@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0a0a0f">
+    <meta name="description" content="ADAM - AI-Driven Asset & Decision Manager. Psychological intelligence for precision audio advertising.">
+    <title>ADAM | Psychological Intelligence for iHeart</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-left">
+            <div class="logo">
+                <span class="logo-mark">◆</span>
+                <span class="logo-text">ADAM</span>
+            </div>
+            <span class="logo-divider"></span>
+            <span class="logo-partner">iHeart</span>
+        </div>
+        <div class="header-center">
+            <span class="tagline">Psychological Intelligence for Audio Advertising</span>
+        </div>
+        <div class="header-right">
+            <div class="status-indicator" id="status-indicator">
+                <span class="status-dot"></span>
+                <span class="status-text">Connecting...</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main">
+        <!-- Input Panel -->
+        <aside class="input-panel">
+            <div class="panel-section">
+                <h2 class="section-label">Your Campaign</h2>
+                
+                <div class="input-group">
+                    <label for="brand_name">Brand</label>
+                    <input type="text" id="brand_name" placeholder="e.g., Starbucks" required>
+                </div>
+
+                <div class="input-group">
+                    <label for="product_name">Product / Service</label>
+                    <input type="text" id="product_name" placeholder="e.g., Mobile Order & Pay" required>
+                </div>
+
+                <div class="input-group">
+                    <label for="description">Brief Description</label>
+                    <textarea id="description" rows="3" placeholder="Describe what you're offering in a few sentences..."></textarea>
+                </div>
+
+                <div class="input-group">
+                    <label for="call_to_action">Call to Action</label>
+                    <input type="text" id="call_to_action" placeholder="e.g., Download the app today">
+                </div>
+
+                <div class="input-row">
+                    <div class="input-group half">
+                        <label for="tagline">Tagline <span class="optional">(optional)</span></label>
+                        <input type="text" id="tagline" placeholder="Key message">
+                    </div>
+                    <div class="input-group half">
+                        <label for="landing_url">Landing URL <span class="optional">(optional)</span></label>
+                        <input type="text" id="landing_url" placeholder="Landing page">
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="product_url">Product URL <span class="optional">(for review analysis)</span></label>
+                    <input type="text" id="product_url" placeholder="e.g., https://amazon.com/dp/...">
+                    <p class="input-hint">ADAM will scrape reviews to understand your real customers</p>
+                </div>
+            </div>
+
+            <!-- Targeting Override -->
+            <div class="panel-section collapsible">
+                <button class="section-toggle" onclick="toggleTargeting()">
+                    <h2 class="section-label">Custom Targeting <span class="optional">(optional)</span></h2>
+                    <span class="toggle-icon" id="toggle-icon">+</span>
+                </button>
+                
+                <div class="collapsible-content" id="targeting-section" style="display: none;">
+                    <p class="section-note">Override ADAM's recommendations with your own audience targeting</p>
+                    
+                    <div class="input-group">
+                        <label for="target_audience">Target Audience</label>
+                        <textarea id="target_audience" rows="2" placeholder="e.g., Teenage women interested in fashion"></textarea>
+                    </div>
+
+                    <div class="input-group">
+                        <label>Campaign Goal</label>
+                        <div class="radio-group">
+                            <label class="radio-item">
+                                <input type="radio" name="campaign_goal" value="reach_core" checked>
+                                <span>Reach core customers</span>
+                            </label>
+                            <label class="radio-item">
+                                <input type="radio" name="campaign_goal" value="grow_audience">
+                                <span>Grow new audience</span>
+                            </label>
+                            <label class="radio-item">
+                                <input type="radio" name="campaign_goal" value="both">
+                                <span>Both</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Submit -->
+            <div class="panel-section">
+                <button class="btn-primary" id="analyze-btn" onclick="analyzeCampaign()">
+                    <span class="btn-text">Analyze Campaign</span>
+                    <span class="btn-icon">→</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Results Panel -->
+        <section class="results-panel" id="results-panel">
+            <div class="results-empty" id="results-empty">
+                <div class="empty-content">
+                    <div class="empty-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                        </svg>
+                    </div>
+                    <h3>Enter your campaign details</h3>
+                    <p>ADAM will identify your optimal customer segments,<br>recommend stations, and craft persuasion strategies.</p>
+                </div>
+            </div>
+
+            <div class="results-content" id="results-content" style="display: none;">
+                <!-- Results populated by JavaScript -->
+            </div>
+
+            <div class="results-loading" id="results-loading" style="display: none;">
+                <div class="loading-animation">
+                    <div class="loading-ring"></div>
+                    <div class="loading-text">ADAM is analyzing...</div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-left">
+            <span>ADAM Platform</span>
+            <span class="footer-sep">·</span>
+            <span>Informative AI</span>
+        </div>
+        <div class="footer-right">
+            <span class="processing-time" id="processing-time"></span>
+        </div>
+    </footer>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

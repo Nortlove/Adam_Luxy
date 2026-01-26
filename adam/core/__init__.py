@@ -1,0 +1,1 @@
+# ADAM Core Module
