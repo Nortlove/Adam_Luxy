@@ -23,8 +23,16 @@ from adam.graph_reasoning.bridge.interaction_bridge import (
 from adam.graph_reasoning.bridge.context_queries import (
     ContextQueryExecutor,
 )
+from adam.graph_reasoning.bridge.bidirectional_integration import (
+    BidirectionalBridgeIntegration,
+    get_bidirectional_bridge,
+    shutdown_bidirectional_bridge,
+)
 
 __all__ = [
     "InteractionBridge",
     "ContextQueryExecutor",
+    "BidirectionalBridgeIntegration",
+    "get_bidirectional_bridge",
+    "shutdown_bidirectional_bridge",
 ]

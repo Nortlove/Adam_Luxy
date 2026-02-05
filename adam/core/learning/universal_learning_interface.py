@@ -452,16 +452,119 @@ class LearningSignalRouter:
     
     This is the central nervous system of ADAM's learning architecture.
     Every signal flows through here to reach the right destinations.
+    
+    CRITICAL FIX (Phase 4): Now subscribes to event bus for learning signals,
+    completing the Kafka → EventBus → Router → Components flow.
     """
     
     def __init__(self, event_bus):
         self.event_bus = event_bus
+        self._event_bus = event_bus  # Alias for compatibility
         self.component_registry: Dict[str, LearningCapableComponent] = {}
         self.signal_subscriptions: Dict[LearningSignalType, Set[str]] = {}
+        
+        # Event bus subscription ID
+        self._subscription_id: Optional[str] = None
         
         # Metrics
         self.signals_routed: int = 0
         self.signals_dropped: int = 0
+        self.signals_from_event_bus: int = 0
+    
+    async def start(self) -> None:
+        """
+        Start the router by subscribing to the event bus.
+        
+        This connects the Kafka consumer flow to the learning components.
+        Without this, signals published to the event bus never reach components.
+        """
+        if self.event_bus and hasattr(self.event_bus, 'subscribe'):
+            try:
+                self._subscription_id = await self.event_bus.subscribe(
+                    "learning_signal",
+                    self._handle_event_bus_signal
+                )
+                logger.info(f"LearningSignalRouter subscribed to event bus (id={self._subscription_id})")
+            except Exception as e:
+                logger.error(f"Failed to subscribe to event bus: {e}")
+    
+    async def stop(self) -> None:
+        """Stop the router by unsubscribing from the event bus."""
+        if self._subscription_id and self.event_bus and hasattr(self.event_bus, 'unsubscribe'):
+            try:
+                await self.event_bus.unsubscribe(self._subscription_id)
+                logger.info("LearningSignalRouter unsubscribed from event bus")
+            except Exception as e:
+                logger.error(f"Failed to unsubscribe from event bus: {e}")
+    
+    async def _handle_event_bus_signal(self, event) -> None:
+        """
+        Handle a learning signal from the event bus.
+        
+        This is called when Kafka consumers publish events to the event bus.
+        We convert the event back to a LearningSignal and route it.
+        
+        NOTE: Handles signal type conversion from gradient_bridge SignalType
+        to universal LearningSignalType.
+        """
+        try:
+            # Extract signal data from event
+            payload = event.payload if hasattr(event, 'payload') else event.data if hasattr(event, 'data') else {}
+            
+            # Build LearningSignal from event payload
+            signal_type_str = payload.get("signal_type", payload.get("type", "outcome"))
+            
+            # Map gradient_bridge SignalType values to LearningSignalType
+            # This handles the type system fragmentation between modules
+            SIGNAL_TYPE_MAPPING = {
+                # Outcome types
+                "reward": LearningSignalType.OUTCOME_CONVERSION,
+                "credit": LearningSignalType.CREDIT_ASSIGNED,
+                "mechanism_effectiveness": LearningSignalType.MECHANISM_EFFECTIVENESS_UPDATED,
+                "outcome": LearningSignalType.OUTCOME_ENGAGEMENT,
+                "conversion": LearningSignalType.OUTCOME_CONVERSION,
+                "click": LearningSignalType.OUTCOME_CLICK,
+                "skip": LearningSignalType.OUTCOME_SKIP,
+                "engagement": LearningSignalType.OUTCOME_ENGAGEMENT,
+                # Prior updates
+                "prior_update": LearningSignalType.PRIOR_UPDATED,
+                "thompson_update": LearningSignalType.PRIOR_UPDATED,
+                # Quality signals
+                "prediction_validated": LearningSignalType.PREDICTION_VALIDATED,
+                "prediction_failed": LearningSignalType.PREDICTION_FAILED,
+                "drift": LearningSignalType.DRIFT_DETECTED,
+            }
+            
+            # Try direct mapping, then try as enum value, then default
+            signal_type_lower = signal_type_str.lower() if isinstance(signal_type_str, str) else "outcome"
+            try:
+                if signal_type_lower in SIGNAL_TYPE_MAPPING:
+                    signal_type = SIGNAL_TYPE_MAPPING[signal_type_lower]
+                else:
+                    signal_type = LearningSignalType(signal_type_str)
+            except (ValueError, KeyError):
+                # Default to outcome engagement for unknown types
+                signal_type = LearningSignalType.OUTCOME_ENGAGEMENT
+                logger.debug(f"Unknown signal type '{signal_type_str}', defaulting to OUTCOME_ENGAGEMENT")
+            
+            signal = LearningSignal(
+                signal_type=signal_type,
+                source_component=payload.get("source_component", payload.get("source", "event_bus")),
+                signal_data=payload,
+                decision_id=payload.get("decision_id"),
+                user_id=payload.get("user_id"),
+                confidence=event.confidence if hasattr(event, 'confidence') else payload.get("confidence", 1.0),
+                weight=event.weight if hasattr(event, 'weight') else payload.get("weight", 1.0),
+            )
+            
+            # Route the signal
+            delivered = await self.route_signal(signal)
+            self.signals_from_event_bus += 1
+            
+            logger.debug(f"Routed event bus signal ({signal_type.value}) to {delivered} components")
+            
+        except Exception as e:
+            logger.error(f"Failed to handle event bus signal: {e}")
     
     def register_component(self, component: LearningCapableComponent) -> None:
         """Register a component for signal routing."""

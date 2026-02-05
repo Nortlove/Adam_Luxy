@@ -80,6 +80,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
     
     # Shutdown
     logger.info("ADAM Platform Shutting Down...")
+    
+    # Shutdown learning components (including Kafka consumers and event bus)
+    try:
+        await components.shutdown()
+    except Exception as e:
+        logger.error(f"Error during learning components shutdown: {e}")
+    
+    # Shutdown infrastructure
     await infra.shutdown()
     logger.info("ADAM Platform Shutdown Complete")
 
@@ -149,9 +157,13 @@ def register_routers(app: FastAPI) -> None:
     from adam.platform.iheart.router import router as iheart_router
     from adam.platform.wpp.router import router as wpp_router
     from adam.api.monitoring.router import router as monitoring_router
+    from adam.api.intelligence.router import router as intelligence_router
     
     # Decision API (main entry point)
     app.include_router(decision_router)
+    
+    # Intelligence API (new - pre-computed intelligence queries)
+    app.include_router(intelligence_router)
     
     # Platform-specific APIs
     app.include_router(iheart_router)

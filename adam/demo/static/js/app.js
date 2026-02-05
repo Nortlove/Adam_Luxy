@@ -1,7 +1,6 @@
-/* =============================================================================
-   ADAM Demo Platform - iHeart Showcase
-   Psychological Intelligence for Audio Advertising
-   ============================================================================= */
+// =============================================================================
+// ADAM Demo - Action-Focused Results
+// =============================================================================
 
 const API_BASE = '/api';
 let currentResult = null;
@@ -10,20 +9,106 @@ let currentResult = null;
 // INITIALIZATION
 // =============================================================================
 
-document.addEventListener('DOMContentLoaded', async () => {
-    await checkPlatformStatus();
-    setInterval(checkPlatformStatus, 30000);
+document.addEventListener('DOMContentLoaded', () => {
+    checkPlatformStatus();
     
-    // Enter key submits form
-    document.querySelectorAll('input, textarea').forEach(el => {
-        el.addEventListener('keydown', e => {
-            if (e.key === 'Enter' && !e.shiftKey && el.tagName !== 'TEXTAREA') {
-                e.preventDefault();
-                analyzeCampaign();
-            }
-        });
+    document.getElementById('campaign-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        analyzeCampaign();
+    });
+    
+    // Brand input → fetch categories with debounce
+    let debounceTimer;
+    const brandInput = document.getElementById('brand_name');
+    brandInput.addEventListener('input', () => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+            fetchBrandCategories(brandInput.value.trim());
+        }, 500);
     });
 });
+
+// =============================================================================
+// CATEGORY FACETED SEARCH
+// =============================================================================
+
+function normalizeCategoryNames(categories) {
+    const seen = new Set();
+    const normalized = [];
+    
+    categories.forEach(cat => {
+        let displayName = (cat.display_name || cat.main_category || '')
+            .replace(/_/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+        
+        // Title case
+        displayName = displayName.split(' ').map(word => {
+            if (word.length <= 2 && word.toUpperCase() === word) return word;
+            return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+        }).join(' ');
+        
+        // Clean up common names
+        displayName = displayName
+            .replace('Amazon Fashion', 'Fashion')
+            .replace('Clothing Shoes And Jewelry', 'Clothing & Accessories')
+            .replace('Sports And Outdoors', 'Sports & Outdoors')
+            .replace('Health And Household', 'Health & Household')
+            .replace('Beauty And Personal Care', 'Beauty & Personal Care')
+            .replace(' > ', ' - ');
+        
+        const key = displayName.toLowerCase();
+        if (!seen.has(key)) {
+            seen.add(key);
+            normalized.push({ ...cat, display_name: displayName });
+        }
+    });
+    
+    return normalized.slice(0, 8);
+}
+
+async function fetchBrandCategories(brandName) {
+    const categoryList = document.getElementById('product_category');
+    const statusEl = document.getElementById('category-status');
+    
+    if (!brandName || brandName.length < 2) {
+        categoryList.innerHTML = '<p class="category-placeholder">Enter brand name to see categories</p>';
+        statusEl.textContent = '';
+        return;
+    }
+    
+    categoryList.innerHTML = '<p class="category-placeholder">Loading...</p>';
+    statusEl.textContent = '';
+    
+    try {
+        const response = await fetch(`${API_BASE}/brands/${encodeURIComponent(brandName)}/categories`);
+        const data = await response.json();
+        
+        if (data.categories && data.categories.length > 0) {
+            const normalized = normalizeCategoryNames(data.categories);
+            
+            let html = '';
+            normalized.forEach((cat, idx) => {
+                const value = `${cat.main_category}|${cat.subcategory || ''}`;
+                html += `
+                    <label class="category-checkbox">
+                        <input type="checkbox" name="product_category" value="${value}">
+                        <span class="category-label">${cat.display_name}</span>
+                        <span class="category-count">${cat.product_count}</span>
+                    </label>
+                `;
+            });
+            
+            categoryList.innerHTML = html;
+            statusEl.textContent = `${data.total_products} products found`;
+        } else {
+            categoryList.innerHTML = '<p class="category-placeholder">No products found</p>';
+            statusEl.textContent = 'Will use general models';
+        }
+    } catch (error) {
+        categoryList.innerHTML = '<p class="category-placeholder">Could not load categories</p>';
+    }
+}
 
 // =============================================================================
 // PLATFORM STATUS
@@ -33,39 +118,19 @@ async function checkPlatformStatus() {
     try {
         const response = await fetch(`${API_BASE}/status`);
         const status = await response.json();
-        updateStatus(status);
+        const dot = document.getElementById('status-dot');
+        const text = document.getElementById('status-text');
+        
+        if (status.status === 'operational') {
+            dot.className = 'status-dot active';
+            text.textContent = 'Ready';
+        } else {
+            dot.className = 'status-dot';
+            text.textContent = 'Connecting';
+        }
     } catch (error) {
-        updateStatus({ status: 'error' });
-    }
-}
-
-function updateStatus(status) {
-    const dot = document.querySelector('.status-dot');
-    const text = document.querySelector('.status-text');
-    
-    if (status.status === 'operational') {
-        dot.className = 'status-dot active';
-        text.textContent = `${status.total_components} components`;
-    } else {
-        dot.className = 'status-dot';
-        text.textContent = 'Connecting...';
-    }
-}
-
-// =============================================================================
-// UI INTERACTIONS
-// =============================================================================
-
-function toggleTargeting() {
-    const section = document.getElementById('targeting-section');
-    const icon = document.getElementById('toggle-icon');
-    
-    if (section.style.display === 'none') {
-        section.style.display = 'block';
-        icon.textContent = '−';
-    } else {
-        section.style.display = 'none';
-        icon.textContent = '+';
+        document.getElementById('status-dot').className = 'status-dot';
+        document.getElementById('status-text').textContent = 'Offline';
     }
 }
 
@@ -79,86 +144,66 @@ async function analyzeCampaign() {
     const description = document.getElementById('description').value.trim();
     const cta = document.getElementById('call_to_action').value.trim();
     
-    // Validation
     if (!brand || !product || !description || !cta) {
-        alert('Please fill in all required fields: Brand, Product, Description, and Call to Action');
+        highlightMissingFields();
         return;
     }
     
-    // Get optional fields
-    const tagline = document.getElementById('tagline').value.trim();
-    const landingUrl = document.getElementById('landing_url').value.trim();
-    const productUrl = document.getElementById('product_url').value.trim();
-    const targetAudience = document.getElementById('target_audience').value.trim();
-    const campaignGoal = document.querySelector('input[name="campaign_goal"]:checked')?.value || 'reach_core';
+    const productUrl = document.getElementById('product_url')?.value.trim() || '';
+    const targetAudience = document.getElementById('target_audience')?.value.trim() || '';
     
-    // Show loading
+    // Get selected categories (multi-select)
+    const checkboxes = document.querySelectorAll('input[name="product_category"]:checked');
+    let category = null, subcategory = null;
+    if (checkboxes.length > 0) {
+        const parts = checkboxes[0].value.split('|');
+        category = parts[0] || null;
+        subcategory = parts[1] || null;
+    }
+    
     showLoading();
     
     try {
-        const startTime = performance.now();
-        
-        // Run campaign analysis with product_url included
-        // The server will fetch review intelligence if product_url is provided
-        const requestBody = {
-            brand_name: brand,
-            product_name: product,
-            description: description,
-            call_to_action: cta,
-            tagline: tagline || null,
-            landing_url: landingUrl || null,
-            target_audience: targetAudience || null,
-            campaign_goal: campaignGoal,
-        };
-        
-        // Include product URL for review intelligence
-        if (productUrl) {
-            requestBody.product_url = productUrl;
-            console.log('Including product URL for review intelligence:', productUrl);
-        }
-        
         const response = await fetch(`${API_BASE}/analyze-campaign`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(requestBody),
+            body: JSON.stringify({
+                brand_name: brand,
+                product_name: product,
+                description: description,
+                call_to_action: cta,
+                product_url: productUrl || null,
+                target_audience: targetAudience || null,
+                category: category,
+                subcategory: subcategory
+            })
         });
         
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error('API Error:', errorText);
-            throw new Error('Analysis failed: ' + (response.statusText || 'Unknown error'));
-        }
+        if (!response.ok) throw new Error('Analysis failed');
         
         const result = await response.json();
-        const clientTime = performance.now() - startTime;
-        
-        // Log review intelligence status
-        if (result.review_intelligence) {
-            console.log('Review intelligence received:', result.review_intelligence);
-            console.log('Reviews analyzed:', result.review_intelligence.reviews_analyzed);
-            console.log('Buyer archetypes:', result.review_intelligence.buyer_archetypes);
-            console.log('Language intelligence:', result.review_intelligence.language_intelligence);
-        } else {
-            console.log('No review intelligence in response');
-        }
-        
         currentResult = result;
         
-        // Update processing time
-        document.getElementById('processing-time').textContent = 
-            `Analysis: ${result.processing_time_ms.toFixed(0)}ms`;
-        
-        // Render results
+        document.getElementById('processing-time').textContent = `${result.processing_time_ms?.toFixed(0) || 0}ms`;
         renderResults(result);
         
     } catch (error) {
-        console.error('Analysis error:', error);
         showError(error.message);
     }
 }
 
+function highlightMissingFields() {
+    ['brand_name', 'product_name', 'description', 'call_to_action'].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el.value.trim()) {
+            el.style.borderColor = '#ef4444';
+            setTimeout(() => el.style.borderColor = '', 2000);
+        }
+    });
+}
+
 // =============================================================================
-// LOADING & ERROR STATES
+// UI STATES
 // =============================================================================
 
 function showLoading() {
@@ -172,14 +217,12 @@ function showError(message) {
     document.getElementById('results-loading').style.display = 'none';
     document.getElementById('results-content').style.display = 'none';
     document.getElementById('results-empty').style.display = 'flex';
+    document.getElementById('results-empty').innerHTML = `<p>Error: ${message || 'Please try again.'}</p>`;
     document.getElementById('analyze-btn').disabled = false;
-    
-    document.querySelector('.empty-content h3').textContent = 'Analysis Error';
-    document.querySelector('.empty-content p').textContent = message;
 }
 
 // =============================================================================
-// RENDER RESULTS
+// RENDER RESULTS - ACTION-FOCUSED
 // =============================================================================
 
 function renderResults(result) {
@@ -189,366 +232,199 @@ function renderResults(result) {
     document.getElementById('analyze-btn').disabled = false;
     
     const container = document.getElementById('results-content');
+    const segments = result.core_segments || [];
+    const stations = result.station_recommendations || [];
+    const constructs = result.psychological_constructs || {};
     
-    // Build HTML
-    let html = `
-        <!-- Summary Header -->
-        <div class="results-header">
-            <div class="campaign-echo">
-                <span class="campaign-brand">${result.campaign.brand}</span>
-                <span class="campaign-product">${result.campaign.product}</span>
-            </div>
-            <div class="confidence-badge">
-                <span class="confidence-value">${(result.overall_confidence * 100).toFixed(0)}%</span>
-                <span class="confidence-label">confidence</span>
-            </div>
-        </div>
-
-        <!-- Core Segments Summary -->
-        <div class="section-block">
-            <p class="summary-text">${result.core_segment_summary}</p>
-        </div>
-
-        <!-- Customer Segments -->
-        <div class="section-block">
-            <h3 class="section-title">Core Customer Segments</h3>
-            <div class="segments-grid">
-                ${result.core_segments.map((segment, i) => renderSegmentCard(segment, i === 0)).join('')}
-            </div>
-        </div>
-
-        <!-- Station Recommendations -->
-        <div class="section-block">
-            <h3 class="section-title">Recommended Stations</h3>
-            <div class="stations-list">
-                ${result.station_recommendations.map(station => renderStationCard(station)).join('')}
-            </div>
-        </div>
-    `;
-    
-    // Custom Audience Analysis (if present)
-    if (result.custom_audience) {
-        html += renderCustomAudienceSection(result.custom_audience);
+    // No segments? Show basic message
+    if (segments.length === 0) {
+        container.innerHTML = '<p>No targeting recommendations available.</p>';
+        return;
     }
     
-    // Review Intelligence (if present)
-    if (result.review_intelligence && result.review_intelligence.reviews_analyzed > 0) {
-        html += renderReviewIntelligenceSection(result.review_intelligence);
+    // Build tabbed interface for customer types
+    let html = '';
+    
+    // Tab navigation (if multiple segments)
+    if (segments.length > 1) {
+        html += '<div class="customer-tabs">';
+        segments.forEach((seg, i) => {
+            html += `<button class="customer-tab ${i === 0 ? 'active' : ''}" onclick="switchTab(${i})">${seg.segment_name}</button>`;
+        });
+        html += '</div>';
     }
     
-    // Components footer
-    const components = [...result.components_used];
-    if (result.review_intelligence) {
-        components.push('ReviewIntelligence');
-    }
-    
-    html += `
-        <div class="components-footer">
-            <span class="components-label">Components used:</span>
-            <span class="components-list">${components.join(' · ')}</span>
-        </div>
-    `;
+    // Tab content for each segment
+    segments.forEach((segment, i) => {
+        const isActive = i === 0;
+        const segmentStations = stations.slice(0, 3); // Top 3 stations
+        
+        html += `<div class="customer-content ${isActive ? 'active' : ''}" id="tab-${i}">`;
+        html += renderActionCard(segment, segmentStations, constructs);
+        html += '</div>';
+    });
     
     container.innerHTML = html;
+}
+
+// =============================================================================
+// ACTION CARD - THE MAIN OUTPUT
+// =============================================================================
+
+function renderActionCard(segment, stations, constructs) {
+    // Primary Action: What station, what words, what timing
+    let html = '<div class="recommendation-card">';
     
-    // Animate in
-    requestAnimationFrame(() => {
-        container.querySelectorAll('.segment-card, .station-card').forEach((el, i) => {
-            el.style.animationDelay = `${i * 0.1}s`;
+    // Header: Customer type + confidence
+    html += `
+        <div class="recommendation-header">
+            <span class="recommendation-title">${escapeHtml(segment.segment_name)}</span>
+            <span class="recommendation-confidence">${(segment.match_score * 100).toFixed(0)}% match</span>
+        </div>
+    `;
+    
+    html += '<div class="recommendation-body">';
+    
+    // ACTION 1: Script/Hook to use
+    html += `
+        <div class="action-section">
+            <div class="action-label">Use This Hook</div>
+            <div class="script-box">${escapeHtml(segment.example_hook || 'No hook available')}</div>
+        </div>
+    `;
+    
+    // ACTION 2: Stations to place on
+    if (stations.length > 0) {
+        html += `
+            <div class="action-section">
+                <div class="action-label">Place On</div>
+        `;
+        stations.forEach(station => {
+            const name = station.station_name || station.station_format;
+            const format = station.station_format;
+            html += `
+                <div class="station-item">
+                    <div>
+                        <div class="station-name">${escapeHtml(name)}</div>
+                        <div class="station-format">${escapeHtml(format)}</div>
+                    </div>
+                    <span>${(station.listener_profile_match * 100).toFixed(0)}%</span>
+                </div>
+            `;
         });
+        html += '</div>';
+    }
+    
+    // ACTION 3: Key mechanisms to use
+    const mechanisms = [];
+    if (segment.primary_mechanism) mechanisms.push(segment.primary_mechanism);
+    if (segment.secondary_mechanisms) mechanisms.push(...segment.secondary_mechanisms.slice(0, 2));
+    
+    if (mechanisms.length > 0) {
+        html += `
+            <div class="action-section">
+                <div class="action-label">Persuasion Approach</div>
+                <div class="mechanism-list">
+                    ${mechanisms.map(m => `<span class="mechanism-pill">${formatMechanism(m)}</span>`).join('')}
+                </div>
+            </div>
+        `;
+    }
+    
+    // ACTION 4: Frame + Tone (simple one-liner)
+    html += `
+        <div class="action-section">
+            <div class="action-label">Style</div>
+            <div class="action-value">${capitalize(segment.recommended_frame || 'balanced')} framing, ${segment.recommended_tone || 'conversational'} tone</div>
+        </div>
+    `;
+    
+    // EXPANDABLE: Why this recommendation
+    html += `
+        <div class="details-section">
+            <button class="details-toggle" onclick="toggleDetails(this)">
+                <span>Why this recommendation?</span>
+                <span>+</span>
+            </button>
+            <div class="details-content">
+                <p style="margin-bottom: 12px;">${escapeHtml(segment.match_explanation || 'Based on psychological profile analysis.')}</p>
+    `;
+    
+    // Show psychological dimensions if available
+    if (constructs.regulatory_focus_promotion !== undefined) {
+        html += `
+            <div class="details-row">
+                <span class="details-row-label">Promotion Focus</span>
+                <span>${(constructs.regulatory_focus_promotion * 100).toFixed(0)}%</span>
+            </div>
+            <div class="details-row">
+                <span class="details-row-label">Prevention Focus</span>
+                <span>${(constructs.regulatory_focus_prevention * 100).toFixed(0)}%</span>
+            </div>
+        `;
+    }
+    
+    if (constructs.need_for_cognition !== undefined) {
+        html += `
+            <div class="details-row">
+                <span class="details-row-label">Need for Cognition</span>
+                <span>${(constructs.need_for_cognition * 100).toFixed(0)}%</span>
+            </div>
+        `;
+    }
+    
+    html += '</div></div>'; // Close details-content and details-section
+    html += '</div>'; // Close recommendation-body
+    html += '</div>'; // Close recommendation-card
+    
+    return html;
+}
+
+// =============================================================================
+// TAB SWITCHING
+// =============================================================================
+
+function switchTab(idx) {
+    // Update tab buttons
+    document.querySelectorAll('.customer-tab').forEach((tab, i) => {
+        tab.classList.toggle('active', i === idx);
+    });
+    
+    // Update tab content
+    document.querySelectorAll('.customer-content').forEach((content, i) => {
+        content.classList.toggle('active', i === idx);
     });
 }
 
 // =============================================================================
-// SEGMENT CARD
+// EXPANDABLE DETAILS
 // =============================================================================
 
-function renderSegmentCard(segment, isPrimary) {
-    const profile = segment.profile;
+function toggleDetails(btn) {
+    const content = btn.nextElementSibling;
+    const isOpen = content.classList.contains('open');
     
-    return `
-        <div class="segment-card ${isPrimary ? 'primary' : ''}">
-            <div class="segment-header">
-                <span class="segment-icon">${segment.archetype_icon}</span>
-                <div class="segment-titles">
-                    <h4 class="segment-name">${segment.segment_name}</h4>
-                    <span class="segment-archetype">${segment.archetype}</span>
-                </div>
-                <div class="segment-match">
-                    <span class="match-value">${(segment.match_score * 100).toFixed(0)}%</span>
-                    <span class="match-label">match</span>
-                </div>
-            </div>
-            
-            <p class="segment-explanation">${segment.match_explanation}</p>
-            
-            <div class="segment-strategy">
-                <div class="strategy-header">
-                    <span class="strategy-label">Persuasion Strategy</span>
-                    <span class="mechanism-badge">${formatMechanism(segment.primary_mechanism)}</span>
-                </div>
-                <p class="strategy-text">${segment.mechanism_explanation}</p>
-            </div>
-            
-            <div class="segment-messaging">
-                <div class="messaging-row">
-                    <span class="messaging-label">Tone</span>
-                    <span class="messaging-value">${segment.recommended_tone}</span>
-                </div>
-                <div class="messaging-row">
-                    <span class="messaging-label">Frame</span>
-                    <span class="messaging-value frame-${segment.recommended_frame}">${segment.recommended_frame === 'gain' ? 'Gain-focused' : segment.recommended_frame === 'loss-avoidance' ? 'Loss-avoidance' : 'Balanced'}</span>
-                </div>
-            </div>
-            
-            <div class="segment-example">
-                <span class="example-label">Example Hook</span>
-                <p class="example-text">"${segment.example_hook}"</p>
-            </div>
-            
-            <div class="segment-research">
-                <span class="research-icon">📚</span>
-                <span class="research-text">${segment.research_citation}</span>
-            </div>
-        </div>
-    `;
-}
-
-// =============================================================================
-// STATION CARD
-// =============================================================================
-
-function renderStationCard(station) {
-    const daypartsHtml = station.best_dayparts.map(dp => {
-        const explanation = station.daypart_explanations[dp] || '';
-        return `
-            <div class="daypart-item">
-                <span class="daypart-name">${dp}</span>
-                <span class="daypart-reason">${explanation}</span>
-            </div>
-        `;
-    }).join('');
-    
-    return `
-        <div class="station-card">
-            <div class="station-header">
-                <div class="station-format">
-                    <h4 class="format-name">${station.station_format}</h4>
-                    <span class="format-desc">${station.station_description}</span>
-                </div>
-                <div class="station-metrics">
-                    <div class="metric">
-                        <span class="metric-value">${(station.listener_profile_match * 100).toFixed(0)}%</span>
-                        <span class="metric-label">match</span>
-                    </div>
-                    <div class="metric">
-                        <span class="metric-value engagement-${station.expected_engagement.replace(' ', '-')}">${station.expected_engagement}</span>
-                        <span class="metric-label">engagement</span>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="station-reason">
-                <p>${station.recommendation_reason}</p>
-            </div>
-            
-            <div class="station-dayparts">
-                <span class="dayparts-label">Optimal Dayparts</span>
-                <div class="dayparts-list">
-                    ${daypartsHtml}
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-// =============================================================================
-// CUSTOM AUDIENCE SECTION
-// =============================================================================
-
-function renderCustomAudienceSection(custom) {
-    const stationsHtml = custom.station_recommendations.map(s => `
-        <div class="mini-station">
-            <span class="mini-station-format">${s.station_format}</span>
-            <span class="mini-station-reason">${s.recommendation_reason.substring(0, 100)}...</span>
-        </div>
-    `).join('');
-    
-    return `
-        <div class="section-block custom-audience">
-            <h3 class="section-title">Your Specified Audience</h3>
-            
-            <div class="custom-header">
-                <div class="custom-audience-desc">"${custom.audience_description}"</div>
-                <div class="custom-archetype">
-                    <span class="archetype-inferred">Inferred as</span>
-                    <span class="archetype-name">${custom.inferred_archetype}</span>
-                </div>
-            </div>
-            
-            <div class="custom-contrast">
-                <span class="contrast-icon">⚡</span>
-                <p>${custom.contrast_with_core}</p>
-            </div>
-            
-            <div class="custom-strategy">
-                <h4>How to Persuade This Audience</h4>
-                <p class="strategy-text">${custom.persuasion_strategy}</p>
-                
-                <div class="custom-mechanisms">
-                    ${custom.recommended_mechanisms.map(m => `<span class="mechanism-tag">${formatMechanism(m)}</span>`).join('')}
-                </div>
-                
-                <div class="custom-messaging">
-                    <span class="messaging-label">Suggested Messaging</span>
-                    <p class="messaging-example">"${custom.messaging_approach}"</p>
-                </div>
-            </div>
-            
-            <div class="custom-stations">
-                <h4>Stations for This Audience</h4>
-                ${stationsHtml}
-            </div>
-        </div>
-    `;
-}
-
-// =============================================================================
-// REVIEW INTELLIGENCE SECTION
-// =============================================================================
-
-function renderReviewIntelligenceSection(intel) {
-    const archetypeBars = Object.entries(intel.buyer_archetypes || {})
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 5)
-        .map(([archetype, score]) => `
-            <div class="archetype-bar-row">
-                <span class="archetype-bar-label">${archetype}</span>
-                <div class="archetype-bar-container">
-                    <div class="archetype-bar-fill" style="width: ${score * 100}%"></div>
-                </div>
-                <span class="archetype-bar-value">${(score * 100).toFixed(0)}%</span>
-            </div>
-        `).join('');
-    
-    const mechanismBars = Object.entries(intel.mechanism_predictions || {})
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 5)
-        .map(([mech, score]) => `
-            <div class="mechanism-bar-row">
-                <span class="mechanism-bar-label">${formatMechanism(mech)}</span>
-                <div class="mechanism-bar-container">
-                    <div class="mechanism-bar-fill" style="width: ${score * 100}%"></div>
-                </div>
-                <span class="mechanism-bar-value">${(score * 100).toFixed(0)}%</span>
-            </div>
-        `).join('');
-    
-    const phrases = (intel.language_intelligence?.phrases || []).slice(0, 5);
-    const powerWords = (intel.language_intelligence?.power_words || []).slice(0, 8);
-    
-    return `
-        <div class="section-block review-intelligence">
-            <h3 class="section-title">
-                <span class="ri-icon">📊</span>
-                Customer Intelligence from Reviews
-            </h3>
-            
-            <div class="ri-header">
-                <div class="ri-stat">
-                    <span class="ri-stat-value">${intel.reviews_analyzed}</span>
-                    <span class="ri-stat-label">Reviews Analyzed</span>
-                </div>
-                <div class="ri-stat">
-                    <span class="ri-stat-value">${intel.sources_used?.length || 0}</span>
-                    <span class="ri-stat-label">Sources</span>
-                </div>
-                <div class="ri-stat">
-                    <span class="ri-stat-value">${intel.avg_rating?.toFixed(1) || 'N/A'}</span>
-                    <span class="ri-stat-label">Avg Rating</span>
-                </div>
-                <div class="ri-stat">
-                    <span class="ri-stat-value">${(intel.overall_confidence * 100).toFixed(0)}%</span>
-                    <span class="ri-stat-label">Confidence</span>
-                </div>
-            </div>
-            
-            <div class="ri-grid">
-                <div class="ri-card">
-                    <h4>Real Buyer Archetypes</h4>
-                    <p class="ri-note">Who actually buys this product:</p>
-                    <div class="archetype-bars">
-                        ${archetypeBars}
-                    </div>
-                    <div class="ri-dominant">
-                        Dominant: <strong>${intel.dominant_archetype}</strong> (${(intel.archetype_confidence * 100).toFixed(0)}% confidence)
-                    </div>
-                </div>
-                
-                <div class="ri-card">
-                    <h4>Predicted Mechanism Effectiveness</h4>
-                    <p class="ri-note">Based on customer psychology:</p>
-                    <div class="mechanism-bars">
-                        ${mechanismBars}
-                    </div>
-                </div>
-            </div>
-            
-            <div class="ri-grid">
-                <div class="ri-card">
-                    <h4>Customer Language</h4>
-                    <p class="ri-note">Use these phrases in your ad copy:</p>
-                    <div class="ri-phrases">
-                        ${phrases.map(p => `<span class="ri-phrase">"${p}"</span>`).join('')}
-                    </div>
-                    <div class="ri-power-words">
-                        <span class="ri-pw-label">Power words:</span>
-                        ${powerWords.map(w => `<span class="ri-power-word">${w}</span>`).join('')}
-                    </div>
-                </div>
-                
-                <div class="ri-card">
-                    <h4>Purchase Motivations</h4>
-                    <p class="ri-note">Why customers buy:</p>
-                    <div class="ri-motivations">
-                        ${(intel.purchase_motivations || []).slice(0, 5).map(m => `
-                            <span class="ri-motivation ${m === intel.primary_motivation ? 'primary' : ''}">${formatMechanism(m)}</span>
-                        `).join('')}
-                    </div>
-                    ${intel.primary_motivation ? `
-                        <div class="ri-primary-motivation">
-                            Primary driver: <strong>${formatMechanism(intel.primary_motivation)}</strong>
-                        </div>
-                    ` : ''}
-                </div>
-            </div>
-            
-            ${intel.ideal_customer ? `
-                <div class="ri-ideal">
-                    <h4>Ideal Customer Profile</h4>
-                    <p class="ri-note">From 5-star reviewers - your best targets:</p>
-                    <div class="ri-ideal-content">
-                        <span class="ri-ideal-archetype">${intel.ideal_customer.archetype}</span>
-                        <span class="ri-ideal-conf">${(intel.ideal_customer.archetype_confidence * 100).toFixed(0)}% match</span>
-                    </div>
-                    ${intel.ideal_customer.characteristic_phrases?.length ? `
-                        <div class="ri-ideal-phrases">
-                            ${intel.ideal_customer.characteristic_phrases.slice(0, 3).map(p => `<span class="ri-phrase">"${p}"</span>`).join('')}
-                        </div>
-                    ` : ''}
-                </div>
-            ` : ''}
-        </div>
-    `;
+    content.classList.toggle('open');
+    btn.querySelector('span:last-child').textContent = isOpen ? '+' : '−';
 }
 
 // =============================================================================
 // UTILITIES
 // =============================================================================
 
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
 function formatMechanism(mechanism) {
     if (!mechanism) return '';
-    return mechanism
-        .replace(/_/g, ' ')
-        .replace(/\b\w/g, c => c.toUpperCase());
+    return mechanism.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function capitalize(str) {
+    if (!str) return '';
+    return str.charAt(0).toUpperCase() + str.slice(1).replace(/_/g, ' ');
 }

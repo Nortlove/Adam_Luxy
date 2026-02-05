@@ -246,3 +246,22 @@ class SignalAggregationService:
                     "timestamp": datetime.now(timezone.utc).isoformat(),
                 },
             )
+
+
+# =============================================================================
+# SINGLETON
+# =============================================================================
+
+_service: Optional[SignalAggregationService] = None
+
+
+def get_signal_aggregation_service(
+    redis_cache: Optional[ADAMRedisCache] = None,
+) -> SignalAggregationService:
+    """Get or create the signal aggregation service singleton."""
+    global _service
+    
+    if _service is None:
+        _service = SignalAggregationService(redis_cache=redis_cache)
+    
+    return _service

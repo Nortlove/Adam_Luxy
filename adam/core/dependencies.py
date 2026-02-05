@@ -141,6 +141,10 @@ class LearningComponents:
         self._holistic_synthesizer = None
         self._metrics_exporter = None
         
+        # Event bus and consumers (Phase 1.3)
+        self._event_bus = None
+        self._kafka_consumers = []
+        
         # Behavioral Analytics (Nonconscious Signal Intelligence)
         self._behavioral_analytics_engine = None
         self._behavioral_learning_bridge = None
@@ -187,27 +191,53 @@ class LearningComponents:
         from src.v3.narrative.session import get_narrative_session_engine
         from src.v3.interactions.mechanism import get_mechanism_interaction_engine
         
-        # Simple event bus implementation
-        class SimpleEventBus:
-            """Simple in-memory event bus for development."""
+        # Import proper event bus from Phase 1.1
+        from adam.core.learning.event_bus import (
+            InMemoryEventBus,
+            KafkaEventBus,
+            Event,
+        )
+        
+        # Use InMemoryEventBus for local/dev, KafkaEventBus for production
+        if settings.is_production and hasattr(settings, 'kafka'):
+            logger.info("Using KafkaEventBus for production")
+            event_bus_impl = KafkaEventBus({
+                'bootstrap.servers': settings.kafka.bootstrap_servers,
+                'client.id': 'adam-learning-bus'
+            })
+        else:
+            logger.info("Using InMemoryEventBus for local development")
+            event_bus_impl = InMemoryEventBus()
+        
+        # Start the event bus
+        await event_bus_impl.start()
+        self._event_bus = event_bus_impl
+        
+        # Legacy-compatible wrapper for components expecting old interface
+        class EventBusWrapper:
+            """Wraps the new EventBus to provide backward-compatible interface."""
             
-            def __init__(self):
-                self._subscribers = {}
+            def __init__(self, event_bus):
+                self._bus = event_bus
                 self._events = []
             
-            async def publish(self, topic: str, event: dict):
-                self._events.append((topic, event))
-                if topic in self._subscribers:
-                    for callback in self._subscribers[topic]:
-                        try:
-                            await callback(event)
-                        except Exception as e:
-                            logger.error(f"Event callback error: {e}")
+            async def publish(self, topic: str, event_data: dict):
+                """Legacy publish method."""
+                from adam.core.learning.event_bus import Event
+                event = Event(
+                    event_type=topic,
+                    source_component="legacy_wrapper",
+                    payload=event_data,
+                )
+                self._events.append((topic, event_data))
+                await self._bus.publish(event)
             
             def subscribe(self, topic: str, callback):
-                if topic not in self._subscribers:
-                    self._subscribers[topic] = []
-                self._subscribers[topic].append(callback)
+                """Legacy subscribe method (sync wrapper)."""
+                import asyncio
+                asyncio.create_task(self._bus.subscribe(topic, callback))
+        
+        event_bus = EventBusWrapper(event_bus_impl)
         
         # Prompt manager using Redis
         class RedisPromptManager:
@@ -393,8 +423,96 @@ class LearningComponents:
         ]:
             self._signal_router.register_consumer(component)
         
+        # =================================================================
+        # KAFKA CONSUMERS (Phase 1.3)
+        # =================================================================
+        
+        # Start Kafka consumers in production mode
+        if settings.is_production:
+            try:
+                from adam.infrastructure.kafka.consumer import (
+                    create_learning_signal_consumer,
+                    create_outcome_consumer,
+                )
+                
+                # Handler that routes signals through the LearningSignalRouter
+                async def learning_signal_handler(message: dict):
+                    """Route Kafka learning signals to components."""
+                    try:
+                        from adam.core.learning.event_bus import Event
+                        event = Event(
+                            event_type=message.get("type", "learning_signal"),
+                            source_component=message.get("source", "kafka"),
+                            payload=message,
+                        )
+                        await event_bus_impl.publish(event)
+                        logger.debug(f"Routed learning signal: {event.event_type}")
+                    except Exception as e:
+                        logger.error(f"Failed to route learning signal: {e}")
+                
+                async def outcome_handler(message: dict):
+                    """Route Kafka outcome events to learning components."""
+                    try:
+                        from adam.core.learning.event_bus import Event
+                        event = Event(
+                            event_type="outcome_recorded",
+                            source_component="kafka",
+                            payload=message,
+                            # Extract helpful_vote weighting if available
+                            confidence=message.get("confidence", 1.0),
+                            weight=message.get("weight", 1.0),
+                        )
+                        await event_bus_impl.publish(event)
+                        logger.debug(f"Routed outcome event")
+                    except Exception as e:
+                        logger.error(f"Failed to route outcome: {e}")
+                
+                # Start consumers
+                learning_consumer = await create_learning_signal_consumer(learning_signal_handler)
+                outcome_consumer = await create_outcome_consumer(outcome_handler)
+                
+                self._kafka_consumers = [learning_consumer, outcome_consumer]
+                logger.info(f"Started {len(self._kafka_consumers)} Kafka consumers")
+                
+            except ImportError as e:
+                logger.warning(f"Kafka consumers disabled (aiokafka not installed): {e}")
+            except Exception as e:
+                logger.error(f"Failed to start Kafka consumers: {e}")
+                # Continue without Kafka in non-production
+                if settings.is_production:
+                    raise
+        else:
+            logger.info("Kafka consumers disabled in development mode (using InMemoryEventBus)")
+        
         self._initialized = True
         logger.info("ADAM learning components initialized (including behavioral analytics)")
+    
+    async def shutdown(self) -> None:
+        """Shutdown learning components and event bus."""
+        
+        logger.info("Shutting down ADAM learning components...")
+        
+        # Stop Kafka consumers
+        for consumer in self._kafka_consumers:
+            try:
+                await consumer.stop()
+            except Exception as e:
+                logger.error(f"Error stopping Kafka consumer: {e}")
+        
+        # Stop event bus
+        if self._event_bus:
+            try:
+                await self._event_bus.stop()
+            except Exception as e:
+                logger.error(f"Error stopping event bus: {e}")
+        
+        self._initialized = False
+        logger.info("ADAM learning components shutdown complete")
+    
+    @property
+    def event_bus(self):
+        """Get the event bus instance."""
+        return self._event_bus
     
     @property
     def cold_start(self):
@@ -599,6 +717,33 @@ async def get_metrics_exporter():
     """Get metrics exporter."""
     components = await get_learning_components()
     return components.metrics
+
+
+async def get_event_bus():
+    """
+    Get the event bus for publishing learning signals.
+    
+    The event bus enables asynchronous communication between components:
+    - InMemoryEventBus for local development
+    - KafkaEventBus for production
+    
+    Example:
+        @router.post("/decisions/{id}/outcome")
+        async def record_outcome(
+            id: str,
+            outcome: OutcomeData,
+            event_bus = Depends(get_event_bus),
+        ):
+            from adam.core.learning.event_bus import Event
+            event = Event(
+                event_type="outcome_recorded",
+                source_component="decision_api",
+                payload={"decision_id": id, **outcome.dict()},
+            )
+            await event_bus.publish(event)
+    """
+    components = await get_learning_components()
+    return components.event_bus
 
 
 # =============================================================================

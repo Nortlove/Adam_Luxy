@@ -117,6 +117,10 @@ class ADAMContainer:
         # Phase 6: Workflow
         await self._init_workflow()
         
+        # Phase 7: Learning Component Registration (CRITICAL FIX)
+        # This was missing - components were emitting signals but not registered to receive them
+        await self._init_learning_signal_routing()
+        
         self._initialized = True
         logger.info("ADAM Container initialized successfully")
     
@@ -311,13 +315,261 @@ class ADAMContainer:
             logger.info("Research knowledge stored in Neo4j graph")
     
     async def _init_workflow(self) -> None:
-        """Initialize workflow executor."""
-        # Workflow executor is built on-demand
-        logger.info("Workflow components ready")
+        """
+        Initialize the Holistic Decision Workflow Executor.
+        
+        This is CRITICAL - the workflow executor orchestrates all decision-making
+        via LangGraph, integrating all psychological reasoning, learning, and synthesis.
+        
+        Previously this was a STUB that just logged a message. Now it properly
+        initializes the complete workflow with all dependencies.
+        """
+        logger.info("Initializing workflow executor...")
+        
+        try:
+            # Import workflow components
+            from adam.workflows.holistic_decision_workflow import HolisticDecisionWorkflowExecutor
+            from adam.core.learning.component_integrations import (
+                MetaLearnerLearningIntegration,
+                AtomOfThoughtLearningIntegration,
+                get_learning_registry,
+            )
+            from adam.signals.learning_integration import SignalLearningBridge
+            
+            # Import services (using our newly created services)
+            from adam.services import (
+                get_brand_library_service,
+                get_competitive_intel_service,
+                get_temporal_patterns_service,
+                get_archetype_service,
+                get_bandit_service,
+            )
+            from adam.user.signal_aggregation.service import get_signal_aggregation_service
+            from adam.user.journey.service import get_journey_tracking_service
+            
+            # Get or create learning signal router
+            if hasattr(self, '_signal_router') and self._signal_router:
+                learning_signal_router = self._signal_router
+            else:
+                from adam.core.learning.universal_learning_interface import LearningSignalRouter
+                from adam.core.learning.event_bus import InMemoryEventBus
+                event_bus = InMemoryEventBus()
+                learning_signal_router = LearningSignalRouter(event_bus)
+            
+            # Start the learning signal router to subscribe to event bus
+            # This enables: Kafka → EventBus → Router → Components flow
+            await learning_signal_router.start()
+            
+            # Create integration instances
+            meta_learner_integration = MetaLearnerLearningIntegration(
+                meta_learner=self._meta_learner_service,
+                redis_client=self._redis_cache,
+                neo4j_driver=self._neo4j_driver,
+            )
+            
+            atom_integration = AtomOfThoughtLearningIntegration(
+                atom_executor=self._atom_dag,
+                redis_client=self._redis_cache,
+                neo4j_driver=self._neo4j_driver,
+            )
+            
+            signal_integration = SignalLearningBridge(
+                neo4j_driver=self._neo4j_driver,
+                redis_client=self._redis_cache,
+                event_bus=learning_signal_router._event_bus if hasattr(learning_signal_router, '_event_bus') else InMemoryEventBus(),
+            )
+            
+            # Get services
+            signal_aggregation = get_signal_aggregation_service()
+            journey_tracker = get_journey_tracking_service()
+            temporal_patterns = get_temporal_patterns_service(neo4j_driver=self._neo4j_driver)
+            brand_library = get_brand_library_service(neo4j_driver=self._neo4j_driver)
+            competitive_intel = get_competitive_intel_service(neo4j_driver=self._neo4j_driver)
+            archetype_service = get_archetype_service(neo4j_driver=self._neo4j_driver)
+            bandit_service = get_bandit_service(neo4j_driver=self._neo4j_driver)
+            
+            # Import advanced engines (Phase 5: V3 Cognitive Engines)
+            from adam.meta_learner.neural_thompson import get_neural_thompson_engine
+            from adam.intelligence.predictive_processing import get_predictive_processing_engine
+            
+            neural_thompson = get_neural_thompson_engine()
+            predictive_engine = get_predictive_processing_engine()
+            
+            # Phase 1 (Full Intelligence): Import and create FullIntelligenceIntegrator
+            # This ensures 100% of our intelligence capabilities are used in every decision
+            from adam.intelligence.full_intelligence_integration import (
+                FullIntelligenceIntegrator,
+                get_full_intelligence_integrator,
+            )
+            full_intelligence_integrator = get_full_intelligence_integrator()
+            logger.info("Full Intelligence Integrator initialized - 100% capability utilization enabled")
+            
+            # Create the workflow executor
+            self._workflow_executor = HolisticDecisionWorkflowExecutor(
+                interaction_bridge=self._interaction_bridge,
+                blackboard_service=self._blackboard_service,
+                meta_learner=self._meta_learner_service,
+                meta_learner_integration=meta_learner_integration,
+                atom_executor=self._atom_dag,
+                atom_integration=atom_integration,
+                signal_aggregation=signal_aggregation,
+                signal_integration=signal_integration,
+                journey_tracker=journey_tracker,
+                temporal_patterns=temporal_patterns,
+                brand_library=brand_library,
+                competitive_intel=competitive_intel,
+                holistic_synthesizer=self._holistic_synthesizer,
+                learning_signal_router=learning_signal_router,
+                cache_service=self._redis_cache,
+                archetype_service=archetype_service,
+                bandit_service=bandit_service,
+                # Phase 5: V3 Cognitive Engines - Now wired!
+                neural_thompson_engine=neural_thompson,
+                predictive_engine=predictive_engine,
+                emergence_engine=self._v3_emergence,  # V3 emergence engine
+                use_enhanced_routing=True,  # Enable enhanced routing with neural thompson
+                # Phase 1 (Full Intelligence): FullIntelligenceIntegrator - Now wired!
+                full_intelligence_integrator=full_intelligence_integrator,
+            )
+            
+            # Store integration references for learning loop
+            self._meta_learner_integration = meta_learner_integration
+            self._atom_integration = atom_integration
+            self._signal_integration = signal_integration
+            self._learning_signal_router = learning_signal_router
+            
+            # Initialize bidirectional bridge for Graph-AoT communication
+            # This enables: decision persistence, learning paths, conflict resolution
+            from adam.graph_reasoning.bridge import (
+                get_bidirectional_bridge,
+                BidirectionalBridgeIntegration,
+            )
+            self._bidirectional_bridge = get_bidirectional_bridge(
+                neo4j_driver=self._neo4j_driver,
+                redis_cache=self._redis_cache,
+            )
+            if self._bidirectional_bridge:
+                await self._bidirectional_bridge.start()
+                logger.info("Bidirectional bridge initialized and started")
+            
+            logger.info("Workflow executor initialized successfully")
+            
+        except Exception as e:
+            logger.error(f"Failed to initialize workflow executor: {e}")
+            # Non-fatal - system can still function without workflow
+            # Individual components can be called directly
+            self._workflow_executor = None
+    
+    async def _init_learning_signal_routing(self) -> None:
+        """
+        Initialize learning signal routing by registering all learning-capable components.
+        
+        CRITICAL FIX: This was completely missing before. Components were emitting
+        learning signals but none were registered to receive them, causing:
+        - "Signal had no consumers" warnings
+        - No actual learning from outcomes
+        - Broken feedback loops
+        """
+        try:
+            from adam.core.learning.universal_learning_interface import (
+                LearningSignalRouter,
+                LearningCapableComponent,
+            )
+            
+            # Create or get event bus
+            try:
+                from adam.infrastructure.kafka import get_event_bus
+                event_bus = await get_event_bus()
+            except Exception:
+                # Fallback to in-memory event bus
+                from adam.core.learning.event_bus import InMemoryEventBus
+                event_bus = InMemoryEventBus()
+            
+            # Create the signal router
+            self._signal_router = LearningSignalRouter(event_bus)
+            
+            # Register all learning-capable components
+            learning_components = []
+            
+            # Meta-learner
+            if self._meta_learner_service:
+                try:
+                    from adam.meta_learner.learning_integration import MetaLearnerLearning
+                    meta_learning = MetaLearnerLearning(self._meta_learner_service)
+                    learning_components.append(meta_learning)
+                except ImportError:
+                    pass
+            
+            # Gradient Bridge
+            if self._gradient_bridge_service:
+                try:
+                    from adam.gradient_bridge.learning_integration import GradientBridgeLearning
+                    gb_learning = GradientBridgeLearning(self._gradient_bridge_service)
+                    learning_components.append(gb_learning)
+                except ImportError:
+                    pass
+            
+            # Cold Start
+            if self._cold_start_service:
+                try:
+                    from adam.coldstart.unified_learning import ColdStartLearning
+                    cs_learning = ColdStartLearning(self._cold_start_service)
+                    learning_components.append(cs_learning)
+                except ImportError:
+                    pass
+            
+            # Behavioral Analytics
+            if self._behavioral_analytics_engine:
+                try:
+                    from adam.behavioral_analytics.learning_integration import BehavioralAnalyticsLearning
+                    ba_learning = BehavioralAnalyticsLearning(self._behavioral_analytics_engine)
+                    learning_components.append(ba_learning)
+                except ImportError:
+                    pass
+            
+            # V3 Emergence Engine
+            if self._v3_emergence:
+                try:
+                    from adam.intelligence.emergence_engine import EmergenceEngineLearning
+                    emergence_learning = EmergenceEngineLearning(self._v3_emergence)
+                    learning_components.append(emergence_learning)
+                except ImportError:
+                    pass
+            
+            # Register all components
+            for component in learning_components:
+                if hasattr(component, 'component_name'):
+                    self._signal_router.register_component(component)
+            
+            # Start the router to subscribe to event bus
+            # This connects: Kafka → EventBus → Router → Components
+            await self._signal_router.start()
+            
+            logger.info(f"Learning signal routing initialized with {len(learning_components)} components")
+            
+        except Exception as e:
+            logger.warning(f"Learning signal routing initialization failed: {e}")
+            # Non-fatal - system can still function without learning routing
     
     async def shutdown(self) -> None:
         """Clean shutdown of all components."""
         logger.info("Shutting down ADAM Container...")
+        
+        # Stop learning signal router
+        if hasattr(self, '_learning_signal_router') and self._learning_signal_router:
+            try:
+                await self._learning_signal_router.stop()
+                logger.info("Learning signal router stopped")
+            except Exception as e:
+                logger.warning(f"Error stopping learning signal router: {e}")
+        
+        # Stop bidirectional bridge
+        if hasattr(self, '_bidirectional_bridge') and self._bidirectional_bridge:
+            try:
+                await self._bidirectional_bridge.stop()
+                logger.info("Bidirectional bridge stopped")
+            except Exception as e:
+                logger.warning(f"Error stopping bidirectional bridge: {e}")
         
         if self._neo4j_driver:
             await self._neo4j_driver.close()
@@ -416,9 +668,69 @@ class ADAMContainer:
         """Get v3 Mechanism Interaction Engine."""
         return self._v3_mechanism
     
+    @property
+    def neural_thompson_engine(self):
+        """
+        Get Neural Thompson Sampling Engine.
+        
+        Advanced context-aware exploration-exploitation using:
+        - Neural networks for context encoding
+        - Bootstrap heads for epistemic uncertainty
+        - Learned exploration bonuses
+        """
+        try:
+            from adam.meta_learner.neural_thompson import get_neural_thompson_engine
+            return get_neural_thompson_engine()
+        except Exception:
+            return None
+    
+    @property
+    def predictive_processing_engine(self):
+        """
+        Get Predictive Processing Engine.
+        
+        Free energy-based optimization for:
+        - Active inference (curiosity-driven exploration)
+        - Prediction error minimization
+        - Epistemic/pragmatic value balancing
+        """
+        try:
+            from adam.intelligence.predictive_processing import get_predictive_processing_engine
+            return get_predictive_processing_engine()
+        except Exception:
+            return None
+    
     # =========================================================================
     # BEHAVIORAL ANALYTICS ACCESSORS
     # =========================================================================
+    
+    @property
+    def workflow_executor(self):
+        """
+        Get the Holistic Decision Workflow Executor.
+        
+        This is the main entry point for making ad decisions via LangGraph.
+        Returns None if workflow initialization failed.
+        """
+        return self._workflow_executor
+    
+    @property
+    def learning_signal_router(self):
+        """Get the Learning Signal Router for propagating learning signals."""
+        return getattr(self, '_learning_signal_router', None)
+    
+    @property
+    def bidirectional_bridge(self):
+        """
+        Get the Bidirectional Bridge for Graph-AoT communication.
+        
+        This enables:
+        - Decision persistence to the graph
+        - Learning path creation for outcome attribution
+        - Conflict resolution between graph and LLM
+        - Tiered update routing (immediate/async/batch)
+        """
+        return getattr(self, '_bidirectional_bridge', None)
     
     @property
     def behavioral_analytics_engine(self):

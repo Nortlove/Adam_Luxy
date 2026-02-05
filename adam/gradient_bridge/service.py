@@ -48,6 +48,17 @@ from adam.graph_reasoning.bridge import InteractionBridge
 from adam.infrastructure.redis import ADAMRedisCache, CacheKeyBuilder
 from adam.infrastructure.kafka import get_kafka_producer, ADAMTopics
 from adam.infrastructure.prometheus import get_metrics
+
+# Import helpful vote weighting for proper learning signal weighting
+try:
+    from adam.intelligence.helpful_vote_weighting import (
+        get_helpful_vote_weighter,
+        HelpfulVoteWeighter,
+    )
+    HELPFUL_VOTE_WEIGHTING_AVAILABLE = True
+except ImportError:
+    HELPFUL_VOTE_WEIGHTING_AVAILABLE = False
+    get_helpful_vote_weighter = None
 from adam.intelligence.graph_edge_service import (
     get_graph_edge_service,
     GraphEdgeService,
@@ -152,6 +163,19 @@ class GradientBridgeService:
             decision_id=decision_id,
             outcome_type=outcome_type.value,
             outcome_value=outcome_value,
+        )
+        
+        # Step 5c: Update brand-archetype effectiveness (NEW - Brand Personality Integration)
+        await self._update_brand_learning(
+            atom_outputs=atom_outputs or {},
+            outcome_value=outcome_value,
+        )
+        
+        # Step 5d: Update relationship-mechanism effectiveness (Consumer-Brand Relationship Integration)
+        await self._update_relationship_learning(
+            atom_outputs=atom_outputs or {},
+            outcome_value=outcome_value,
+            mechanism_used=mechanism_used,
         )
         
         # Step 6: Cache attribution
@@ -309,7 +333,40 @@ class GradientBridgeService:
         return package
     
     async def _propagate_signals(self, package: SignalPackage) -> None:
-        """Propagate signals via Kafka."""
+        """
+        Propagate signals via Kafka AND Unified Learning Hub.
+        
+        BELT & SUSPENDERS: Signals go to both:
+        1. Kafka (for async consumers)
+        2. UnifiedLearningHub (for guaranteed direct delivery)
+        
+        This ensures learning happens even if Kafka is slow or unavailable.
+        """
+        # 1. Send to Unified Learning Hub (guaranteed delivery)
+        try:
+            from adam.core.learning.unified_learning_hub import (
+                get_unified_learning_hub,
+                UnifiedLearningSignal,
+            )
+            hub = get_unified_learning_hub()
+            
+            for signal in package.signals:
+                unified_signal = UnifiedLearningSignal.from_old_signal(signal)
+                
+                # Add extra context
+                unified_signal.mechanism = signal.payload.get("mechanism") or signal.payload.get("mechanism_id")
+                unified_signal.user_id = signal.user_id or package.user_id
+                unified_signal.decision_id = signal.decision_id or package.decision_id
+                
+                await hub.process_signal(unified_signal)
+                
+            logger.debug(f"Routed {len(package.signals)} signals through UnifiedLearningHub")
+        except ImportError:
+            logger.debug("UnifiedLearningHub not available")
+        except Exception as e:
+            logger.warning(f"UnifiedLearningHub routing failed: {e}")
+        
+        # 2. Send to Kafka (async consumers)
         try:
             producer = await get_kafka_producer()
             if producer:
@@ -325,7 +382,7 @@ class GradientBridgeService:
                 
                 package.fully_processed = True
         except Exception as e:
-            logger.error(f"Failed to propagate signals: {e}")
+            logger.error(f"Failed to propagate signals via Kafka: {e}")
     
     async def _update_graph(self, attribution: OutcomeAttribution) -> None:
         """Update Neo4j graph with outcome data."""
@@ -344,6 +401,232 @@ class GradientBridgeService:
             attribution,
             ttl=86400,  # 24 hours
         )
+    
+    async def _update_brand_learning(
+        self,
+        atom_outputs: Dict[str, Any],
+        outcome_value: float,
+    ) -> None:
+        """
+        Update brand-archetype effectiveness from outcome.
+        
+        NEW: Brand Personality Integration
+        
+        This updates:
+        1. Thompson Sampling brand-archetype posteriors
+        2. Neo4j brand-archetype effectiveness edges
+        
+        Enables learning which brand personalities work best with which
+        consumer archetypes over time.
+        """
+        try:
+            # Extract brand and archetype from atom outputs
+            brand_output = atom_outputs.get("atom_brand_personality")
+            personality_output = atom_outputs.get("atom_personality_expression")
+            
+            brand_id = None
+            user_archetype = None
+            
+            # Get brand_id from brand personality atom
+            if brand_output:
+                if isinstance(brand_output, dict):
+                    secondary = brand_output.get("secondary_assessments", {})
+                    brand_id = secondary.get("brand_id")
+                elif hasattr(brand_output, "secondary_assessments"):
+                    brand_id = brand_output.secondary_assessments.get("brand_id")
+            
+            # Get user archetype from personality expression atom
+            if personality_output:
+                if isinstance(personality_output, dict):
+                    secondary = personality_output.get("secondary_assessments", {})
+                    user_archetype = secondary.get("archetype")
+                elif hasattr(personality_output, "secondary_assessments"):
+                    user_archetype = personality_output.secondary_assessments.get("archetype")
+            
+            if not brand_id or not user_archetype:
+                logger.debug("No brand_id or user_archetype for brand learning")
+                return
+            
+            # Convert outcome to success (binary or continuous)
+            success = outcome_value >= 0.5
+            
+            # 1. Update Thompson Sampling posteriors
+            try:
+                from adam.cold_start.thompson.sampler import get_thompson_sampler
+                from adam.cold_start.models.enums import ArchetypeID
+                
+                sampler = get_thompson_sampler()
+                
+                # Map string archetype to enum
+                try:
+                    archetype_enum = ArchetypeID(user_archetype.upper())
+                except ValueError:
+                    archetype_enum = ArchetypeID.ACHIEVER  # Default
+                
+                sampler.update_brand_archetype_posterior(
+                    brand_id=brand_id,
+                    archetype=archetype_enum,
+                    success=success,
+                )
+                
+                logger.debug(
+                    f"Updated Thompson Sampling brand posterior: "
+                    f"{brand_id} + {user_archetype} = {'success' if success else 'failure'}"
+                )
+                
+            except ImportError:
+                logger.debug("Thompson Sampler not available for brand learning")
+            except Exception as e:
+                logger.warning(f"Failed to update Thompson Sampling brand posterior: {e}")
+            
+            # 2. Update Neo4j brand-archetype effectiveness
+            try:
+                from adam.intelligence.knowledge_graph.brand_graph_builder import (
+                    get_brand_graph_builder,
+                )
+                
+                driver = self.bridge.neo4j_driver if hasattr(self.bridge, 'neo4j_driver') else None
+                if driver:
+                    builder = await get_brand_graph_builder(driver)
+                    await builder.update_brand_archetype_effectiveness(
+                        brand_id=brand_id,
+                        archetype_name=user_archetype,
+                        success=float(success),
+                    )
+                    
+                    logger.debug(
+                        f"Updated Neo4j brand-archetype effectiveness: "
+                        f"{brand_id} + {user_archetype}"
+                    )
+                    
+            except ImportError:
+                logger.debug("Brand graph builder not available")
+            except Exception as e:
+                logger.warning(f"Failed to update Neo4j brand effectiveness: {e}")
+            
+        except Exception as e:
+            logger.error(f"Brand learning update failed: {e}")
+    
+    async def _update_relationship_learning(
+        self,
+        atom_outputs: Dict[str, Any],
+        outcome_value: float,
+        mechanism_used: Optional[str] = None,
+    ) -> None:
+        """
+        Update relationship-mechanism effectiveness from outcome.
+        
+        NEW: Consumer-Brand Relationship Integration
+        
+        This updates:
+        1. Thompson Sampling relationship-mechanism posteriors
+        2. Neo4j relationship-mechanism effectiveness edges
+        
+        Enables learning which psychological mechanisms work best with which
+        consumer-brand relationship types over time.
+        """
+        try:
+            # Extract relationship type and mechanism from atom outputs
+            relationship_output = atom_outputs.get("atom_relationship_intelligence")
+            
+            relationship_type = None
+            
+            # Get relationship_type from relationship intelligence atom
+            if relationship_output:
+                if isinstance(relationship_output, dict):
+                    secondary = relationship_output.get("secondary_assessments", {})
+                    relationship_type = secondary.get("primary_relationship_type")
+                    if not relationship_type:
+                        # Also check inferred_states
+                        inferred = relationship_output.get("inferred_states", {})
+                        relationship_type = inferred.get("relationship_type")
+                elif hasattr(relationship_output, "secondary_assessments"):
+                    relationship_type = relationship_output.secondary_assessments.get("primary_relationship_type")
+                    if not relationship_type and hasattr(relationship_output, "inferred_states"):
+                        relationship_type = relationship_output.inferred_states.get("relationship_type")
+            
+            if not relationship_type:
+                logger.debug("No relationship_type for relationship learning")
+                return
+            
+            # Convert outcome to success (binary or continuous)
+            success = outcome_value >= 0.5
+            
+            # 1. Update Thompson Sampling relationship-mechanism posteriors
+            if mechanism_used:
+                try:
+                    from adam.cold_start.thompson.sampler import get_thompson_sampler
+                    from adam.cold_start.models.enums import CognitiveMechanism
+                    
+                    sampler = get_thompson_sampler()
+                    
+                    # Try to map mechanism string to enum
+                    try:
+                        mechanism_enum = CognitiveMechanism(mechanism_used.lower())
+                    except ValueError:
+                        # Try with uppercase
+                        try:
+                            mechanism_enum = CognitiveMechanism[mechanism_used.upper()]
+                        except KeyError:
+                            logger.debug(f"Unknown mechanism {mechanism_used} for relationship learning")
+                            mechanism_enum = None
+                    
+                    if mechanism_enum:
+                        sampler.update_relationship_mechanism_posterior(
+                            relationship_type=relationship_type,
+                            mechanism=mechanism_enum,
+                            success=success,
+                        )
+                        
+                        logger.debug(
+                            f"Updated Thompson Sampling relationship-mechanism posterior: "
+                            f"{relationship_type} + {mechanism_used} = {'success' if success else 'failure'}"
+                        )
+                    
+                except ImportError:
+                    logger.debug("Thompson Sampler not available for relationship learning")
+                except Exception as e:
+                    logger.warning(f"Failed to update Thompson Sampling relationship posterior: {e}")
+            
+            # 2. Update Neo4j relationship-mechanism effectiveness
+            try:
+                from adam.intelligence.relationship import RelationshipGraphBuilder
+                
+                driver = self.bridge.neo4j_driver if hasattr(self.bridge, 'neo4j_driver') else None
+                if driver:
+                    builder = RelationshipGraphBuilder(driver)
+                    
+                    # Get relationship_id if available
+                    relationship_id = None
+                    if relationship_output:
+                        if isinstance(relationship_output, dict):
+                            relationship_id = relationship_output.get("relationship_evidence", {}).get("relationship_id")
+                        elif hasattr(relationship_output, "relationship_evidence") and relationship_output.relationship_evidence:
+                            relationship_id = relationship_output.relationship_evidence.relationship_id
+                    
+                    # Record outcome for learning
+                    if relationship_id:
+                        await builder.record_outcome(
+                            relationship_id=relationship_id,
+                            ad_id=f"ad_{datetime.now(timezone.utc).isoformat()}",  # Placeholder
+                            success=success,
+                            engagement_score=outcome_value,
+                            conversion=outcome_value >= 0.7,
+                            mechanism=mechanism_used,
+                        )
+                        
+                        logger.debug(
+                            f"Updated Neo4j relationship-mechanism effectiveness: "
+                            f"{relationship_type} + {mechanism_used}"
+                        )
+                    
+            except ImportError:
+                logger.debug("Relationship graph builder not available")
+            except Exception as e:
+                logger.warning(f"Failed to update Neo4j relationship effectiveness: {e}")
+            
+        except Exception as e:
+            logger.error(f"Relationship learning update failed: {e}")
     
     async def get_attribution(
         self,
@@ -626,6 +909,7 @@ class GradientBridgeService:
         self,
         decision_id: str,
         outcome_value: float,
+        helpful_votes: Optional[int] = None,
     ) -> Dict[str, float]:
         """
         Compute credit attribution for review intelligence contribution.
@@ -633,21 +917,30 @@ class GradientBridgeService:
         When an outcome arrives, query how much the CustomerIntelligence
         influenced the decision and allocate credit accordingly.
         
+        ENHANCED: Now includes helpful vote weighting for proper learning signal
+        amplification. Reviews with higher helpful votes contribute proportionally
+        more to learning (uncapped logarithmic weighting).
+        
         Returns:
-            Dict with 'review_intelligence_credit' and 'archetype_credit'
+            Dict with 'review_intelligence_credit', 'archetype_credit', 
+            'helpful_vote_weight', and 'weighted_credit'
         """
         if not self.bridge or not self.bridge.driver:
             return {}
         
+        # Extended query to also retrieve helpful vote information
         query = """
         MATCH (d:AdDecision {decision_id: $decision_id})
         -[r:USED_CUSTOMER_INTELLIGENCE]->(ci:CustomerIntelligence)
+        OPTIONAL MATCH (ci)-[:DERIVED_FROM]->(rev:EnhancedReview)
         RETURN 
             ci.product_id AS product_id,
             ci.dominant_archetype AS archetype,
             ci.archetype_confidence AS confidence,
             r.archetype_used AS archetype_used,
-            r.mechanism_predictions_used AS mechanism_predictions
+            r.mechanism_predictions_used AS mechanism_predictions,
+            avg(rev.helpful_vote) AS avg_helpful_votes,
+            count(rev) AS review_count
         """
         
         try:
@@ -660,21 +953,107 @@ class GradientBridgeService:
                 
                 confidence = record.get("confidence", 0.5)
                 
-                # Credit is weighted by how confident the review intelligence was
-                # and how well the outcome matched expectations
+                # Get helpful votes - from record, parameter, or default
+                avg_helpful = helpful_votes
+                if avg_helpful is None:
+                    avg_helpful = record.get("avg_helpful_votes") or 0
+                
+                # Base credit weighted by intelligence confidence
                 base_credit = outcome_value * confidence
                 
-                return {
+                # Apply helpful vote weighting if available
+                vote_weight = 1.0
+                if HELPFUL_VOTE_WEIGHTING_AVAILABLE and avg_helpful > 0:
+                    try:
+                        weighter = get_helpful_vote_weighter()
+                        vote_weight = weighter.calculate_weight(int(avg_helpful))
+                    except Exception as e:
+                        logger.debug(f"Could not apply helpful vote weighting: {e}")
+                
+                # Weighted credit amplifies learning from validated reviews
+                weighted_credit = base_credit * vote_weight
+                
+                credit_result = {
                     "review_intelligence_credit": base_credit,
                     "product_id": record.get("product_id"),
-                    "archetype_credit": base_credit * 0.3,  # Portion of credit to archetype
-                    "mechanism_credit": base_credit * 0.7,  # Portion to mechanism predictions
+                    "archetype": record.get("archetype"),
+                    "archetype_credit": weighted_credit * 0.3,  # 30% to archetype learning
+                    "mechanism_credit": weighted_credit * 0.7,  # 70% to mechanism learning
+                    "helpful_vote_weight": vote_weight,
+                    "avg_helpful_votes": avg_helpful,
+                    "review_count": record.get("review_count", 0),
+                    "weighted_credit": weighted_credit,
                 }
+                
+                # Emit learning signal for downstream consumers
+                await self._emit_review_credit_signal(decision_id, credit_result)
+                
+                return credit_result
                     
         except Exception as e:
             logger.warning(f"Failed to compute review intelligence credit: {e}")
         
         return {}
+    
+    async def _emit_review_credit_signal(
+        self,
+        decision_id: str,
+        credit_result: Dict[str, Any],
+    ) -> None:
+        """
+        Emit a learning signal when review intelligence credit is computed.
+        
+        This ensures the credit flows to all learning components:
+        - Thompson Sampling (via weighted mechanism credit)
+        - Graph updates (via archetype credit)
+        - Meta-learner (via overall weighted credit)
+        """
+        if credit_result.get("weighted_credit", 0) <= 0:
+            return
+        
+        try:
+            # Normalize weighted credit to [-1, 1] range for signal value
+            weighted_credit = credit_result.get("weighted_credit", 0)
+            signal_value = min(1.0, max(-1.0, weighted_credit))  # Clamp to valid range
+            
+            signal = LearningSignal(
+                signal_type=SignalType.CREDIT,
+                source_component=ComponentType.GRAPH,  # Gradient bridge is part of graph layer
+                target_component=ComponentType.META_LEARNER,  # Route to Thompson Sampling
+                signal_value=signal_value,
+                signal_weight=1.0,  # Raw weight stored in payload for flexible downstream processing
+                decision_id=decision_id,
+                payload={
+                    "credit_type": "review_intelligence",
+                    "base_credit": credit_result.get("review_intelligence_credit", 0),
+                    "weighted_credit": weighted_credit,
+                    "helpful_vote_weight": credit_result.get("helpful_vote_weight", 1.0),
+                    "mechanism_credit": credit_result.get("mechanism_credit", 0),
+                    "archetype_credit": credit_result.get("archetype_credit", 0),
+                    "archetype": credit_result.get("archetype"),
+                    "product_id": credit_result.get("product_id"),
+                    "review_count": credit_result.get("review_count", 0),
+                },
+                priority=SignalPriority.HIGH if credit_result.get("helpful_vote_weight", 1) > 2.0 else SignalPriority.MEDIUM,
+            )
+            
+            # Package and publish signal
+            package = SignalPackage(
+                signals=[signal],
+                source_decision_id=decision_id,
+                created_at=datetime.now(timezone.utc),
+            )
+            
+            await self._propagate_signals(package)
+            
+            logger.info(
+                f"Emitted review credit signal: decision={decision_id}, "
+                f"weighted_credit={credit_result.get('weighted_credit', 0):.3f}, "
+                f"vote_weight={credit_result.get('helpful_vote_weight', 1):.2f}"
+            )
+            
+        except Exception as e:
+            logger.debug(f"Could not emit review credit signal: {e}")
     
     async def update_review_intelligence_learning(
         self,

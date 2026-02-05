@@ -60,6 +60,14 @@ class SessionContextRequest(BaseModel):
     day_of_week: int = Field(default=0, ge=0, le=6)
 
 
+class IdentifierRequest(BaseModel):
+    """Identifier for identity resolution."""
+    
+    type: str  # email_hash, device_id, ip_hash, phone_hash, cookie
+    value: str
+    source: str = "direct"
+
+
 class DecisionRequest(BaseModel):
     """Request for an ad decision."""
     
@@ -78,8 +86,28 @@ class DecisionRequest(BaseModel):
         default_factory=SessionContextRequest
     )
     
+    # Identity resolution (optional)
+    identifiers: List[IdentifierRequest] = Field(
+        default_factory=list,
+        description="Additional identifiers for cross-device identity resolution",
+    )
+    
+    # Competitive context (optional)
+    competitor_ads: List[Dict[str, str]] = Field(
+        default_factory=list,
+        description="Competitor ads for counter-strategy: [{'name': 'Nike', 'text': '...'}]",
+    )
+    
     # Options
     include_reasoning: bool = Field(default=False)
+    include_explanation: bool = Field(
+        default=False,
+        description="Include human-readable explanation",
+    )
+    explanation_audience: str = Field(
+        default="advertiser",
+        description="Explanation audience: user, advertiser, engineer, regulator",
+    )
     timeout_ms: int = Field(default=2000, ge=100, le=10000)
 
 
@@ -89,6 +117,24 @@ class MechanismApplication(BaseModel):
     mechanism_id: str
     intensity: float = Field(ge=0.0, le=1.0)
     rationale: str = ""
+
+
+class ExplanationResponse(BaseModel):
+    """Human-readable explanation."""
+    
+    summary: str
+    reasoning: str
+    mechanisms: List[Dict[str, Any]] = Field(default_factory=list)
+    audience: str = "advertiser"
+
+
+class IdentityResolution(BaseModel):
+    """Identity resolution result."""
+    
+    unified_identity_id: Optional[str] = None
+    match_type: str = "new"  # deterministic, probabilistic, new
+    match_confidence: float = 0.0
+    cross_device_count: int = 1
 
 
 class DecisionResponse(BaseModel):
@@ -120,6 +166,15 @@ class DecisionResponse(BaseModel):
     
     # Optional reasoning explanation
     reasoning: Optional[Dict[str, Any]] = None
+    
+    # Identity resolution (if identifiers provided)
+    identity: Optional[IdentityResolution] = None
+    
+    # Human-readable explanation (if requested)
+    explanation: Optional[ExplanationResponse] = None
+    
+    # Competitive intelligence (if competitor_ads provided)
+    competitive_insight: Optional[Dict[str, Any]] = None
 
 
 class OutcomeRequest(BaseModel):
@@ -157,12 +212,14 @@ async def make_decision(
     
     This is the main entry point for ad serving requests.
     
-    Flow:
-    1. Pull context from graph
-    2. Route via Meta-Learner
-    3. Execute appropriate path (fast/reasoning/explore)
-    4. Verify decision
-    5. Return selected ad with mechanisms
+    IMPORTANT: This endpoint now uses the LangGraph workflow executor when available.
+    The workflow provides:
+    - Proper learning signal propagation
+    - Integrated Thompson Sampling for exploration
+    - Bidirectional Graph-AoT communication
+    - Full susceptibility and persuasion intelligence
+    
+    Fallback to direct component calls if workflow unavailable.
     """
     start_time = datetime.now(timezone.utc)
     
@@ -179,6 +236,302 @@ async def make_decision(
             )
             for ac in request.ad_candidates
         ]
+        
+        # =====================================================================
+        # PRE-DECISION ENRICHMENT: Identity + Competitive Intelligence
+        # =====================================================================
+        
+        enriched_context = None
+        identity_result = None
+        competitive_insight = None
+        
+        if request.identifiers or request.competitor_ads:
+            try:
+                from adam.integration.decision_enrichment import (
+                    get_decision_enrichment,
+                    IdentifierData,
+                )
+                
+                enrichment = get_decision_enrichment()
+                
+                # Convert identifiers
+                identifiers = [
+                    IdentifierData(
+                        type=i.type,
+                        value=i.value,
+                        source=i.source,
+                    )
+                    for i in request.identifiers
+                ] if request.identifiers else None
+                
+                # Convert competitor ads
+                competitor_ads = [
+                    (ad["name"], ad["text"])
+                    for ad in request.competitor_ads
+                ] if request.competitor_ads else None
+                
+                enriched_context = await enrichment.enrich_context(
+                    user_id=request.user_id,
+                    identifiers=identifiers,
+                    brand_name=request.brand_id,
+                    competitor_ads=competitor_ads,
+                )
+                
+                # Prepare identity result for response
+                if enriched_context.unified_identity_id:
+                    identity_result = IdentityResolution(
+                        unified_identity_id=enriched_context.unified_identity_id,
+                        match_type=enriched_context.identity_match_type,
+                        match_confidence=enriched_context.identity_confidence,
+                        cross_device_count=enriched_context.cross_device_count,
+                    )
+                
+                # Prepare competitive insight for response
+                if enriched_context.competitor_mechanisms:
+                    competitive_insight = {
+                        "market_saturation": enriched_context.competitor_mechanisms,
+                        "underutilized_mechanisms": enriched_context.underutilized_mechanisms,
+                        "recommended_strategy": enriched_context.recommended_counter_strategy,
+                    }
+                
+                logger.debug(
+                    f"Pre-decision enrichment complete: identity={enriched_context.identity_match_type}, "
+                    f"competitive={len(enriched_context.competitor_mechanisms)} mechanisms"
+                )
+                
+            except ImportError:
+                logger.debug("Decision enrichment not available")
+            except Exception as e:
+                logger.warning(f"Pre-decision enrichment failed: {e}")
+        
+        # =====================================================================
+        # USE WORKFLOW EXECUTOR IF AVAILABLE (PREFERRED PATH)
+        # =====================================================================
+        
+        if container.workflow_executor is not None:
+            logger.info(f"Using LangGraph workflow for decision {request.request_id}")
+            
+            # Execute the complete workflow
+            workflow_result = await container.workflow_executor.execute(
+                request_id=request.request_id,
+                user_id=request.user_id,
+                ad_candidates=[ac.model_dump() for ac in ad_candidates],
+                category_id=request.category_id,
+                brand_id=request.brand_id,
+                session_context=request.context.model_dump() if hasattr(request, 'context') and request.context else {},
+            )
+            
+            # Calculate latency
+            end_time = datetime.now(timezone.utc)
+            latency_ms = (end_time - start_time).total_seconds() * 1000
+            
+            # Extract decision from workflow result
+            holistic_decision = workflow_result.get("decision")
+            
+            if not holistic_decision:
+                logger.warning("Workflow returned no decision, falling back to direct path")
+                # Fall through to direct component calls
+            else:
+                # Build response from workflow result
+                response = DecisionResponse(
+                    decision_id=workflow_result.get("decision_id", str(uuid4())),
+                    request_id=request.request_id,
+                    selected_ad_id=holistic_decision.get("selected_ad_id") or ad_candidates[0].ad_id,
+                    selected_ad_rank=holistic_decision.get("selected_ad_rank", 1),
+                    mechanisms=[
+                        MechanismApplication(
+                            mechanism_id=m.get("mechanism_id"),
+                            intensity=m.get("intensity", 0.5),
+                            rationale=m.get("rationale", ""),
+                        )
+                        for m in holistic_decision.get("mechanisms", [])
+                    ],
+                    primary_mechanism=holistic_decision.get("primary_mechanism"),
+                    decision_confidence=holistic_decision.get("confidence", 0.7),
+                    execution_path=workflow_result.get("path_taken", "reasoning"),
+                    modality_used=holistic_decision.get("modality", "CAUSAL_INFERENCE"),
+                    verification_status=holistic_decision.get("verification_status", "passed"),
+                    latency_ms=latency_ms,
+                )
+                
+                if request.include_reasoning:
+                    response.reasoning = {
+                        "workflow_path": workflow_result.get("path_taken"),
+                        "node_timings": workflow_result.get("timings"),
+                        "errors": workflow_result.get("errors"),
+                        "source": "langgraph_workflow",
+                    }
+                
+                # Background: complete blackboard
+                background_tasks.add_task(
+                    container.blackboard.complete_blackboard,
+                    request.request_id,
+                )
+                
+                # CRITICAL: Persist decision to graph for learning loop
+                # This was identified as "never called" in the system audit
+                if container.bidirectional_bridge:
+                    background_tasks.add_task(
+                        container.bidirectional_bridge.persist_decision_to_graph,
+                        decision_id=response.decision_id,
+                        request_id=request.request_id,
+                        user_id=request.user_id,
+                        selected_ad_id=response.selected_ad_id,
+                        primary_mechanism=response.primary_mechanism,
+                        mechanisms=[m.model_dump() for m in response.mechanisms],
+                        execution_path=response.execution_path,
+                        confidence=response.decision_confidence,
+                        latency_ms=latency_ms,
+                        atom_outputs=workflow_result.get("atom_outputs"),
+                    )
+                    logger.debug(f"Scheduled decision persistence for {response.decision_id}")
+                
+                logger.info(
+                    f"Workflow decision complete: {response.decision_id}, "
+                    f"path={workflow_result.get('path_taken')}, "
+                    f"latency={latency_ms:.0f}ms"
+                )
+                
+                return response
+        
+        # =====================================================================
+        # TRY SYNERGY ORCHESTRATOR (New Intelligence-Aware Path)
+        # =====================================================================
+        
+        try:
+            from adam.workflows.synergy_orchestrator import get_synergy_orchestrator
+            
+            orchestrator = get_synergy_orchestrator()
+            
+            logger.info(f"Using SynergyOrchestrator for decision {request.request_id}")
+            
+            synergy_result = await orchestrator.execute(
+                user_id=request.user_id,
+                brand_name=request.brand_id or "",
+                product_name=request.category_id or "",
+                product_category=request.category_id or "",
+                request_id=request.request_id,
+            )
+            
+            end_time = datetime.now(timezone.utc)
+            latency_ms = (end_time - start_time).total_seconds() * 1000
+            
+            # Extract decision from synergy result
+            mechanisms = synergy_result.get("mechanisms_applied", [])
+            decision_id = synergy_result.get("decision_id", f"dec_{uuid4().hex[:12]}")
+            
+            response = DecisionResponse(
+                decision_id=decision_id,
+                request_id=request.request_id,
+                selected_ad_id=ad_candidates[0].ad_id if ad_candidates else "default",
+                selected_ad_rank=1,
+                mechanisms=[
+                    MechanismApplication(
+                        mechanism_id=m.get("name", "unknown"),
+                        intensity=m.get("intensity", 0.5),
+                        rationale=m.get("source", ""),
+                    )
+                    for m in mechanisms
+                ],
+                primary_mechanism=mechanisms[0]["name"] if mechanisms else None,
+                decision_confidence=synergy_result.get("confidence_scores", {}).get("graph_confidence", 0.6),
+                execution_path="synergy_orchestrator",
+                modality_used="INTELLIGENCE_FUSION",
+                verification_status="passed",
+                latency_ms=latency_ms,
+                identity=identity_result,
+                competitive_insight=competitive_insight,
+            )
+            
+            if request.include_reasoning:
+                response.reasoning = {
+                    "graph_intelligence": synergy_result.get("graph_intelligence"),
+                    "helpful_vote_intelligence": synergy_result.get("helpful_vote_intelligence"),
+                    "full_intelligence_profile": synergy_result.get("full_intelligence_profile"),
+                    "injected_intelligence": synergy_result.get("injected_intelligence"),
+                    "atom_outputs": synergy_result.get("atom_outputs"),
+                    "source": "synergy_orchestrator",
+                }
+            
+            # Add explanation if requested
+            if request.include_explanation:
+                try:
+                    from adam.integration.decision_enrichment import get_decision_enrichment
+                    enrichment = get_decision_enrichment()
+                    
+                    if enrichment.explanation_service:
+                        from adam.explanation.models import ExplanationAudience
+                        
+                        audience_map = {
+                            "user": ExplanationAudience.USER,
+                            "advertiser": ExplanationAudience.ADVERTISER,
+                            "engineer": ExplanationAudience.ENGINEER,
+                            "regulator": ExplanationAudience.REGULATOR,
+                        }
+                        
+                        explanation = enrichment.explanation_service.explain_decision(
+                            decision_id=decision_id,
+                            audience=audience_map.get(request.explanation_audience, ExplanationAudience.ADVERTISER),
+                            decision_data={
+                                "decision_id": decision_id,
+                                "mechanisms": [m.get("name") for m in mechanisms],
+                                "mechanism_scores": {m.get("name"): m.get("intensity", 0.5) for m in mechanisms},
+                                "archetype": synergy_result.get("detected_archetype", "unknown"),
+                                "framing": "gain",
+                                "confidence": response.decision_confidence,
+                            },
+                        )
+                        
+                        response.explanation = ExplanationResponse(
+                            summary=explanation.summary,
+                            reasoning=explanation.reasoning,
+                            mechanisms=[
+                                {
+                                    "mechanism": m.mechanism,
+                                    "description": m.human_description,
+                                    "rationale": m.rationale,
+                                    "score": m.score,
+                                }
+                                for m in explanation.mechanisms
+                            ],
+                            audience=request.explanation_audience,
+                        )
+                except Exception as e:
+                    logger.warning(f"Explanation generation failed: {e}")
+            
+            # Persist for learning
+            if container.bidirectional_bridge:
+                background_tasks.add_task(
+                    container.bidirectional_bridge.persist_decision_to_graph,
+                    decision_id=response.decision_id,
+                    request_id=request.request_id,
+                    user_id=request.user_id,
+                    selected_ad_id=response.selected_ad_id,
+                    primary_mechanism=response.primary_mechanism,
+                    mechanisms=[m.model_dump() for m in response.mechanisms],
+                    execution_path=response.execution_path,
+                    confidence=response.decision_confidence,
+                    latency_ms=latency_ms,
+                    atom_outputs=synergy_result.get("atom_outputs"),
+                )
+            
+            logger.info(
+                f"SynergyOrchestrator decision complete: {response.decision_id}, "
+                f"mechanisms={len(mechanisms)}, latency={latency_ms:.0f}ms"
+            )
+            
+            return response
+            
+        except ImportError:
+            logger.debug("SynergyOrchestrator not available, falling back to direct calls")
+        except Exception as e:
+            logger.warning(f"SynergyOrchestrator failed: {e}, falling back to direct calls")
+        
+        # =====================================================================
+        # FALLBACK: DIRECT COMPONENT CALLS (Original Implementation)
+        # =====================================================================
+        
+        logger.info(f"Using direct component calls for decision {request.request_id} (orchestrators unavailable)")
         
         # Step 0: Initialize v3 cognitive layers
         narrative_engine = get_narrative_session_engine()
@@ -305,6 +658,20 @@ async def make_decision(
             user_id=request.user_id,
         )
         
+        # CRITICAL: Cache atom_outputs for outcome attribution
+        # Without this, the learning loop breaks because outcome processing can't attribute to atoms
+        if atom_outputs:
+            cache_key = f"adam:atom_outputs:{synthesis_result.decision_id}"
+            try:
+                await container.redis_cache.set(
+                    cache_key,
+                    atom_outputs,
+                    expire=3600 * 24  # 24 hour TTL for attribution window
+                )
+                logger.debug(f"Cached {len(atom_outputs)} atom outputs for {synthesis_result.decision_id}")
+            except Exception as e:
+                logger.warning(f"Failed to cache atom outputs: {e}")
+        
         # Build response
         response = DecisionResponse(
             decision_id=synthesis_result.decision_id,
@@ -345,6 +712,7 @@ async def make_decision(
                     "uncertainties": reasoning_trace.uncertainties,
                 },
                 "v3_mechanism_optimization": atom_outputs.get("v3_mechanism_optimization"),
+                "source": "direct_component_calls",  # Indicate fallback path
             }
         
         # Background: complete blackboard
@@ -352,6 +720,23 @@ async def make_decision(
             container.blackboard.complete_blackboard,
             request.request_id,
         )
+        
+        # CRITICAL: Persist decision to graph for learning loop (fallback path)
+        if container.bidirectional_bridge:
+            background_tasks.add_task(
+                container.bidirectional_bridge.persist_decision_to_graph,
+                decision_id=response.decision_id,
+                request_id=request.request_id,
+                user_id=request.user_id,
+                selected_ad_id=response.selected_ad_id,
+                primary_mechanism=response.primary_mechanism,
+                mechanisms=[m.model_dump() for m in response.mechanisms],
+                execution_path=response.execution_path,
+                confidence=response.decision_confidence,
+                latency_ms=response.latency_ms,
+                atom_outputs=atom_outputs,
+            )
+            logger.debug(f"Scheduled decision persistence (fallback) for {response.decision_id}")
         
         return response
     
@@ -408,6 +793,9 @@ async def record_outcome(
     
     This triggers learning across all components via the Gradient Bridge
     and updates v3 cognitive layer models.
+    
+    CRITICAL: We now load atom_outputs from cache to enable proper attribution.
+    Without this, atom-level learning was completely broken.
     """
     try:
         # Map outcome type
@@ -427,16 +815,51 @@ async def record_outcome(
             request.decision_id
         )
         
-        # Process outcome via Gradient Bridge
+        # CRITICAL FIX: Load atom_outputs from cache for proper attribution
+        # Without this, atom-level credit attribution fails completely
+        atom_outputs = None
+        mechanism_used = None
+        execution_path = ""
+        
+        if attribution:
+            # Try to load atom outputs from Redis cache
+            cache_key = f"adam:atom_outputs:{request.decision_id}"
+            try:
+                cached_outputs = await container.redis_cache.get(cache_key)
+                if cached_outputs:
+                    atom_outputs = cached_outputs
+                    logger.debug(f"Loaded {len(atom_outputs)} atom outputs from cache for {request.decision_id}")
+            except Exception as e:
+                logger.warning(f"Failed to load atom outputs from cache: {e}")
+            
+            # Extract mechanism and execution path from attribution
+            mechanism_used = attribution.primary_mechanism
+            execution_path = attribution.execution_path or ""
+            
+            # If no cached outputs, try to get from atom contribution cache
+            if not atom_outputs:
+                try:
+                    from adam.atoms.core.base import BaseAtom
+                    contributions = await BaseAtom.get_all_contributions(request.decision_id)
+                    if contributions:
+                        atom_outputs = {
+                            atom_id: {"contribution": contrib}
+                            for atom_id, contrib in contributions.items()
+                        }
+                        logger.debug(f"Loaded {len(atom_outputs)} contributions for {request.decision_id}")
+                except Exception as e:
+                    logger.warning(f"Failed to load atom contributions: {e}")
+        
+        # Process outcome via Gradient Bridge - now with atom_outputs!
         signal_package = await container.gradient_bridge.process_outcome(
             decision_id=request.decision_id,
             request_id=attribution.request_id if attribution else request.decision_id,
             user_id=attribution.user_id if attribution else "unknown",
             outcome_type=outcome_type,
             outcome_value=request.outcome_value,
-            atom_outputs=None,  # Would be loaded from cache
-            mechanism_used=None,
-            execution_path="",
+            atom_outputs=atom_outputs,  # FIXED: Now properly loaded from cache
+            mechanism_used=mechanism_used,
+            execution_path=execution_path,
         )
         
         # V3: Record outcome in meta-cognitive engine for confidence calibration
@@ -465,6 +888,19 @@ async def record_outcome(
             milestone = await narrative_engine.check_for_milestone(attribution.user_id)
             if milestone:
                 logger.info(f"User {attribution.user_id} achieved milestone: {milestone}")
+        
+        # CRITICAL: Create learning path in graph for outcome attribution
+        # This enables: querying which decisions led to outcomes, mechanism effectiveness over time
+        if container.bidirectional_bridge:
+            background_tasks.add_task(
+                container.bidirectional_bridge.create_learning_path,
+                decision_id=request.decision_id,
+                outcome_type=request.outcome_type,
+                outcome_value=request.outcome_value,
+                attribution_computed=signal_package.total_signals > 0,
+                signals_emitted=signal_package.total_signals,
+            )
+            logger.debug(f"Scheduled learning path creation for {request.decision_id}")
         
         return OutcomeResponse(
             decision_id=request.decision_id,

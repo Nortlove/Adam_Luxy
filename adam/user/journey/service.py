@@ -290,3 +290,20 @@ class JourneyTrackingService:
                 distribution[journey.current_state.stage.value] += 1
         
         return distribution
+
+
+# =============================================================================
+# SINGLETON
+# =============================================================================
+
+_service: Optional["JourneyTrackingService"] = None
+
+
+def get_journey_tracking_service() -> "JourneyTrackingService":
+    """Get or create the journey tracking service singleton."""
+    global _service
+    
+    if _service is None:
+        _service = JourneyTrackingService()
+    
+    return _service

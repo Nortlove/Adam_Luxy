@@ -144,6 +144,15 @@ class WorkflowState(TypedDict):
     brand_voice: Optional[Dict[str, Any]]
     
     # =========================================================================
+    # BRAND PERSONALITY CONTEXT (NEW - Brand-as-Person Integration)
+    # =========================================================================
+    brand_personality_profile: Optional[Dict[str, Any]]  # Full BrandPersonalityProfile
+    brand_archetype: Optional[str]  # Brand's Jung/Mark archetype
+    brand_aaker_dimensions: Optional[Dict[str, float]]  # Aaker brand personality
+    brand_relationship_role: Optional[str]  # How brand relates to consumer
+    brand_voice_characteristics: Optional[Dict[str, float]]  # Voice formality, energy, etc.
+    
+    # =========================================================================
     # COMPETITIVE CONTEXT (from #22)
     # =========================================================================
     competitive_landscape: Optional[Dict[str, Any]]
@@ -667,18 +676,96 @@ async def get_brand_context(
 ) -> WorkflowState:
     """
     Get brand context (#14).
+    
+    Enhanced with Brand-as-Person integration - pulls full brand personality
+    profile from Neo4j including:
+    - Brand archetype (Jung/Mark)
+    - Aaker brand personality dimensions
+    - Brand-consumer relationship role
+    - Brand voice characteristics
     """
     
     start = datetime.now(timezone.utc)
     
     try:
-        if state.get("brand_id"):
-            brand = await brand_library.get_brand(state["brand_id"])
+        brand_id = state.get("brand_id")
+        
+        if brand_id:
+            # Get legacy brand constraints/voice
+            brand = await brand_library.get_brand(brand_id)
             state["brand_constraints"] = brand.constraints if brand else []
             state["brand_voice"] = brand.voice if brand else None
+            
+            # =====================================================================
+            # BRAND PERSONALITY PROFILE (NEW - Brand-as-Person Integration)
+            # =====================================================================
+            try:
+                from adam.intelligence.knowledge_graph.brand_graph_builder import (
+                    get_brand_graph_builder,
+                )
+                # Get Neo4j driver from brand_library or create new connection
+                driver = getattr(brand_library, 'driver', None)
+                if driver:
+                    builder = await get_brand_graph_builder(driver)
+                    profile_data = await builder.get_brand_profile(brand_id)
+                    
+                    if profile_data:
+                        state["brand_personality_profile"] = profile_data
+                        state["brand_archetype"] = profile_data.get("brand_archetype")
+                        state["brand_aaker_dimensions"] = {
+                            "sincerity": profile_data.get("aaker_sincerity", 0.5),
+                            "excitement": profile_data.get("aaker_excitement", 0.5),
+                            "competence": profile_data.get("aaker_competence", 0.5),
+                            "sophistication": profile_data.get("aaker_sophistication", 0.5),
+                            "ruggedness": profile_data.get("aaker_ruggedness", 0.5),
+                        }
+                        state["brand_relationship_role"] = profile_data.get("relationship_role")
+                        state["brand_voice_characteristics"] = {
+                            "formality": profile_data.get("voice_formality", 0.5),
+                            "energy": profile_data.get("voice_energy", 0.5),
+                            "humor": profile_data.get("voice_humor", 0.3),
+                            "directness": profile_data.get("voice_directness", 0.5),
+                        }
+                        logger.debug(
+                            f"Loaded brand personality for {brand_id}: "
+                            f"archetype={state['brand_archetype']}"
+                        )
+                    else:
+                        state["brand_personality_profile"] = None
+                        state["brand_archetype"] = None
+                        state["brand_aaker_dimensions"] = None
+                        state["brand_relationship_role"] = None
+                        state["brand_voice_characteristics"] = None
+                else:
+                    logger.debug("No Neo4j driver available for brand personality")
+                    state["brand_personality_profile"] = None
+                    state["brand_archetype"] = None
+                    state["brand_aaker_dimensions"] = None
+                    state["brand_relationship_role"] = None
+                    state["brand_voice_characteristics"] = None
+                    
+            except ImportError:
+                logger.debug("Brand graph builder not available")
+                state["brand_personality_profile"] = None
+                state["brand_archetype"] = None
+                state["brand_aaker_dimensions"] = None
+                state["brand_relationship_role"] = None
+                state["brand_voice_characteristics"] = None
+            except Exception as e:
+                logger.warning(f"Could not load brand personality: {e}")
+                state["brand_personality_profile"] = None
+                state["brand_archetype"] = None
+                state["brand_aaker_dimensions"] = None
+                state["brand_relationship_role"] = None
+                state["brand_voice_characteristics"] = None
         else:
             state["brand_constraints"] = []
             state["brand_voice"] = None
+            state["brand_personality_profile"] = None
+            state["brand_archetype"] = None
+            state["brand_aaker_dimensions"] = None
+            state["brand_relationship_role"] = None
+            state["brand_voice_characteristics"] = None
             
     except Exception as e:
         logger.error(f"Error getting brand context: {e}")
@@ -1105,6 +1192,16 @@ def create_holistic_decision_workflow(
                 atom_knowledge_interface=atom_knowledge_interface)
         )
     
+    # Susceptibility Intelligence Context (Persuasion Susceptibility Analysis)
+    # This adds 13 research-backed susceptibility constructs for mechanism prediction
+    from adam.workflows.susceptibility_intelligence_node import (
+        analyze_susceptibility_intelligence,
+        create_susceptibility_intelligence_node,
+    )
+    workflow.add_node("get_susceptibility_intelligence",
+        create_async_node(analyze_susceptibility_intelligence, neo4j_driver=None)
+    )
+    
     # Phase 2: Routing
     workflow.add_node("meta_learner_routing",
         create_async_node(meta_learner_routing, 
@@ -1181,6 +1278,9 @@ def create_holistic_decision_workflow(
     if atom_knowledge_interface:
         workflow.add_edge("aggregate_signals", "get_adv_psychology")
     
+    # Susceptibility Intelligence - runs after signals, enriches mechanism predictions
+    workflow.add_edge("aggregate_signals", "get_susceptibility_intelligence")
+    
     # Determine routing node based on feature flags
     routing_node = "neural_thompson_routing" if (neural_thompson_engine and use_enhanced_routing) else "meta_learner_routing"
     
@@ -1210,6 +1310,9 @@ def create_holistic_decision_workflow(
     # Advertising psychology feeds into routing
     if atom_knowledge_interface:
         workflow.add_edge("get_adv_psychology", routing_node)
+    
+    # Susceptibility intelligence feeds into routing
+    workflow.add_edge("get_susceptibility_intelligence", routing_node)
     
     # Neural Thompson or standard Meta-Learner → Conditional path selection
     workflow.add_conditional_edges(
@@ -1253,6 +1356,10 @@ class HolisticDecisionWorkflowExecutor:
     - Neural Thompson Sampling for smarter exploration
     - Predictive Processing for curiosity-driven selection
     - Emergence Engine for novel construct discovery
+    
+    New in v3.0 (Full Intelligence Utilization):
+    - FullIntelligenceIntegrator for 100% capability usage
+    - All intelligence sources contribute to every decision
     """
     
     def __init__(
@@ -1280,6 +1387,8 @@ class HolisticDecisionWorkflowExecutor:
         predictive_engine=None,
         emergence_engine=None,
         use_enhanced_routing: bool = True,
+        # v3.0: Full Intelligence Integration
+        full_intelligence_integrator=None,
     ):
         self.workflow = create_holistic_decision_workflow(
             interaction_bridge=interaction_bridge,
@@ -1308,6 +1417,9 @@ class HolisticDecisionWorkflowExecutor:
         )
         
         self.compiled = self.workflow.compile(checkpointer=MemorySaver())
+        
+        # v3.0: Store full intelligence integrator for pre-decision intelligence gathering
+        self.full_intelligence_integrator = full_intelligence_integrator
     
     async def execute(
         self,
@@ -1317,12 +1429,40 @@ class HolisticDecisionWorkflowExecutor:
         category_id: Optional[str] = None,
         brand_id: Optional[str] = None,
         session_context: Optional[Dict[str, Any]] = None,
+        # v3.0: Additional context for full intelligence
+        brand_name: Optional[str] = None,
+        product_name: Optional[str] = None,
+        brand_description: Optional[str] = None,
+        reviews: Optional[List[Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
         """
         Execute the workflow for a single request.
         
+        v3.0: Now builds FullIntelligenceProfile before workflow execution.
+        This ensures all intelligence sources contribute to the decision.
+        
         Returns the holistic decision.
         """
+        
+        # v3.0: Build full intelligence profile if integrator is available
+        full_intelligence_profile = None
+        if self.full_intelligence_integrator and (brand_name or product_name):
+            try:
+                full_intelligence_profile = await self.full_intelligence_integrator.build_full_profile(
+                    brand_name=brand_name or "",
+                    product_name=product_name or "",
+                    category=category_id or "",
+                    brand_description=brand_description,
+                    reviews=reviews,
+                    customer_signals=session_context,
+                )
+                logger.info(
+                    f"Built full intelligence profile: "
+                    f"coverage={full_intelligence_profile.intelligence_coverage:.1%}, "
+                    f"confidence={full_intelligence_profile.overall_confidence:.2f}"
+                )
+            except Exception as e:
+                logger.warning(f"Failed to build full intelligence profile: {e}")
         
         initial_state = {
             "request_id": request_id,
@@ -1331,6 +1471,11 @@ class HolisticDecisionWorkflowExecutor:
             "category_id": category_id,
             "brand_id": brand_id,
             "session_context": session_context or {},
+            # v3.0: Include full intelligence in state
+            "full_intelligence_profile": (
+                full_intelligence_profile.to_dict() 
+                if full_intelligence_profile else None
+            ),
         }
         
         config = {"configurable": {"thread_id": request_id}}
@@ -1343,6 +1488,15 @@ class HolisticDecisionWorkflowExecutor:
             "path_taken": result.get("selected_path"),
             "timings": result.get("node_timings"),
             "errors": result.get("errors"),
+            # v3.0: Include intelligence utilization metrics
+            "intelligence_coverage": (
+                full_intelligence_profile.intelligence_coverage 
+                if full_intelligence_profile else 0.0
+            ),
+            "intelligence_confidence": (
+                full_intelligence_profile.overall_confidence
+                if full_intelligence_profile else 0.0
+            ),
         }
 
 
