@@ -19,6 +19,7 @@ The bridge ensures that:
 
 from adam.graph_reasoning.bridge.interaction_bridge import (
     InteractionBridge,
+    get_interaction_bridge,
 )
 from adam.graph_reasoning.bridge.context_queries import (
     ContextQueryExecutor,
@@ -31,6 +32,7 @@ from adam.graph_reasoning.bridge.bidirectional_integration import (
 
 __all__ = [
     "InteractionBridge",
+    "get_interaction_bridge",
     "ContextQueryExecutor",
     "BidirectionalBridgeIntegration",
     "get_bidirectional_bridge",

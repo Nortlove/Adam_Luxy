@@ -749,3 +749,46 @@ class InteractionBridge:
         return await self.query_executor.get_interactions_for_variable(
             variable=variable,
         )
+
+
+# =============================================================================
+# SINGLETON
+# =============================================================================
+
+_interaction_bridge: Optional[InteractionBridge] = None
+
+
+def get_interaction_bridge(
+    neo4j_driver=None,
+    force_new: bool = False,
+) -> InteractionBridge:
+    """
+    Get singleton InteractionBridge instance.
+    
+    Used by:
+    - dag_executor.py for atom graph access
+    - synergy_orchestrator.py for decision persistence
+    - workflow nodes for context queries
+    
+    Args:
+        neo4j_driver: Optional Neo4j driver. If not provided, creates from env.
+        force_new: If True, creates a new instance even if one exists.
+        
+    Returns:
+        InteractionBridge singleton instance
+    """
+    global _interaction_bridge
+    
+    if _interaction_bridge is None or force_new:
+        if neo4j_driver is None:
+            # Create from environment
+            from neo4j import AsyncGraphDatabase
+            import os
+            uri = os.getenv("NEO4J_URI", "bolt://127.0.0.1:7687")
+            user = os.getenv("NEO4J_USER", "neo4j")
+            password = os.getenv("NEO4J_PASSWORD", "atomofthought")
+            neo4j_driver = AsyncGraphDatabase.driver(uri, auth=(user, password))
+        
+        _interaction_bridge = InteractionBridge(driver=neo4j_driver)
+    
+    return _interaction_bridge

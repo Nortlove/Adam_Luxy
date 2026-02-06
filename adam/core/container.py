@@ -91,6 +91,9 @@ class ADAMContainer:
         
         # Cold Start Strategy
         self._cold_start_service = None
+        
+        # Review Intelligence (Cookie-less Targeting)
+        self._review_intelligence_bridge = None
     
     async def initialize(self) -> None:
         """Initialize all components in dependency order."""
@@ -430,6 +433,8 @@ class ADAMContainer:
                 use_enhanced_routing=True,  # Enable enhanced routing with neural thompson
                 # Phase 1 (Full Intelligence): FullIntelligenceIntegrator - Now wired!
                 full_intelligence_integrator=full_intelligence_integrator,
+                # CRITICAL FIX (Feb 2026): Pass Neo4j driver for graph intelligence queries
+                neo4j_driver=self._neo4j_driver,
             )
             
             # Store integration references for learning loop
@@ -462,94 +467,206 @@ class ADAMContainer:
     
     async def _init_learning_signal_routing(self) -> None:
         """
-        Initialize learning signal routing by registering all learning-capable components.
+        Initialize learning signal routing using UnifiedLearningHub.
         
-        CRITICAL FIX: This was completely missing before. Components were emitting
-        learning signals but none were registered to receive them, causing:
-        - "Signal had no consumers" warnings
-        - No actual learning from outcomes
-        - Broken feedback loops
+        SYNERGISTIC BRAIN ARCHITECTURE:
+        UnifiedLearningHub is THE SINGLE source of truth for all learning signals.
+        It consolidates signal_router.py and universal_learning_interface.py,
+        providing both signal routing AND direct updates (belt & suspenders).
+        
+        Signal Flow:
+        1. Outcomes → Gradient Bridge → UnifiedLearningHub
+        2. UnifiedLearningHub → Direct updates (Thompson, Graph, Meta-learner)
+        3. UnifiedLearningHub → Registered component handlers
+        4. Zone 5 (Blackboard) → UnifiedLearningHub for attribution context
         """
         try:
-            from adam.core.learning.universal_learning_interface import (
-                LearningSignalRouter,
-                LearningCapableComponent,
+            from adam.core.learning.unified_learning_hub import (
+                UnifiedLearningHub,
+                UnifiedSignalType,
+                get_unified_learning_hub,
             )
             
-            # Create or get event bus
-            try:
-                from adam.infrastructure.kafka import get_event_bus
-                event_bus = await get_event_bus()
-            except Exception:
-                # Fallback to in-memory event bus
-                from adam.core.learning.event_bus import InMemoryEventBus
-                event_bus = InMemoryEventBus()
+            # Get or create the singleton UnifiedLearningHub
+            self._unified_learning_hub = get_unified_learning_hub()
+            await self._unified_learning_hub.initialize()
             
-            # Create the signal router
-            self._signal_router = LearningSignalRouter(event_bus)
+            # Register all learning-capable components with the hub
+            registered_count = 0
             
-            # Register all learning-capable components
-            learning_components = []
-            
-            # Meta-learner
+            # Meta-learner - receives credit and outcome signals
             if self._meta_learner_service:
                 try:
-                    from adam.meta_learner.learning_integration import MetaLearnerLearning
-                    meta_learning = MetaLearnerLearning(self._meta_learner_service)
-                    learning_components.append(meta_learning)
-                except ImportError:
-                    pass
+                    async def meta_learner_handler(signal):
+                        if hasattr(self._meta_learner_service, 'on_learning_signal'):
+                            await self._meta_learner_service.on_learning_signal(signal)
+                    
+                    self._unified_learning_hub.register_component(
+                        name="meta_learner",
+                        handler=meta_learner_handler,
+                        signal_types={
+                            UnifiedSignalType.OUTCOME_SUCCESS,
+                            UnifiedSignalType.OUTCOME_FAILURE,
+                            UnifiedSignalType.UPDATE_META_LEARNER,
+                            UnifiedSignalType.CREDIT_COMPONENT,
+                        },
+                        priority=10,  # High priority
+                    )
+                    registered_count += 1
+                except Exception as e:
+                    logger.debug(f"Could not register meta_learner: {e}")
             
-            # Gradient Bridge
+            # Gradient Bridge - processes all outcomes for credit attribution
             if self._gradient_bridge_service:
                 try:
-                    from adam.gradient_bridge.learning_integration import GradientBridgeLearning
-                    gb_learning = GradientBridgeLearning(self._gradient_bridge_service)
-                    learning_components.append(gb_learning)
-                except ImportError:
-                    pass
+                    async def gradient_bridge_handler(signal):
+                        if hasattr(self._gradient_bridge_service, 'on_learning_signal'):
+                            await self._gradient_bridge_service.on_learning_signal(signal)
+                    
+                    self._unified_learning_hub.register_component(
+                        name="gradient_bridge",
+                        handler=gradient_bridge_handler,
+                        signal_types={
+                            UnifiedSignalType.OUTCOME_SUCCESS,
+                            UnifiedSignalType.OUTCOME_FAILURE,
+                            UnifiedSignalType.OUTCOME_ENGAGEMENT,
+                            UnifiedSignalType.CREDIT_MECHANISM,
+                            UnifiedSignalType.CREDIT_ATOM,
+                        },
+                        priority=15,  # Highest priority - does attribution
+                    )
+                    registered_count += 1
+                except Exception as e:
+                    logger.debug(f"Could not register gradient_bridge: {e}")
             
-            # Cold Start
-            if self._cold_start_service:
+            # Blackboard Zone 5 - learning zone aggregation
+            if self._blackboard_service:
                 try:
-                    from adam.coldstart.unified_learning import ColdStartLearning
-                    cs_learning = ColdStartLearning(self._cold_start_service)
-                    learning_components.append(cs_learning)
-                except ImportError:
-                    pass
+                    # Capture reference for closure
+                    blackboard_svc = self._blackboard_service
+                    
+                    async def blackboard_learning_handler(signal):
+                        # Store signal in Zone 5 for attribution context
+                        if hasattr(blackboard_svc, 'write_zone5_from_unified'):
+                            await blackboard_svc.write_zone5_from_unified(signal)
+                    
+                    self._unified_learning_hub.register_component(
+                        name="blackboard_zone5",
+                        handler=blackboard_learning_handler,
+                        signal_types={
+                            UnifiedSignalType.CREDIT_MECHANISM,
+                            UnifiedSignalType.CREDIT_ATOM,
+                            UnifiedSignalType.PATTERN_DISCOVERED,
+                            UnifiedSignalType.CONSTRUCT_EMERGED,
+                        },
+                        priority=5,  # Lower priority - for logging/tracking
+                    )
+                    registered_count += 1
+                except Exception as e:
+                    logger.debug(f"Could not register blackboard_zone5: {e}")
             
-            # Behavioral Analytics
-            if self._behavioral_analytics_engine:
-                try:
-                    from adam.behavioral_analytics.learning_integration import BehavioralAnalyticsLearning
-                    ba_learning = BehavioralAnalyticsLearning(self._behavioral_analytics_engine)
-                    learning_components.append(ba_learning)
-                except ImportError:
-                    pass
-            
-            # V3 Emergence Engine
+            # V3 Emergence Engine - receives pattern discovery signals
             if self._v3_emergence:
                 try:
-                    from adam.intelligence.emergence_engine import EmergenceEngineLearning
-                    emergence_learning = EmergenceEngineLearning(self._v3_emergence)
-                    learning_components.append(emergence_learning)
-                except ImportError:
-                    pass
+                    async def emergence_handler(signal):
+                        if hasattr(self._v3_emergence, 'on_learning_signal'):
+                            await self._v3_emergence.on_learning_signal(signal)
+                    
+                    self._unified_learning_hub.register_component(
+                        name="v3_emergence",
+                        handler=emergence_handler,
+                        signal_types={
+                            UnifiedSignalType.PATTERN_DISCOVERED,
+                            UnifiedSignalType.CONSTRUCT_EMERGED,
+                            UnifiedSignalType.CALIBRATION_NEEDED,
+                        },
+                        priority=5,
+                    )
+                    registered_count += 1
+                except Exception as e:
+                    logger.debug(f"Could not register v3_emergence: {e}")
             
-            # Register all components
-            for component in learning_components:
-                if hasattr(component, 'component_name'):
-                    self._signal_router.register_component(component)
+            # Behavioral Analytics - receives behavioral outcome signals
+            if self._behavioral_analytics_engine:
+                try:
+                    async def behavioral_handler(signal):
+                        if hasattr(self._behavioral_analytics_engine, 'on_learning_signal'):
+                            await self._behavioral_analytics_engine.on_learning_signal(signal)
+                    
+                    self._unified_learning_hub.register_component(
+                        name="behavioral_analytics",
+                        handler=behavioral_handler,
+                        signal_types={
+                            UnifiedSignalType.OUTCOME_SUCCESS,
+                            UnifiedSignalType.OUTCOME_ENGAGEMENT,
+                            UnifiedSignalType.PATTERN_DISCOVERED,
+                        },
+                        priority=3,
+                    )
+                    registered_count += 1
+                except Exception as e:
+                    logger.debug(f"Could not register behavioral_analytics: {e}")
             
-            # Start the router to subscribe to event bus
-            # This connects: Kafka → EventBus → Router → Components
-            await self._signal_router.start()
+            # Store reference to learning hub for other components
+            self._learning_signal_router = self._unified_learning_hub  # Alias for compatibility
             
-            logger.info(f"Learning signal routing initialized with {len(learning_components)} components")
+            logger.info(f"UnifiedLearningHub initialized with {registered_count} components registered")
+            
+            # Connect Review Intelligence Bridge to learning hub
+            await self._init_review_intelligence_bridge()
             
         except Exception as e:
             logger.warning(f"Learning signal routing initialization failed: {e}")
+            import traceback
+            traceback.print_exc()
             # Non-fatal - system can still function without learning routing
+    
+    async def _init_review_intelligence_bridge(self) -> None:
+        """
+        Initialize Review Intelligence Bridge and connect to learning loop.
+        
+        This enables:
+        - Cookie-less psychological targeting from review data
+        - Bidirectional learning with UnifiedLearningHub
+        - Integration with Neo4j, LangGraph, and AoT
+        """
+        try:
+            from adam.intelligence.review_intelligence.orchestrator import (
+                ReviewIntelligenceOrchestrator,
+            )
+            from adam.intelligence.review_intelligence.machine_integration import (
+                ReviewIntelligenceMachineBridge,
+            )
+            from pathlib import Path
+            
+            # Get review data root from settings or use default
+            review_data_root = getattr(
+                self.settings, 'REVIEW_DATA_ROOT',
+                Path("/Volumes/Sped/Nocera Models/Review Data")
+            )
+            
+            if review_data_root.exists():
+                # Initialize orchestrator
+                orchestrator = ReviewIntelligenceOrchestrator(
+                    data_root=review_data_root,
+                )
+                
+                # Create bridge with Neo4j driver
+                self._review_intelligence_bridge = ReviewIntelligenceMachineBridge(
+                    orchestrator=orchestrator,
+                    neo4j_driver=self._neo4j_driver,
+                )
+                
+                # Connect to learning hub for bidirectional learning
+                await self._review_intelligence_bridge.connect_to_learning_hub()
+                
+                logger.info("Review Intelligence Bridge initialized and connected to learning loop")
+            else:
+                logger.debug(f"Review data root not found: {review_data_root}")
+                
+        except Exception as e:
+            logger.debug(f"Review Intelligence Bridge not initialized: {e}")
+            # Non-fatal - system can function without review intelligence
     
     async def shutdown(self) -> None:
         """Clean shutdown of all components."""

@@ -148,6 +148,11 @@ class WorkflowState(TypedDict):
     # =========================================================================
     brand_personality_profile: Optional[Dict[str, Any]]  # Full BrandPersonalityProfile
     brand_archetype: Optional[str]  # Brand's Jung/Mark archetype
+    
+    # =========================================================================
+    # THOMPSON PRIORS (Synergistic Brain Architecture)
+    # =========================================================================
+    thompson_priors_used: Optional[Dict[str, float]]  # Priors used in atom execution
     brand_aaker_dimensions: Optional[Dict[str, float]]  # Aaker brand personality
     brand_relationship_role: Optional[str]  # How brand relates to consumer
     brand_voice_characteristics: Optional[Dict[str, float]]  # Voice formality, energy, etc.
@@ -397,6 +402,12 @@ async def execute_reasoning_path(
     """
     Reasoning path execution - full Atom of Thought DAG.
     
+    Enhanced with Thompson Prior Injection (Synergistic Brain Architecture):
+    - Fetches mechanism priors from Thompson Sampling
+    - Injects priors into atoms before execution
+    - Atoms use priors to bias mechanism weights
+    - Outcomes flow back to update Thompson posteriors
+    
     Executes the complete psychological reasoning pipeline:
     - User State Atom
     - Regulatory Focus Atom
@@ -410,22 +421,63 @@ async def execute_reasoning_path(
     start = datetime.now(timezone.utc)
     
     try:
-        # Build atom context
+        # =====================================================================
+        # PRIOR INJECTION (Synergistic Brain Architecture)
+        # Fetch Thompson priors before atom execution for learning synergy
+        # =====================================================================
+        thompson_priors = {}
+        archetype = state.get("graph_context", {}).get("primary_archetype")
+        
+        try:
+            from adam.cold_start.thompson.sampler import get_thompson_sampler
+            from adam.cold_start.models.enums import ArchetypeID
+            
+            sampler = get_thompson_sampler()
+            
+            # Map archetype string to ArchetypeID
+            archetype_id = None
+            if archetype:
+                try:
+                    archetype_id = ArchetypeID(archetype.upper())
+                except (ValueError, AttributeError):
+                    pass
+            
+            # Get mechanism ranking with uncertainty for all mechanisms
+            ranking = sampler.get_mechanism_ranking(archetype_id)
+            thompson_priors = {
+                mech.value if hasattr(mech, 'value') else str(mech): mean
+                for mech, mean, uncertainty in ranking
+            }
+            
+            logger.debug(
+                f"Injecting Thompson priors: {len(thompson_priors)} mechanisms, "
+                f"archetype={archetype}"
+            )
+        except Exception as e:
+            logger.debug(f"Could not fetch Thompson priors: {e}")
+        
+        # Build atom context with priors
         atom_context = {
             "user_id": state["user_id"],
             "graph_context": state.get("graph_context"),
             "evidence_package": state.get("evidence_package"),
             "session_context": state.get("session_context"),
             "blackboard_state": state.get("blackboard_state"),
+            # NEW: Thompson priors for mechanism biasing
+            "thompson_priors": thompson_priors,
+            "user_archetype": archetype,
         }
         
-        # Execute atom DAG
+        # Execute atom DAG with priors injected
         atom_outputs = await atom_executor.execute_dag(
             context=atom_context,
             ad_candidates=state.get("ad_candidates", [])
         )
         
         state["atom_outputs"] = atom_outputs
+        
+        # Store priors in state for learning attribution
+        state["thompson_priors_used"] = thompson_priors
         
         # Register for learning
         await atom_integration.register_atom_execution(
@@ -1130,6 +1182,8 @@ def create_holistic_decision_workflow(
     predictive_engine=None,          # Predictive processing / curiosity
     emergence_engine=None,           # Novel construct discovery
     use_enhanced_routing: bool = True,  # Feature flag
+    # CRITICAL FIX (Feb 2026): Neo4j driver for graph queries
+    neo4j_driver=None,               # Graph database connection for intelligence queries
 ) -> StateGraph:
     """
     Create the complete Holistic Decision Workflow.
@@ -1198,8 +1252,10 @@ def create_holistic_decision_workflow(
         analyze_susceptibility_intelligence,
         create_susceptibility_intelligence_node,
     )
+    # CRITICAL FIX (Feb 2026): Pass actual neo4j_driver instead of None
+    # This enables graph queries for mechanism influence relationships
     workflow.add_node("get_susceptibility_intelligence",
-        create_async_node(analyze_susceptibility_intelligence, neo4j_driver=None)
+        create_async_node(analyze_susceptibility_intelligence, neo4j_driver=neo4j_driver)
     )
     
     # Phase 2: Routing
@@ -1389,6 +1445,8 @@ class HolisticDecisionWorkflowExecutor:
         use_enhanced_routing: bool = True,
         # v3.0: Full Intelligence Integration
         full_intelligence_integrator=None,
+        # CRITICAL FIX (Feb 2026): Neo4j driver for graph queries
+        neo4j_driver=None,
     ):
         self.workflow = create_holistic_decision_workflow(
             interaction_bridge=interaction_bridge,
@@ -1414,6 +1472,8 @@ class HolisticDecisionWorkflowExecutor:
             predictive_engine=predictive_engine,
             emergence_engine=emergence_engine,
             use_enhanced_routing=use_enhanced_routing,
+            # CRITICAL FIX (Feb 2026): Pass Neo4j driver to workflow
+            neo4j_driver=neo4j_driver,
         )
         
         self.compiled = self.workflow.compile(checkpointer=MemorySaver())

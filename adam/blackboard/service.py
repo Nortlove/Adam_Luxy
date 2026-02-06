@@ -382,6 +382,55 @@ class BlackboardService:
     # ZONE 5: LEARNING SIGNALS
     # -------------------------------------------------------------------------
     
+    async def write_zone5_from_unified(
+        self,
+        signal: "UnifiedLearningSignal",
+        role: ComponentRole = ComponentRole.GRADIENT_BRIDGE,
+    ) -> bool:
+        """
+        Write a UnifiedLearningSignal to Zone 5.
+        
+        Converts from UnifiedLearningSignal format to ComponentSignal for storage.
+        This enables the Synergistic Brain Architecture's Zone 5 integration.
+        """
+        # Convert UnifiedLearningSignal to ComponentSignal
+        from adam.blackboard.models import ComponentSignal, SignalType
+        
+        # Map unified signal type to legacy signal type
+        type_mapping = {
+            "outcome_success": SignalType.OUTCOME,
+            "outcome_failure": SignalType.OUTCOME,
+            "outcome_engagement": SignalType.OUTCOME,
+            "credit_mechanism": SignalType.CREDIT,
+            "credit_atom": SignalType.CREDIT,
+            "credit_component": SignalType.CREDIT,
+            "pattern_discovered": SignalType.LEARNING,
+            "construct_emerged": SignalType.LEARNING,
+        }
+        
+        signal_type_str = signal.signal_type.value if hasattr(signal.signal_type, 'value') else str(signal.signal_type)
+        legacy_type = type_mapping.get(signal_type_str, SignalType.LEARNING)
+        
+        component_signal = ComponentSignal(
+            signal_id=signal.signal_id,
+            signal_type=legacy_type,
+            source_component_id=signal.component,
+            target_construct=signal.mechanism or "unknown",
+            value=signal.value,
+            confidence=1.0,
+            metadata={
+                "archetype": signal.archetype,
+                "weight": signal.weight,
+                "unified_type": signal_type_str,
+                **signal.payload,
+            },
+        )
+        
+        # Use request_id from signal or generate one
+        request_id = signal.request_id or signal.decision_id or signal.signal_id
+        
+        return await self.write_zone5_signal(request_id, component_signal, role)
+    
     async def write_zone5_signal(
         self,
         request_id: str,
@@ -530,3 +579,34 @@ class BlackboardService:
             state["zone5"] = z5.model_dump(mode="json")
         
         return state
+
+
+# =============================================================================
+# SINGLETON
+# =============================================================================
+
+_service: Optional[BlackboardService] = None
+
+
+def get_blackboard_service(redis_cache: Optional[ADAMRedisCache] = None) -> BlackboardService:
+    """
+    Get singleton BlackboardService instance.
+    
+    Used by:
+    - dag_executor.py for atom coordination
+    - campaign_orchestrator.py for campaign management
+    - synergy_orchestrator.py for decision flow
+    
+    Args:
+        redis_cache: Optional Redis cache. If not provided, creates one.
+        
+    Returns:
+        BlackboardService singleton instance
+    """
+    global _service
+    if _service is None:
+        if redis_cache is None:
+            # Create default Redis cache
+            redis_cache = ADAMRedisCache()
+        _service = BlackboardService(redis_cache=redis_cache)
+    return _service
