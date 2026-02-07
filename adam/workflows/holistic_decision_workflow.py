@@ -440,7 +440,9 @@ async def execute_reasoning_path(
                 try:
                     archetype_id = ArchetypeID(archetype.upper())
                 except (ValueError, AttributeError):
-                    pass
+                    # Unknown archetype - use population-level priors
+                    logger.debug(f"Unknown archetype '{archetype}', using population priors")
+                    archetype_id = None
             
             # Get mechanism ranking with uncertainty for all mechanisms
             ranking = sampler.get_mechanism_ranking(archetype_id)

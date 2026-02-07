@@ -419,6 +419,10 @@ async def execute_aot_with_priors(state: OrchestratorState) -> OrchestratorState
         import traceback
         logger.debug(traceback.format_exc())
     
+    # FALLBACK: If AoT didn't produce mechanism activations, use priors
+    if "atom_mechanism_activation" not in atom_outputs or not atom_outputs.get("atom_mechanism_activation"):
+        atom_outputs["atom_mechanism_activation"] = await _get_mechanism_activation_from_priors(state)
+    
     return {
         **state,
         "atom_outputs": atom_outputs,
@@ -426,6 +430,83 @@ async def execute_aot_with_priors(state: OrchestratorState) -> OrchestratorState
         "atom_feedback": atom_feedback,
         "prior_validation": prior_validation,
         "atom_learning_signals": learning_signals,
+    }
+
+
+async def _get_mechanism_activation_from_priors(state: OrchestratorState) -> Dict[str, Any]:
+    """
+    FALLBACK: Get mechanism activations directly from learned priors.
+    
+    Used when AoT execution fails or returns empty results.
+    Leverages Thompson Sampler's archetype-mechanism effectiveness data.
+    """
+    archetype = state.get("archetype_match", {}).get("primary_archetype") or "everyman"
+    deep_archetype = state.get("deep_archetype", {}).get("primary_archetype")
+    if deep_archetype:
+        archetype = deep_archetype
+    
+    brand_name = state.get("brand_name", "")
+    category = state.get("category", "")
+    
+    mechanism_scores = {}
+    
+    try:
+        # Try Thompson Sampler for mechanism selection
+        from adam.cold_start.thompson.sampler import get_thompson_sampler
+        sampler = get_thompson_sampler()
+        
+        if sampler:
+            # Use sample_top_k method to get multiple mechanisms
+            top_mechanisms = sampler.sample_top_k(
+                k=5,
+                archetype=archetype,
+            )
+            for mech, score, reason in top_mechanisms:
+                # Convert enum to string if needed
+                mech_name = mech.value if hasattr(mech, 'value') else str(mech)
+                mechanism_scores[mech_name] = score
+            
+            logger.debug(f"Priors fallback: {len(mechanism_scores)} mechanisms from Thompson Sampler")
+    except Exception as e:
+        logger.debug(f"Thompson Sampler fallback failed: {e}")
+    
+    # If Thompson Sampler didn't work, try learned priors directly
+    if not mechanism_scores:
+        try:
+            from adam.core.learning.learned_priors_integration import get_learned_priors
+            priors = get_learned_priors()
+            
+            # Get archetype-mechanism matrix
+            matrix = priors._archetype_mechanism_matrix
+            if matrix and archetype in matrix:
+                arch_mechs = matrix[archetype]
+                for mech, effectiveness in arch_mechs.items():
+                    if isinstance(effectiveness, (int, float)):
+                        mechanism_scores[mech] = effectiveness
+            
+            logger.debug(f"Priors fallback: {len(mechanism_scores)} mechanisms from priors matrix")
+        except Exception as e:
+            logger.debug(f"Priors matrix fallback failed: {e}")
+    
+    # If still empty, use default mechanism set
+    if not mechanism_scores:
+        # Default mechanisms based on archetype
+        default_mechanisms = {
+            "everyman": {"social_proof": 0.8, "belonging": 0.7, "relatability": 0.6},
+            "achiever": {"scarcity": 0.8, "authority": 0.7, "exclusivity": 0.6},
+            "explorer": {"curiosity": 0.8, "novelty": 0.7, "freedom": 0.6},
+            "connector": {"social_proof": 0.8, "community": 0.7, "reciprocity": 0.6},
+            "guardian": {"trust": 0.8, "safety": 0.7, "consistency": 0.6},
+            "pragmatist": {"value": 0.8, "efficiency": 0.7, "proof": 0.6},
+            "analyst": {"data": 0.8, "logic": 0.7, "comparison": 0.6},
+        }
+        mechanism_scores = default_mechanisms.get(archetype, default_mechanisms["everyman"])
+        logger.debug(f"Priors fallback: Using default mechanisms for {archetype}")
+    
+    return {
+        "mechanism_scores": mechanism_scores,
+        "source": "priors_fallback",
+        "archetype": archetype,
     }
 
 
@@ -850,12 +931,41 @@ async def persist_for_learning(state: OrchestratorState) -> OrchestratorState:
     except Exception as e:
         logger.warning(f"Failed to persist for learning: {e}")
     
-    # Also persist via gradient bridge
+    # Also persist via gradient bridge for credit attribution
     try:
-        from adam.gradient_bridge.service import GradientBridgeService
-        # Get service instance... (would need to be passed in or singleton)
-    except Exception:
-        pass
+        from adam.core.learning.unified_learning_hub import (
+            get_unified_learning_hub,
+            UnifiedLearningSignal,
+            UnifiedSignalType,
+        )
+        
+        hub = get_unified_learning_hub()
+        
+        # Create learning signal for gradient bridge
+        mechanisms = state.get("mechanisms_applied", [])
+        primary_mechanism = mechanisms[0]["name"] if mechanisms else "unknown"
+        
+        signal = UnifiedLearningSignal(
+            signal_type=UnifiedSignalType.CREDIT_MECHANISM,
+            source_component="synergy_orchestrator",
+            archetype=state.get("archetype_match", {}).get("primary_archetype", "everyman"),
+            mechanism=primary_mechanism,
+            confidence=state.get("confidence_scores", {}).get("overall", 0.5),
+            payload={
+                "decision_id": decision_id,
+                "user_id": user_id,
+                "mechanisms": [m["name"] for m in mechanisms],
+                "event_type": "decision_persisted",
+            },
+        )
+        
+        await hub.process_signal(signal)
+        logger.debug(f"Gradient signal emitted for decision {decision_id}")
+        
+    except ImportError as e:
+        logger.debug(f"Gradient bridge not available: {e}")
+    except Exception as e:
+        logger.warning(f"Failed to emit gradient signal: {e}")
     
     return state
 
@@ -880,7 +990,30 @@ async def trigger_graph_maintenance(state: OrchestratorState) -> OrchestratorSta
         asyncio.create_task(trigger_maintenance())
         logger.info("Triggered graph maintenance")
     except ImportError:
-        pass
+        # Fallback: emit maintenance signal for other systems to handle
+        try:
+            from adam.core.learning.unified_learning_hub import (
+                get_unified_learning_hub,
+                UnifiedLearningSignal,
+                UnifiedSignalType,
+            )
+            
+            hub = get_unified_learning_hub()
+            signal = UnifiedLearningSignal(
+                signal_type=UnifiedSignalType.CALIBRATION_NEEDED,
+                source_component="graph_maintenance_trigger",
+                archetype="system",
+                mechanism="maintenance",
+                confidence=1.0,
+                payload={
+                    "maintenance_type": "graph",
+                    "trigger_reason": "periodic",
+                },
+            )
+            await hub.process_signal(signal)
+            logger.debug("Emitted graph maintenance signal via learning hub")
+        except Exception:
+            logger.debug("Graph maintenance unavailable, skipping")
     except Exception as e:
         logger.debug(f"Could not trigger maintenance: {e}")
     
@@ -970,6 +1103,95 @@ async def prefetch_competitive_intelligence(state: OrchestratorState) -> Orchest
     return {
         **state,
         "competitive_intelligence": competitive_intel,
+    }
+
+
+async def validate_and_merge_prefetch(state: OrchestratorState) -> OrchestratorState:
+    """
+    Validate and merge all prefetch intelligence before continuing pipeline.
+    
+    This is a critical sync point that:
+    1. Validates prefetch results are properly formatted
+    2. Tracks which intelligence sources were successful
+    3. Computes overall intelligence confidence
+    4. Prepares unified context for downstream nodes
+    
+    Enterprise Requirement: All prefetch failures must be logged and tracked.
+    """
+    # Track successful prefetches
+    prefetch_results = {
+        "graph_intelligence": bool(state.get("graph_intelligence")),
+        "helpful_vote_intelligence": bool(state.get("helpful_vote_intelligence")),
+        "full_intelligence_profile": bool(state.get("full_intelligence_profile")),
+        "competitive_intelligence": state.get("competitive_intelligence", {}).get("available", False),
+    }
+    
+    successful_prefetches = sum(prefetch_results.values())
+    total_prefetches = len(prefetch_results)
+    
+    # Calculate intelligence coverage
+    intelligence_coverage = successful_prefetches / total_prefetches if total_prefetches > 0 else 0
+    
+    # Log prefetch status for enterprise monitoring
+    if successful_prefetches < total_prefetches:
+        missing = [k for k, v in prefetch_results.items() if not v]
+        logger.warning(
+            f"Prefetch incomplete: {successful_prefetches}/{total_prefetches} sources. "
+            f"Missing: {missing}"
+        )
+    else:
+        logger.info(f"All {total_prefetches} prefetch sources available")
+    
+    # Build unified intelligence context for downstream nodes
+    unified_context = {
+        "prefetch_status": prefetch_results,
+        "intelligence_coverage": intelligence_coverage,
+        "has_graph_context": prefetch_results["graph_intelligence"],
+        "has_helpful_votes": prefetch_results["helpful_vote_intelligence"],
+        "has_full_profile": prefetch_results["full_intelligence_profile"],
+        "has_competitive_intel": prefetch_results["competitive_intelligence"],
+    }
+    
+    # Extract key signals from full intelligence profile
+    full_profile = state.get("full_intelligence_profile", {})
+    if full_profile:
+        unified_context["dominant_archetype"] = full_profile.get("psychological_profile", {}).get(
+            "dominant_archetype"
+        )
+        unified_context["susceptibility_tier"] = full_profile.get("susceptibility", {}).get("tier")
+        unified_context["behavioral_classifiers"] = list(
+            full_profile.get("behavioral_classifiers", {}).keys()
+        )
+    
+    # Emit prefetch completion signal for learning loop
+    try:
+        from adam.core.learning.unified_learning_hub import (
+            get_unified_learning_hub,
+            UnifiedLearningSignal,
+            UnifiedSignalType,
+        )
+        
+        hub = get_unified_learning_hub()
+        signal = UnifiedLearningSignal(
+            signal_type=UnifiedSignalType.PATTERN_DISCOVERED,
+            source_component="prefetch_merge",
+            archetype=unified_context.get("dominant_archetype", "unknown"),
+            mechanism="prefetch_coverage",
+            confidence=intelligence_coverage,
+            payload={
+                "prefetch_status": prefetch_results,
+                "coverage": intelligence_coverage,
+                "request_id": state.get("request_id"),
+            },
+        )
+        await hub.process_signal(signal)
+    except Exception as e:
+        logger.debug(f"Could not emit prefetch signal: {e}")
+    
+    return {
+        **state,
+        "unified_intelligence_context": unified_context,
+        "intelligence_coverage": intelligence_coverage,
     }
 
 
@@ -1271,7 +1493,7 @@ def build_parallel_synergy_orchestrator() -> StateGraph:
     graph.add_node("prefetch_helpful_vote", prefetch_helpful_vote_intelligence)
     graph.add_node("prefetch_full_intel", prefetch_full_intelligence)
     graph.add_node("prefetch_competitive", prefetch_competitive_intelligence)
-    graph.add_node("merge_prefetch", lambda s: s)  # Merge point (no-op)
+    graph.add_node("merge_prefetch", validate_and_merge_prefetch)  # Validate prefetch results
     graph.add_node("detect_archetype", detect_deep_archetype)
     graph.add_node("execute_aot", execute_aot_with_priors)
     graph.add_node("process_feedback", process_atom_feedback)  # NEW: Bidirectional feedback

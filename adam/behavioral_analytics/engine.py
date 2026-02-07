@@ -1492,11 +1492,58 @@ class BehavioralAnalyticsEngine:
         inference: PsychologicalInference,
         mechanism_profile: Optional[UserMechanismProfile] = None,
     ) -> None:
-        """Store session, inference, and mechanism profile to Neo4j."""
-        # This would use the graph integration
-        # Implementation depends on specific graph schema
-        # TODO: Store mechanism profile for learning and hypothesis testing
-        pass
+        """
+        Store session, inference, and mechanism profile to Neo4j.
+        
+        Creates/updates graph nodes for:
+        - User node with psychological profile
+        - Session node with behavioral data
+        - Mechanism effectiveness relationships
+        """
+        try:
+            from adam.infrastructure.neo4j.pattern_persistence import get_pattern_persistence
+            
+            persistence = get_pattern_persistence()
+            
+            # Build user profile data
+            user_data = {
+                "user_id": session.user_id,
+                "session_id": session.session_id,
+                "psychological_profile": {
+                    "openness": inference.big_five.openness,
+                    "conscientiousness": inference.big_five.conscientiousness,
+                    "extraversion": inference.big_five.extraversion,
+                    "agreeableness": inference.big_five.agreeableness,
+                    "neuroticism": inference.big_five.neuroticism,
+                },
+                "regulatory_focus": {
+                    "promotion": inference.regulatory_focus.promotion,
+                    "prevention": inference.regulatory_focus.prevention,
+                },
+                "inferred_archetype": inference.inferred_archetype,
+                "archetype_confidence": inference.archetype_confidence,
+                "timestamp": session.created_at.isoformat() if session.created_at else None,
+            }
+            
+            # Store mechanism profile if available
+            if mechanism_profile:
+                user_data["mechanism_responsiveness"] = {
+                    mech: profile.responsiveness
+                    for mech, profile in mechanism_profile.mechanisms.items()
+                }
+                user_data["processing_style"] = mechanism_profile.processing_style.value
+            
+            # Store to graph
+            await persistence.store_user_behavioral_profile(user_data)
+            
+            logger.debug(
+                f"Stored behavioral session to graph for user {session.user_id}"
+            )
+            
+        except ImportError:
+            logger.debug("Neo4j pattern persistence not available, skipping graph storage")
+        except Exception as e:
+            logger.warning(f"Failed to store session to graph: {e}")
     
     async def _forward_to_gradient_bridge(
         self,
@@ -1662,9 +1709,44 @@ class BehavioralAnalyticsEngine:
         user_id: str,
         priors: Dict[str, Any],
     ) -> None:
-        """Inject priors before processing."""
-        # Could use priors to initialize mechanism profile
-        pass
+        """
+        Inject priors before processing.
+        
+        Priors are used to:
+        1. Initialize mechanism profiles for new users
+        2. Bias initial predictions toward known effective patterns
+        3. Accelerate convergence for cold-start users
+        """
+        if not priors:
+            return
+        
+        # Get or create user profile
+        profile = await self._get_or_create_profile(user_id)
+        
+        # Inject archetype priors
+        if "archetype" in priors:
+            profile.inferred_archetype = priors["archetype"]
+            profile.archetype_confidence = priors.get("archetype_confidence", 0.5)
+        
+        # Inject mechanism effectiveness priors
+        if "mechanism_priors" in priors:
+            for mech_id, effectiveness in priors["mechanism_priors"].items():
+                if mech_id in profile.mechanism_affinities:
+                    # Blend with existing (weighted average)
+                    existing = profile.mechanism_affinities[mech_id]
+                    profile.mechanism_affinities[mech_id] = (
+                        existing * 0.3 + effectiveness * 0.7
+                    )
+                else:
+                    profile.mechanism_affinities[mech_id] = effectiveness
+        
+        # Inject category preferences
+        if "category_priors" in priors:
+            for cat, data in priors["category_priors"].items():
+                if cat not in profile.category_preferences:
+                    profile.category_preferences[cat] = data.get("archetype", "everyman")
+        
+        logger.debug(f"Injected priors for user {user_id}: {len(priors)} prior sources")
     
     async def validate_learning_health(self) -> Tuple[bool, List[str]]:
         """Validate learning health."""
