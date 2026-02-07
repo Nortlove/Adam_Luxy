@@ -490,10 +490,41 @@ class MetaLearnerService:
         user_id: str,
         priors: Dict[str, Any],
     ) -> None:
-        """Inject priors before processing."""
-        # Meta-learner uses global posteriors, not per-user
-        # Could extend to per-user modality preferences
-        pass
+        """
+        Inject priors for meta-learning routing decisions.
+        
+        The meta-learner uses these priors to:
+        1. Route reasoning to appropriate modality (fast vs full)
+        2. Initialize user-specific routing preferences
+        3. Bias modality selection for cold-start users
+        """
+        if not priors:
+            return
+        
+        # Store user-specific routing hints
+        if not hasattr(self, '_user_routing_priors'):
+            self._user_routing_priors = {}
+        
+        self._user_routing_priors[user_id] = {
+            "preferred_modality": priors.get("preferred_modality", "balanced"),
+            "complexity_tolerance": priors.get("complexity_tolerance", 0.5),
+            "latency_sensitivity": priors.get("latency_sensitivity", 0.5),
+            "archetype": priors.get("archetype"),
+        }
+        
+        # If archetype-based routing priors provided, update global posteriors
+        if "modality_effectiveness" in priors:
+            for modality, effectiveness in priors["modality_effectiveness"].items():
+                if hasattr(self, '_modality_posteriors'):
+                    # Bayesian update with prior
+                    if modality in self._modality_posteriors:
+                        prior = self._modality_posteriors[modality]
+                        # Simple weighted update
+                        self._modality_posteriors[modality] = (
+                            prior * 0.7 + effectiveness * 0.3
+                        )
+        
+        logger.debug(f"Injected meta-learner priors for user {user_id}")
     
     async def validate_learning_health(self) -> Tuple[bool, List[str]]:
         """Validate learning health."""
