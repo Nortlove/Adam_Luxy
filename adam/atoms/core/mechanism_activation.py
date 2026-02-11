@@ -535,8 +535,27 @@ class MechanismActivationAtom(BaseAtom):
         mechanism_history = {}
         mech_evi = evidence.get_evidence(IntelligenceSourceType.MECHANISM_TRAJECTORIES)
         if mech_evi and mech_evi.assessment_value is not None:
-            # Would populate from full mechanism history
-            pass
+            # Extract mechanism effectiveness history from evidence
+            # Evidence can contain:
+            # - A dict of mechanism_id -> effectiveness_score
+            # - A single mechanism assessment (best performing)
+            if isinstance(mech_evi.assessment_value, dict):
+                # Direct mechanism history dict
+                mechanism_history = mech_evi.assessment_value
+            elif isinstance(mech_evi.assessment_value, (int, float)):
+                # Single best mechanism - use as starting point
+                if mech_evi.assessment:
+                    mechanism_history[mech_evi.assessment] = float(mech_evi.assessment_value)
+            
+            # Also check secondary assessments for full history
+            if mech_evi.secondary_assessments:
+                for key, value in mech_evi.secondary_assessments.items():
+                    if isinstance(value, (int, float)) and value > 0:
+                        mechanism_history[key] = float(value)
+            
+            logger.debug(
+                f"Loaded mechanism history: {len(mechanism_history)} mechanisms"
+            )
         
         # Score mechanisms (base scores from psychological fit)
         base_scores = self._score_mechanisms(reg_focus, construal, mechanism_history)
@@ -554,6 +573,52 @@ class MechanismActivationAtom(BaseAtom):
             "construal_level": construal,
         }
         scores = await self._apply_synergy_adjustments(base_scores, context)
+        
+        # =====================================================================
+        # FINANCIAL TRUST LAYER: Apply financial psychology adjustments
+        # =====================================================================
+        us_output = atom_input.get_upstream("atom_user_state")
+        if us_output and us_output.secondary_assessments:
+            financial_psych = us_output.secondary_assessments.get("financial_psychology", {})
+            
+            if financial_psych:
+                # Get mechanism adjustments computed by UserStateAtom
+                fin_mech_adjustments = financial_psych.get("mechanism_adjustments", {})
+                requires_safeguards = financial_psych.get("requires_safeguards", False)
+                
+                if fin_mech_adjustments:
+                    # Apply financial psychology multipliers
+                    for mech, multiplier in fin_mech_adjustments.items():
+                        mech_key = mech.lower().replace(" ", "_")
+                        if mech_key in scores:
+                            scores[mech_key] = min(1.0, max(0.0, scores[mech_key] * multiplier))
+                    
+                    logger.debug(
+                        f"Applied financial psychology adjustments: "
+                        f"anxiety={financial_psych.get('anxiety_category')}, "
+                        f"trust={financial_psych.get('trust_level'):.2f}"
+                    )
+                
+                # ETHICAL SAFEGUARDS for financial anxiety
+                if requires_safeguards:
+                    safeguard_reason = financial_psych.get("safeguard_reason", "high financial anxiety")
+                    
+                    # Completely disable fear-based mechanisms
+                    scores["scarcity"] = min(scores.get("scarcity", 0), 0.1)
+                    scores["fear_appeal"] = 0.0
+                    scores["urgency"] = min(scores.get("urgency", 0), 0.2)
+                    
+                    # Boost supportive mechanisms
+                    scores["liking"] = min(1.0, scores.get("liking", 0.5) * 1.4)
+                    scores["social_proof"] = min(1.0, scores.get("social_proof", 0.5) * 1.3)
+                    scores["commitment"] = min(1.0, scores.get("commitment", 0.5) * 1.3)
+                    
+                    logger.info(f"FINANCIAL SAFEGUARDS ACTIVATED: {safeguard_reason}")
+                
+                # Adjust for credit journey stage
+                journey_stage = financial_psych.get("credit_journey_stage", "not_applicable")
+                if journey_stage != "not_applicable":
+                    scores = self._apply_credit_journey_adjustments(scores, journey_stage)
         
         # =====================================================================
         # NEW: Apply review-based mechanism adjustments
@@ -624,6 +689,22 @@ class MechanismActivationAtom(BaseAtom):
         except Exception as e:
             logger.debug(f"Susceptibility adjustment failed: {e}")
         
+        # =====================================================================
+        # NDF (Nonconscious Decision Fingerprint) MECHANISM SUSCEPTIBILITY
+        #
+        # This is the deepest layer of mechanism scoring. NDF measures the
+        # nonconscious decision machinery that drives behavior below awareness.
+        # Unlike review-based patterns (what people say), NDF captures HOW
+        # their language reveals their underlying cognitive architecture.
+        #
+        # NDF susceptibility maps 8 nonconscious dimensions to Cialdini
+        # mechanism effectiveness using theoretically-grounded equations.
+        #
+        # Weight: 25% of final score (complementing psychological fit 60%
+        # + historical effectiveness 40%, adjusted by NDF)
+        # =====================================================================
+        scores = self._apply_ndf_susceptibility(scores, atom_input)
+        
         # Select top mechanisms
         selections = self._select_mechanisms(scores, top_n=3)
         
@@ -638,15 +719,78 @@ class MechanismActivationAtom(BaseAtom):
         recommended = [s[0] for s in selections] if selections else [primary_mechanism]
         weights = {s[0]: s[1] for s in selections} if selections else {primary_mechanism: 0.5}
         
+        # =====================================================================
+        # INFERENTIAL CHAIN GENERATION
+        # Generate explicit reasoning chains that explain WHY each mechanism
+        # is recommended — the connective tissue between NDF and mechanism.
+        # =====================================================================
+        inferential_chains = []
+        try:
+            from adam.intelligence.graph.reasoning_chain_generator import (
+                generate_chains_local,
+            )
+            ad_ctx = atom_input.ad_context or {}
+            ndf_intel = ad_ctx.get("ndf_intelligence", {})
+            ndf_prof = ndf_intel.get("profile", {})
+            
+            if ndf_prof:
+                chain_context = {
+                    "device": ad_ctx.get("device"),
+                    "hour": ad_ctx.get("hour"),
+                    "price": ad_ctx.get("price", 0),
+                    "novel_category": ad_ctx.get("novel_category", False),
+                    "exposure_count": ad_ctx.get("exposure_count", 0),
+                    "time_pressure": ad_ctx.get("urgency", False),
+                    "involvement": ad_ctx.get("involvement", 0.5),
+                }
+                chains = generate_chains_local(
+                    ndf_profile=ndf_prof,
+                    context=chain_context,
+                    archetype=ad_ctx.get("archetype", ""),
+                    category=ad_ctx.get("category", ""),
+                    request_id=atom_input.request_id,
+                    top_k=5,
+                )
+                inferential_chains = [c.to_dict() for c in chains]
+                
+                # Use chain-informed mechanism boosting: if the top chain
+                # recommends a mechanism that's already in our top selections,
+                # boost confidence. If it recommends a different mechanism,
+                # consider it as a theory-data blend signal.
+                if chains:
+                    for chain in chains[:3]:
+                        mech = chain.recommended_mechanism
+                        if mech in scores:
+                            # Theory-data blend: 15% weight from inferential chain
+                            theory_score = chain.mechanism_score
+                            scores[mech] = 0.85 * scores[mech] + 0.15 * theory_score
+                    
+                    logger.debug(
+                        f"Generated {len(chains)} inferential chains, "
+                        f"top: {chains[0].recommended_mechanism} "
+                        f"(score={chains[0].mechanism_score:.3f})"
+                    )
+        except Exception as e:
+            logger.debug(f"Inferential chain generation failed (non-fatal): {e}")
+        
+        # Re-select after chain adjustment (may have changed rankings)
+        if inferential_chains:
+            selections = self._select_mechanisms(scores, top_n=3)
+            if selections:
+                primary_mechanism = selections[0][0]
+            recommended = [s[0] for s in selections] if selections else [primary_mechanism]
+            weights = {s[0]: s[1] for s in selections} if selections else {primary_mechanism: 0.5}
+        
         # Update fusion result
         fusion_result.assessment = primary_mechanism
         fusion_result.confidence = upstream_confidence * 0.9
         
-        # Include review context if available
+        # Include review context and NDF intelligence
         secondary = {
             "regulatory_focus": reg_focus,
             "construal_level": construal,
             "mechanism_scores": scores,
+            "inferential_chains": inferential_chains,
         }
         if review_output and review_output.secondary_assessments:
             secondary["review_context"] = review_output.secondary_assessments.get(
@@ -655,6 +799,15 @@ class MechanismActivationAtom(BaseAtom):
             secondary["customer_types"] = review_output.secondary_assessments.get(
                 "customer_types", []
             )[:5]  # Top 5 customer types
+        
+        # Include NDF intelligence for downstream atoms (MessageFraming, CopyGen)
+        ad_context = atom_input.ad_context or {}
+        ndf_intel = ad_context.get("ndf_intelligence", {})
+        if ndf_intel.get("has_ndf"):
+            secondary["ndf_profile"] = ndf_intel.get("profile", {})
+            secondary["ndf_mechanism_susceptibility"] = ndf_intel.get(
+                "mechanism_susceptibility", {}
+            )
         
         return AtomOutput(
             atom_id=self.config.atom_id,
@@ -707,8 +860,29 @@ class MechanismActivationAtom(BaseAtom):
             brand = atom_input.ad_context.get("brand") if atom_input.ad_context else None
             category = atom_input.ad_context.get("category") if atom_input.ad_context else None
             
+            # Use archetype if available, otherwise infer from context
+            # NOTE: This is a legacy fallback - the granular type system should be used
+            # when available (see adam/intelligence/granular_type_detector.py)
+            effective_archetype = archetype
+            if not effective_archetype:
+                # Try to detect from ad context using granular system
+                try:
+                    from adam.intelligence.granular_type_detector import detect_granular_type
+                    context_text = f"{brand or ''} {category or ''}"
+                    if len(context_text.strip()) > 5:
+                        granular_result = detect_granular_type(context_text, {"brand": brand, "category": category})
+                        effective_archetype = granular_result.archetype.title()
+                        logger.debug(f"Detected granular type for mechanism fallback: {granular_result.type_id}")
+                except Exception:
+                    pass
+                
+                # Final fallback - use balanced archetype
+                if not effective_archetype:
+                    effective_archetype = "Pragmatist"  # Balanced default
+                    logger.debug("Using Pragmatist as final archetype fallback")
+            
             computed_scores = get_computed_mechanism_scores(
-                archetype=archetype or "Pragmatist",
+                archetype=effective_archetype,
                 brand=brand,
                 category=category
             )
@@ -716,10 +890,78 @@ class MechanismActivationAtom(BaseAtom):
             if computed_scores:
                 best_mech = max(computed_scores.items(), key=lambda x: x[1])
                 return best_mech[0]
-        except Exception:
-            pass
+        except ImportError:
+            # Review orchestrator not available - use fallback
+            logger.debug("Review orchestrator not available for mechanism fallback")
+        except Exception as e:
+            # Log but continue to fallback
+            logger.debug(f"Could not get computed mechanism scores: {e}")
         
         return "social_proof"  # Final fallback
+    
+    def _apply_credit_journey_adjustments(
+        self,
+        scores: Dict[str, float],
+        journey_stage: str,
+    ) -> Dict[str, float]:
+        """
+        Apply mechanism adjustments based on credit rebuilding journey stage.
+        
+        THE FINANCIAL TRUST LAYER - Credit Journey Transformation
+        
+        Each stage of the credit rebuilding journey requires different
+        psychological mechanisms to be effective AND ethical.
+        """
+        modified = scores.copy()
+        
+        # Stage-specific adjustments based on bank review psychological analysis
+        stage_adjustments = {
+            "shame": {
+                # Initial awareness - need empathy and normalization
+                "liking": 1.5,        # Build rapport
+                "social_proof": 1.4,  # Others did it too
+                "fear_appeal": 0.0,   # NEVER use fear
+                "scarcity": 0.2,      # Avoid pressure
+                "commitment": 0.8,    # Don't push commitment yet
+            },
+            "seeking": {
+                # Looking for solutions - need authority and clear path
+                "authority": 1.5,     # Credible guidance
+                "commitment": 1.4,    # Path forward
+                "social_proof": 1.2,  # Validation
+                "fear_appeal": 0.0,   # Still avoid fear
+            },
+            "rebuilding": {
+                # Actively improving - reward and reinforce
+                "commitment": 1.6,    # Stay the course
+                "reciprocity": 1.4,   # Reward progress
+                "social_proof": 1.2,  # You're doing it
+                "scarcity": 0.5,      # Still cautious
+            },
+            "recovered": {
+                # Success achieved - celebrate and belong
+                "social_proof": 1.5,  # Join the successful
+                "unity": 1.4,         # Community membership
+                "commitment": 1.2,    # Maintain gains
+            },
+            "advocate": {
+                # Helping others - empower and unite
+                "unity": 1.6,         # Shared identity
+                "social_proof": 1.3,  # Influence others
+                "storytelling": 1.4,  # Share your story
+            },
+        }
+        
+        adjustments = stage_adjustments.get(journey_stage, {})
+        
+        for mech, multiplier in adjustments.items():
+            mech_key = mech.lower().replace(" ", "_")
+            if mech_key in modified:
+                modified[mech_key] = min(1.0, max(0.0, modified[mech_key] * multiplier))
+        
+        logger.debug(f"Applied credit journey adjustments for stage: {journey_stage}")
+        
+        return modified
     
     def _apply_regional_modifiers(
         self,
@@ -751,8 +993,12 @@ class MechanismActivationAtom(BaseAtom):
                         modified[mech] = min(1.0, max(0.0, modified[mech] + boost))
                 
                 return modified
-        except Exception:
-            pass
+        except ImportError:
+            # Review learnings service not available - use fallback
+            logger.debug("Review learnings service not available for regional modifiers")
+        except Exception as e:
+            # Log but continue to fallback
+            logger.debug(f"Could not get computed regional boosts: {e}")
         
         # Fallback to research-based regional boosts
         _default_regional_boosts = {
@@ -993,5 +1239,139 @@ class MechanismActivationAtom(BaseAtom):
                     modified["investment_framing"] = min(1.0, modified.get("investment_framing", 0.5) * 1.2)
                 if "urgency" in modified:
                     modified["urgency"] = modified["urgency"] * 0.8
+        
+        return modified
+    
+    def _apply_ndf_susceptibility(
+        self,
+        scores: Dict[str, float],
+        atom_input: AtomInput,
+    ) -> Dict[str, float]:
+        """
+        Apply NDF-derived mechanism susceptibility to mechanism scores.
+        
+        NDF (Nonconscious Decision Fingerprint) captures the deep cognitive
+        architecture that drives decisions below conscious awareness. Unlike
+        behavioral signals (what people DO) or self-report (what people SAY),
+        NDF measures HOW their language reveals their underlying decision machinery.
+        
+        The NDF susceptibility scores map 8 nonconscious dimensions to 7 Cialdini
+        mechanisms using theoretically-grounded equations:
+        
+        - reciprocity ← σ (social_calibration) + α (approach) + ρ̄ (anti-status)
+        - commitment  ← ῡ (anti-uncertainty) + λ̄ (anti-arousal) + τ (temporal)  
+        - social_proof← σ (social_calibration) + κ̄ (anti-cognitive) + ῡ̄ (anti-uncertainty)
+        - authority   ← ρ (status) + ῡ (anti-uncertainty) + κ̄ (anti-cognitive)
+        - liking      ← σ (social) + α (approach) + λ (arousal)
+        - scarcity    ← α (approach) + λ (arousal) + τ̄ (anti-temporal) + ρ (status)
+        - unity       ← σ (social) + α (approach) + ῡ (anti-uncertainty)
+        
+        We map these to the 9 ADAM core mechanisms for integration.
+        
+        NDF weight: 25% blend with existing scores.
+        Rationale: NDF is theory-driven and consistent across population;
+        it serves as a strong prior that existing evidence can update.
+        """
+        ad_context = atom_input.ad_context or {}
+        ndf_intel = ad_context.get("ndf_intelligence", {})
+        
+        if not ndf_intel or not ndf_intel.get("has_ndf"):
+            return scores
+        
+        ndf_susceptibility = ndf_intel.get("mechanism_susceptibility", {})
+        ndf_profile = ndf_intel.get("profile", {})
+        
+        if not ndf_susceptibility:
+            return scores
+        
+        modified = scores.copy()
+        
+        # Map NDF Cialdini mechanisms → ADAM core mechanisms
+        # NDF uses Cialdini's 7 principles; ADAM uses 9 mechanisms
+        # The mapping is based on theoretical alignment:
+        NDF_TO_ADAM_MAP = {
+            # NDF Cialdini → ADAM Core Mechanisms (with weight)
+            "social_proof": [("social_proof", 1.0), ("mimetic_desire", 0.6)],
+            "scarcity": [("scarcity", 1.0), ("attention_dynamics", 0.4)],
+            "authority": [("anchoring", 0.7), ("identity_construction", 0.3)],
+            "commitment": [("regulatory_focus", 0.6), ("temporal_construal", 0.5)],
+            "reciprocity": [("embodied_cognition", 0.5), ("social_proof", 0.3)],
+            "liking": [("mimetic_desire", 0.5), ("identity_construction", 0.4)],
+            "unity": [("social_proof", 0.4), ("embodied_cognition", 0.3)],
+        }
+        
+        # Accumulate NDF-based adjustments per ADAM mechanism
+        ndf_adjustments: Dict[str, float] = {}
+        ndf_weights: Dict[str, float] = {}
+        
+        for ndf_mech, adam_mappings in NDF_TO_ADAM_MAP.items():
+            ndf_score = ndf_susceptibility.get(ndf_mech, 0.5)
+            
+            for adam_mech, mapping_weight in adam_mappings:
+                if adam_mech in modified:
+                    # Convert NDF susceptibility (0-1 sigmoid output) to adjustment
+                    # 0.5 = neutral (no change), >0.5 = boost, <0.5 = reduce
+                    adjustment = (ndf_score - 0.5) * mapping_weight
+                    
+                    if adam_mech not in ndf_adjustments:
+                        ndf_adjustments[adam_mech] = 0.0
+                        ndf_weights[adam_mech] = 0.0
+                    
+                    ndf_adjustments[adam_mech] += adjustment * mapping_weight
+                    ndf_weights[adam_mech] += mapping_weight
+        
+        # Apply NDF adjustments as 25% blend
+        NDF_BLEND_WEIGHT = 0.25
+        
+        for mech, adj_sum in ndf_adjustments.items():
+            if mech in modified and ndf_weights.get(mech, 0) > 0:
+                # Normalize by total mapping weight
+                normalized_adj = adj_sum / ndf_weights[mech]
+                
+                # Blend: 75% existing + 25% NDF-adjusted
+                ndf_adjusted = modified[mech] + normalized_adj
+                modified[mech] = (
+                    (1.0 - NDF_BLEND_WEIGHT) * modified[mech] +
+                    NDF_BLEND_WEIGHT * max(0.0, min(1.0, ndf_adjusted))
+                )
+                modified[mech] = max(0.05, min(0.95, modified[mech]))
+        
+        # Additional direct NDF dimension → mechanism adjustments
+        # These are more fine-grained than the Cialdini mapping:
+        
+        # High cognitive_velocity → trust pre-cognitive mechanisms more
+        # (person is writing fast, less filtered = NDF signal is stronger)
+        cv = ndf_profile.get("cognitive_velocity", 0.0)
+        if cv > 0.6:
+            # High velocity: boost quick-decision mechanisms
+            for mech in ["scarcity", "attention_dynamics"]:
+                if mech in modified:
+                    modified[mech] = min(0.95, modified[mech] * (1.0 + cv * 0.15))
+        
+        # High status_sensitivity → boost identity/aspirational mechanisms
+        rho = ndf_profile.get("status_sensitivity", 0.0)
+        if rho > 0.5:
+            for mech in ["identity_construction", "anchoring"]:
+                if mech in modified:
+                    modified[mech] = min(0.95, modified[mech] * (1.0 + rho * 0.2))
+        
+        # High uncertainty_tolerance → can handle more novel mechanisms
+        upsilon = ndf_profile.get("uncertainty_tolerance", 0.5)
+        if upsilon > 0.6:
+            # Tolerant of uncertainty: boost exploratory mechanisms
+            for mech in ["attention_dynamics", "embodied_cognition"]:
+                if mech in modified:
+                    modified[mech] = min(0.95, modified[mech] * (1.0 + upsilon * 0.1))
+        elif upsilon < 0.3:
+            # Needs closure: boost certainty-providing mechanisms
+            for mech in ["social_proof", "regulatory_focus"]:
+                if mech in modified:
+                    modified[mech] = min(0.95, modified[mech] * 1.15)
+        
+        logger.debug(
+            f"NDF susceptibility applied: "
+            f"{len(ndf_adjustments)} mechanisms adjusted, "
+            f"cv={cv:.2f}, ρ={rho:.2f}, υ={upsilon:.2f}"
+        )
         
         return modified
