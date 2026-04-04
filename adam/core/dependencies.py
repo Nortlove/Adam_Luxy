@@ -34,6 +34,7 @@ class Infrastructure:
     def __init__(self):
         self._neo4j_driver: Optional[AsyncDriver] = None
         self._redis_client: Optional[redis.Redis] = None
+        self._circuit_breakers = None
         self._initialized: bool = False
     
     @classmethod
@@ -85,6 +86,32 @@ class Infrastructure:
             logger.error(f"Failed to connect to Redis: {e}")
             raise
         
+        # Circuit breakers — initialize with tuned configs for hot path
+        from adam.infrastructure.resilience.circuit_breaker import (
+            CircuitBreakerConfig,
+            CircuitBreakerRegistry,
+        )
+        self._circuit_breakers = CircuitBreakerRegistry()
+        self._circuit_breakers.register("neo4j", CircuitBreakerConfig(
+            name="neo4j",
+            failure_threshold=5,
+            recovery_timeout=30.0,
+            call_timeout=0.050,  # 50ms — hot path Neo4j queries must be fast
+        ))
+        self._circuit_breakers.register("redis", CircuitBreakerConfig(
+            name="redis",
+            failure_threshold=5,
+            recovery_timeout=10.0,
+            call_timeout=0.020,  # 20ms
+        ))
+        self._circuit_breakers.register("prefetch", CircuitBreakerConfig(
+            name="prefetch",
+            failure_threshold=5,
+            recovery_timeout=30.0,
+            call_timeout=0.040,  # 40ms — prefetch budget
+        ))
+        logger.info("Circuit breakers initialized: neo4j(50ms), redis(20ms), prefetch(40ms)")
+
         self._initialized = True
         logger.info("ADAM infrastructure initialized successfully")
     
@@ -115,6 +142,22 @@ class Infrastructure:
         if not self._redis_client:
             raise RuntimeError("Infrastructure not initialized")
         return self._redis_client
+
+    @property
+    def circuit_breakers(self):
+        """Get the circuit breaker registry."""
+        if self._circuit_breakers is None:
+            # Lazy init if infrastructure hasn't been fully initialized
+            from adam.infrastructure.resilience.circuit_breaker import (
+                get_circuit_breaker_registry,
+            )
+            self._circuit_breakers = get_circuit_breaker_registry()
+        return self._circuit_breakers
+
+    @property
+    def neo4j_driver(self):
+        """Alias for neo4j property — used by persistence code."""
+        return self._neo4j_driver
 
 
 # =============================================================================
@@ -151,6 +194,16 @@ class LearningComponents:
         self._behavioral_hypothesis_engine = None
         self._behavioral_knowledge_promoter = None
         self._behavioral_knowledge_graph = None
+
+        # Nonconscious Signal Intelligence (Enhancement #34)
+        self._signal_collector = None
+
+        # Therapeutic Retargeting (Enhancement #33 + #36)
+        self._hierarchical_prior_manager = None
+        self._user_posterior_manager = None
+        self._mixed_effects_estimator = None
+        self._therapeutic_orchestrator = None
+        self._barrier_diagnostic_engine = None
     
     @classmethod
     def get_instance(cls, infrastructure: Infrastructure) -> "LearningComponents":
@@ -284,7 +337,8 @@ class LearningComponents:
                 # In production, this would call the real Claude API
                 return "{\"status\": \"ok\"}"
         
-        event_bus = SimpleEventBus()
+        # NOTE: event_bus was correctly set to EventBusWrapper(event_bus_impl) above.
+        # A previous bug here overwrote it with SimpleEventBus() which doesn't exist.
         
         # Signal router
         self._signal_router = LearningSignalRouter()
@@ -422,7 +476,83 @@ class LearningComponents:
             self._emergence_detector,
         ]:
             self._signal_router.register_consumer(component)
-        
+
+        # =================================================================
+        # THERAPEUTIC RETARGETING (Enhancement #33 + #36)
+        # =================================================================
+
+        try:
+            from adam.retargeting.engines.prior_manager import (
+                HierarchicalPriorManager,
+                get_prior_manager,
+            )
+            from adam.retargeting.engines.repeated_measures import (
+                UserPosteriorManager,
+                MixedEffectsEstimator,
+            )
+            from adam.retargeting.engines.barrier_diagnostic import (
+                ConversionBarrierDiagnosticEngine,
+            )
+            from adam.retargeting.engines.sequence_orchestrator import (
+                TherapeuticSequenceOrchestrator,
+            )
+
+            # Hierarchical prior manager (singleton with Neo4j persistence)
+            self._hierarchical_prior_manager = get_prior_manager(
+                neo4j_driver=self._infra.neo4j_driver,
+            )
+
+            # Enhancement #36: Within-subject repeated measures
+            self._mixed_effects_estimator = MixedEffectsEstimator()
+            self._user_posterior_manager = UserPosteriorManager(
+                prior_manager=self._hierarchical_prior_manager,
+                redis_client=self._infra.redis,
+            )
+            self._user_posterior_manager.set_mixed_effects(
+                self._mixed_effects_estimator,
+            )
+
+            # Barrier diagnostic engine (shared singleton)
+            self._barrier_diagnostic_engine = ConversionBarrierDiagnosticEngine()
+
+            # Sequence orchestrator with full wiring
+            self._therapeutic_orchestrator = TherapeuticSequenceOrchestrator(
+                prior_manager=self._hierarchical_prior_manager,
+                neo4j_driver=self._infra.neo4j_driver,
+                redis_client=self._infra.redis,
+                user_posterior_manager=self._user_posterior_manager,
+            )
+
+            logger.info(
+                "Therapeutic retargeting initialized "
+                "(prior manager + user posteriors + barrier diagnostics + orchestrator)"
+            )
+        except Exception as e:
+            logger.debug("Therapeutic retargeting not available: %s", e)
+
+        # Enhancement #34: Nonconscious Signal Intelligence
+        try:
+            from adam.retargeting.engines.signal_collector import (
+                NonconsciousSignalCollector,
+            )
+            self._signal_collector = NonconsciousSignalCollector(
+                redis_client=self._infra.redis,
+            )
+            logger.info("Nonconscious signal collector initialized")
+        except Exception as e:
+            logger.debug("Signal collector not available: %s", e)
+
+        # DiagnosticReasoner — core platform deductive engine
+        self._diagnostic_reasoner = None
+        try:
+            from adam.retargeting.engines.diagnostic_reasoner import DiagnosticReasoner
+            self._diagnostic_reasoner = DiagnosticReasoner(
+                barrier_diagnostic_engine=self._barrier_diagnostic_engine,
+            )
+            logger.info("DiagnosticReasoner initialized (core platform primitive)")
+        except Exception as e:
+            logger.debug("DiagnosticReasoner not available: %s", e)
+
         # =================================================================
         # KAFKA CONSUMERS (Phase 1.3)
         # =================================================================
@@ -642,6 +772,45 @@ class LearningComponents:
         - Signal-construct relationships
         """
         return self._behavioral_knowledge_graph
+
+    # =========================================================================
+    # THERAPEUTIC RETARGETING PROPERTIES (Enhancement #33 + #36)
+    # =========================================================================
+
+    @property
+    def hierarchical_prior_manager(self):
+        """Get HierarchicalPriorManager — 6-level Bayesian prior hierarchy."""
+        return self._hierarchical_prior_manager
+
+    @property
+    def user_posterior_manager(self):
+        """Get UserPosteriorManager — per-user mechanism posteriors (Enhancement #36)."""
+        return self._user_posterior_manager
+
+    @property
+    def mixed_effects_estimator(self):
+        """Get MixedEffectsEstimator — ICC and design-effect computation."""
+        return self._mixed_effects_estimator
+
+    @property
+    def therapeutic_orchestrator(self):
+        """Get TherapeuticSequenceOrchestrator — full retargeting lifecycle."""
+        return self._therapeutic_orchestrator
+
+    @property
+    def barrier_diagnostic_engine(self):
+        """Get ConversionBarrierDiagnosticEngine — shared singleton."""
+        return self._barrier_diagnostic_engine
+
+    @property
+    def signal_collector(self):
+        """Get NonconsciousSignalCollector — telemetry ingestion (Enhancement #34)."""
+        return self._signal_collector
+
+    @property
+    def diagnostic_reasoner(self):
+        """Get DiagnosticReasoner — core platform deductive engine."""
+        return self._diagnostic_reasoner
 
 
 # =============================================================================
@@ -895,3 +1064,82 @@ async def get_behavioral_knowledge_graph():
     """
     components = await get_learning_components()
     return components.behavioral_knowledge_graph
+
+
+# =============================================================================
+# THERAPEUTIC RETARGETING DEPENDENCIES (Enhancement #33 + #36)
+# =============================================================================
+
+async def get_hierarchical_prior_manager():
+    """Get HierarchicalPriorManager — 6-level Bayesian prior hierarchy.
+
+    Platform primitive used by retargeting, bilateral cascade, outcome handler,
+    and campaign orchestrator for barrier-conditioned mechanism selection.
+    """
+    components = await get_learning_components()
+    return components.hierarchical_prior_manager
+
+
+async def get_user_posterior_manager():
+    """Get UserPosteriorManager — per-user mechanism posteriors (Enhancement #36).
+
+    Provides within-subject repeated measures analysis:
+    - Per-user Beta posteriors (L1 memory + L2 Redis)
+    - Design-effect weighting for population updates
+    - Cold-start from population posteriors
+    """
+    components = await get_learning_components()
+    return components.user_posterior_manager
+
+
+async def get_mixed_effects_estimator():
+    """Get MixedEffectsEstimator — ICC and design-effect computation.
+
+    Online method-of-moments variance decomposition for
+    between/within-user variance, intraclass correlation,
+    and design-effect weighting.
+    """
+    components = await get_learning_components()
+    return components.mixed_effects_estimator
+
+
+async def get_therapeutic_orchestrator():
+    """Get TherapeuticSequenceOrchestrator — full retargeting lifecycle.
+
+    The orchestrator manages: diagnosis → mechanism selection → sequence
+    creation → touch generation → outcome processing → learning.
+    """
+    components = await get_learning_components()
+    return components.therapeutic_orchestrator
+
+
+async def get_barrier_diagnostic_engine():
+    """Get ConversionBarrierDiagnosticEngine — shared singleton.
+
+    Diagnoses conversion barriers from bilateral edge gaps and
+    behavioral signals. Used by retargeting AND first-touch flows.
+    """
+    components = await get_learning_components()
+    return components.barrier_diagnostic_engine
+
+
+async def get_signal_collector():
+    """Get NonconsciousSignalCollector — telemetry ingestion (Enhancement #34).
+
+    Receives site telemetry payloads and accumulates per-user signal
+    profiles in Redis. Feeds all 6 nonconscious signals.
+    """
+    components = await get_learning_components()
+    return components.signal_collector
+
+
+async def get_diagnostic_reasoner():
+    """Get DiagnosticReasoner — core platform deductive engine.
+
+    Interprets each outcome as evidence about a psychological puzzle,
+    then selects the constrained next move that maximizes diagnostic
+    information. Used by retargeting orchestrator, campaign orchestrator,
+    and any system that reasons about Person x PageMindstate x Mechanism.
+    """
+    components = await get_learning_components()
+    return components.diagnostic_reasoner

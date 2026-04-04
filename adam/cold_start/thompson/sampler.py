@@ -184,50 +184,54 @@ class ThompsonSampler:
         mechanism: CognitiveMechanism,
         success: bool,
         archetype: Optional[ArchetypeID] = None,
+        weight: float = 1.0,
     ) -> BetaDistribution:
         """
         Update posterior with outcome.
-        
+
         Args:
             mechanism: Mechanism that was used
             success: Whether outcome was positive
             archetype: User's archetype
-            
+            weight: Observation weight (0.0-1.0). Used by processing depth
+                    classifier (Enhancement #34) to discount unprocessed
+                    impressions. At weight=0.05, posterior barely moves.
+
         Returns:
             Updated posterior
         """
         self.total_updates += 1
-        
+
         # Update archetype-specific posterior
         if archetype:
             if archetype not in self.posteriors:
                 self.posteriors[archetype] = {}
-            
+
             if mechanism not in self.posteriors[archetype]:
                 # Initialize from population
                 pop = self.population_posteriors.get(
-                    mechanism, 
+                    mechanism,
                     BetaDistribution(alpha=1.0, beta=1.0)
                 )
                 self.posteriors[archetype][mechanism] = BetaDistribution(
                     alpha=pop.alpha,
                     beta=pop.beta
                 )
-            
+
             self.posteriors[archetype][mechanism] = \
-                self.posteriors[archetype][mechanism].update(success)
-            
+                self.posteriors[archetype][mechanism].weighted_update(success, weight)
+
             return self.posteriors[archetype][mechanism]
-        
+
         # Update population posterior
         if mechanism not in self.population_posteriors:
             self.population_posteriors[mechanism] = BetaDistribution(
                 alpha=1.0, beta=1.0
             )
-        
+
         self.population_posteriors[mechanism] = \
-            self.population_posteriors[mechanism].update(success)
-        
+            self.population_posteriors[mechanism].weighted_update(success, weight)
+
         return self.population_posteriors[mechanism]
     
     def get_posterior(

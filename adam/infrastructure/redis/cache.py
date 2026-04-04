@@ -67,6 +67,12 @@ class CacheDomain(str, Enum):
     AMAZON = "amazon"             # Amazon corpus data
     WPP = "wpp"                   # WPP integration data
     
+    # Therapeutic retargeting (Enhancement #33)
+    RETARGETING = "retargeting"   # Diagnoses, sequences, priors, site profiles
+
+    # Nonconscious signal intelligence (Enhancement #34)
+    NONCONSCIOUS = "nonconscious"  # Per-user signal profiles, telemetry state
+
     # General cache
     CACHE = "cache"               # General purpose cache
 
@@ -96,6 +102,13 @@ DOMAIN_TTLS: Dict[CacheDomain, int] = {
     CacheDomain.AMAZON: 3600 * 24,        # 24 hours (stable corpus data)
     CacheDomain.WPP: 1800,                # 30 minutes
     
+    # Therapeutic retargeting
+    CacheDomain.RETARGETING: 3600,        # 1 hour
+
+    # Nonconscious signal intelligence (Enhancement #34)
+    # 90-day TTL: signal profiles accumulate across the retargeting lifecycle
+    CacheDomain.NONCONSCIOUS: 3600 * 24 * 90,  # 90 days
+
     # General cache
     CacheDomain.CACHE: 3600,              # 1 hour default
 }
@@ -202,6 +215,21 @@ class CacheKeyBuilder:
         """Build meta-learner user context key."""
         return f"{cls.PREFIX}:{CacheDomain.FEATURE}:meta_learner:context:{user_id}"
     
+    @classmethod
+    def nonconscious_profile(cls, user_id: str) -> str:
+        """Build per-user nonconscious signal profile key."""
+        return f"{cls.PREFIX}:{CacheDomain.NONCONSCIOUS}:profile:{user_id}"
+
+    @classmethod
+    def nonconscious_session(cls, session_id: str) -> str:
+        """Build telemetry session key (short-lived, for dedup)."""
+        return f"{cls.PREFIX}:{CacheDomain.NONCONSCIOUS}:session:{session_id}"
+
+    @classmethod
+    def nonconscious_population(cls, metric: str) -> str:
+        """Build population-level signal metric key (e.g., organic_ratio baseline)."""
+        return f"{cls.PREFIX}:{CacheDomain.NONCONSCIOUS}:population:{metric}"
+
     @classmethod
     def pattern(cls, domain: CacheDomain, pattern: str = "*") -> str:
         """Build a pattern for key scanning."""
@@ -498,17 +526,40 @@ class ADAMRedisCache:
             logger.error(f"Cache mget failed: {e}")
             return [None] * len(keys)
     
-    async def mset(self, mapping: Dict[str, Union[Dict, BaseModel]]) -> bool:
-        """Set multiple keys at once."""
+    async def mset(
+        self,
+        mapping: Dict[str, Union[Dict, BaseModel]],
+        ttl: Optional[int] = None,
+        domain: Optional[CacheDomain] = None,
+    ) -> bool:
+        """Set multiple keys at once WITH TTL (prevents memory leak).
+
+        Uses a Redis pipeline of SETEX calls instead of raw MSET,
+        ensuring every key has an expiry.
+
+        Args:
+            mapping: Key-value pairs to set.
+            ttl: Explicit TTL in seconds (overrides domain).
+            domain: Cache domain for default TTL. Falls back to 1hr.
+        """
+        if not mapping:
+            return True
+
+        effective_ttl = ttl
+        if effective_ttl is None:
+            effective_ttl = DOMAIN_TTLS.get(
+                domain, DOMAIN_TTLS[CacheDomain.CACHE]
+            ) if domain else DOMAIN_TTLS[CacheDomain.CACHE]
+
         try:
-            serialized = {}
+            pipe = self.redis.pipeline()
             for k, v in mapping.items():
                 if isinstance(v, BaseModel):
-                    serialized[k] = json.dumps(v.model_dump(mode="json"), default=str)
+                    json_val = json.dumps(v.model_dump(mode="json"), default=str)
                 else:
-                    serialized[k] = json.dumps(v, default=str)
-            
-            await self.redis.mset(serialized)
+                    json_val = json.dumps(v, default=str)
+                pipe.setex(k, effective_ttl, json_val)
+            await pipe.execute()
             return True
         except Exception as e:
             logger.error(f"Cache mset failed: {e}")

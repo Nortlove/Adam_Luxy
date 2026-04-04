@@ -79,16 +79,37 @@ class BetaDistribution(BaseModel):
     def update(self, success: bool) -> "BetaDistribution":
         """
         Bayesian update with new observation.
-        
+
         Args:
             success: Whether outcome was successful
-            
+
         Returns:
             New BetaDistribution with updated parameters
         """
         if success:
             return BetaDistribution(alpha=self.alpha + 1, beta=self.beta)
         return BetaDistribution(alpha=self.alpha, beta=self.beta + 1)
+
+    def weighted_update(self, success: bool, weight: float = 1.0) -> "BetaDistribution":
+        """Bayesian update with fractional observation weight.
+
+        Implements the power posterior framework: L(x|θ)^w where w ∈ [0,1].
+        At w=1.0 this is identical to update(). At w=0.05 the posterior
+        barely moves — used for unprocessed impressions (Enhancement #34).
+
+        Args:
+            success: Whether outcome was successful.
+            weight: Observation weight (0.0-1.0). Lower = less posterior shift.
+
+        Returns:
+            New BetaDistribution with weighted parameter update.
+        """
+        if weight <= 0:
+            return BetaDistribution(alpha=self.alpha, beta=self.beta)
+        w = min(weight, 1.0)
+        if success:
+            return BetaDistribution(alpha=self.alpha + w, beta=self.beta)
+        return BetaDistribution(alpha=self.alpha, beta=self.beta + w)
     
     def blend(
         self, 
