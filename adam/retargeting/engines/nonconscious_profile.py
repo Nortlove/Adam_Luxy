@@ -273,6 +273,19 @@ def enrich_diagnostic_input(
     if nonconscious.stage_signal == "intending":
         inp.behavioral_signals["organic_intending"] = 1.0
 
+    # 5. Frustration scoring from bilateral edge dimensions
+    if inp.bilateral_edge:
+        from adam.retargeting.engines.frustration import FrustrationScorer
+        scorer = FrustrationScorer()
+        frust_score = scorer.score(inp.bilateral_edge)
+        inp.frustration_score = frust_score
+        # Merge frustration H-modifiers
+        frust_h = scorer.get_frustration_h_modifiers(frust_score)
+        for key in ("H1", "H2", "H3", "H4", "H5"):
+            inp.external_h_modifiers[key] = (
+                inp.external_h_modifiers.get(key, 0.0) + frust_h.get(key, 0.0)
+            )
+
     return inp
 
 

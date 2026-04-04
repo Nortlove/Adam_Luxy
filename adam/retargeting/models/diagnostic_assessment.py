@@ -180,6 +180,11 @@ class DiagnosticInput(BaseModel):
     reactance_level: float = 0.0
     pkm_phase: int = 1
     ownership_level: float = 0.0
+    frustration_score: float = Field(
+        0.0,
+        description="Aggregate frustration from conflicting alignment dimensions (0-1). "
+                    "Session 34-2: r=-0.582 with non-conversion.",
+    )
 
     # User profile (for per-user posterior lookup)
     user_profile: Optional[Any] = None
