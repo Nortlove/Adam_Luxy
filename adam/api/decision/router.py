@@ -365,7 +365,7 @@ async def make_decision(
                 ad_candidates=[ac.model_dump() for ac in ad_candidates],
                 category_id=request.category_id,
                 brand_id=request.brand_id,
-                session_context=request.context.model_dump() if hasattr(request, 'context') and request.context else {},
+                session_context=request.session_context.model_dump() if request.session_context else {},
             )
             
             # Calculate latency
@@ -1231,4 +1231,385 @@ async def enrich(request: EnrichRequest) -> EnrichResponse:
         raise
     except Exception as e:
         logger.exception(f"Error in enrichment: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# =============================================================================
+# DSP IMPRESSION ENRICHMENT ENDPOINTS
+# =============================================================================
+
+class ImpressionEnrichRequest(BaseModel):
+    """
+    Request for DSP impression-level psychological enrichment.
+    
+    All behavioral signals from the bidstream are passed in as flat fields.
+    The engine infers a full PsychologicalStateVector, generates inferential
+    chains, and returns a CPM premium multiplier.
+    """
+    
+    request_id: str = Field(
+        default_factory=lambda: f"imp_{uuid4().hex[:12]}"
+    )
+    
+    # Mode: "fast" (~50ms DSP-only) or "full" (~200ms with ADAM enrichment)
+    mode: str = Field(default="fast", description="'fast' or 'full'")
+    
+    # Ad context
+    ad_category: str = Field(default="", description="Category of the ad being considered")
+    
+    # Temporal signals
+    timestamp: float = Field(default=0, description="Unix timestamp")
+    day_of_week: int = Field(default=0, ge=0, le=6)
+    local_hour: int = Field(default=12, ge=0, le=23)
+    
+    # Device signals
+    device_type: str = Field(default="desktop", description="desktop, mobile, tablet")
+    screen_width: int = Field(default=1920)
+    screen_height: int = Field(default=1080)
+    dark_mode: bool = False
+    connection_speed_mbps: float = Field(default=50.0)
+    
+    # Content context
+    content_category: str = Field(default="news")
+    content_sentiment: float = Field(default=0.0, ge=-1.0, le=1.0)
+    content_arousal: float = Field(default=0.5, ge=0.0, le=1.0)
+    content_complexity: float = Field(default=0.5, ge=0.0, le=1.0)
+    
+    # Ad placement
+    ad_density: float = Field(default=0.3, ge=0.0, le=1.0)
+    viewability_prediction: float = Field(default=0.7, ge=0.0, le=1.0)
+    above_fold: bool = True
+    
+    # Session signals
+    session_duration_seconds: int = Field(default=0)
+    pages_viewed: int = Field(default=1)
+    
+    # Behavioral signals (from bidstream)
+    scroll_depth: float = Field(default=0.0, ge=0.0, le=1.0)
+    scroll_velocity: float = Field(default=0.0)
+    time_on_page_seconds: float = Field(default=0.0)
+    mouse_velocity: float = Field(default=0.0)
+    mouse_max_deviation: float = Field(default=0.0)
+    click_precision: float = Field(default=1.0)
+    backspace_frequency: float = Field(default=0.0)
+    touch_pressure: float = Field(default=0.5)
+    
+    # Navigation signals
+    referrer_type: str = Field(default="direct")
+    navigation_directness: float = Field(default=0.5, ge=0.0, le=1.0)
+    category_changes: int = Field(default=0)
+    comparison_behavior: float = Field(default=0.0, ge=0.0, le=1.0)
+    
+    # Product context (optional, for ADAM enrichment)
+    product_category: str = Field(default="")
+    brand_name: str = Field(default="")
+    
+    # Optional prior NDF from ADAM (if user already profiled)
+    adam_ndf_prior: Optional[Dict[str, float]] = None
+
+
+class ImpressionEnrichResponse(BaseModel):
+    """
+    DSP impression enrichment response.
+    
+    Contains the full psychological intelligence for this impression,
+    including inferential chains, CPM multiplier, and ethical check.
+    """
+    
+    request_id: str
+    mode: str
+    approved: bool
+    
+    # CPM Scoring
+    enrichment_multiplier: float = Field(
+        description="CPM premium multiplier (e.g. 1.85 = 85% premium)"
+    )
+    
+    # Psychological state
+    ndf_profile: Dict[str, float] = Field(
+        default_factory=dict,
+        description="7+1 NDF dimensions (0-1 scale)"
+    )
+    dominant_frame: Optional[str] = None
+    processing_route: Optional[str] = None
+    
+    # Strategy
+    strategy: Dict[str, Any] = Field(default_factory=dict)
+    
+    # Inferential intelligence (full mode only)
+    inferential_chains: List[Dict[str, Any]] = Field(default_factory=list)
+    atom_mechanisms: List[str] = Field(default_factory=list)
+    
+    # Reasoning trace
+    reasoning_trace: List[str] = Field(default_factory=list)
+    
+    # Ethical
+    ethical_check: Dict[str, Any] = Field(default_factory=dict)
+    
+    # Performance
+    timing: Dict[str, float] = Field(default_factory=dict)
+    errors: List[str] = Field(default_factory=list)
+
+
+@router.post("/impression/enrich", response_model=ImpressionEnrichResponse)
+async def enrich_impression(request: ImpressionEnrichRequest) -> ImpressionEnrichResponse:
+    """
+    DSP Impression Enrichment Endpoint.
+    
+    Given raw bidstream behavioral signals, returns:
+    - Full psychological state inference (50+ dimensions)
+    - NDF profile (7+1 dimensions)
+    - Optimal persuasion strategy
+    - CPM premium multiplier
+    - Inferential chains explaining WHY (full mode)
+    - Ethical vulnerability check
+    
+    Modes:
+    - fast (~50ms): DSP inference only. Best for high-QPS RTB.
+    - full (~200ms): DSP + ADAM atom enrichment. Best for PMP/PG deals.
+    
+    Example:
+        POST /api/v1/decisions/impression/enrich
+        {
+            "device_type": "mobile",
+            "local_hour": 23,
+            "content_category": "finance",
+            "content_sentiment": -0.3,
+            "scroll_velocity": 850.0,
+            "session_duration_seconds": 1800,
+            "ad_category": "insurance",
+            "mode": "full"
+        }
+    """
+    try:
+        from adam.workflows.dsp_impression_workflow import DSPImpressionWorkflowExecutor
+
+        # Build impression context dict from request
+        ctx = request.model_dump(exclude={"request_id", "mode", "ad_category", "adam_ndf_prior"})
+
+        executor = DSPImpressionWorkflowExecutor()
+        result = executor.enrich(
+            impression_context=ctx,
+            ad_category=request.ad_category,
+            mode=request.mode,
+            adam_ndf_prior=request.adam_ndf_prior,
+        )
+
+        state = result.get("state", {})
+
+        return ImpressionEnrichResponse(
+            request_id=request.request_id,
+            mode=request.mode,
+            approved=result.get("approved", True),
+            enrichment_multiplier=result.get("enrichment_multiplier", 1.0),
+            ndf_profile=result.get("ndf_profile", {}),
+            dominant_frame=state.get("dominant_motivational_frame"),
+            processing_route=state.get("optimal_processing_route"),
+            strategy=result.get("strategy", {}),
+            inferential_chains=result.get("inferential_chains", []),
+            atom_mechanisms=result.get("atom_mechanisms", []),
+            reasoning_trace=result.get("reasoning_trace", []),
+            ethical_check=result.get("ethical_check", {}),
+            timing=result.get("timing", {}),
+            errors=result.get("errors", []),
+        )
+
+    except Exception as e:
+        logger.exception(f"Error in impression enrichment: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class BatchImpressionRequest(BaseModel):
+    """Batch request for multiple impressions."""
+    
+    impressions: List[ImpressionEnrichRequest] = Field(
+        ..., min_length=1, max_length=100,
+        description="Up to 100 impressions per batch"
+    )
+
+
+class BatchImpressionResponse(BaseModel):
+    """Batch response for multiple impressions."""
+    
+    results: List[ImpressionEnrichResponse]
+    total: int
+    succeeded: int
+    failed: int
+    avg_latency_ms: float
+
+
+@router.post("/impression/batch", response_model=BatchImpressionResponse)
+async def batch_enrich_impressions(request: BatchImpressionRequest) -> BatchImpressionResponse:
+    """
+    Batch DSP Impression Enrichment.
+    
+    Process up to 100 impressions in a single request.
+    Useful for pre-enrichment of impression queues.
+    
+    Example:
+        POST /api/v1/decisions/impression/batch
+        {
+            "impressions": [
+                {"device_type": "mobile", "local_hour": 23, "content_category": "finance"},
+                {"device_type": "desktop", "local_hour": 10, "content_category": "tech"}
+            ]
+        }
+    """
+    import asyncio
+
+    results: List[ImpressionEnrichResponse] = []
+    succeeded = 0
+    failed = 0
+    latencies: List[float] = []
+
+    from adam.workflows.dsp_impression_workflow import DSPImpressionWorkflowExecutor
+    executor = DSPImpressionWorkflowExecutor()
+
+    for imp_req in request.impressions:
+        try:
+            ctx = imp_req.model_dump(exclude={"request_id", "mode", "ad_category", "adam_ndf_prior"})
+            result = executor.enrich(
+                impression_context=ctx,
+                ad_category=imp_req.ad_category,
+                mode=imp_req.mode,
+                adam_ndf_prior=imp_req.adam_ndf_prior,
+            )
+
+            state = result.get("state", {})
+            total_ms = result.get("timing", {}).get("total_ms", 0)
+            latencies.append(total_ms)
+
+            results.append(ImpressionEnrichResponse(
+                request_id=imp_req.request_id,
+                mode=imp_req.mode,
+                approved=result.get("approved", True),
+                enrichment_multiplier=result.get("enrichment_multiplier", 1.0),
+                ndf_profile=result.get("ndf_profile", {}),
+                dominant_frame=state.get("dominant_motivational_frame"),
+                processing_route=state.get("optimal_processing_route"),
+                strategy=result.get("strategy", {}),
+                inferential_chains=result.get("inferential_chains", []),
+                atom_mechanisms=result.get("atom_mechanisms", []),
+                reasoning_trace=result.get("reasoning_trace", []),
+                ethical_check=result.get("ethical_check", {}),
+                timing=result.get("timing", {}),
+                errors=result.get("errors", []),
+            ))
+            succeeded += 1
+
+        except Exception as e:
+            logger.warning(f"Batch impression failed: {e}")
+            results.append(ImpressionEnrichResponse(
+                request_id=imp_req.request_id,
+                mode=imp_req.mode,
+                approved=True,
+                enrichment_multiplier=1.0,
+                errors=[str(e)],
+            ))
+            failed += 1
+
+    avg_latency = sum(latencies) / max(1, len(latencies))
+
+    return BatchImpressionResponse(
+        results=results,
+        total=len(request.impressions),
+        succeeded=succeeded,
+        failed=failed,
+        avg_latency_ms=round(avg_latency, 2),
+    )
+
+
+# =============================================================================
+# DSP IMPRESSION OUTCOME REPORTING
+# =============================================================================
+
+class ImpressionOutcomeRequest(BaseModel):
+    """Report an outcome for a DSP impression enrichment."""
+    
+    request_id: str = Field(description="Original impression request_id")
+    outcome_type: str = Field(
+        description="click, conversion, view, engagement, bounce, skip"
+    )
+    outcome_value: float = Field(
+        default=1.0, ge=0.0, le=1.0,
+        description="Outcome value (1.0 = full success)"
+    )
+    
+    # DSP-specific metadata for learning
+    ndf_profile: Optional[Dict[str, float]] = None
+    strategy: Optional[Dict[str, Any]] = None
+    enrichment_multiplier: Optional[float] = None
+    inferential_chains: Optional[List[Dict[str, Any]]] = None
+    extracted_signals: Optional[Dict[str, float]] = None
+    ad_category: str = ""
+    
+    # Attribution
+    creative_id: str = ""
+    campaign_id: str = ""
+    dsp_name: str = ""
+
+
+class ImpressionOutcomeResponse(BaseModel):
+    """Response after processing a DSP impression outcome."""
+    
+    request_id: str
+    processed: bool
+    updates: Dict[str, Any] = Field(default_factory=dict)
+    processing_time_ms: float = 0.0
+
+
+@router.post("/impression/outcome", response_model=ImpressionOutcomeResponse)
+async def report_impression_outcome(
+    request: ImpressionOutcomeRequest,
+    background_tasks: BackgroundTasks,
+) -> ImpressionOutcomeResponse:
+    """
+    Report an outcome for a previously enriched DSP impression.
+    
+    This closes the learning loop: outcomes flow back to update
+    signal reliability, construct inference accuracy, edge strengths,
+    and strategy effectiveness.
+    
+    Example:
+        POST /api/v1/decisions/impression/outcome
+        {
+            "request_id": "imp_abc123",
+            "outcome_type": "conversion",
+            "outcome_value": 1.0,
+            "enrichment_multiplier": 1.85,
+            "ad_category": "insurance"
+        }
+    """
+    try:
+        from adam.core.learning.outcome_handler import handle_outcome
+
+        metadata = {
+            "source": "dsp_impression",
+            "ndf_profile": request.ndf_profile or {},
+            "strategy": request.strategy or {},
+            "enrichment_multiplier": request.enrichment_multiplier or 1.0,
+            "inferential_chains": request.inferential_chains or [],
+            "extracted_signals": request.extracted_signals or {},
+            "ad_category": request.ad_category,
+            "creative_id": request.creative_id,
+            "campaign_id": request.campaign_id,
+            "dsp_name": request.dsp_name,
+        }
+
+        result = await handle_outcome(
+            decision_id=request.request_id,
+            outcome_type=request.outcome_type,
+            outcome_value=request.outcome_value,
+            metadata=metadata,
+        )
+
+        return ImpressionOutcomeResponse(
+            request_id=request.request_id,
+            processed=True,
+            updates=result.get("updates", {}),
+            processing_time_ms=result.get("processing_time_ms", 0.0),
+        )
+
+    except Exception as e:
+        logger.exception(f"Error processing impression outcome: {e}")
         raise HTTPException(status_code=500, detail=str(e))

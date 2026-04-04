@@ -146,7 +146,7 @@ class MetaLearnerService:
     ) -> None:
         """
         Update posteriors from an observed outcome.
-        
+
         Args:
             decision_id: Original decision ID
             modality: The modality that was used
@@ -154,16 +154,20 @@ class MetaLearnerService:
         """
         engine = await self._get_engine()
         engine.update(modality, reward)
-        
-        # Cache updated state
+
+        # Cache updated state to Redis (every update)
         await self._cache_posterior_state(engine.posterior_state)
-        
+
+        # Persist to Neo4j every 10th update for durability
+        if engine.posterior_state.total_decisions % 10 == 0:
+            await self._persist_posterior_to_neo4j(engine.posterior_state)
+
         # Record metric
         self.metrics.meta_learner_updates.labels(
             modality=modality.value,
             reward_bin=self._reward_bin(reward),
         ).inc()
-        
+
         logger.debug(f"Updated modality {modality.value} with reward {reward:.2f}")
     
     def _extract_context_features(
@@ -209,6 +213,55 @@ class MetaLearnerService:
         else:
             context_novelty = ContextNovelty.FAMILIAR
         
+        # Extract alignment system features from ad_context
+        alignment_confidence = 0.0
+        prior_richness = 0
+        product_known = False
+        dsp_graph_available = False
+        
+        ad_context = getattr(context, 'ad_context', {}) or {}
+        if ad_context:
+            # Alignment confidence from alignment scores
+            alignment_data = ad_context.get("alignment", {})
+            alignment_confidence = alignment_data.get("overall", 0.0)
+            
+            # Prior richness: count how many prior sources are available
+            if ad_context.get("has_langgraph_priors"):
+                prior_richness += 1
+            if ad_context.get("has_ingestion_priors"):
+                prior_richness += 1
+            if ad_context.get("has_ndf_intelligence"):
+                prior_richness += 1
+            if ad_context.get("has_dsp_intelligence"):
+                prior_richness += 1
+            if ad_context.get("has_precomputed_priors"):
+                prior_richness += 1
+            
+            # Product known: check if we have product ad profile
+            product_ad = ad_context.get("product_ad_psychology", {})
+            product_known = product_ad.get("has_profile", False) if product_ad else False
+            
+            # DSP graph available
+            dsp_intel = ad_context.get("dsp_graph_intelligence", {})
+            dsp_graph_available = dsp_intel.get("has_dsp", False) if dsp_intel else False
+        
+        # DSP construct-level features (also check injected_intelligence if ad_context lacks it)
+        dsp_construct_count = 0
+        dsp_dominant_domain = ""
+        dsp_intel = ad_context.get("dsp_graph_intelligence", {}) or (
+            getattr(context, "injected_intelligence", {}) or {}
+        ).get("dsp_graph_intelligence", {})
+        if dsp_intel.get("has_dsp"):
+            empirical = dsp_intel.get("empirical_effectiveness", {})
+            dsp_construct_count = len(empirical)
+            domain_counts: Dict[str, int] = {}
+            for edge in dsp_intel.get("alignment_edges", []):
+                d = edge.get("domain", "")
+                if d:
+                    domain_counts[d] = domain_counts.get(d, 0) + 1
+            if domain_counts:
+                dsp_dominant_domain = max(domain_counts, key=domain_counts.get)
+        
         return ContextFeatures(
             user_id=user_intel.user_id,
             interaction_count=interaction_count,
@@ -222,6 +275,13 @@ class MetaLearnerService:
             latency_budget_ms=context.latency_budget_ms,
             exploration_allowed=True,  # Could be configured per campaign
             campaign_mode="standard",
+            # Alignment system features
+            alignment_confidence=alignment_confidence,
+            prior_richness=prior_richness,
+            product_known=product_known,
+            dsp_graph_available=dsp_graph_available,
+            dsp_construct_count=dsp_construct_count,
+            dsp_dominant_domain=dsp_dominant_domain,
         )
     
     async def _get_engine(self) -> ThompsonSamplingEngine:
@@ -239,17 +299,89 @@ class MetaLearnerService:
         return self._engine
     
     async def _load_posterior_state(self) -> PosteriorState:
-        """Load posterior state from cache."""
+        """Load posterior state with fallback chain: Redis → Neo4j → fresh.
+
+        Redis is fast but volatile. Neo4j is durable but slower. Fresh
+        priors are last resort — logs WARNING so operators know learning
+        was lost.
+        """
+        # 1. Try Redis (fast, but lost on restart)
         key = CacheKeyBuilder.meta_learner_posteriors()
-        
         state = await self.cache.get(key, PosteriorState)
         if state:
-            logger.debug("Loaded posterior state from cache")
+            logger.debug("Loaded posterior state from Redis cache")
             return state
-        
-        # Initialize fresh state
-        logger.info("Initializing fresh posterior state")
+
+        # 2. Try Neo4j (durable)
+        state = await self._load_posterior_from_neo4j()
+        if state:
+            logger.info("Loaded posterior state from Neo4j (Redis miss)")
+            # Re-populate Redis so subsequent loads are fast
+            await self._cache_posterior_state(state)
+            return state
+
+        # 3. Fresh priors — this means ALL learning history is lost
+        logger.warning(
+            "No posterior state in Redis or Neo4j — initializing fresh priors. "
+            "All prior meta-learner learning is lost."
+        )
         return PosteriorState()
+
+    async def _load_posterior_from_neo4j(self) -> Optional[PosteriorState]:
+        """Load posterior state from Neo4j MetaLearnerState node."""
+        try:
+            from adam.core.dependencies import get_infrastructure
+            infra = get_infrastructure()
+            driver = getattr(infra, "neo4j_driver", None) if infra else None
+            if not driver:
+                return None
+
+            async with driver.session() as session:
+                result = await session.run(
+                    "MATCH (s:MetaLearnerState) RETURN s LIMIT 1"
+                )
+                record = await result.single()
+                if not record:
+                    return None
+
+                node = record["s"]
+                state_json = node.get("state_json", "")
+                if not state_json:
+                    return None
+
+                import json
+                state_dict = json.loads(state_json)
+                return PosteriorState(**state_dict)
+        except Exception as e:
+            logger.debug("Neo4j posterior load failed: %s", e)
+            return None
+
+    async def _persist_posterior_to_neo4j(self, state: PosteriorState) -> None:
+        """Persist posterior state to Neo4j for durability."""
+        try:
+            from adam.core.dependencies import get_infrastructure
+            infra = get_infrastructure()
+            driver = getattr(infra, "neo4j_driver", None) if infra else None
+            if not driver:
+                return
+
+            import json
+            state_json = json.dumps(state.model_dump(), default=str)
+
+            async with driver.session() as session:
+                await session.run(
+                    """
+                    MERGE (s:MetaLearnerState {singleton: true})
+                    SET s.state_json = $state_json,
+                        s.total_decisions = $total_decisions,
+                        s.last_updated = datetime()
+                    """,
+                    state_json=state_json,
+                    total_decisions=state.total_decisions,
+                )
+            logger.debug("Persisted meta-learner posteriors to Neo4j")
+        except Exception as e:
+            logger.debug("Neo4j posterior persist failed: %s", e)
     
     async def _cache_posterior_state(self, state: PosteriorState) -> None:
         """Cache posterior state."""

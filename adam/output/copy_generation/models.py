@@ -77,6 +77,34 @@ class CopyRequest(BaseModel):
     preferred_voice_gender: VoiceGender = Field(default=VoiceGender.NEUTRAL)
     target_duration_seconds: Optional[int] = None
 
+    # DSP construct intelligence (creative_implications for style/frame/cta)
+    dsp_constructs: Dict[str, Any] = Field(default_factory=dict)
+
+    # Gradient field priorities: top optimization dimensions from gradient bridge
+    # Each entry maps dimension name -> priority weight (higher = more important)
+    # Example: {"regulatory_fit": 0.82, "emotional_resonance": 0.71}
+    gradient_priorities: Optional[Dict[str, float]] = Field(
+        default=None,
+        description="Top gradient field priorities to use as creative direction constraints",
+    )
+
+    # Bilateral edge dimensions: buyer×product psychological alignment (20 dims)
+    # When available, provides precise per-buyer copy parameter derivation
+    edge_dimensions: Optional[Dict[str, float]] = Field(
+        default=None,
+        description="Bilateral edge dimensions from prefetch (regulatory_fit, emotional_resonance, etc.)",
+    )
+
+    # Retargeting context — when copy is for a specific touch in a sequence
+    archetype: Optional[str] = Field(default=None, description="Buyer archetype ID")
+    barrier_targeted: Optional[str] = Field(default=None, description="Diagnosed psychological barrier")
+    touch_position: Optional[int] = Field(default=None, description="Touch position in retargeting sequence (1-5)")
+    narrative_chapter: Optional[int] = Field(default=None, description="Narrative arc chapter (2-5)")
+    narrative_function: Optional[str] = Field(default=None, description="present_conflict, show_consideration, show_resolution, confirm_outcome")
+    frustrated_dimensions: Optional[List[Dict[str, Any]]] = Field(default=None, description="Dimension pairs that conflict — must be addressed sequentially, not simultaneously")
+    headline_direction: Optional[str] = Field(default=None, description="Creative brief for headline direction")
+    product_category: Optional[str] = Field(default=None)
+
 
 class TextVariant(BaseModel):
     """A text variant."""

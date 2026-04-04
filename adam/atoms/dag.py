@@ -37,6 +37,12 @@ from adam.atoms.core.mechanism_activation import MechanismActivationAtom
 from adam.atoms.core.message_framing import MessageFramingAtom
 from adam.atoms.core.ad_selection import AdSelectionAtom
 from adam.atoms.core.channel_selection import ChannelSelectionAtom
+from adam.atoms.core.review_intelligence import ReviewIntelligenceAtom
+from adam.atoms.core.cognitive_load import CognitiveLoadAtom
+from adam.atoms.core.decision_entropy import DecisionEntropyAtom
+from adam.atoms.core.information_asymmetry import InformationAsymmetryAtom
+from adam.atoms.core.predictive_error import PredictiveErrorAtom
+from adam.atoms.core.ambiguity_attitude import AmbiguityAttitudeAtom
 from adam.atoms.models.atom_io import (
     AtomInput,
     AtomOutput,
@@ -104,6 +110,58 @@ DEFAULT_DAG_NODES = [
         required=True,
     ),
     
+    # Level 2.5: Review Intelligence (parallel with Level 2, feeds into MechanismActivation)
+    AtomNode(
+        atom_id="atom_review_intelligence",
+        atom_class="ReviewIntelligenceAtom",
+        depends_on=["atom_user_state"],
+        required=False,  # Non-critical — MechanismActivation gracefully handles its absence
+        timeout_ms=1500,
+    ),
+
+    # Level 2.5: Auxiliary psychological atoms (parallel, all optional)
+    # These provide non-redundant filtering that strengthens MechanismActivation:
+    # - CognitiveLoad: System 1/2 filtering, complexity threshold
+    # - DecisionEntropy: Decision stage (browsing, comparing, ready-to-buy)
+    # - InformationAsymmetry: Search/experience/credence good type
+    # - PredictiveError: Goldilocks surprise zone
+    # - AmbiguityAttitude: Ellsberg risk vs ambiguity preference
+    AtomNode(
+        atom_id="atom_cognitive_load",
+        atom_class="CognitiveLoadAtom",
+        depends_on=["atom_user_state"],
+        required=False,
+        timeout_ms=500,
+    ),
+    AtomNode(
+        atom_id="atom_decision_entropy",
+        atom_class="DecisionEntropyAtom",
+        depends_on=["atom_user_state"],
+        required=False,
+        timeout_ms=500,
+    ),
+    AtomNode(
+        atom_id="atom_information_asymmetry",
+        atom_class="InformationAsymmetryAtom",
+        depends_on=["atom_user_state"],
+        required=False,
+        timeout_ms=500,
+    ),
+    AtomNode(
+        atom_id="atom_predictive_error",
+        atom_class="PredictiveErrorAtom",
+        depends_on=["atom_user_state"],
+        required=False,
+        timeout_ms=500,
+    ),
+    AtomNode(
+        atom_id="atom_ambiguity_attitude",
+        atom_class="AmbiguityAttitudeAtom",
+        depends_on=["atom_user_state"],
+        required=False,
+        timeout_ms=500,
+    ),
+
     # Level 3: Mechanism Synthesis
     AtomNode(
         atom_id="atom_mechanism_activation",
@@ -111,7 +169,14 @@ DEFAULT_DAG_NODES = [
         depends_on=[
             "atom_personality_expression",
             "atom_regulatory_focus",
-            "atom_construal_level"
+            "atom_construal_level",
+            "atom_review_intelligence",
+            # Auxiliary atoms — optional deps, gracefully handled if absent
+            "atom_cognitive_load",
+            "atom_decision_entropy",
+            "atom_information_asymmetry",
+            "atom_predictive_error",
+            "atom_ambiguity_attitude",
         ],
         required=True,
     ),
@@ -206,10 +271,17 @@ class AtomDAG:
         "PersonalityExpressionAtom": PersonalityExpressionAtom,
         "RegulatoryFocusAtom": RegulatoryFocusAtom,
         "ConstrualLevelAtom": ConstrualLevelAtom,
+        "ReviewIntelligenceAtom": ReviewIntelligenceAtom,
         "MechanismActivationAtom": MechanismActivationAtom,
         "MessageFramingAtom": MessageFramingAtom,
         "AdSelectionAtom": AdSelectionAtom,
         "ChannelSelectionAtom": ChannelSelectionAtom,
+        # Auxiliary atoms (Enhancement #35 DAG completion)
+        "CognitiveLoadAtom": CognitiveLoadAtom,
+        "DecisionEntropyAtom": DecisionEntropyAtom,
+        "InformationAsymmetryAtom": InformationAsymmetryAtom,
+        "PredictiveErrorAtom": PredictiveErrorAtom,
+        "AmbiguityAttitudeAtom": AmbiguityAttitudeAtom,
     }
     
     def __init__(
@@ -273,30 +345,59 @@ class AtomDAG:
         self,
         request_id: str,
         request_context: RequestContext,
+        buyer_uncertainty: Optional[Dict[str, Any]] = None,
+        gradient_field: Optional[Dict[str, float]] = None,
+        ad_context: Optional[Dict[str, Any]] = None,
+        latency_budget=None,
     ) -> DAGExecutionResult:
         """
         Execute the entire atom DAG.
-        
+
         Runs atoms level by level, with parallelization within levels.
+        If a latency_budget is provided and exhausted, returns partial
+        results from completed levels.
+
+        Args:
+            request_id: Unique request identifier.
+            request_context: Zone 1 context.
+            buyer_uncertainty: Per-dimension uncertainty from BuyerUncertaintyProfile.
+            ad_context: Pre-fetched psychological intelligence from graph queries.
+            gradient_field: Gradient magnitudes per dimension for this archetype×category.
+            latency_budget: Optional LatencyBudget for timeout enforcement.
         """
         start_time = datetime.now(timezone.utc)
         user_id = request_context.user_intelligence.user_id
-        
+
         result = DAGExecutionResult(
             request_id=request_id,
             started_at=start_time,
         )
-        
+
         # Outputs from completed atoms
         outputs: Dict[str, AtomOutput] = {}
-        
+
         try:
             # Get execution order
             levels = self._topological_sort()
-            
+
             for level_idx, level in enumerate(levels):
+                # Budget check: if exhausted, return partial results
+                if latency_budget is not None and not latency_budget.has_budget:
+                    logger.warning(
+                        "DAG budget exhausted at level %d/%d (%.0fms elapsed). "
+                        "Returning partial results with %d atoms completed.",
+                        level_idx, len(levels),
+                        latency_budget.elapsed_ms,
+                        result.atoms_executed,
+                    )
+                    result.errors.append(
+                        f"Budget exhausted at level {level_idx}: "
+                        f"{result.atoms_executed} atoms completed"
+                    )
+                    break
+
                 logger.debug(f"Executing DAG level {level_idx}: {level}")
-                
+
                 # Create tasks for this level
                 tasks = []
                 for atom_id in level:
@@ -305,15 +406,42 @@ class AtomDAG:
                         request_id=request_id,
                         request_context=request_context,
                         upstream_outputs=outputs,
+                        buyer_uncertainty=buyer_uncertainty,
+                        gradient_field=gradient_field,
+                        ad_context=ad_context,
                     )
                     tasks.append((atom_id, task))
-                
-                # Execute level in parallel
-                level_results = await asyncio.gather(
-                    *[t[1] for t in tasks],
-                    return_exceptions=True,
-                )
-                
+
+                # Execute level in parallel, with budget-aware timeout
+                level_timeout = None
+                if latency_budget is not None:
+                    level_timeout = latency_budget.remaining_seconds
+                    if level_timeout < 0.001:
+                        break
+
+                try:
+                    if level_timeout is not None:
+                        level_results = await asyncio.wait_for(
+                            asyncio.gather(
+                                *[t[1] for t in tasks],
+                                return_exceptions=True,
+                            ),
+                            timeout=level_timeout,
+                        )
+                    else:
+                        level_results = await asyncio.gather(
+                            *[t[1] for t in tasks],
+                            return_exceptions=True,
+                        )
+                except asyncio.TimeoutError:
+                    logger.warning(
+                        "DAG level %d timed out (budget=%.0fms remaining)",
+                        level_idx,
+                        latency_budget.remaining_ms if latency_budget else 0,
+                    )
+                    result.errors.append(f"Level {level_idx} timed out")
+                    break
+
                 # Process results
                 for (atom_id, _), exec_result in zip(tasks, level_results):
                     if isinstance(exec_result, Exception):
@@ -327,6 +455,25 @@ class AtomDAG:
                         result.atoms_executed += 1
                         result.total_claude_tokens_in += exec_result.claude_tokens_in
                         result.total_claude_tokens_out += exec_result.claude_tokens_out
+
+                        # Write to Blackboard Zone 2 for explainability
+                        try:
+                            from adam.blackboard.models.zone2_reasoning import AtomReasoningSpace
+                            from adam.blackboard.models.core import ComponentRole
+                            space = AtomReasoningSpace(
+                                atom_id=atom_id,
+                                atom_type=exec_result.output.atom_type if exec_result.output else None,
+                                primary_assessment=exec_result.output.primary_assessment if exec_result.output else "",
+                                confidence=exec_result.output.overall_confidence if exec_result.output else 0.0,
+                            )
+                            asyncio.create_task(
+                                self.blackboard.write_zone2_atom(
+                                    request_id, atom_id, space,
+                                    role=ComponentRole.ATOM,
+                                )
+                            )
+                        except Exception:
+                            pass  # Zone 2 write is best-effort
                     else:
                         result.errors.append(
                             f"{atom_id}: {exec_result.error_message}"
@@ -365,6 +512,9 @@ class AtomDAG:
         request_id: str,
         request_context: RequestContext,
         upstream_outputs: Dict[str, AtomOutput],
+        buyer_uncertainty: Optional[Dict[str, Any]] = None,
+        gradient_field: Optional[Dict[str, float]] = None,
+        ad_context: Optional[Dict[str, Any]] = None,
     ) -> AtomExecutionResult:
         """Execute a single atom."""
         node = self.node_map[atom_id]
@@ -390,7 +540,7 @@ class AtomDAG:
             config=config,
         )
         
-        # Build input with upstream outputs
+        # Build input with upstream outputs + buyer uncertainty + gradient + ad_context
         atom_input = AtomInput(
             request_id=request_id,
             user_id=request_context.user_intelligence.user_id,
@@ -400,6 +550,9 @@ class AtomDAG:
                 for dep in node.depends_on
                 if dep in upstream_outputs
             },
+            buyer_uncertainty=buyer_uncertainty,
+            gradient_field=gradient_field,
+            ad_context=ad_context,
         )
         
         # Execute with timeout

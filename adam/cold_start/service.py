@@ -90,7 +90,13 @@ class ColdStartService:
         
         # Initialize Thompson Sampler with archetype priors
         self._initialize_archetype_priors()
-        
+
+        # Layer ingestion-derived archetype distributions + category effectiveness
+        self._apply_ingestion_archetype_layer()
+
+        # Corpus fusion priors (Layer 1: Prior Extraction Service)
+        self._corpus_prior_service = None
+
         # Tracking
         self._decisions_made = 0
         self._cache_hits = 0
@@ -153,6 +159,222 @@ class ColdStartService:
                     except Exception:
                         pass
     
+    def _apply_ingestion_archetype_layer(self) -> None:
+        """
+        Layer ingestion-derived priors into Thompson Sampler.
+
+        This uses the global_effectiveness_matrix from 937M+ review ingestion
+        to provide much stronger empirical warm-start than the 2.4M learned
+        intelligence alone. Also applies global archetype distribution to
+        adjust base rates.
+        """
+        try:
+            from adam.core.learning.learned_priors_integration import get_learned_priors
+
+            priors_service = get_learned_priors()
+            if not priors_service.is_loaded:
+                return
+
+            # 1. Apply global archetype distribution as base rate adjustment
+            global_dist = priors_service.get_ingestion_archetype_distribution()
+            if global_dist:
+                logger.info(
+                    f"Applying ingestion archetype distribution: "
+                    f"{len(global_dist)} archetypes from 937M+ reviews"
+                )
+
+            # 2. Apply global effectiveness matrix (archetype → mechanism → rate)
+            eff_matrix = priors_service._ingestion_effectiveness_matrix
+            applied_count = 0
+            for archetype, mechanisms in eff_matrix.items():
+                if not isinstance(mechanisms, dict):
+                    continue
+                try:
+                    arch_id = ArchetypeID[archetype.upper()]
+                except (KeyError, ValueError):
+                    continue
+
+                for mech_name, data in mechanisms.items():
+                    if isinstance(data, dict):
+                        rate = data.get("success_rate", 0)
+                        sample = data.get("sample_size", 0)
+                    else:
+                        rate = float(data) if data else 0
+                        sample = 0
+
+                    if rate <= 0 or sample < 50:
+                        continue
+
+                    try:
+                        mechanism = CognitiveMechanism(mech_name)
+                    except (ValueError, KeyError):
+                        continue
+
+                    # Scale pseudo-observations: log(sample) to avoid overwhelming
+                    import math
+                    pseudo_n = min(100, int(math.log(max(sample, 1)) * 5))
+                    pseudo_successes = int(pseudo_n * rate)
+
+                    for _ in range(pseudo_successes):
+                        self.thompson_sampler.update_with_observation(
+                            mechanism=mechanism,
+                            success=True,
+                            archetype=arch_id,
+                            weight=0.8,  # Slightly discounted vs direct observation
+                        )
+                    for _ in range(pseudo_n - pseudo_successes):
+                        self.thompson_sampler.update_with_observation(
+                            mechanism=mechanism,
+                            success=False,
+                            archetype=arch_id,
+                            weight=0.8,
+                        )
+                    applied_count += 1
+
+            if applied_count > 0:
+                logger.info(
+                    f"Applied {applied_count} ingestion effectiveness priors to Thompson Sampler"
+                )
+
+        except ImportError:
+            logger.debug("LearnedPriorsService not available for ingestion layer")
+        except Exception as e:
+            logger.warning(f"Ingestion archetype layer failed (non-fatal): {e}")
+
+    @staticmethod
+    def get_dimension_priors_for_archetype(
+        archetype: str,
+    ) -> Dict[str, tuple]:
+        """Return per-dimension Beta priors for a BuyerUncertaintyProfile.
+
+        Each archetype has different levels of prior certainty on the
+        20 alignment dimensions used in information-value bidding.
+        Instead of starting every buyer at uniform Beta(2,2) on every
+        dimension, we give tighter priors on dimensions where the
+        archetype provides strong theoretical expectations.
+
+        Args:
+            archetype: Archetype name (e.g. "achiever", "explorer").
+
+        Returns:
+            Dict mapping dimension name -> (alpha, beta) tuple.
+            Missing dimensions should use the default Beta(2,2).
+        """
+        try:
+            from adam.intelligence.information_value import _ARCHETYPE_DIMENSION_PRIORS
+            return _ARCHETYPE_DIMENSION_PRIORS.get(archetype.lower(), {})
+        except ImportError:
+            return {}
+
+    def _get_corpus_prior_service(self):
+        """Lazy-load the corpus fusion PriorExtractionService."""
+        if self._corpus_prior_service is None:
+            try:
+                from adam.fusion.prior_extraction import get_prior_extraction_service
+                self._corpus_prior_service = get_prior_extraction_service()
+            except ImportError:
+                logger.debug("Corpus fusion PriorExtractionService not available")
+        return self._corpus_prior_service
+
+    def apply_corpus_fusion_priors(
+        self,
+        category: str,
+        archetype: Optional[str] = None,
+        trait_profile: Optional[Dict[str, float]] = None,
+    ) -> bool:
+        """
+        Apply corpus-calibrated priors from the billion-review fusion layer.
+
+        This is the primary integration point between Layer 1 (Prior
+        Extraction Service) and the Thompson Sampling bandits. Instead of
+        uniform priors, each (archetype, mechanism) pair gets a Beta
+        distribution calibrated from the corpus.
+
+        Key advantages over _apply_ingestion_archetype_layer:
+        - Cross-category psychological transfer for novel categories
+        - Helpful-vote confidence boosting
+        - Full confidence intervals and evidence counts
+        - Structured provenance for every prior
+
+        Args:
+            category: Product category for the current advertiser
+            archetype: Known archetype (optional)
+            trait_profile: Big Five trait scores (optional)
+
+        Returns:
+            True if corpus priors were applied
+        """
+        prior_svc = self._get_corpus_prior_service()
+        if not prior_svc:
+            return False
+
+        try:
+            corpus_prior = prior_svc.extract_prior(
+                category=category,
+                archetype=archetype,
+                trait_profile=trait_profile,
+            )
+
+            if not corpus_prior.mechanism_priors:
+                logger.debug(f"No corpus priors found for category={category}")
+                return False
+
+            # Convert corpus priors to Thompson Sampler Beta distributions
+            beta_dists = corpus_prior.to_beta_distributions()
+
+            for mechanism_name, (alpha, beta_p) in beta_dists.items():
+                try:
+                    mechanism = CognitiveMechanism(mechanism_name)
+                except (ValueError, KeyError):
+                    continue
+
+                # Scale down to avoid overwhelming live observations
+                # Use log of original to create informed-but-not-rigid priors
+                import math
+                scaled_alpha = max(1.0, math.log(max(alpha, 1)) * 3)
+                scaled_beta = max(1.0, math.log(max(beta_p, 1)) * 3)
+
+                # Apply to all archetypes if no specific one given
+                if archetype:
+                    try:
+                        arch_id = ArchetypeID[archetype.upper()]
+                        if arch_id not in self.thompson_sampler.posteriors:
+                            self.thompson_sampler.posteriors[arch_id] = {}
+                        from adam.cold_start.models.priors import BetaDistribution
+                        self.thompson_sampler.posteriors[arch_id][mechanism] = BetaDistribution(
+                            alpha=scaled_alpha,
+                            beta=scaled_beta,
+                        )
+                    except (KeyError, ValueError):
+                        pass
+                else:
+                    # Apply to population posteriors
+                    from adam.cold_start.models.priors import BetaDistribution
+                    self.thompson_sampler.population_posteriors[mechanism] = BetaDistribution(
+                        alpha=scaled_alpha,
+                        beta=scaled_beta,
+                    )
+
+            transfer_note = ""
+            if corpus_prior.is_transfer:
+                transfer_note = (
+                    f" (via {corpus_prior.transfer_invariant} transfer "
+                    f"from {corpus_prior.transfer_source_categories})"
+                )
+
+            logger.info(
+                f"Applied corpus fusion priors: category={category}, "
+                f"mechanisms={len(beta_dists)}, "
+                f"evidence={corpus_prior.total_evidence:,}, "
+                f"confidence={corpus_prior.overall_confidence.confidence_level.value}"
+                f"{transfer_note}"
+            )
+            return True
+
+        except Exception as e:
+            logger.warning(f"Corpus fusion prior application failed: {e}")
+            return False
+
     async def make_decision(
         self,
         session_id: str,
@@ -199,6 +421,19 @@ class ColdStartService:
             context=context
         )
         
+        # Apply corpus fusion priors if category context available (Layer 1)
+        category_ctx = context.get("category") or context.get("product_category", "")
+        if category_ctx:
+            arch_name = None
+            if archetype_result and archetype_result.matched_archetype:
+                arch_val = archetype_result.matched_archetype
+                arch_name = arch_val.name if hasattr(arch_val, 'name') else str(arch_val)
+            self.apply_corpus_fusion_priors(
+                category=category_ctx,
+                archetype=arch_name,
+                trait_profile=context.get("trait_estimates"),
+            )
+        
         # Apply graph-based archetype priors (leverages ARCHETYPE_RESPONDS_TO edges)
         await self._apply_archetype_graph_priors(user_id, archetype_result)
         
@@ -206,6 +441,48 @@ class ColdStartService:
         if customer_intelligence:
             await self._apply_review_intelligence_priors(customer_intelligence)
         
+        # Apply three-layer fused intelligence via UnifiedIntelligenceService
+        asin = context.get("asin") or context.get("product_id")
+        category = context.get("category", "All_Beauty")
+        personality = context.get("trait_estimates")
+        try:
+            from adam.intelligence.unified_intelligence_service import (
+                get_unified_intelligence_service,
+            )
+            svc = get_unified_intelligence_service()
+            intel = svc.get_intelligence(
+                category=category,
+                asin=asin,
+                personality=personality,
+            )
+            fused_mechs = intel.get("fused_mechanisms", [])
+            if fused_mechs:
+                arch_enum = (
+                    archetype_result.matched_archetype
+                    if archetype_result else None
+                )
+                applied = 0
+                for m in fused_mechs:
+                    if m["fused_score"] > 0.1:
+                        try:
+                            mech_enum = CognitiveMechanism(m["mechanism"])
+                            self.thompson_sampler.update_with_observation(
+                                mechanism=mech_enum,
+                                success=True,
+                                archetype=arch_enum,
+                                weight=float(m["fused_score"]),
+                            )
+                            applied += 1
+                        except (ValueError, KeyError):
+                            pass
+                logger.debug(
+                    f"Three-layer fusion applied to Thompson priors: "
+                    f"{applied} mechanisms, asin={asin}, "
+                    f"layers={intel.get('layers_used', [])}"
+                )
+        except Exception as e:
+            logger.debug(f"Three-layer cold start enhancement failed (non-fatal): {e}")
+
         # Sample mechanisms
         top_mechanisms = self._sample_mechanisms(
             archetype=archetype_result.matched_archetype if archetype_result else None,
@@ -509,6 +786,110 @@ class ColdStartService:
         
         combined_prior = hierarchical.compute_combined_prior()
         
+        # =====================================================================
+        # DSP Construct-Level Priors
+        # Archetype -> Construct -> Mechanism priors from DSP graph
+        # =====================================================================
+        try:
+            from adam.dsp.construct_registry import build_construct_registry
+            from adam.dsp.edge_registry import build_edge_registry
+            from adam.cold_start.models.enums import CognitiveMechanism, PriorSource
+            from adam.cold_start.models.priors import (
+                BetaDistribution,
+                MechanismPrior,
+            )
+
+            construct_registry = build_construct_registry()
+            edge_registry = build_edge_registry()
+
+            # Resolve archetype ID for edge matching
+            archetype_id = ""
+            if archetype_result and archetype_result.matched_archetype:
+                arch = archetype_result.matched_archetype
+                arch_name = arch.name if hasattr(arch, "name") else (
+                    arch.value if hasattr(arch, "value") else str(arch)
+                )
+                archetype_id = f"{arch_name.lower()}_archetype"
+            elif learned_prior_adjustment and learned_prior_adjustment.get("confidence", 0) > 0.5:
+                pred = learned_prior_adjustment.get("predicted_archetype", "")
+                archetype_id = f"{pred.lower().replace(' ', '_')}_archetype"
+
+            if archetype_id:
+                # Find constructs relevant to this archetype from edge registry
+                construct_mechanism_priors: Dict[str, float] = {}
+                archetype_lower = archetype_id.lower().replace("_archetype", "")
+
+                for edge_id, edge in edge_registry.items():
+                    source = edge.get("source", "")
+                    target = edge.get("target", "")
+                    mechanism = edge.get("mechanism", "")
+                    if hasattr(mechanism, "value"):
+                        mechanism = mechanism.value
+
+                    # Compute edge strength
+                    effect_sizes = edge.get("effect_sizes", [])
+                    strength = 0.5
+                    if effect_sizes:
+                        es = effect_sizes[0]
+                        val = getattr(es, "value", 0.5)
+                        metric = getattr(es, "metric", "r")
+                        strength = abs(val)
+                        if metric == "odds_ratio":
+                            strength = min(1.0, val / 6.0)
+
+                    # Relevant if archetype appears in source/target construct names
+                    if archetype_lower in source.lower() or archetype_lower in target.lower():
+                        if mechanism and mechanism not in construct_mechanism_priors:
+                            construct_mechanism_priors[mechanism] = strength
+                        elif mechanism and mechanism in construct_mechanism_priors:
+                            construct_mechanism_priors[mechanism] = (
+                                construct_mechanism_priors[mechanism] + strength
+                            ) / 2
+
+                # Blend construct priors into mechanism_priors (10% weight)
+                if construct_mechanism_priors and combined_prior.mechanism_priors:
+                    # Map DSP mechanism strings to CognitiveMechanism where they align
+                    dsp_to_cognitive = {
+                        cm.value: cm for cm in CognitiveMechanism
+                    }
+                    updated_mechs = dict(combined_prior.mechanism_priors)
+                    for mech_str, dsp_prior in construct_mechanism_priors.items():
+                        if mech_str in dsp_to_cognitive:
+                            cm = dsp_to_cognitive[mech_str]
+                            if cm in updated_mechs:
+                                mp = updated_mechs[cm]
+                                current_mean = mp.distribution.mean
+                                blended_mean = 0.90 * current_mean + 0.10 * dsp_prior
+                                blended_mean = max(0.01, min(0.99, blended_mean))
+                                alpha, beta = mp.distribution.alpha, mp.distribution.beta
+                                total = max(2, alpha + beta)
+                                new_alpha = max(0.001, blended_mean * total)
+                                new_beta = max(0.001, (1.0 - blended_mean) * total)
+                                updated_mechs[cm] = MechanismPrior(
+                                    mechanism=cm,
+                                    distribution=BetaDistribution(
+                                        alpha=new_alpha,
+                                        beta=new_beta,
+                                    ),
+                                    source=mp.source,
+                                    archetype_source=mp.archetype_source,
+                                )
+                            else:
+                                updated_mechs[cm] = MechanismPrior(
+                                    mechanism=cm,
+                                    distribution=BetaDistribution(
+                                        alpha=max(0.001, dsp_prior * 2),
+                                        beta=max(0.001, (1.0 - dsp_prior) * 2),
+                                    ),
+                                    source=PriorSource.CLUSTER,
+                                )
+                    combined_prior.mechanism_priors = updated_mechs
+
+        except ImportError:
+            logger.debug("DSP registries not available for construct priors")
+        except Exception as e:
+            logger.debug(f"DSP construct prior building failed: {e}")
+
         return combined_prior, archetype_result
     
     def _get_contextual_prior(

@@ -30,7 +30,7 @@ from adam.monitoring.health_service import (
     SystemHealth,
 )
 from adam.monitoring.drift_detection import (
-    DriftDetectionEngine,
+    DriftDetectionService,
     DriftSnapshot,
     DriftSeverity,
 )
@@ -119,7 +119,7 @@ class ResolveRequest(BaseModel):
 # =============================================================================
 
 _health_service: Optional[HealthMonitoringService] = None
-_drift_engine: Optional[DriftDetectionEngine] = None
+_drift_engine: Optional[DriftDetectionService] = None
 _alerting_service: Optional[AlertingService] = None
 
 
@@ -133,11 +133,11 @@ def get_health_service(
     return _health_service
 
 
-def get_drift_engine() -> DriftDetectionEngine:
+def get_drift_engine() -> DriftDetectionService:
     """Get or create drift engine."""
     global _drift_engine
     if _drift_engine is None:
-        _drift_engine = DriftDetectionEngine()
+        _drift_engine = DriftDetectionService()
     return _drift_engine
 
 
@@ -207,7 +207,7 @@ async def get_component_health(
 
 @router.get("/drift", response_model=DriftResponse)
 async def get_drift_status(
-    drift_engine: DriftDetectionEngine = Depends(get_drift_engine),
+    drift_engine: DriftDetectionService = Depends(get_drift_engine),
 ) -> DriftResponse:
     """
     Get current drift detection status.

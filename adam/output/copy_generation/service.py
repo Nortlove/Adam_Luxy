@@ -191,7 +191,194 @@ class CopyGenerationService:
         brand = None
         if self.brand_service:
             brand = await self.brand_service.get_brand(request.brand_id)
-        
+
+        # =====================================================================
+        # CONSTRUCT-TO-CREATIVE REASONING (Inferential Core)
+        #
+        # Instead of flat parameter overrides, we now use the
+        # ConstructCreativeEngine to derive a full CreativeSpec from
+        # graph-inferred construct activations. The spec encodes:
+        #   message_frame, tone, CTA, imagery, constraints
+        # all derived from validated psychological science in graph edges.
+        # =====================================================================
+        creative_spec = None
+        try:
+            from adam.creative.construct_creative_engine import (
+                get_construct_creative_engine,
+            )
+            engine = get_construct_creative_engine()
+
+            # Get construct activations from request
+            construct_activations = {}
+            if hasattr(request, "dsp_constructs") and request.dsp_constructs:
+                construct_activations = request.dsp_constructs
+
+            # Also check for graph-inferred activations
+            if hasattr(request, "construct_activation_profile"):
+                profile = request.construct_activation_profile
+                if profile and hasattr(profile, "activations"):
+                    construct_activations.update(profile.activations)
+
+            if construct_activations:
+                mechanism_priors = getattr(request, "graph_mechanism_priors", None)
+                vulnerability_flags = getattr(request, "vulnerability_flags", None)
+
+                creative_spec = engine.derive_creative_spec(
+                    construct_activations=construct_activations,
+                    mechanism_priors=mechanism_priors,
+                    vulnerability_flags=vulnerability_flags,
+                )
+
+                if creative_spec and creative_spec.confidence > 0.1:
+                    # Apply the full CreativeSpec to the request
+                    spec_params = creative_spec.to_copy_params()
+                    overrides = {
+                        k: v for k, v in spec_params.items()
+                        if v is not None and k in (
+                            "gain_emphasis", "abstraction_level",
+                            "emotional_appeal", "urgency_level", "tone",
+                            "cta_action",
+                        )
+                    }
+                    if overrides:
+                        request = request.model_copy(update=overrides)
+
+                    logger.debug(
+                        f"CreativeSpec applied: frame={creative_spec.message_frame.value}, "
+                        f"tone={creative_spec.tone}, "
+                        f"confidence={creative_spec.confidence:.2f}, "
+                        f"constructs={len(creative_spec.contributing_constructs)}"
+                    )
+
+        except ImportError:
+            logger.debug("ConstructCreativeEngine not available — using legacy path")
+        except Exception as e:
+            logger.debug(f"Construct creative reasoning failed: {e}")
+
+        # =====================================================================
+        # CORPUS FUSION: Creative Pattern Constraints (Layer 2)
+        #
+        # Query the billion-review corpus for proven creative patterns
+        # that successfully converted the target psychological profile.
+        # These become structured constraints for generation — not literal
+        # copy, but validated framing, mechanism, and emotional register.
+        # =====================================================================
+        corpus_constraints = None
+        try:
+            from adam.fusion.creative_patterns import get_creative_pattern_extractor
+
+            extractor = get_creative_pattern_extractor()
+            category = getattr(request, "product_category", None) or ""
+            archetype = getattr(request, "target_archetype", None)
+            platform = getattr(request, "platform", None)
+            trait_profile = getattr(request, "user_trait_profile", None)
+
+            if category:
+                corpus_constraints = extractor.extract_creative_constraints(
+                    category=category,
+                    target_archetype=archetype,
+                    target_trait_profile=trait_profile,
+                    target_mechanism=(
+                        request.mechanisms[0] if request.mechanisms else None
+                    ),
+                    platform=platform,
+                )
+
+                if corpus_constraints and corpus_constraints.overall_confidence > 0.1:
+                    # Apply corpus-backed mechanism recommendations
+                    if corpus_constraints.recommended_mechanisms and not request.mechanisms:
+                        request = request.model_copy(update={
+                            "mechanisms": corpus_constraints.recommended_mechanisms[:3]
+                        })
+
+                    # Merge framing guidance into request params
+                    framing = corpus_constraints.recommended_framing
+                    if framing:
+                        framing_overrides = {}
+                        if framing.regulatory_focus == "promotion":
+                            framing_overrides["gain_emphasis"] = 0.75
+                        elif framing.regulatory_focus == "prevention":
+                            framing_overrides["gain_emphasis"] = 0.25
+                        if framing.construal_level == "abstract":
+                            framing_overrides["abstraction_level"] = 0.8
+                        elif framing.construal_level == "concrete":
+                            framing_overrides["abstraction_level"] = 0.2
+                        if framing_overrides:
+                            request = request.model_copy(update=framing_overrides)
+
+                    logger.debug(
+                        f"Corpus creative constraints applied: "
+                        f"patterns={len(corpus_constraints.patterns)}, "
+                        f"mechanisms={corpus_constraints.recommended_mechanisms[:3]}, "
+                        f"confidence={corpus_constraints.overall_confidence:.2f}"
+                    )
+
+        except ImportError:
+            logger.debug("Corpus fusion CreativePatternExtractor not available")
+        except Exception as e:
+            logger.debug(f"Corpus creative constraint extraction failed: {e}")
+
+        # Store corpus constraints for prompt enrichment
+        self._last_corpus_constraints = corpus_constraints
+
+        # =====================================================================
+        # LEGACY: DSP creative_implications parameter overrides (FALLBACK)
+        # Used when ConstructCreativeEngine is not available or returns
+        # low-confidence results.
+        # =====================================================================
+        if creative_spec is None or (creative_spec and creative_spec.confidence < 0.1):
+            dsp_creative = {}
+            if hasattr(request, "dsp_constructs") and request.dsp_constructs:
+                for construct_id, construct_data in request.dsp_constructs.items():
+                    ci = construct_data.get("creative_implications", {})
+                    if ci:
+                        dsp_creative.update(ci)
+
+            overrides = {}
+            if dsp_creative:
+                frame_val = dsp_creative.get("frame") or dsp_creative.get("style")
+                if frame_val == "gain":
+                    overrides["gain_emphasis"] = 0.8
+                elif frame_val == "loss":
+                    overrides["gain_emphasis"] = 0.2
+
+                if "imagery" in dsp_creative:
+                    overrides["tone"] = dsp_creative["imagery"]
+                elif "color" in dsp_creative:
+                    overrides["tone"] = dsp_creative["color"]
+
+                if "cta" in dsp_creative:
+                    overrides["cta_action"] = dsp_creative["cta"]
+
+            if overrides:
+                request = request.model_copy(update=overrides)
+
+        # =====================================================================
+        # BILATERAL EDGE INTELLIGENCE: Direct copy parameter derivation
+        #
+        # When bilateral edge dimensions are available (from prefetch),
+        # map them directly to copy generation parameters. This is more
+        # precise than gradient priorities because it uses the actual
+        # buyer×product alignment values rather than population gradients.
+        #
+        # Edge dims → copy params (high cognitive_elaboration → longer
+        # copy + evidence; high emotional_resonance → shorter + visceral)
+        # =====================================================================
+        if hasattr(request, "edge_dimensions") and request.edge_dimensions:
+            request = self._apply_edge_dimensions(request)
+
+        # =====================================================================
+        # GRADIENT PRIORITIES: Creative Direction from Gradient Field
+        #
+        # If gradient_priorities are provided (top 2-3 optimization
+        # dimensions from the gradient bridge), use them to steer
+        # framing, mechanism selection, and emphasis. This ensures
+        # copy generation aligns with the dimensions that have the
+        # highest marginal impact on conversion for this buyer.
+        # =====================================================================
+        if request.gradient_priorities:
+            request = self._apply_gradient_priorities(request)
+
         # Generate primary text
         primary_text = self._generate_text(request, brand)
         
@@ -327,6 +514,158 @@ class CopyGenerationService:
         
         return text
     
+    def _apply_edge_dimensions(self, request: CopyRequest) -> CopyRequest:
+        """Map bilateral edge dimensions directly to copy parameters.
+
+        This is the bridge between the 20-dimensional buyer×product
+        psychological alignment and the concrete copy generation knobs.
+        More precise than gradient priorities because it uses THIS buyer's
+        actual alignment values, not population-level gradients.
+
+        Key mappings:
+          High cognitive_load_tolerance → longer copy, more evidence, complex arguments
+          Low cognitive_load_tolerance → shorter copy, simple CTA, System 1 triggers
+          High emotional_resonance → visceral language, shorter, emotional CTA
+          High regulatory_fit → sharpen gain/loss framing confidence
+          High construal_fit → strengthen abstract/concrete positioning
+          High social_proof_sensitivity → lead with social proof
+          High loss_aversion_intensity → loss-framed hook
+          High narrative_transport → storytelling structure
+          High autonomy_reactance → reduce urgency, emphasize choice
+        """
+        dims = request.edge_dimensions
+        if not dims:
+            return request
+
+        overrides: Dict[str, Any] = {}
+        new_mechanisms = list(request.mechanisms or [])
+
+        # Cognitive load tolerance → copy complexity
+        clt = dims.get("cognitive_load_tolerance")
+        if clt is not None:
+            if clt > 0.65:
+                # User can handle complex arguments → longer copy
+                overrides["abstraction_level"] = max(
+                    request.abstraction_level, 0.6 + clt * 0.3
+                )
+            elif clt < 0.35:
+                # Low tolerance → simple, short, action-oriented
+                overrides["abstraction_level"] = min(request.abstraction_level, 0.3)
+
+        # Emotional resonance → emotional register
+        er = dims.get("emotional_resonance")
+        if er is not None and er > 0.6:
+            overrides["emotional_appeal"] = max(request.emotional_appeal, er)
+
+        # Regulatory fit → sharpen gain/loss
+        rf = dims.get("regulatory_fit")
+        if rf is not None:
+            if rf > 0.6:
+                overrides["gain_emphasis"] = max(request.gain_emphasis, rf)
+            elif rf < 0.4:
+                overrides["gain_emphasis"] = min(request.gain_emphasis, rf)
+
+        # Social proof sensitivity → add mechanism
+        sps = dims.get("social_proof_sensitivity")
+        if sps is not None and sps > 0.6 and "social_proof" not in new_mechanisms:
+            new_mechanisms.append("social_proof")
+
+        # Loss aversion → loss framing
+        lai = dims.get("loss_aversion_intensity")
+        if lai is not None and lai > 0.6:
+            overrides["gain_emphasis"] = min(
+                overrides.get("gain_emphasis", request.gain_emphasis), 0.25
+            )
+
+        # Narrative transport → storytelling
+        nt = dims.get("narrative_transport")
+        if nt is not None and nt > 0.6 and "storytelling" not in new_mechanisms:
+            new_mechanisms.append("storytelling")
+
+        # Autonomy reactance → reduce urgency
+        ar = dims.get("autonomy_reactance")
+        if ar is not None and ar > 0.6:
+            overrides["urgency_level"] = min(request.urgency_level, 0.2)
+
+        if new_mechanisms != list(request.mechanisms or []):
+            overrides["mechanisms"] = new_mechanisms[:5]
+
+        if overrides:
+            request = request.model_copy(update=overrides)
+            logger.debug(
+                "Edge dimension copy params applied: %s", list(overrides.keys())
+            )
+
+        return request
+
+    def _apply_gradient_priorities(self, request: CopyRequest) -> CopyRequest:
+        """Apply gradient field priorities as creative direction constraints.
+
+        Maps the top gradient dimensions to concrete copy generation
+        parameters.  This is the bridge between "which psychological
+        dimensions matter most for this buyer" and "how do we write
+        the ad".
+
+        Dimension -> copy parameter mapping:
+          regulatory_fit       -> gain_emphasis (promotion vs prevention framing)
+          emotional_resonance  -> emotional_appeal (raise emotional register)
+          personality_alignment-> tone (match personality style)
+          construal_fit        -> abstraction_level (abstract vs concrete)
+          value_alignment      -> add "identity_construction" mechanism
+          evolutionary_motive  -> add "evolutionary_adaptations" mechanism
+          social_proof_sensitivity -> add "social_proof" mechanism
+          loss_aversion_intensity -> shift toward loss framing
+          narrative_transport  -> add "storytelling" mechanism
+          autonomy_reactance   -> reduce urgency (avoid pressure)
+        """
+        priorities = request.gradient_priorities
+        if not priorities:
+            return request
+
+        # Sort by weight descending — only act on top 3
+        top = sorted(priorities.items(), key=lambda x: x[1], reverse=True)[:3]
+        top_dims = {dim for dim, _ in top}
+
+        overrides: Dict[str, Any] = {}
+        new_mechanisms = list(request.mechanisms or [])
+
+        for dim, weight in top:
+            if dim == "regulatory_fit":
+                # High gradient on regulatory_fit -> sharpen gain/loss framing
+                overrides["gain_emphasis"] = max(0.75, request.gain_emphasis)
+            elif dim == "emotional_resonance":
+                overrides["emotional_appeal"] = max(0.7, request.emotional_appeal)
+            elif dim == "construal_fit":
+                # Push toward abstract framing when construal matters most
+                overrides["abstraction_level"] = max(0.7, request.abstraction_level)
+            elif dim == "personality_alignment":
+                if request.tone == "neutral":
+                    overrides["tone"] = "warm"
+            elif dim == "value_alignment" and "identity_construction" not in new_mechanisms:
+                new_mechanisms.append("identity_construction")
+            elif dim == "evolutionary_motive" and "evolutionary_adaptations" not in new_mechanisms:
+                new_mechanisms.append("evolutionary_adaptations")
+            elif dim == "social_proof_sensitivity" and "social_proof" not in new_mechanisms:
+                new_mechanisms.append("social_proof")
+            elif dim == "loss_aversion_intensity":
+                overrides["gain_emphasis"] = min(0.25, request.gain_emphasis)
+            elif dim == "narrative_transport" and "storytelling" not in new_mechanisms:
+                new_mechanisms.append("storytelling")
+            elif dim == "autonomy_reactance":
+                overrides["urgency_level"] = min(0.2, request.urgency_level)
+
+        if new_mechanisms != list(request.mechanisms or []):
+            overrides["mechanisms"] = new_mechanisms[:5]
+
+        if overrides:
+            request = request.model_copy(update=overrides)
+            logger.debug(
+                f"Gradient priorities applied: top_dims={list(top_dims)}, "
+                f"overrides={list(overrides.keys())}"
+            )
+
+        return request
+
     def _generate_variants(
         self,
         request: CopyRequest,
@@ -902,131 +1241,315 @@ class CopyGenerationService:
         # Fallback to template-based generation
         return await self.generate(request)
     
+    async def generate_evolved(
+        self,
+        request: CopyRequest,
+        archetype: str = "",
+        barrier: str = "",
+        page_cluster: str = "",
+    ) -> GeneratedCopy:
+        """Generate copy using LEARNED effectiveness parameters.
+
+        Instead of using the request's default tone/framing, override
+        with what the CopyEffectivenessLearner has discovered works for
+        this (archetype, barrier, page_cluster) combination.
+
+        This is directed evolution — not random mutation. The system
+        generates copy informed by empirical evidence of what converts.
+
+        Architecture:
+        1. Query learner for recommended params (Thompson Sampling, <1ms)
+        2. Override request parameters with learned values
+        3. Call generate_with_claude with enhanced parameters
+        4. Tag the result as "evolved" for tracking
+
+        Called weekly for bottom-performing variants, or on-demand
+        when the learner has strong recommendations.
+        """
+        from adam.output.copy_generation.copy_learner import get_copy_learner
+
+        learner = get_copy_learner()
+        learned = learner.recommend_params(
+            archetype=archetype or request.archetype or "",
+            barrier=barrier or request.barrier_targeted or "",
+            page_cluster=page_cluster,
+        )
+
+        # Map learned params to CopyRequest overrides
+        overrides: Dict[str, Any] = {}
+        if learned.get("tone"):
+            overrides["tone"] = learned["tone"]
+        if learned.get("framing"):
+            framing_map = {"gain": 0.75, "loss": 0.25, "mixed": 0.5}
+            overrides["gain_emphasis"] = framing_map.get(learned["framing"], 0.5)
+        if learned.get("cta_style"):
+            urgency_map = {"soft": 0.2, "direct": 0.5, "urgent": 0.8, "social": 0.3}
+            overrides["urgency_level"] = urgency_map.get(learned["cta_style"], 0.3)
+
+        if overrides:
+            request = request.model_copy(update=overrides)
+            logger.info(
+                "Evolved copy params: %s (archetype=%s, barrier=%s, cluster=%s)",
+                overrides, archetype, barrier, page_cluster,
+            )
+
+        result = await self.generate_with_claude(request)
+
+        # Tag as evolved
+        if result.framing_applied:
+            result.framing_applied["evolved"] = True
+            result.framing_applied["learned_params"] = learned
+
+        return result
+
     def _build_psychological_prompt(
         self,
         request: CopyRequest,
-        user_profile: Optional[Dict[str, float]],
-        brand: Optional[BrandProfile],
+        user_profile: Optional[Dict[str, float]] = None,
+        brand: Optional[BrandProfile] = None,
     ) -> str:
         """
-        Build a psychologically-informed prompt for Claude.
-        
-        This is where ADAM's psychological intelligence is translated
-        into copy generation guidance.
+        Build a psychologically-informed prompt for Claude using the
+        FULL intelligence of the INFORMATIV system.
+
+        This prompt is informed by:
+        1. Bilateral edge dimensions (20-dim buyer×product alignment)
+        2. Gradient field priorities (which dims drive conversion most)
+        3. Barrier diagnosis (the specific psychological block to resolve)
+        4. Narrative arc position (what came before, what must happen now)
+        5. Frustrated dimension pairs (what NOT to trigger simultaneously)
+        6. Corpus fusion constraints (941M review-derived patterns)
+        7. Mechanism-specific creative guidance (why THIS mechanism for THIS barrier)
         """
-        prompt_parts = []
-        
-        # System context
-        prompt_parts.append(
-            "You are an expert advertising copywriter with deep knowledge of "
-            "consumer psychology. Your task is to generate highly effective "
-            "ad copy that resonates with the target user's psychological profile."
+        parts = []
+
+        # ── SYSTEM ROLE ──
+        parts.append(
+            "You are generating advertising copy for INFORMATIV, a system that "
+            "uses bilateral psychological analysis to match ads to buyers. "
+            "You are NOT writing generic ad copy. You are writing a SPECIFIC "
+            "psychological intervention designed to resolve a diagnosed barrier "
+            "for a specific buyer archetype at a specific point in a narrative sequence."
         )
-        
-        # Product context
-        prompt_parts.append(f"\n## Product Information")
-        prompt_parts.append(f"- Product: {request.product_name or 'Unspecified product'}")
+
+        # ── CORPUS FUSION CONSTRAINTS ──
+        corpus_constraints = getattr(self, "_last_corpus_constraints", None)
+        if corpus_constraints and corpus_constraints.overall_confidence > 0.1:
+            prompt_instructions = corpus_constraints.to_prompt_instructions()
+            if prompt_instructions:
+                parts.append(f"\n{prompt_instructions}")
+
+        # ── PRODUCT CONTEXT ──
+        parts.append("\n<product_context>")
+        parts.append(f"Product: {request.product_name or request.brand_id}")
         if request.product_description:
-            prompt_parts.append(f"- Description: {request.product_description}")
+            parts.append(f"Description: {request.product_description}")
         if request.product_category:
-            prompt_parts.append(f"- Category: {request.product_category}")
-        
-        # Brand voice
+            parts.append(f"Category: {request.product_category}")
         if brand:
-            prompt_parts.append(f"\n## Brand Voice")
-            prompt_parts.append(f"- Brand: {brand.name}")
+            parts.append(f"Brand: {brand.name}")
             if brand.voice_attributes:
-                prompt_parts.append(f"- Voice: {', '.join(brand.voice_attributes)}")
+                parts.append(f"Voice: {', '.join(brand.voice_attributes)}")
             if brand.key_messages:
-                prompt_parts.append(f"- Key messages: {', '.join(brand.key_messages[:3])}")
-        
-        # Psychological targeting
-        prompt_parts.append(f"\n## Psychological Targeting")
-        
-        if user_profile:
-            # Regulatory focus
-            reg_focus = user_profile.get("regulatory_focus", 0.5)
-            if reg_focus > 0.6:
-                prompt_parts.append("- Frame as GAINS: Focus on benefits, achievements, aspirations")
-            elif reg_focus < 0.4:
-                prompt_parts.append("- Frame as LOSS PREVENTION: Focus on protection, security, avoiding negatives")
-            else:
-                prompt_parts.append("- Use balanced framing: Mix of benefits and risk mitigation")
-            
-            # Construal level
-            construal = user_profile.get("construal_level", 0.5)
-            if construal > 0.6:
-                prompt_parts.append("- Use ABSTRACT language: Focus on 'why', broader purpose, values")
-            else:
-                prompt_parts.append("- Use CONCRETE language: Focus on 'how', specific features, details")
-            
-            # Need for cognition
-            nfc = user_profile.get("need_for_cognition", 0.5)
-            if nfc > 0.6:
-                prompt_parts.append("- Include DETAILED arguments: User appreciates complexity and evidence")
-            else:
-                prompt_parts.append("- Keep it SIMPLE: Use heuristics, social proof, authority cues")
-            
-            # Temporal orientation
-            temporal = user_profile.get("temporal_orientation", 0.5)
-            if temporal < 0.4:  # Present-focused
-                prompt_parts.append("- Create URGENCY: User responds to immediate benefits and scarcity")
-            else:
-                prompt_parts.append("- Emphasize LONG-TERM VALUE: User thinks about future outcomes")
-            
-            # Social proof susceptibility
-            social = user_profile.get("social_proof_susceptibility", 0.5)
-            if social > 0.6:
-                prompt_parts.append("- Include SOCIAL PROOF: Numbers, testimonials, popularity")
-        
-        else:
-            # Default guidance based on request parameters
-            if request.gain_emphasis > 0.6:
-                prompt_parts.append("- Use gain-framed language (benefits, achievements)")
-            elif request.gain_emphasis < 0.4:
-                prompt_parts.append("- Use loss-framed language (risks, protection)")
-            
-            if request.abstraction_level > 0.6:
-                prompt_parts.append("- Use abstract, 'why'-focused messaging")
-            else:
-                prompt_parts.append("- Use concrete, 'how'-focused messaging")
-        
-        # Mechanisms to incorporate
-        if request.mechanisms:
-            prompt_parts.append(f"\n## Cognitive Mechanisms to Incorporate")
-            mechanism_guidance = {
-                "scarcity": "Create sense of limited availability",
-                "social_proof": "Reference popularity or others' choices",
-                "authority": "Cite experts or credentials",
-                "urgency": "Emphasize time-sensitivity",
-                "reciprocity": "Offer value first",
-                "consistency": "Connect to user's identity or past behavior",
-                "liking": "Create warmth and relatability",
+                parts.append(f"Key messages: {', '.join(brand.key_messages[:3])}")
+        parts.append("</product_context>")
+
+        # ── BILATERAL EDGE INTELLIGENCE ──
+        # This is the deepest psychological signal — actual buyer×product alignment
+        # from 47M+ conversion edges, not generic archetype labels
+        edge_dims = request.edge_dimensions
+        if edge_dims:
+            parts.append("\n<bilateral_intelligence>")
+            parts.append(
+                "These are the buyer's actual psychological alignment scores with this "
+                "product, computed from real conversion data across millions of edges. "
+                "Scores near 1.0 = strong alignment, near 0.0 = misalignment, 0.5 = neutral."
+            )
+            # Show top 8 most extreme dimensions (most informative for copy)
+            sorted_dims = sorted(
+                edge_dims.items(),
+                key=lambda x: abs(x[1] - 0.5),
+                reverse=True,
+            )
+            for dim, val in sorted_dims[:8]:
+                label = dim.replace("_", " ")
+                direction = "strong" if val > 0.6 else "weak" if val < 0.4 else "moderate"
+                parts.append(f"  {label}: {val:.2f} ({direction})")
+
+            # Derive explicit creative guidance from edge dims
+            parts.append("\nDerived creative guidance:")
+            if edge_dims.get("cognitive_load_tolerance", 0.5) > 0.65:
+                parts.append("  - Buyer can process complex arguments. Use evidence and data.")
+            elif edge_dims.get("cognitive_load_tolerance", 0.5) < 0.35:
+                parts.append("  - Buyer prefers simple messages. Keep it short, visceral, action-oriented.")
+            if edge_dims.get("emotional_resonance", 0.5) > 0.65:
+                parts.append("  - Buyer responds to emotional content. Use vivid scenarios and feeling-words.")
+            if edge_dims.get("social_proof_sensitivity", 0.5) > 0.65:
+                parts.append("  - Buyer is influenced by others. Lead with social proof, numbers, testimonials.")
+            if edge_dims.get("autonomy_reactance", 0.5) > 0.6:
+                parts.append("  - Buyer resists pressure. NEVER use urgency or scarcity. Emphasize choice and control.")
+            if edge_dims.get("narrative_transport", 0.5) > 0.65:
+                parts.append("  - Buyer is transported by stories. Use narrative structure, not bullet points.")
+            if edge_dims.get("loss_aversion_intensity", 0.5) > 0.65:
+                parts.append("  - Buyer is loss-averse. Frame as 'what you'll miss' not 'what you'll gain'.")
+            parts.append("</bilateral_intelligence>")
+
+        # ── GRADIENT FIELD PRIORITIES ──
+        gradient = request.gradient_priorities
+        if gradient:
+            parts.append("\n<gradient_priorities>")
+            parts.append(
+                "These are the psychological dimensions with the highest marginal "
+                "impact on conversion for this buyer type. Copy should EMPHASIZE "
+                "these dimensions above all others."
+            )
+            top3 = sorted(gradient.items(), key=lambda x: x[1], reverse=True)[:3]
+            for dim, weight in top3:
+                parts.append(f"  #{dim.replace('_', ' ')}: priority={weight:.2f}")
+            parts.append("</gradient_priorities>")
+
+        # ── BARRIER DIAGNOSIS ──
+        if request.barrier_targeted:
+            barrier_explanations = {
+                "negativity_block": (
+                    "The buyer has encountered negative information about the brand/category "
+                    "and can't get past it. Your copy must acknowledge the concern WITHOUT "
+                    "dismissing it, then provide counter-evidence. Do NOT pretend the concern "
+                    "doesn't exist — that triggers reactance."
+                ),
+                "identity_misalignment": (
+                    "The buyer doesn't see this brand as matching who they are. Your copy "
+                    "must show how the brand aligns with their self-concept, values, and "
+                    "aspirations — without claiming the buyer needs to change."
+                ),
+                "intention_action_gap": (
+                    "The buyer WANTS the product but hasn't acted. The barrier is not "
+                    "desire — it's friction. Your copy must reduce friction to near-zero: "
+                    "specific next steps, minimal commitment, implementation intention ('when X, do Y')."
+                ),
+                "trust_deficit": "The buyer doesn't trust the brand enough. Address with verifiable facts, credentials, evidence.",
+                "price_friction": "The buyer perceives price as too high. Address with value comparisons, not discounts.",
+                "reactance_triggered": "The buyer feels pushed. Back off all pressure. Restore autonomy. Use indirect approaches.",
             }
+            parts.append("\n<barrier_diagnosis>")
+            parts.append(f"Diagnosed barrier: {request.barrier_targeted}")
+            explanation = barrier_explanations.get(request.barrier_targeted, "")
+            if explanation:
+                parts.append(explanation)
+            parts.append("</barrier_diagnosis>")
+
+        # ── NARRATIVE POSITION ──
+        if request.narrative_chapter and request.touch_position:
+            parts.append("\n<narrative_position>")
+            parts.append(f"This is Touch {request.touch_position} of a 5-touch retargeting sequence.")
+            parts.append(f"Narrative chapter: {request.narrative_chapter}")
+            chapter_guidance = {
+                2: "COMPLICATION: Present the problem the buyer faces. Build tension. Do NOT resolve yet. The buyer should feel understood, not sold to.",
+                3: "RISING ACTION: Show the path to resolution. Introduce evidence. Build credibility. The buyer should feel hope emerging.",
+                4: "RESOLUTION: Show how the product resolves the specific barrier. Concrete proof. The buyer should feel 'this could work for me'.",
+                5: "EPILOGUE: Reinforce the decision. Remove final friction. The buyer should feel ready to act NOW.",
+            }
+            guidance = chapter_guidance.get(request.narrative_chapter, "")
+            if guidance:
+                parts.append(guidance)
+            if request.narrative_function:
+                parts.append(f"Function: {request.narrative_function}")
+            if request.touch_position > 1:
+                parts.append(
+                    f"IMPORTANT: The buyer has already seen {request.touch_position - 1} previous touches. "
+                    "Do NOT repeat introductory messaging. Build on what came before."
+                )
+            parts.append("</narrative_position>")
+
+        # ── FRUSTRATED DIMENSIONS ──
+        if request.frustrated_dimensions:
+            parts.append("\n<frustrated_dimensions>")
+            parts.append(
+                "WARNING: These psychological dimension pairs CONFLICT with each other. "
+                "Satisfying one makes the other worse. Address them SEQUENTIALLY across "
+                "touches, NEVER simultaneously in one ad."
+            )
+            for fd in request.frustrated_dimensions:
+                parts.append(
+                    f"  {fd.get('dim', '?')} conflicts with {fd.get('conflicts_with', '?')} "
+                    f"(r={fd.get('r', 0):.3f})"
+                )
+            parts.append("</frustrated_dimensions>")
+
+        # ── MECHANISM GUIDANCE ──
+        if request.mechanisms:
+            mechanism_deep = {
+                "social_proof_matched": (
+                    "Use social proof from people who MATCH the buyer's psychology. "
+                    "Not generic '1000 customers' — specific testimonials from people "
+                    "who had the SAME barrier and overcame it."
+                ),
+                "evidence_proof": (
+                    "Present verifiable, specific evidence. Numbers, credentials, "
+                    "third-party validation. The buyer needs FACTS, not promises."
+                ),
+                "narrative_transportation": (
+                    "Transport the buyer into a story. First-person perspective. "
+                    "Sensory details. The buyer should FEEL the experience before buying it."
+                ),
+                "anxiety_resolution": (
+                    "Directly address the specific anxiety. Acknowledge it. Then provide "
+                    "a concrete safety net (guarantee, free trial, easy cancellation)."
+                ),
+                "loss_framing": (
+                    "Frame the decision as what the buyer LOSES by not acting. "
+                    "Time, convenience, status — whatever this buyer values most (see edge dims)."
+                ),
+                "implementation_intention": (
+                    "Give the buyer a specific if-then plan: 'When you land at JFK, open the app.' "
+                    "The action should feel automatic, not deliberated."
+                ),
+                "micro_commitment": (
+                    "Ask for the SMALLEST possible commitment. Not 'book a ride' but "
+                    "'save your airport' or 'see pricing'. Foot-in-the-door."
+                ),
+                "ownership_reactivation": (
+                    "Make the buyer feel they ALREADY own the experience. "
+                    "'Your ride is waiting' not 'Book a ride'. Endowment effect."
+                ),
+                "claude_argument": (
+                    "Generate a novel factual argument specifically designed for this "
+                    "buyer's barrier. Not a template — a reasoned case built from evidence."
+                ),
+            }
+            parts.append("\n<mechanism>")
             for mech in request.mechanisms[:3]:
-                if mech in mechanism_guidance:
-                    prompt_parts.append(f"- {mech.upper()}: {mechanism_guidance[mech]}")
-        
-        # Copy specifications
-        prompt_parts.append(f"\n## Copy Specifications")
-        prompt_parts.append(f"- Type: {request.copy_type.value}")
-        prompt_parts.append(f"- Length: {request.length.value}")
-        prompt_parts.append(f"- Tone: {request.tone or 'professional'}")
-        if request.cta_action:
-            prompt_parts.append(f"- CTA: {request.cta_action}")
-        
-        # Output instruction
-        prompt_parts.append(
-            "\n## Task\n"
-            "Generate compelling ad copy that:\n"
-            "1. Aligns with the psychological profile above\n"
-            "2. Incorporates the specified cognitive mechanisms\n"
-            "3. Matches the brand voice\n"
-            "4. Fits the length requirement\n"
-            "\nOutput ONLY the ad copy text, no explanations or metadata."
+                guidance = mechanism_deep.get(mech, f"Apply {mech} mechanism.")
+                parts.append(f"Primary mechanism: {mech}")
+                parts.append(guidance)
+            parts.append("</mechanism>")
+
+        # ── COPY SPECIFICATIONS ──
+        parts.append("\n<specifications>")
+        parts.append(f"Tone: {request.tone or 'professional'}")
+        parts.append(f"Gain emphasis: {request.gain_emphasis:.1f} (0=loss-framed, 1=gain-framed)")
+        parts.append(f"Abstraction: {request.abstraction_level:.1f} (0=concrete/how, 1=abstract/why)")
+        parts.append(f"Emotional appeal: {request.emotional_appeal:.1f}")
+        parts.append(f"Urgency: {request.urgency_level:.1f}")
+        if request.headline_direction:
+            parts.append(f"\nCreative brief: {request.headline_direction}")
+        parts.append("</specifications>")
+
+        # ── OUTPUT FORMAT ──
+        parts.append(
+            "\n<output_format>\n"
+            "Generate exactly three lines:\n"
+            "HEADLINE: [max 50 characters, the hook]\n"
+            "BODY: [max 120 characters, the argument]\n"
+            "CTA: [max 10 characters, the action]\n"
+            "\n"
+            "The headline must make the buyer STOP scrolling.\n"
+            "The body must resolve (or advance resolving) the diagnosed barrier.\n"
+            "The CTA must feel like the OBVIOUS next step, not a demand.\n"
+            "</output_format>"
         )
-        
-        return "\n".join(prompt_parts)
+
+        return "\n".join(parts)
     
     async def _generate_claude_variants(
         self,

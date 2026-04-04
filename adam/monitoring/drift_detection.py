@@ -67,10 +67,22 @@ class DriftType(str, Enum):
     ADVERSARIAL_PATTERN = "adversarial_pattern"
 
 
+class DriftStatus(str, Enum):
+    """Status of a drift alert."""
+    ACTIVE = "active"
+    ACKNOWLEDGED = "acknowledged"
+    RESOLVED = "resolved"
+    FALSE_POSITIVE = "false_positive"
+
+
 class DriftSeverity(str, Enum):
     """Severity levels for drift alerts."""
+    NONE = "none"
     INFO = "info"
+    LOW = "low"
+    MEDIUM = "medium"
     WARNING = "warning"
+    HIGH = "high"
     CRITICAL = "critical"
 
 
@@ -194,12 +206,49 @@ class DriftDetectionService:
     ) -> None:
         """
         Set reference distribution for drift comparison.
-        
+
         Args:
             drift_type: Drift type
             values: Reference values
         """
         self._reference_windows[drift_type] = deque(values, maxlen=self._window_size)
+
+    def warm_up_references(self, warm_up_count: int = 100) -> Dict[str, int]:
+        """Auto-populate reference windows from the first N current observations.
+
+        Call during app startup after initial traffic has flowed. For each
+        drift type that has enough current observations but an empty reference,
+        copies the current window into the reference window.
+
+        This solves the cold-start problem where drift detection is disabled
+        because no one ever called set_reference() manually.
+
+        Args:
+            warm_up_count: Minimum current observations needed to seed reference.
+
+        Returns:
+            {drift_type: count_seeded} for types that were warmed up.
+        """
+        seeded = {}
+        for dt in DriftType:
+            ref = self._reference_windows[dt]
+            cur = self._current_windows[dt]
+            if len(ref) == 0 and len(cur) >= warm_up_count:
+                # Copy current as baseline reference
+                self._reference_windows[dt] = deque(
+                    list(cur), maxlen=self._window_size
+                )
+                seeded[dt.value] = len(cur)
+                logger.info(
+                    "Drift reference seeded: %s with %d observations",
+                    dt.value, len(cur),
+                )
+        if not seeded:
+            logger.debug(
+                "Drift warm-up: no types ready (need %d observations each)",
+                warm_up_count,
+            )
+        return seeded
     
     def check_drift(
         self,

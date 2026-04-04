@@ -42,6 +42,7 @@ from adam.graph_reasoning.models.intelligence_sources import (
     IntelligenceSourceType,
     ConfidenceSemantics,
 )
+from adam.atoms.core.dsp_integration import DSPDataAccessor, EmpiricalEffectivenessHelper
 
 logger = logging.getLogger(__name__)
 
@@ -529,7 +530,41 @@ class UserStateAtom(BaseAtom):
         if not recommended_mechanisms:
             recommended_mechanisms = ["automatic_evaluation"]
             mechanism_weights["automatic_evaluation"] = 0.5
-        
+
+        # DSP empirical effectiveness: adjust mechanisms by review-corpus success data
+        dsp = DSPDataAccessor(atom_input)
+        if dsp.has_dsp:
+            mechanism_weights = EmpiricalEffectivenessHelper.apply(mechanism_weights, dsp)
+
+        # =====================================================================
+        # BUYER UNCERTAINTY MODULATION
+        # Adjust confidence based on how well we know this buyer.
+        # High buyer uncertainty → wider confidence intervals → atoms
+        # downstream should treat our assessments more cautiously.
+        # Also emit extended dimension scores for the learning loop.
+        # =====================================================================
+        overall_conf = fusion_result.confidence
+        extended_dim_scores = {}
+
+        buyer_uncertainty = atom_input.buyer_uncertainty
+        if buyer_uncertainty:
+            agg_confidence = buyer_uncertainty.get("aggregate_confidence", 1.0)
+            # Scale our confidence by buyer characterization level
+            # Well-known buyer (agg_confidence=0.9) → keep 95% of confidence
+            # Unknown buyer (agg_confidence=0.2) → keep 70% of confidence
+            buyer_conf_factor = 0.7 + 0.3 * agg_confidence
+            overall_conf = fusion_result.confidence * buyer_conf_factor
+
+            # Emit state-level extended dimension inferences for learning
+            # These scores let the learning loop update extended dimensions
+            extended_dim_scores = {
+                "cognitive_load_tolerance_score": 1.0 - cognitive_load_value,
+                "information_seeking_score": engagement_value * 0.8,
+                "temporal_discounting_score": temporal_pressure_value,
+                "interoceptive_score": arousal_value * 0.6,
+                "decision_entropy_score": cognitive_load_value * 0.5 + (1.0 - engagement_value) * 0.3,
+            }
+
         return AtomOutput(
             atom_id=self.config.atom_id,
             atom_type=self.ATOM_TYPE,
@@ -545,6 +580,7 @@ class UserStateAtom(BaseAtom):
                 "temporal_pressure": temporal_pressure_value,
                 "recommended_complexity": complexity,
                 "state_assessment": assessment.model_dump(),
+                **extended_dim_scores,
             },
             recommended_mechanisms=recommended_mechanisms,
             mechanism_weights=mechanism_weights,
@@ -555,7 +591,7 @@ class UserStateAtom(BaseAtom):
                 "engagement_level": engagement_value,
                 "overall_receptivity": receptivity,
             },
-            overall_confidence=fusion_result.confidence,
+            overall_confidence=overall_conf,
             evidence_package=evidence,
             sources_queried=len(evidence.sources_queried),
             claude_used=fusion_result.claude_used,

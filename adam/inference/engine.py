@@ -30,7 +30,7 @@ except ImportError:
     logger = logging.getLogger(__name__)
 
 try:
-    from prometheus_client import Counter, Histogram, Gauge
+    from prometheus_client import Counter, Histogram
     INFERENCE_LATENCY = Histogram(
         'adam_inference_latency_seconds',
         'Inference engine latency',
@@ -41,11 +41,8 @@ try:
         'Inference tier selection',
         ['tier']
     )
-    CIRCUIT_BREAKER_STATE = Gauge(
-        'adam_circuit_breaker_state',
-        'Circuit breaker state (0=closed, 1=half_open, 2=open)',
-        ['component']
-    )
+    # CIRCUIT_BREAKER_STATE removed — canonical definition in
+    # adam/infrastructure/prometheus/metrics.py
     PROMETHEUS_AVAILABLE = True
 except ImportError:
     PROMETHEUS_AVAILABLE = False

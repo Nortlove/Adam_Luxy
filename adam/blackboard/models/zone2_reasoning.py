@@ -51,7 +51,14 @@ class AtomType(str, Enum):
     # Decision atoms
     AD_SELECTION = "ad_selection"
     COPY_GENERATION = "copy_generation"
-    
+
+    # Auxiliary psychological atoms
+    COGNITIVE_LOAD = "cognitive_load"
+    DECISION_ENTROPY = "decision_entropy"
+    INFORMATION_ASYMMETRY = "information_asymmetry"
+    PREDICTIVE_ERROR = "predictive_error"
+    AMBIGUITY_ATTITUDE = "ambiguity_attitude"
+
     # Channel intelligence
     CHANNEL_SELECTION = "channel_selection"
     
@@ -231,6 +238,9 @@ class AtomOutput(BaseModel):
     recommended_mechanisms: List[str] = Field(default_factory=list)
     mechanism_scores: Dict[str, float] = Field(default_factory=dict)
     
+    # DSP construct activation tracking
+    active_dsp_constructs: List[str] = Field(default_factory=list)  # DSP constructs activated by this atom
+    
     # State inferences (if applicable)
     inferred_states: Dict[str, float] = Field(default_factory=dict)
     
@@ -270,6 +280,21 @@ class AtomReasoningSpace(BaseModel):
     # State
     status: str = Field(default="pending")  # "pending", "running", "completed", "error"
     
+    # DSP construct activation tracking
+    dsp_construct_activations: Dict[str, float] = Field(default_factory=dict)  # {construct_id: confidence_score}
+
+    # Buyer uncertainty profile (per-dimension variance/confidence from information value system)
+    buyer_uncertainty: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Per-dimension uncertainty from BuyerUncertaintyProfile for information-value-aware reasoning",
+    )
+
+    # Gradient field (which dimensions matter most for this archetype×category)
+    gradient_field: Optional[Dict[str, float]] = Field(
+        default=None,
+        description="Gradient magnitudes per dimension — atoms should focus reasoning on high-gradient, high-uncertainty dimensions",
+    )
+
     # Preliminary signals (shared early)
     preliminary_signals: List[PreliminarySignal] = Field(default_factory=list)
     

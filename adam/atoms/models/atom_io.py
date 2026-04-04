@@ -88,7 +88,33 @@ class AtomInput(BaseModel):
     
     # Pre-fetched evidence (optional, for optimization)
     pre_fetched_evidence: Optional[MultiSourceEvidence] = None
-    
+
+    # Psychological intelligence context — populated by intelligence prefetch
+    # before DAG execution. Contains graph-derived data that atoms access via
+    # PsychologicalConstructResolver and DSPDataAccessor.
+    ad_context: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description=(
+            "Pre-fetched psychological intelligence from Neo4j graph, "
+            "corpus priors, and DSP enrichment. Keys: graph_type_inference, "
+            "expanded_customer_type, dimensional_priors, ndf_intelligence, "
+            "graph_mechanism_priors, dsp_graph_intelligence, "
+            "corpus_fusion_intelligence."
+        ),
+    )
+
+    # Buyer uncertainty profile (for information-value-aware reasoning)
+    buyer_uncertainty: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Per-dimension uncertainty (variance, confidence) from BuyerUncertaintyProfile",
+    )
+
+    # Gradient field (which dimensions matter most for this archetype×category)
+    gradient_field: Optional[Dict[str, float]] = Field(
+        default=None,
+        description="Gradient magnitudes per dimension from pre-computed gradient field",
+    )
+
     # Execution hints
     latency_budget_ms: int = Field(default=500, ge=0)
     skip_claude: bool = Field(default=False)

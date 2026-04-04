@@ -41,6 +41,7 @@ from adam.graph_reasoning.models.intelligence_sources import (
     IntelligenceSourceType,
     ConfidenceSemantics,
 )
+from adam.atoms.core.dsp_integration import DSPDataAccessor
 
 logger = logging.getLogger(__name__)
 
@@ -291,14 +292,53 @@ class AdSelectionAtom(BaseAtom):
     ) -> Optional[IntelligenceEvidence]:
         """
         Query empirical patterns for ad selection.
+
+        Uses mechanism_registry (graph-backed evidence) when available,
+        falling back to archetype heuristics.
         """
         user_intel = atom_input.request_context.user_intelligence
-        
+        ad_context = atom_input.ad_context or {}
+
+        # Try mechanism registry first (graph-backed, evidence-weighted)
+        from adam.atoms.core.mechanism_registry import get_mechanism_registry
+        registry = get_mechanism_registry(ad_context)
+        if registry.is_populated:
+            scores = registry.get_mechanism_scores()
+            if scores:
+                top_mech = max(scores, key=scores.get)
+                top_score = scores[top_mech]
+                # Derive strategy from top mechanism rather than archetype lookup
+                strategy = f"{top_mech}_optimized"
+                evidence_depth = registry.get_evidence_depth(top_mech)
+
+                return IntelligenceEvidence(
+                    source_type=IntelligenceSourceType.EMPIRICAL_PATTERNS,
+                    construct=self.TARGET_CONSTRUCT,
+                    assessment=strategy,
+                    assessment_value=top_score,
+                    confidence=min(0.9, top_score),
+                    confidence_semantics=ConfidenceSemantics.STATISTICAL,
+                    strength=(
+                        EvidenceStrength.STRONG if evidence_depth == "strong"
+                        else EvidenceStrength.MODERATE
+                    ),
+                    reasoning=(
+                        f"Registry: top mechanism {top_mech} "
+                        f"(score={top_score:.2f}, depth={evidence_depth})"
+                    ),
+                    metadata={
+                        "mechanism_scores": scores,
+                        "top_mechanism": top_mech,
+                        "strategy": strategy,
+                        "evidence_source": "mechanism_registry",
+                    },
+                )
+
+        # Fallback: archetype heuristics
         if user_intel.archetype_match:
             archetype = user_intel.archetype_match.archetype_id
             confidence = user_intel.archetype_match.confidence
-            
-            # Archetype → Ad strategy mappings
+
             archetype_strategies = {
                 "Achiever": "premium_positioning",
                 "Explorer": "novelty_emphasis",
@@ -306,9 +346,9 @@ class AdSelectionAtom(BaseAtom):
                 "Connector": "social_endorsement",
                 "Pragmatist": "value_demonstration",
             }
-            
+
             strategy = archetype_strategies.get(archetype, "balanced")
-            
+
             return IntelligenceEvidence(
                 source_type=IntelligenceSourceType.EMPIRICAL_PATTERNS,
                 construct=self.TARGET_CONSTRUCT,
@@ -316,14 +356,15 @@ class AdSelectionAtom(BaseAtom):
                 assessment_value=confidence,
                 confidence=confidence * 0.8,
                 confidence_semantics=ConfidenceSemantics.STATISTICAL,
-                strength=EvidenceStrength.MODERATE,
-                reasoning=f"Archetype {archetype} → {strategy} strategy",
+                strength=EvidenceStrength.WEAK,
+                reasoning=f"Fallback: archetype {archetype} → {strategy} (no registry data)",
                 metadata={
                     "archetype": archetype,
                     "strategy": strategy,
+                    "evidence_source": "archetype_heuristic",
                 },
             )
-        
+
         return None
     
     async def _query_temporal_ad_effectiveness(
@@ -458,7 +499,19 @@ class AdSelectionAtom(BaseAtom):
                     ctx["temporal_multiplier"] = evi.metadata["multiplier"]
                 if "strategy" in evi.metadata:
                     ctx["archetype_strategy"] = evi.metadata["strategy"]
-        
+
+        # Include DSP empirical data for candidate scoring
+        ad_context = atom_input.ad_context or {}
+        dsp_intel = ad_context.get("dsp_graph_intelligence", {})
+        if dsp_intel.get("has_dsp"):
+            ctx["dsp_empirical_effectiveness"] = dsp_intel.get("empirical_effectiveness", {})
+            ctx["dsp_alignment_edges"] = dsp_intel.get("alignment_edges", [])
+
+        # Include bilateral edge dimensions for brand compatibility scoring
+        edge_dims = ad_context.get("edge_dimensions", {})
+        if edge_dims:
+            ctx["edge_dimensions"] = edge_dims
+
         return ctx
     
     def _score_candidate(
@@ -481,7 +534,18 @@ class AdSelectionAtom(BaseAtom):
                     mechanism_score = max(mechanism_score, mech_score * activated[mech])
         else:
             mechanism_score = 0.5  # Neutral
-        
+
+        # DSP empirical boost: adjust mechanism alignment by empirical success data
+        dsp_empirical = ctx.get("dsp_empirical_effectiveness", {})
+        if dsp_empirical and candidate.primary_mechanism:
+            emp_data = dsp_empirical.get(candidate.primary_mechanism)
+            if emp_data:
+                success_rate = emp_data.get("success_rate", 0.5)
+                sample_size = emp_data.get("sample_size", 0)
+                if sample_size > 100:
+                    # Blend empirical data with mechanism score (15% weight)
+                    mechanism_score = 0.85 * mechanism_score + 0.15 * success_rate
+
         # 2. Framing alignment
         framing_score = 0.5
         gain_emphasis = ctx.get("gain_emphasis", 0.5)
@@ -509,8 +573,18 @@ class AdSelectionAtom(BaseAtom):
         # 4. State alignment
         state_score = ctx.get("overall_receptivity", 0.5)
         
-        # 5. Brand compatibility (would query brand-user match from graph)
+        # 5. Brand compatibility — use bilateral edge dimensions if available
         brand_score = 0.5
+        edge_dims = ctx.get("edge_dimensions", {})
+        if edge_dims:
+            # Composite alignment from the bilateral edge evidence
+            brand_score = (
+                0.30 * edge_dims.get("personality_alignment", 0.5)
+                + 0.25 * edge_dims.get("value_alignment", 0.5)
+                + 0.20 * edge_dims.get("brand_relationship_depth", 0.5)
+                + 0.15 * edge_dims.get("emotional_resonance", 0.5)
+                + 0.10 * edge_dims.get("cooperative_framing_fit", 0.5)
+            )
         
         # Apply temporal multiplier
         temporal_mult = ctx.get("temporal_multiplier", 1.0)

@@ -29,6 +29,8 @@ logger = logging.getLogger(__name__)
 
 # Import demo routes
 from adam.demo.api import demo_router
+# Fusion API (corpus intelligence)
+from adam.api.fusion.router import router as fusion_router
 
 # =============================================================================
 # APP CREATION
@@ -54,6 +56,9 @@ def create_demo_app() -> FastAPI:
     
     # Demo API routes
     app.include_router(demo_router)
+    
+    # Fusion intelligence API (corpus priors, calibrations, resonance)
+    app.include_router(fusion_router)
     
     # Health check
     @app.get("/health")

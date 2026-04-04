@@ -43,6 +43,7 @@ from adam.intelligence.graph.theory_schema import (
     CONTEXT_CONDITIONS,
     THEORETICAL_LINKS,
     TheoreticalLink,
+    PsychologicalNeed,
     get_chains_for_ndf_profile,
     get_processing_routes_for_state,
     get_context_modifiers,

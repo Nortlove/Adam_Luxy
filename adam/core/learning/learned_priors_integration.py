@@ -3492,6 +3492,140 @@ JSON array only, no explanation:"""
             "social_influence_type": bool(self._social_influence_type),
         }
     
+    # =========================================================================
+    # ALIGNMENT MATRIX ACCESSORS (for DSP + expanded type system)
+    # =========================================================================
+
+    def get_alignment_matrices(self) -> Dict[str, Dict]:
+        """
+        Load and return all 7 alignment matrices from customer_ad_alignment.
+
+        Returns:
+            Dict mapping matrix name to the matrix dict.
+        """
+        try:
+            import adam.intelligence.customer_ad_alignment as caa
+            return {
+                "motivation_value": getattr(caa, "MOTIVATION_VALUE_ALIGNMENT", {}),
+                "decision_style_linguistic": getattr(caa, "DECISION_STYLE_LINGUISTIC_ALIGNMENT", {}),
+                "regulatory_emotional": getattr(caa, "REGULATORY_EMOTIONAL_ALIGNMENT", {}),
+                "archetype_personality": getattr(caa, "ARCHETYPE_PERSONALITY_ALIGNMENT", {}),
+                "mechanism_susceptibility": getattr(caa, "MECHANISM_SUSCEPTIBILITY", {}),
+                "cognitive_complexity": getattr(caa, "COGNITIVE_COMPLEXITY_ALIGNMENT", {}),
+                "social_persuasion": getattr(caa, "SOCIAL_PERSUASION_ALIGNMENT", {}),
+            }
+        except ImportError:
+            return {}
+
+    def get_motivation_value_alignment(self, motivation: str) -> Dict[str, float]:
+        """Get value propositions aligned to a specific motivation."""
+        matrices = self.get_alignment_matrices()
+        return matrices.get("motivation_value", {}).get(motivation, {})
+
+    def get_mechanism_susceptibility(self, decision_style: str) -> Dict[str, float]:
+        """Get mechanism susceptibility scores for a decision style."""
+        matrices = self.get_alignment_matrices()
+        return matrices.get("mechanism_susceptibility", {}).get(decision_style, {})
+
+    def get_linguistic_alignment(self, decision_style: str) -> Dict[str, float]:
+        """Get linguistic style alignment for a decision style."""
+        matrices = self.get_alignment_matrices()
+        return matrices.get("decision_style_linguistic", {}).get(decision_style, {})
+
+    def get_category_effectiveness_matrix(self, category: str) -> Dict:
+        """
+        Get archetype→mechanism effectiveness for a specific product category.
+
+        Returns:
+            Dict: {archetype: {mechanism: {success_rate, sample_size, ...}}}
+        """
+        cat_matrices = self._ingestion_merged_priors.get("category_effectiveness_matrices", {})
+        return cat_matrices.get(category, {})
+
+    def get_all_category_effectiveness_matrices(self) -> Dict[str, Dict]:
+        """
+        Get all category-level effectiveness matrices.
+
+        Returns:
+            Dict: {category: {archetype: {mechanism: effectiveness}}}
+        """
+        return self._ingestion_merged_priors.get("category_effectiveness_matrices", {})
+
+    def get_category_mechanism_delta(self, category: str, archetype: str, mechanism: str) -> float:
+        """
+        Get the delta between category-specific and global mechanism effectiveness.
+
+        Returns:
+            float: positive means mechanism is more effective in this category
+        """
+        global_eff = self._ingestion_effectiveness_matrix.get(archetype, {}).get(mechanism, {})
+        cat_eff = self.get_category_effectiveness_matrix(category).get(archetype, {}).get(mechanism, {})
+
+        global_rate = global_eff.get("success_rate", 0) if isinstance(global_eff, dict) else float(global_eff or 0)
+        cat_rate = cat_eff.get("success_rate", 0) if isinstance(cat_eff, dict) else float(cat_eff or 0)
+
+        return cat_rate - global_rate
+
+    def get_ingestion_category_archetype_distributions(self) -> Dict[str, Dict[str, float]]:
+        """
+        Get archetype distributions by category from ingestion data.
+
+        Returns:
+            Dict: {category: {archetype: proportion}}
+        """
+        dist = self._ingestion_merged_priors.get("archetype_distribution", {})
+        by_cat = dist.get("by_category", {}) if isinstance(dist, dict) else {}
+        return by_cat
+
+    def get_cross_domain_similarity(self, cat1: str, cat2: str) -> float:
+        """
+        Calculate cosine similarity between two categories based on archetype distributions.
+        Used for cross-domain transfer of mechanism effectiveness.
+        """
+        dists = self.get_ingestion_category_archetype_distributions()
+        d1 = dists.get(cat1, {})
+        d2 = dists.get(cat2, {})
+        if not d1 or not d2:
+            return 0.0
+
+        all_archetypes = set(d1.keys()) | set(d2.keys())
+        dot = sum(d1.get(a, 0) * d2.get(a, 0) for a in all_archetypes)
+        mag1 = sum(v ** 2 for v in d1.values()) ** 0.5
+        mag2 = sum(v ** 2 for v in d2.values()) ** 0.5
+        if mag1 == 0 or mag2 == 0:
+            return 0.0
+        return dot / (mag1 * mag2)
+
+    def get_dsp_enrichment_context(self, archetype: str, category: str = "") -> Dict[str, Any]:
+        """
+        Get a comprehensive context bundle for DSP enrichment, combining:
+        - Global mechanism effectiveness for archetype
+        - Category-specific delta (if category provided)
+        - NDF profile for archetype
+        - Persuasion sensitivity
+        - Decision style
+        - Linguistic fingerprint
+
+        This is the primary accessor for the DSP pipeline integration.
+        """
+        result = {
+            "archetype": archetype,
+            "category": category,
+            "mechanism_effectiveness": self._ingestion_effectiveness_matrix.get(archetype, {}),
+            "ndf_profile": self.get_ndf_archetype_profile(archetype),
+            "persuasion_sensitivity": self.get_persuasion_sensitivity(archetype),
+            "decision_style": self.get_decision_style(archetype),
+            "linguistic_fingerprint": self.get_linguistic_fingerprint(archetype),
+            "social_influence": self.get_social_influence_type(archetype),
+            "emotion_sensitivity": self.get_emotion_sensitivity(archetype),
+        }
+
+        if category:
+            result["category_effectiveness"] = self.get_category_effectiveness_matrix(category).get(archetype, {})
+            result["category_archetype_dist"] = self.get_ingestion_archetype_distribution(category)
+
+        return result
+
     def get_summary(self) -> Dict[str, Any]:
         """Get comprehensive summary of loaded priors."""
         corpus_stats = self.get_corpus_statistics()

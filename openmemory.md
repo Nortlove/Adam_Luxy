@@ -1,6 +1,6 @@
 # ADAM Platform Architecture Audit
 
-> Last Updated: February 5, 2026
+> Last Updated: February 10, 2026
 
 ## Overview
 
@@ -150,6 +150,7 @@
 **Core Services:**
 | Service | File | Purpose |
 |---------|------|---------|
+| `UnifiedIntelligenceService` | `unified_intelligence_service.py` | **Three-layer Bayesian fusion (Layer 1 JSON + Layer 2 Neo4j structural + Layer 3 Claude-annotated)** |
 | `EmergenceEngine` | `emergence_engine.py` | Novel construct discovery |
 | `GraphEdgeService` | `graph_edge_service.py` | Graph relationship intelligence |
 | `CohortDiscoveryService` | `cohort_discovery.py` | Behavioral cohort identification |
@@ -623,6 +624,136 @@ New state fields:
 - `user_review_text` - For deep archetype detection
 - `competitive_intelligence` - Market saturation, counter-strategies
 - `selected_templates` - Personalized, ranked templates
+
+---
+
+## Three-Layer Intelligence Architecture (Feb 2026)
+
+```
+Layer 1: JSON Priors (937M reviews)
+  data/learning/ingestion_merged_priors.json
+  → Archetype distributions, mechanism effectiveness, NDF profiles
+  → 32 categories, global population-level base rates
+
+Layer 2: Old Neo4j Schema (structural intelligence)
+  1.9M GranularType nodes, 12M BrandPrior nodes, 38 CognitiveMechanisms
+  13.4M SUSCEPTIBLE_TO edges, 2.2K PersuasiveTemplates
+  → Mechanism synergies/antagonisms knowledge graph
+  → Type-to-mechanism susceptibility mapping
+
+Layer 3: New Neo4j Schema (Claude-annotated depth) — v5.0 prompts
+  54,277 AnnotatedReview nodes (69 user-side + 20 peer-side constructs each)
+  2,748 ProductDescription nodes (66 ad-side constructs each)
+  BRAND_CONVERTED edges (36 properties, 27 match dimensions + metadata)
+  PEER_INFLUENCED edges (14+ dimensions)
+  ECOSYSTEM_CONVERTED edges (8 dimensions)
+  BayesianPrior nodes (segmented by Big Five / category)
+  ProductEcosystem nodes (now include std_rating, earliest/latest_ts)
+  → Currently all_beauty category only
+
+  v5.0 constructs added (Feb 10 2026):
+    User-side: self_monitoring, spending_pain_sensitivity, disgust_sensitivity,
+               anchor_susceptibility, mental_ownership_strength
+    Ad-side: anchor_deployment, contamination_risk_framing
+    Edge: verified_purchase_trust, review_recency_weight, star_rating_polarization
+    + Category-dependent mechanism activation weights (6 categories)
+
+  Pydantic models: adam/corpus/models/user_side_annotation.py (69 flat fields)
+                   adam/corpus/models/ad_side_annotation.py (66 flat fields)
+  Prompt templates: adam/corpus/annotators/prompt_templates.py (v5.0)
+  Match calculators: adam/corpus/edge_builders/match_calculators.py (27 dimensions)
+
+Service: adam/intelligence/unified_intelligence_service.py
+  → Queries all three layers, fuses via Bayesian combination
+  → Wired into: MechanismActivationAtom, ColdStartService, CampaignOrchestrator,
+                GraphIntelligence, IntelligenceSources, PriorExtraction,
+                ResonanceIndex, CreativePatterns
+  → Exposed via: /api/unified/* endpoints in partner_api.py
+
+Demo: demos_research/partner-suite/ (React) + adam/demo/partner_api.py (FastAPI)
+  → 24 API endpoints, all 200 OK with real data
+  → All scenarios use all_beauty products with real ASINs
+```
+
+---
+
+## Enterprise Deployment System (Sessions 1-4 — BUILT Feb 2026)
+
+### Multi-Tenant Blueprint Architecture
+
+**Location:** `adam/platform/tenants/`, `adam/platform/connectors/`, `adam/platform/delivery/`, `adam/platform/blueprints/`
+
+| Module | Files | Purpose |
+|--------|-------|---------|
+| `adam/platform/tenants/` | models.py, namespace.py, service.py, middleware.py, router.py | Tenant lifecycle, API key auth, Redis/Neo4j namespace isolation |
+| `adam/platform/connectors/` | base.py, rss, webhook, s3_audio, bidstream, product_feed, factory.py | Content ingestion (19 connector type mappings → 5 implementations) |
+| `adam/platform/delivery/` | base.py, ssp_adapter, dsp_adapter, audio_adapter, factory.py | Segment delivery (21 adapter type mappings → 6 implementations) |
+| `adam/platform/blueprints/` | registry.py, engine.py, router.py | 11 Blueprint specs, activation engine, API |
+| `adam/platform/intelligence/` | content_profiler.py, segment_builder.py, taxonomy_mapper.py, outcome_bridge.py, cross_tenant_learner.py | Intelligence bridge wiring |
+| `adam/platform/identity/` | resolver.py | 4 identity resolvers (Contextual, FPI, UID2, Household) |
+| `adam/platform/onboarding/` | service.py, router.py | Single-call activation flow |
+| `tests/` | test_blueprint_lifecycle.py | 90/90 integration tests passing |
+
+### Blueprint Types Available
+
+PUB-ENR, DSP-TGT, AUD-LST, DSP-CRE, PUB-YLD, BRD-INT, AGY-PLN, CTV-AUD, RET-PSY, SOC-AUD, EXC-DAT
+
+### Key Patterns
+
+- **Namespace isolation:** Redis keys `bp:{blueprint}:{tenant_id}:{type}:{parts}`, Neo4j `tenant_id` property, Kafka consumer groups `{blueprint}-{tenant_id}`
+- **Shared intelligence:** 52.8M graph elements, 441 constructs, 27-dim edges are NEVER partitioned — all tenants query the same intelligence core
+- **API Key middleware:** `TenantMiddleware` extracts API key → resolves tenant → sets context var → scopes all downstream queries
+- **Intelligence bridge:** ContentProfiler (NDF extraction) → SegmentBuilder (14 segment defs) → TaxonomyMapper (IAB) → OutcomeBridge (learning loop)
+- **Identity resolution:** Hierarchical: UID2 → FirstParty → Household → Contextual (always available, no ID needed)
+- **Cross-tenant learning:** Anonymous aggregation of mechanism effectiveness, segment performance, NDF correlations — improves all tenants
+- **Singleton pattern:** All services follow ADAM's existing `get_*()` module-level singleton pattern
+- **Wired into partner API:** All routers (tenant, blueprint, onboarding) registered in `adam/demo/partner_api.py`
+- **Integration test:** 90/90 tests passing full lifecycle (model → namespace → connectors → adapters → profiling → segments → taxonomy → delivery → identity → learning → outcome → blueprint → API)
+
+### Self-Service Onboarding (6-Phase Wizard — BUILT Feb 2026)
+
+**Location:** `adam/platform/onboarding/` (models.py, guidance.py, service.py, router.py)
+
+**Backend — 6 Phases:**
+
+| Phase | Endpoint | Input | Output |
+|-------|----------|-------|--------|
+| 1. Account | `POST /api/v1/onboarding/account` | Company + contact info | `tenant_id`, `auth_token` |
+| 2. Platform | `POST /api/v1/onboarding/{id}/platform` | Business type | Blueprint ID, dynamic questions |
+| 3. Inbound Data | `POST /api/v1/onboarding/{id}/inbound-data` | Signals, formats, access | Intelligence ceiling, ranked products |
+| 4. Intelligence | `POST /api/v1/onboarding/{id}/intelligence` | Product selections | Active pipelines, total power |
+| 5. Connections | `POST /api/v1/onboarding/{id}/connections` | Connector/adapter configs | API key, endpoints, rate limits |
+| 6. Feedback | `POST /api/v1/onboarding/{id}/feedback` | Outcome events, attribution | Webhook URL, pixel, learning timeline |
+
+**Auto-Guidance Engine** (`guidance.py`):
+- `OnboardingGuidance.suggest_blueprint_from_role()` — maps job title → business type
+- `OnboardingGuidance.get_phase3_questions()` — dynamic question set per blueprint
+- `IntelligenceCapabilityScore` — computes intelligence ceiling from inbound data commitment
+- Power level computation per return type based on available data
+- Upgrade hints showing what data to share to unlock higher capabilities
+
+**Models** (`models.py`):
+- 14 business types → 11 blueprints (`BUSINESS_TYPE_BLUEPRINT_MAP`)
+- `RETURN_TYPE_REGISTRY` — 2-5 intelligence products per blueprint with pricing, requirements, base power
+- `TenantOnboardingState` — tracks full multi-phase progress in memory
+- `IntelligenceCapabilityScore` — 6-dimension ceiling: content_psychology, persistent_profiles, learning_loop, creative_matching, sequential_persuasion, contextual_fusion
+
+**Frontend** (`demos_research/partner-suite/src/components/enterprise/EnterpriseDemo.jsx`):
+- 6-step interactive wizard (account → platform → data → intelligence → connections → feedback)
+- Dynamic form rendering based on blueprint questions
+- Auto-guided blueprint suggestion from contact role
+- Power bars + upgrade hints for intelligence products
+- Connection wiring with toggle configs for connectors/adapters
+- Completion display: API key, endpoints, learning timeline
+
+**Helper Endpoints:**
+- `GET /business-types` — all 14 business type labels
+- `GET /suggest-blueprint?role=...` — role-based auto-suggestion
+- `GET /{id}/questions` — dynamic Phase 3 questions for blueprint
+- `GET /{id}/products` — ranked intelligence products after Phase 3
+- `GET /{id}/config` — full tenant configuration at any point
+
+**Tests:** `tests/test_self_service_onboarding.py` — 228/228 passing
 
 ---
 

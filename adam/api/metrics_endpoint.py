@@ -34,8 +34,18 @@ async def metrics_health():
     """
     Health check for metrics system.
     """
-    
+
     return {
         "status": "healthy",
         "metrics_available": True,
     }
+
+
+@router.get("/metrics/information-value")
+async def information_value_metrics():
+    """Information value system observability metrics."""
+    try:
+        from adam.intelligence.information_value import iv_metrics
+        return iv_metrics.summary()
+    except ImportError:
+        return {"error": "information_value module not available"}

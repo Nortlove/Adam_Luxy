@@ -206,6 +206,34 @@ class LearningSignalAggregator(BaseModel):
     final_outcome: Optional[OutcomeType] = None
     final_outcome_value: Optional[float] = None
     
+    # Corpus Fusion Tracking — records which corpus priors and calibrations
+    # were active during this decision, enabling post-hoc analysis of
+    # how corpus intelligence affects outcomes.
+    corpus_priors_active: Dict[str, float] = Field(
+        default_factory=dict,
+        description="Mechanism priors from corpus that were active during decision"
+    )
+    corpus_prior_confidence: float = Field(
+        default=0.0, ge=0.0, le=1.0,
+        description="Confidence level of the corpus prior used"
+    )
+    corpus_evidence_count: int = Field(
+        default=0, ge=0,
+        description="Number of reviews backing the corpus prior"
+    )
+    corpus_platform_calibration: Dict[str, float] = Field(
+        default_factory=dict,
+        description="Platform-specific calibration factors active during decision"
+    )
+    corpus_creative_constraints: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Creative pattern constraints from corpus"
+    )
+    corpus_transfer_sources: List[str] = Field(
+        default_factory=list,
+        description="Categories used for cross-category transfer"
+    )
+    
     def add_signal(self, signal: ComponentSignal) -> None:
         """Add a component signal."""
         self.component_signals.append(signal)

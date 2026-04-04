@@ -43,6 +43,37 @@ class JourneyStage(str, Enum):
     CHURNING = "churning"
 
 
+# ---------------------------------------------------------------------------
+# TTM-derived Conversion Stage mapping (Enhancement #33)
+# Maps the 13 granular JourneyStage values to 6 retargeting conversion stages.
+# ---------------------------------------------------------------------------
+_JOURNEY_TO_CONVERSION_STAGE = {
+    "unaware":      "unaware",
+    "aware":        "curious",
+    "considering":  "evaluating",
+    "researching":  "evaluating",
+    "comparing":    "evaluating",
+    "ready_to_buy": "intending",
+    "deciding":     "intending",
+    "purchasing":   "intending",
+    "purchased":    "converted",
+    "using":        "converted",
+    "evaluating":   "converted",
+    "advocating":   "converted",
+    "churning":     "stalled",
+}
+
+
+def to_conversion_stage(journey_stage: "JourneyStage") -> str:
+    """Map a JourneyStage to a retargeting ConversionStage string.
+
+    Returns one of: unaware, curious, evaluating, intending, stalled, converted.
+    Used by the Therapeutic Retargeting Engine (Enhancement #33) to determine
+    which intervention class is appropriate.
+    """
+    return _JOURNEY_TO_CONVERSION_STAGE.get(journey_stage.value, "unaware")
+
+
 class DecisionUrgency(str, Enum):
     """Urgency of decision."""
     

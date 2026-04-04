@@ -58,8 +58,33 @@ from adam.graph_reasoning.models.intelligence_sources import (
     IntelligenceSourceType,
     ConfidenceSemantics,
 )
+from adam.atoms.core.construct_resolver import PsychologicalConstructResolver
 
 logger = logging.getLogger(__name__)
+
+
+def evidence_weighted_blend(
+    score_a: float,
+    confidence_a: float,
+    n_obs_a: int,
+    score_b: float,
+    confidence_b: float,
+    n_obs_b: int,
+) -> float:
+    """
+    T3.1: Evidence-weighted blending — replaces hardcoded blend percentages.
+
+    weight = confidence * log(1 + n_observations)
+
+    The source with more confident, more-observed evidence naturally dominates.
+    This replaces the hardcoded 70/30, 65/35, 85/15 blend ratios that become
+    increasingly wrong as the system accumulates data.
+    """
+    import math
+    w_a = max(0.01, confidence_a * math.log(1 + n_obs_a))
+    w_b = max(0.01, confidence_b * math.log(1 + n_obs_b))
+    total = w_a + w_b
+    return (w_a / total) * score_a + (w_b / total) * score_b
 
 
 # Mechanism definitions aligned with the 9 core mechanisms
@@ -227,9 +252,98 @@ class MechanismActivationAtom(BaseAtom):
         self,
         atom_input: AtomInput,
     ) -> Optional[IntelligenceEvidence]:
-        """Query cross-domain transfer patterns for mechanisms."""
-        # Would query Neo4j for patterns that transfer across categories
-        return None
+        """
+        Query cross-domain transfer patterns via the theory graph.
+
+        This is the ZERO-SHOT TRANSFER capability — the key differentiator
+        over correlational systems. When we encounter a new context with no
+        empirical data, we traverse the theory graph to produce intelligent
+        recommendations based on validated psychological science.
+
+        The system reasons:
+            NDF profile → Active States → Active Needs → Mechanism
+        through causal chains with effect sizes, producing recommendations
+        with explicit confidence and uncertainty bounds.
+        """
+        try:
+            from adam.intelligence.graph.zero_shot_transfer import zero_shot_recommend
+
+            ad_context = atom_input.ad_context or {}
+            category = ad_context.get("category", "")
+            archetype = self._get_archetype_from_input(atom_input) or ad_context.get("archetype", "")
+            ndf_intel = ad_context.get("ndf_intelligence", {})
+            ndf_profile = ndf_intel.get("profile") if ndf_intel.get("has_ndf") else None
+            # Fall back to resolver-derived profile if no direct NDF
+            if not ndf_profile:
+                _psy = PsychologicalConstructResolver(atom_input)
+                if _psy.has_rich_constructs:
+                    ndf_profile = _psy.as_full_construct_dict()
+
+            # Get theory learner for learned link strengths
+            theory_learner = None
+            try:
+                from adam.core.learning.theory_learner import get_theory_learner
+                theory_learner = get_theory_learner()
+            except Exception:
+                pass
+
+            # Context signals
+            context = {
+                "device": ad_context.get("device"),
+                "hour": ad_context.get("hour"),
+                "price": ad_context.get("price", 0),
+                "novel_category": ad_context.get("novel_category", False),
+                "involvement": ad_context.get("involvement", 0.5),
+            }
+
+            result = zero_shot_recommend(
+                category=category,
+                ndf_profile=ndf_profile,
+                archetype=archetype,
+                context=context,
+                top_k=5,
+                theory_learner=theory_learner,
+            )
+
+            if not result.recommendations:
+                return None
+
+            # Convert to IntelligenceEvidence
+            top_rec = result.recommendations[0]
+
+            # Build mechanism scores from all recommendations
+            mech_scores = {}
+            for rec in result.recommendations:
+                mech_scores[rec.mechanism] = rec.score
+
+            return IntelligenceEvidence(
+                source=IntelligenceSourceType.CROSS_DOMAIN_TRANSFER,
+                confidence=ConfidenceSemantics(
+                    value=top_rec.confidence,
+                    meaning="zero_shot_transfer_confidence",
+                    methodology="theory_graph_traversal",
+                    sample_size=0,  # Zero-shot: no empirical samples
+                ),
+                assessment=top_rec.mechanism,
+                assessment_value=top_rec.score,
+                strength=EvidenceStrength.MODERATE if top_rec.confidence > 0.3
+                    else EvidenceStrength.WEAK,
+                secondary_assessments={
+                    "all_recommendations": mech_scores,
+                    "transfer_reasoning": top_rec.reasoning,
+                    "uncertainty_note": top_rec.uncertainty_note,
+                    "analogical_contexts": top_rec.analogical_contexts,
+                    "is_zero_shot": True,
+                    "transferability": top_rec.transferability,
+                },
+            )
+
+        except ImportError:
+            logger.debug("Zero-shot transfer module not available")
+            return None
+        except Exception as e:
+            logger.debug(f"Zero-shot transfer query failed: {e}")
+            return None
     
     async def _query_extended_frameworks(
         self,
@@ -342,6 +456,138 @@ class MechanismActivationAtom(BaseAtom):
         
         return reg_focus, construal, confidence
     
+    def _score_mechanisms_from_graph(
+        self,
+        atom_input: AtomInput,
+        mechanism_history: Optional[Dict[str, float]] = None,
+    ) -> Optional[Dict[str, float]]:
+        """
+        Score mechanisms via graph traversal (INFERENTIAL — PRIMARY path).
+
+        Instead of a static dictionary of {mechanism: {regulatory_affinity: ...}},
+        this method traverses the actual construct activation profile that was
+        inferred from observable signals through the Neo4j graph.
+
+        The causal chain is:
+            Observable Signals → BehavioralSignal → DSPConstruct → Mechanism
+
+        Each link in the chain has an effect size from validated research,
+        making this genuinely inferential rather than correlational.
+
+        Returns None if graph data is unavailable (triggers heuristic fallback).
+        """
+        ad_context = atom_input.ad_context or {}
+        graph_mechanism_priors = ad_context.get("graph_mechanism_priors", {})
+
+        # Also check request_context if present
+        request_ctx = getattr(atom_input, "request_context", None)
+        if not graph_mechanism_priors and request_ctx:
+            graph_mechanism_priors = getattr(request_ctx, "graph_mechanism_priors", {})
+
+        if not graph_mechanism_priors:
+            return None
+
+        scores: Dict[str, float] = {}
+
+        for mech_id, graph_prior in graph_mechanism_priors.items():
+            # Normalize mechanism ID
+            mech_key = mech_id.lower().replace(" ", "_").replace("-", "_")
+
+            # Graph prior is the base score (from causal edge traversal)
+            base_score = graph_prior
+
+            # T3.1: Evidence-weighted blend with historical effectiveness
+            if mechanism_history and mech_key in mechanism_history:
+                hist_score = mechanism_history[mech_key]
+                # Graph confidence is high (causal traversal); history has observations
+                hist_n = ad_context.get("mechanism_history_n", {}).get(mech_key, 10)
+                final_score = evidence_weighted_blend(
+                    score_a=base_score, confidence_a=0.8, n_obs_a=max(5, len(graph_mechanism_priors)),
+                    score_b=hist_score, confidence_b=0.6, n_obs_b=hist_n,
+                )
+            else:
+                final_score = base_score
+
+            scores[mech_key] = final_score
+
+        # Ensure we have coverage of all 9 core mechanisms
+        # (graph may not activate all of them — fill with low priors)
+        for mech_id in CORE_MECHANISMS:
+            if mech_id not in scores:
+                scores[mech_id] = 0.2  # Low prior for non-activated mechanisms
+
+        logger.debug(
+            f"Graph-inferred mechanism scores: "
+            f"{len(graph_mechanism_priors)} from graph, "
+            f"top={max(scores, key=scores.get) if scores else 'none'}"
+        )
+
+        return scores
+
+    def _score_mechanisms_from_unified(
+        self,
+        atom_input: AtomInput,
+        mechanism_history: Optional[Dict[str, float]] = None,
+    ) -> Optional[Dict[str, float]]:
+        """
+        Score mechanisms via UnifiedIntelligenceService three-layer Bayesian fusion.
+
+        Queries Layer 3 (annotated graph), Layer 2 (structural), and Layer 1
+        (corpus priors) via get_intelligence(), returning fused mechanism scores.
+        Returns None if the service is unavailable.
+        """
+        ad_context = atom_input.ad_context or {}
+        asin = ad_context.get("asin") or ad_context.get("product_asin")
+        category = ad_context.get("category", "All_Beauty")
+        personality = ad_context.get("personality_profile")
+
+        if not asin and not category:
+            return None
+
+        try:
+            from adam.intelligence.unified_intelligence_service import (
+                get_unified_intelligence_service,
+            )
+            svc = get_unified_intelligence_service()
+            intel = svc.get_intelligence(
+                category=category,
+                asin=asin,
+                personality=personality,
+            )
+        except Exception as e:
+            logger.debug(f"UnifiedIntelligenceService unavailable: {e}")
+            return None
+
+        fused = intel.get("fused_mechanisms", [])
+        if not fused:
+            return None
+
+        scores: Dict[str, float] = {}
+        for entry in fused:
+            mech_key = entry["mechanism"].lower().replace(" ", "_").replace("-", "_")
+            base_score = entry["fused_score"]
+            if mechanism_history and mech_key in mechanism_history:
+                # T3.1: Evidence-weighted blend
+                hist_n = ad_context.get("mechanism_history_n", {}).get(mech_key, 10)
+                final = evidence_weighted_blend(
+                    score_a=base_score, confidence_a=0.7, n_obs_a=max(3, len(fused)),
+                    score_b=mechanism_history[mech_key], confidence_b=0.6, n_obs_b=hist_n,
+                )
+            else:
+                final = base_score
+            scores[mech_key] = final
+
+        for mech_id in CORE_MECHANISMS:
+            if mech_id not in scores:
+                scores[mech_id] = 0.2
+
+        logger.debug(
+            f"Unified three-layer mechanism scores: "
+            f"layers={intel.get('layers_used', [])}, "
+            f"top={max(scores, key=scores.get) if scores else 'none'}"
+        )
+        return scores
+
     def _score_mechanisms(
         self,
         reg_focus: str,
@@ -350,6 +596,9 @@ class MechanismActivationAtom(BaseAtom):
     ) -> Dict[str, float]:
         """
         Score mechanisms based on psychological state and history.
+
+        FALLBACK path — used when graph-inferred priors are not available.
+        Uses static CORE_MECHANISMS dictionary with regulatory/construal affinity.
         """
         scores: Dict[str, float] = {}
         
@@ -373,6 +622,67 @@ class MechanismActivationAtom(BaseAtom):
         
         return scores
     
+    def _score_mechanisms_from_ndf(
+        self,
+        atom_input,
+        mechanism_history: Optional[Dict[str, float]] = None,
+    ) -> Optional[Dict[str, float]]:
+        """
+        Score mechanisms using all available NDF dimensions (8D).
+
+        Intermediate fallback between graph inference (full construct space)
+        and static heuristic (2 categoricals). Uses the same psychological
+        mapping as the L3 bilateral cascade's extended dimension scoring.
+        """
+        try:
+            from adam.atoms.core.construct_resolver import PsychologicalConstructResolver
+
+            psy = PsychologicalConstructResolver(atom_input)
+            if not psy.has_any:
+                return None
+
+            aa = psy.approach_avoidance
+            th = psy.temporal_horizon
+            sc = psy.social_calibration
+            ut = psy.uncertainty_tolerance
+            ss = psy.status_sensitivity
+            ce = psy.cognitive_engagement
+            ar = psy.arousal_seeking
+
+            # Score each mechanism using all 7 NDF dimensions.
+            # Weights derived from the bilateral edge dimension mappings
+            # used in L3 (same psychological logic, different data source).
+            scores = {
+                "authority":       0.30 * ce + 0.25 * (1.0 - ar) + 0.20 * th + 0.15 * (1.0 - ut) + 0.10 * (1.0 - sc),
+                "social_proof":    0.30 * sc + 0.25 * (1.0 - ut) + 0.20 * ar + 0.15 * aa + 0.10 * (1.0 - ce),
+                "scarcity":        0.30 * ar + 0.25 * (1.0 - th) + 0.20 * (1.0 - ut) + 0.15 * aa + 0.10 * ss,
+                "loss_aversion":   0.30 * (1.0 - aa) + 0.25 * (1.0 - ut) + 0.20 * ar + 0.15 * (1.0 - th) + 0.10 * ce,
+                "commitment":      0.30 * th + 0.25 * ce + 0.20 * (1.0 - ar) + 0.15 * ut + 0.10 * (1.0 - sc),
+                "liking":          0.30 * sc + 0.25 * ar + 0.20 * aa + 0.15 * (1.0 - ce) + 0.10 * ss,
+                "cognitive_ease":  0.30 * (1.0 - ce) + 0.25 * (1.0 - th) + 0.20 * (1.0 - ut) + 0.15 * ar + 0.10 * aa,
+                "curiosity":       0.30 * ut + 0.25 * ce + 0.20 * ar + 0.15 * th + 0.10 * (1.0 - sc),
+                "reciprocity":     0.30 * sc + 0.25 * (1.0 - ss) + 0.20 * aa + 0.15 * (1.0 - ar) + 0.10 * th,
+                "unity":           0.30 * sc + 0.25 * ss + 0.20 * (1.0 - ut) + 0.15 * ar + 0.10 * aa,
+            }
+
+            # T3.1: Evidence-weighted blend with history
+            if mechanism_history:
+                ad_context = atom_input.ad_context or {} if hasattr(atom_input, 'ad_context') else {}
+                hist_n_map = ad_context.get("mechanism_history_n", {}) if isinstance(ad_context, dict) else {}
+                for mech in scores:
+                    if mech in mechanism_history:
+                        hist_n = hist_n_map.get(mech, 10)
+                        scores[mech] = evidence_weighted_blend(
+                            score_a=scores[mech], confidence_a=0.6, n_obs_a=7,  # 7 NDF dimensions
+                            score_b=mechanism_history[mech], confidence_b=0.5, n_obs_b=hist_n,
+                        )
+
+            return scores
+
+        except Exception as e:
+            logger.debug("NDF-enriched scoring failed: %s", e)
+            return None
+
     async def _apply_synergy_adjustments(
         self,
         scores: Dict[str, float],
@@ -497,6 +807,130 @@ class MechanismActivationAtom(BaseAtom):
             logger.warning(f"Failed to apply unified construct adjustments: {e}")
             return scores
     
+    def _apply_corpus_fusion_priors(
+        self,
+        scores: Dict[str, float],
+        atom_input: AtomInput,
+    ) -> Dict[str, float]:
+        """
+        Blend corpus fusion mechanism priors from 1B+ verified purchase reviews.
+        
+        These priors come from PriorExtractionService (Layer 1) and represent
+        real-world mechanism effectiveness derived from review language analysis.
+        The evidence base is massive (potentially millions of reviews per category),
+        so we give this a meaningful 20% blend weight.
+        
+        Also applies platform calibration (Layer 3) when available.
+        """
+        ad_context = atom_input.ad_context or {}
+        corpus_intel = ad_context.get("corpus_fusion_intelligence", {})
+        
+        if not corpus_intel or not corpus_intel.get("has_corpus"):
+            return scores
+        
+        mechanism_priors = corpus_intel.get("mechanism_priors", {})
+        prior_confidence = corpus_intel.get("prior_confidence", 0.0)
+        platform_calibration = corpus_intel.get("platform_calibration", {})
+        
+        if not mechanism_priors:
+            return scores
+        
+        # Dynamic blend weight: scale with corpus confidence (max 20%)
+        blend_weight = min(0.20, prior_confidence * 0.25)
+        
+        corpus_applied = 0
+        for mech_key, corpus_prior in mechanism_priors.items():
+            # Normalize key to match score keys
+            normalized = mech_key.lower().replace(" ", "_").replace("-", "_")
+            
+            # Apply platform calibration if available
+            if normalized in platform_calibration:
+                cal = platform_calibration[normalized]
+                calibrated = cal.get("calibrated_score", corpus_prior)
+                corpus_prior = calibrated
+            
+            if normalized in scores:
+                # Blend: (1 - w) * existing + w * corpus
+                scores[normalized] = (1 - blend_weight) * scores[normalized] + blend_weight * corpus_prior
+                corpus_applied += 1
+            else:
+                # New mechanism from corpus — add with reduced weight
+                scores[normalized] = corpus_prior * blend_weight
+                corpus_applied += 1
+        
+        if corpus_applied > 0:
+            logger.debug(
+                f"Corpus fusion: blended {corpus_applied} mechanism priors "
+                f"(weight={blend_weight:.2f}, confidence={prior_confidence:.2f})"
+            )
+        
+        return scores
+    
+    def _apply_layer3_edge_intelligence(
+        self,
+        scores: Dict[str, float],
+        atom_input: AtomInput,
+    ) -> Dict[str, float]:
+        """
+        Blend three-layer fused mechanism recommendations from
+        UnifiedIntelligenceService into mechanism activation scores.
+
+        Uses fuse_mechanism_recommendation() which combines:
+        - Layer 3: Claude-annotated product construct scores
+        - Layer 2: Mechanism knowledge graph (synergies/antagonisms)
+        - Layer 1: 937M corpus population priors
+
+        The fused scores replace the old manual 25% blend with a
+        principled Bayesian combination.
+        """
+        ad_context = atom_input.ad_context or {}
+        asin = ad_context.get("asin") or ad_context.get("product_id")
+        if not asin:
+            return scores
+
+        try:
+            from adam.intelligence.unified_intelligence_service import (
+                get_unified_intelligence_service,
+            )
+
+            svc = get_unified_intelligence_service()
+            fused = svc.fuse_mechanism_recommendation(asin=asin)
+
+            if not fused or not fused.get("mechanisms"):
+                return scores
+
+            fusion_blend = 0.40
+            applied = 0
+
+            for m in fused["mechanisms"]:
+                mech_key = m["mechanism"]
+                fused_score = m["fused_score"]
+                if fused_score > 0.05:
+                    if mech_key in scores:
+                        scores[mech_key] = (
+                            (1 - fusion_blend) * scores[mech_key]
+                            + fusion_blend * fused_score
+                        )
+                    else:
+                        scores[mech_key] = fused_score * fusion_blend
+                    applied += 1
+
+            for src, tgt in fused.get("conflicts", []):
+                tgt_key = tgt.lower().replace(" ", "_")
+                if tgt_key in scores:
+                    scores[tgt_key] *= 0.7
+
+            if applied > 0:
+                logger.debug(
+                    f"Three-layer fusion: blended {applied} mechanisms from {asin} "
+                    f"(layers: {fused.get('layers_used', [])})"
+                )
+
+        except Exception as e:
+            logger.debug(f"Layer 3 edge intelligence failed (non-fatal): {e}")
+
+        return scores
+
     def _select_mechanisms(
         self,
         scores: Dict[str, float],
@@ -557,8 +991,35 @@ class MechanismActivationAtom(BaseAtom):
                 f"Loaded mechanism history: {len(mechanism_history)} mechanisms"
             )
         
-        # Score mechanisms (base scores from psychological fit)
-        base_scores = self._score_mechanisms(reg_focus, construal, mechanism_history)
+        # Score mechanisms: GRAPH FIRST, static fallback
+        # Try graph-inferred scores (inferential — primary path)
+        base_scores = self._score_mechanisms_from_graph(
+            atom_input, mechanism_history
+        )
+        scoring_method = "graph_inference"
+
+        if base_scores is None:
+            # Try UnifiedIntelligenceService three-layer fusion
+            base_scores = self._score_mechanisms_from_unified(atom_input, mechanism_history)
+            if base_scores is not None:
+                scoring_method = "unified_three_layer"
+                logger.debug("Using UnifiedIntelligenceService three-layer fusion")
+
+        if base_scores is None:
+            # Fallback: Try NDF-enriched scoring before pure static heuristic.
+            # The static fallback uses only 2 dimensions (reg_focus + construal).
+            # If we have NDF data, we can score with all 8 dimensions — a much
+            # richer signal than 2 categoricals.
+            ndf_scores = self._score_mechanisms_from_ndf(atom_input, mechanism_history)
+            if ndf_scores is not None:
+                base_scores = ndf_scores
+                scoring_method = "ndf_enriched"
+                logger.debug("Using NDF-enriched mechanism scoring (8 dimensions)")
+            else:
+                # Final fallback: static dictionary (2 dimensions only)
+                base_scores = self._score_mechanisms(reg_focus, construal, mechanism_history)
+                scoring_method = "static_heuristic"
+                logger.debug("Using static heuristic mechanism scoring (graph + NDF unavailable)")
         
         # Phase 6: Apply unified construct adjustments (all 35 constructs)
         # This integrates the previously underutilized psychological constructs
@@ -658,6 +1119,46 @@ class MechanismActivationAtom(BaseAtom):
                     )
         
         # =====================================================================
+        # NEW: Apply auxiliary atom mechanism adjustments
+        # CognitiveLoad, DecisionEntropy, InformationAsymmetry,
+        # PredictiveError, AmbiguityAttitude — each provides mechanism
+        # adjustments from its domain. These are confidence-weighted
+        # so only atoms that actually executed contribute.
+        # =====================================================================
+        _AUXILIARY_ATOMS = [
+            "atom_cognitive_load",
+            "atom_decision_entropy",
+            "atom_information_asymmetry",
+            "atom_predictive_error",
+            "atom_ambiguity_attitude",
+        ]
+        auxiliary_applied = []
+        for aux_id in _AUXILIARY_ATOMS:
+            try:
+                aux_output = atom_input.get_upstream(aux_id)
+                if aux_output is None:
+                    continue
+                aux_adjustments = (
+                    aux_output.secondary_assessments.get("mechanism_adjustments", {})
+                    if aux_output.secondary_assessments else {}
+                )
+                aux_confidence = aux_output.overall_confidence or 0.5
+                if aux_adjustments:
+                    for mech, adj in aux_adjustments.items():
+                        mech_key = mech.lower().replace(" ", "_")
+                        if mech_key in scores:
+                            # Confidence-weighted adjustment (stronger evidence = larger effect)
+                            scores[mech_key] = min(
+                                1.0, max(0.0, scores[mech_key] + adj * aux_confidence)
+                            )
+                    auxiliary_applied.append(aux_id.replace("atom_", ""))
+            except Exception as e:
+                logger.debug("Auxiliary atom %s failed: %s", aux_id, e)
+
+        if auxiliary_applied:
+            logger.debug("Applied auxiliary atom adjustments: %s", auxiliary_applied)
+
+        # =====================================================================
         # NEW: Apply extended framework adjustments (frameworks 41-82)
         # Previously these frameworks were computed but NEVER used!
         # =====================================================================
@@ -692,19 +1193,100 @@ class MechanismActivationAtom(BaseAtom):
         # =====================================================================
         # NDF (Nonconscious Decision Fingerprint) MECHANISM SUSCEPTIBILITY
         #
-        # This is the deepest layer of mechanism scoring. NDF measures the
-        # nonconscious decision machinery that drives behavior below awareness.
-        # Unlike review-based patterns (what people say), NDF captures HOW
-        # their language reveals their underlying cognitive architecture.
+        # CONDITIONAL: Only applied when bilateral edge dimensions are NOT
+        # available. The 20-dim edge scoring (applied later) is strictly
+        # superior — it covers all 7 NDF dimensions plus 13 extended
+        # dimensions, derived from real conversion evidence rather than
+        # theoretical mappings. Applying NDF when edges are available
+        # would compress the rich 20-dim signal through a 7-dim bottleneck.
         #
-        # NDF susceptibility maps 8 nonconscious dimensions to Cialdini
-        # mechanism effectiveness using theoretically-grounded equations.
-        #
-        # Weight: 25% of final score (complementing psychological fit 60%
-        # + historical effectiveness 40%, adjusted by NDF)
+        # When edges are unavailable, NDF provides the best available
+        # psychological signal (8 dimensions > 2 categoricals).
         # =====================================================================
-        scores = self._apply_ndf_susceptibility(scores, atom_input)
-        
+        ad_context = atom_input.ad_context or {}
+        has_edge_dims = bool(ad_context.get("edge_dimensions"))
+        if not has_edge_dims:
+            try:
+                scores = self._apply_ndf_susceptibility(scores, atom_input)
+            except Exception as e:
+                logger.debug("NDF susceptibility adjustment skipped: %s", e)
+        else:
+            logger.debug(
+                "NDF susceptibility SKIPPED: bilateral edge dimensions available "
+                "(20-dim > 7-dim NDF, avoiding compression bottleneck)"
+            )
+
+        # =====================================================================
+        # ALIGNMENT + DIMENSIONAL PRIORS (Phase D4)
+        # Apply category-specific mechanism effectiveness from ingestion,
+        # alignment matrix susceptibility from expanded type system,
+        # and dimensional priors for fine-grained scoring.
+        # Weight: 15% blend with existing scores.
+        # =====================================================================
+        try:
+            scores = self._apply_alignment_and_dimensional_priors(scores, atom_input)
+        except Exception as e:
+            logger.debug("Alignment/dimensional priors adjustment skipped: %s", e)
+
+        # =====================================================================
+        # CORPUS FUSION PRIORS (Phase CF)
+        # Blend empirical priors from 1B+ customer reviews.
+        # These are the strongest empirical signal — derived from actual
+        # purchase outcomes, not theoretical mappings.
+        # Weight: 20% blend with existing scores (high evidence base).
+        # =====================================================================
+        scores = self._apply_corpus_fusion_priors(scores, atom_input)
+
+        # =====================================================================
+        # LAYER 3 EDGE INTELLIGENCE (Phase L3)
+        # When a product ASIN is available, query the Claude-annotated graph
+        # for BRAND_CONVERTED edge statistics and BayesianPrior-backed
+        # mechanism evidence. This is the highest-fidelity signal — derived
+        # from per-review psychological construct matching.
+        # Weight: 25% blend when available (individual-level precision).
+        # =====================================================================
+        scores = self._apply_layer3_edge_intelligence(scores, atom_input)
+
+        # =====================================================================
+        # INFORMATION VALUE AWARE SCORING
+        # Use buyer_uncertainty + gradient_field to boost mechanisms that
+        # target high-gradient, high-uncertainty dimensions. This means:
+        # - For cold buyers: explore mechanisms that address unknown dims
+        # - For warm buyers: exploit mechanisms on well-characterized dims
+        # =====================================================================
+        scores = self._apply_information_value_weighting(scores, atom_input)
+
+        # =====================================================================
+        # T2.1: EXTENDED EDGE DIMENSIONS (20-dim parity with cascade L3)
+        # The bilateral cascade L3 uses all 20 dimensions for mechanism
+        # scoring. The atom DAG path only used 7 via NDF. This brings the
+        # atom path to parity when edge_dimensions are available.
+        # =====================================================================
+        scores = self._apply_edge_dimension_scoring(scores, atom_input)
+
+        # =====================================================================
+        # T1.2: DISCOVERED PATTERNS from intelligence_prefetch
+        # Empirically discovered patterns from the brand pattern learner.
+        # These are patterns like "brand_relationship_depth > 0.7 →
+        # commitment +20%" that were prefetched but never consumed.
+        # =====================================================================
+        scores = self._apply_discovered_patterns(scores, atom_input)
+
+        # =====================================================================
+        # T1.3: GDS ALGORITHM INTELLIGENCE
+        # Node Similarity, PageRank, and Community detection results from
+        # the graph data science library. Structural patterns that pure
+        # edge traversal misses.
+        # =====================================================================
+        scores = self._apply_gds_intelligence(scores, atom_input)
+
+        # =====================================================================
+        # T3.3: IV EXPLORATION — FLATTEN SCORES FOR COLD BUYERS
+        # When buyer uncertainty is high, flatten mechanism scores toward
+        # uniform to widen mechanism selection for exploratory impressions.
+        # =====================================================================
+        scores = self._apply_exploration_flattening(scores, atom_input)
+
         # Select top mechanisms
         selections = self._select_mechanisms(scores, top_n=3)
         
@@ -732,6 +1314,11 @@ class MechanismActivationAtom(BaseAtom):
             ad_ctx = atom_input.ad_context or {}
             ndf_intel = ad_ctx.get("ndf_intelligence", {})
             ndf_prof = ndf_intel.get("profile", {})
+            # Fall back to resolver-derived profile if no direct NDF
+            if not ndf_prof:
+                _psy_chain = PsychologicalConstructResolver(atom_input)
+                if _psy_chain.has_rich_constructs:
+                    ndf_prof = _psy_chain.as_full_construct_dict()
             
             if ndf_prof:
                 chain_context = {
@@ -758,12 +1345,23 @@ class MechanismActivationAtom(BaseAtom):
                 # boost confidence. If it recommends a different mechanism,
                 # consider it as a theory-data blend signal.
                 if chains:
+                    # T2.2: Theory weight inversely proportional to data availability.
+                    # Graph inference = strong data → theory 15%
+                    # NDF-only = moderate data → theory 35%
+                    # Pure heuristic = no data → theory 60%
+                    if scoring_method == "graph_inference" or scoring_method == "unified_three_layer":
+                        theory_weight = 0.15
+                    elif scoring_method == "ndf_enriched":
+                        theory_weight = 0.35
+                    else:
+                        theory_weight = 0.60  # static_heuristic — theory is the prior
+                    data_weight = 1.0 - theory_weight
+
                     for chain in chains[:3]:
                         mech = chain.recommended_mechanism
                         if mech in scores:
-                            # Theory-data blend: 15% weight from inferential chain
                             theory_score = chain.mechanism_score
-                            scores[mech] = 0.85 * scores[mech] + 0.15 * theory_score
+                            scores[mech] = data_weight * scores[mech] + theory_weight * theory_score
                     
                     logger.debug(
                         f"Generated {len(chains)} inferential chains, "
@@ -790,6 +1388,7 @@ class MechanismActivationAtom(BaseAtom):
             "regulatory_focus": reg_focus,
             "construal_level": construal,
             "mechanism_scores": scores,
+            "scoring_method": scoring_method,  # "graph_inference" or "static_heuristic"
             "inferential_chains": inferential_chains,
         }
         if review_output and review_output.secondary_assessments:
@@ -808,6 +1407,19 @@ class MechanismActivationAtom(BaseAtom):
             secondary["ndf_mechanism_susceptibility"] = ndf_intel.get(
                 "mechanism_susceptibility", {}
             )
+
+        # Include zero-shot transfer evidence if available
+        transfer_evi = evidence.get_evidence(
+            IntelligenceSourceType.CROSS_DOMAIN_TRANSFER
+        )
+        if transfer_evi and transfer_evi.secondary_assessments:
+            secondary["zero_shot_transfer"] = {
+                "is_zero_shot": transfer_evi.secondary_assessments.get("is_zero_shot", False),
+                "recommendations": transfer_evi.secondary_assessments.get("all_recommendations", {}),
+                "reasoning": transfer_evi.secondary_assessments.get("transfer_reasoning", ""),
+                "transferability": transfer_evi.secondary_assessments.get("transferability", 0),
+                "analogical_contexts": transfer_evi.secondary_assessments.get("analogical_contexts", []),
+            }
         
         return AtomOutput(
             atom_id=self.config.atom_id,
@@ -898,7 +1510,403 @@ class MechanismActivationAtom(BaseAtom):
             logger.debug(f"Could not get computed mechanism scores: {e}")
         
         return "social_proof"  # Final fallback
-    
+
+    def _apply_information_value_weighting(
+        self,
+        scores: Dict[str, float],
+        atom_input: AtomInput,
+    ) -> Dict[str, float]:
+        """
+        Weight mechanism scores by buyer uncertainty × gradient magnitude.
+
+        For each mechanism, we check which psychological dimensions it
+        primarily targets. If those dimensions have high buyer uncertainty
+        AND high gradient magnitude (meaning adjusting them would increase
+        conversion), we boost the mechanism — it's both high-lift and
+        high-learning-value.
+
+        For well-characterized buyers (low uncertainty), we skip exploration
+        bonuses and let pure effectiveness scores dominate.
+        """
+        buyer_uncertainty = atom_input.buyer_uncertainty
+        gradient_field = atom_input.gradient_field
+
+        if not buyer_uncertainty and not gradient_field:
+            return scores
+
+        # Map mechanisms to their primary psychological dimensions
+        mechanism_dimension_map = {
+            "regulatory_focus": ["regulatory_fit"],
+            "temporal_construal": ["construal_fit", "temporal_discounting"],
+            "social_proof": ["social_proof_sensitivity", "mimetic_desire"],
+            "scarcity": ["loss_aversion_intensity", "decision_entropy"],
+            "identity_construction": ["personality_alignment", "brand_relationship_depth"],
+            "mimetic_desire": ["mimetic_desire", "social_proof_sensitivity"],
+            "anchoring": ["cognitive_load_tolerance", "decision_entropy"],
+            "attention_dynamics": ["interoceptive_awareness", "cognitive_load_tolerance"],
+            "embodied_cognition": ["interoceptive_awareness"],
+            "authority": ["persuasion_susceptibility", "information_seeking"],
+            "liking": ["cooperative_framing_fit", "brand_relationship_depth"],
+            "reciprocity": ["cooperative_framing_fit"],
+            "commitment": ["autonomy_reactance", "brand_relationship_depth"],
+            "cognitive_ease": ["cognitive_load_tolerance", "decision_entropy"],
+            "curiosity": ["information_seeking", "narrative_transport"],
+            "loss_aversion": ["loss_aversion_intensity", "temporal_discounting"],
+            "storytelling": ["narrative_transport"],
+            "unity": ["cooperative_framing_fit", "mimetic_desire"],
+        }
+
+        # Extract uncertainty variances (higher = more uncertain = more learning value)
+        dim_variances = {}
+        if buyer_uncertainty:
+            constructs = buyer_uncertainty.get("constructs", {})
+            for dim_name, data in constructs.items():
+                if isinstance(data, dict):
+                    dim_variances[dim_name] = data.get("variance", 0.0)
+
+        # Get gradient magnitudes (higher = more lift from adjusting)
+        grad_mags = gradient_field or {}
+
+        adjusted = {}
+        for mech_id, base_score in scores.items():
+            target_dims = mechanism_dimension_map.get(mech_id, [])
+            if not target_dims:
+                adjusted[mech_id] = base_score
+                continue
+
+            # Compute information-value relevance for this mechanism
+            iv_relevance = 0.0
+            for dim in target_dims:
+                uncertainty = dim_variances.get(dim, 0.0)
+                gradient = abs(grad_mags.get(dim, 0.0))
+                # Information value = uncertainty × gradient magnitude
+                iv_relevance += uncertainty * gradient
+
+            if len(target_dims) > 0:
+                iv_relevance /= len(target_dims)
+
+            # Apply a modest boost (up to 15%) for high-IV mechanisms
+            # This preserves the base scoring while nudging toward
+            # mechanisms that are both effective AND informative
+            iv_boost = min(0.15, iv_relevance * 2.0)
+            adjusted[mech_id] = min(1.0, base_score + iv_boost)
+
+        if any(adjusted[k] != scores[k] for k in scores):
+            logger.debug(
+                "Applied information-value weighting: "
+                f"{sum(1 for k in scores if adjusted.get(k, scores[k]) != scores[k])} mechanisms adjusted"
+            )
+
+        return adjusted
+
+    def _apply_edge_dimension_scoring(
+        self,
+        scores: Dict[str, float],
+        atom_input: AtomInput,
+    ) -> Dict[str, float]:
+        """
+        T2.1: Score mechanisms from all 20 edge dimensions (parity with cascade L3).
+
+        The bilateral cascade L3 uses all 20 dimensions for mechanism scoring
+        (lines 623-700 of bilateral_cascade.py). But the atom DAG path only
+        uses 7 via _score_mechanisms_from_ndf. The 13 extended dimensions
+        (social_proof_sensitivity, loss_aversion_intensity, etc.) are available
+        in ad_context["edge_dimensions"] but were previously ignored.
+
+        This method mirrors the L3 scoring logic. It attempts this BEFORE
+        the NDF-based fallback, bringing the atom path to parity.
+        """
+        ad_context = atom_input.ad_context or {}
+        edge_dims = ad_context.get("edge_dimensions", {})
+
+        if not edge_dims or len(edge_dims) < 10:
+            # Need at least some extended dims to be worthwhile
+            return scores
+
+        # Extract dimensions (with 0.5 defaults for missing)
+        reg_fit = edge_dims.get("regulatory_fit", 0.5)
+        construal_fit = edge_dims.get("construal_fit", 0.5)
+        personality_align = edge_dims.get("personality_alignment", 0.5)
+        emotional = edge_dims.get("emotional_resonance", 0.5)
+        value_align = edge_dims.get("value_alignment", 0.5)
+        evo_motive = edge_dims.get("evolutionary_motive", 0.5)
+        persuasion_conf = edge_dims.get("persuasion_confidence", 0.5)
+        # Extended 13
+        persuasion_susceptibility = edge_dims.get("persuasion_susceptibility", 0.5)
+        cognitive_load_tolerance = edge_dims.get("cognitive_load_tolerance", 0.5)
+        narrative_transport = edge_dims.get("narrative_transport", 0.5)
+        social_proof_sensitivity = edge_dims.get("social_proof_sensitivity", 0.5)
+        loss_aversion_intensity = edge_dims.get("loss_aversion_intensity", 0.5)
+        temporal_discounting = edge_dims.get("temporal_discounting", 0.5)
+        brand_relationship_depth = edge_dims.get("brand_relationship_depth", 0.5)
+        autonomy_reactance = edge_dims.get("autonomy_reactance", 0.5)
+        information_seeking = edge_dims.get("information_seeking", 0.5)
+        mimetic_desire = edge_dims.get("mimetic_desire", 0.5)
+        interoceptive_awareness = edge_dims.get("interoceptive_awareness", 0.5)
+        cooperative_framing_fit = edge_dims.get("cooperative_framing_fit", 0.5)
+        decision_entropy = edge_dims.get("decision_entropy", 0.5)
+
+        # Mirror the L3 bilateral cascade scoring (20-dim)
+        edge_scores = {
+            "authority": (
+                0.30 * construal_fit + 0.20 * persuasion_conf
+                + 0.15 * (1.0 - emotional) + 0.15 * cognitive_load_tolerance
+                + 0.10 * information_seeking + 0.10 * (1.0 - autonomy_reactance)
+            ),
+            "social_proof": (
+                0.25 * social_proof_sensitivity + 0.20 * personality_align
+                + 0.15 * mimetic_desire + 0.15 * value_align
+                + 0.15 * emotional + 0.10 * (1.0 - autonomy_reactance)
+            ),
+            "scarcity": (
+                0.25 * loss_aversion_intensity + 0.20 * emotional
+                + 0.15 * (1.0 - construal_fit) + 0.15 * decision_entropy
+                + 0.15 * evo_motive + 0.10 * (1.0 - temporal_discounting)
+            ),
+            "loss_aversion": (
+                0.30 * loss_aversion_intensity + 0.25 * (1.0 - reg_fit)
+                + 0.20 * emotional + 0.15 * (1.0 - construal_fit)
+                + 0.10 * decision_entropy
+            ),
+            "commitment": (
+                0.25 * value_align + 0.20 * brand_relationship_depth
+                + 0.20 * (1.0 - emotional) + 0.15 * construal_fit
+                + 0.10 * cognitive_load_tolerance + 0.10 * cooperative_framing_fit
+            ),
+            "liking": (
+                0.25 * personality_align + 0.20 * emotional
+                + 0.20 * brand_relationship_depth + 0.15 * evo_motive
+                + 0.10 * interoceptive_awareness + 0.10 * cooperative_framing_fit
+            ),
+            "cognitive_ease": (
+                0.30 * (1.0 - cognitive_load_tolerance) + 0.25 * (1.0 - construal_fit)
+                + 0.20 * (1.0 - information_seeking) + 0.15 * (1.0 - emotional)
+                + 0.10 * value_align
+            ),
+            "curiosity": (
+                0.25 * information_seeking + 0.20 * construal_fit
+                + 0.20 * narrative_transport + 0.15 * evo_motive
+                + 0.10 * (1.0 - personality_align) + 0.10 * cognitive_load_tolerance
+            ),
+            "reciprocity": (
+                0.30 * cooperative_framing_fit + 0.25 * value_align
+                + 0.20 * personality_align + 0.15 * (1.0 - autonomy_reactance)
+                + 0.10 * brand_relationship_depth
+            ),
+            "unity": (
+                0.25 * mimetic_desire + 0.25 * personality_align
+                + 0.20 * value_align + 0.15 * emotional
+                + 0.15 * cooperative_framing_fit
+            ),
+        }
+
+        # Blend edge-dimension scores with existing scores (40% edge, 60% existing)
+        blend_w = 0.40
+        applied = 0
+        for mech, edge_score in edge_scores.items():
+            if mech in scores:
+                scores[mech] = (1.0 - blend_w) * scores[mech] + blend_w * edge_score
+                applied += 1
+
+        if applied > 0:
+            logger.debug(
+                "Extended edge dimension scoring: %d mechanisms updated from %d dims",
+                applied, len(edge_dims),
+            )
+
+        return scores
+
+    def _apply_discovered_patterns(
+        self,
+        scores: Dict[str, float],
+        atom_input: AtomInput,
+    ) -> Dict[str, float]:
+        """
+        T1.2: Apply empirically discovered patterns from intelligence_prefetch.
+
+        ad_context["discovered_patterns"] contains patterns from the brand
+        pattern learner with pattern_type, confidence, effect_size, and
+        actionable_recommendation. These were prefetched but never consumed.
+        """
+        ad_context = atom_input.ad_context or {}
+        patterns = ad_context.get("discovered_patterns", [])
+
+        if not patterns:
+            return scores
+
+        adjustments_applied = 0
+        for pattern in patterns:
+            if not isinstance(pattern, dict):
+                continue
+
+            confidence = pattern.get("confidence", 0.0)
+            if confidence < 0.3:
+                continue
+
+            effect_size = pattern.get("effect_size", 0.0)
+            target_mechanism = pattern.get("target_mechanism", "")
+            pattern_type = pattern.get("pattern_type", "")
+
+            if target_mechanism and target_mechanism in scores:
+                # Apply pattern adjustment weighted by confidence
+                adjustment = effect_size * confidence * 0.3  # Conservative 30% application
+                scores[target_mechanism] = max(0.0, min(1.0,
+                    scores[target_mechanism] + adjustment
+                ))
+                adjustments_applied += 1
+
+            # Check for conditional patterns with edge dimension conditions
+            conditions = pattern.get("conditions", {})
+            edge_dims = ad_context.get("edge_dimensions", {})
+            if conditions and edge_dims:
+                condition_met = True
+                for dim, threshold in conditions.items():
+                    dim_val = edge_dims.get(dim, 0.5)
+                    if isinstance(threshold, dict):
+                        if "min" in threshold and dim_val < threshold["min"]:
+                            condition_met = False
+                        if "max" in threshold and dim_val > threshold["max"]:
+                            condition_met = False
+                    elif dim_val < threshold:
+                        condition_met = False
+
+                if condition_met and target_mechanism and target_mechanism in scores:
+                    boost = effect_size * confidence * 0.2
+                    scores[target_mechanism] = max(0.0, min(1.0,
+                        scores[target_mechanism] + boost
+                    ))
+                    adjustments_applied += 1
+
+        if adjustments_applied > 0:
+            logger.debug(
+                "Discovered patterns: %d adjustments from %d patterns",
+                adjustments_applied, len(patterns),
+            )
+
+        return scores
+
+    def _apply_gds_intelligence(
+        self,
+        scores: Dict[str, float],
+        atom_input: AtomInput,
+    ) -> Dict[str, float]:
+        """
+        T1.3: Apply GDS algorithm intelligence (PageRank, Node Similarity, Community).
+
+        ad_context["gds_algorithm_intelligence"] contains results from Neo4j
+        Graph Data Science algorithms. These were prefetched but no atom read them.
+
+        - PageRank: Boost high-influence mechanisms (structurally central in graph)
+        - Community: Identify mechanism clusters this buyer belongs to
+        - Node Similarity: Archetype-based transfer when direct evidence sparse
+        """
+        ad_context = atom_input.ad_context or {}
+        gds_intel = ad_context.get("gds_algorithm_intelligence", {})
+
+        if not gds_intel:
+            return scores
+
+        adjustments_applied = 0
+
+        # PageRank: boost mechanisms with high structural importance
+        pagerank = gds_intel.get("pagerank", {})
+        if pagerank:
+            # Normalize pagerank scores to [0, 1] range
+            max_pr = max(pagerank.values()) if pagerank else 1.0
+            if max_pr > 0:
+                for mech, pr_score in pagerank.items():
+                    normalized = pr_score / max_pr
+                    if mech in scores:
+                        # Modest boost (up to 10%) for structurally important mechanisms
+                        scores[mech] = min(1.0, scores[mech] + normalized * 0.10)
+                        adjustments_applied += 1
+
+        # Community detection: boost mechanisms in same cluster as buyer's profile
+        communities = gds_intel.get("communities", {})
+        buyer_community = gds_intel.get("buyer_community")
+        if communities and buyer_community is not None:
+            cluster_mechanisms = communities.get(str(buyer_community), [])
+            for mech in cluster_mechanisms:
+                if mech in scores:
+                    scores[mech] = min(1.0, scores[mech] * 1.08)  # 8% community boost
+                    adjustments_applied += 1
+
+        # Node Similarity: transfer from similar archetypes when evidence sparse
+        similar_archetypes = gds_intel.get("similar_archetypes", [])
+        if similar_archetypes and scores:
+            # Only apply transfer if current scores have low variance (weak signal)
+            score_vals = list(scores.values())
+            if score_vals:
+                score_range = max(score_vals) - min(score_vals)
+                if score_range < 0.15:  # Scores are flat → weak differentiation
+                    for sim_entry in similar_archetypes[:2]:
+                        sim_scores = sim_entry.get("mechanism_scores", {})
+                        similarity = sim_entry.get("similarity", 0.5)
+                        transfer_w = similarity * 0.15  # Max 15% transfer
+                        for mech, sim_score in sim_scores.items():
+                            if mech in scores:
+                                scores[mech] = (1.0 - transfer_w) * scores[mech] + transfer_w * sim_score
+                                adjustments_applied += 1
+
+        if adjustments_applied > 0:
+            logger.debug(
+                "GDS intelligence: %d adjustments (pagerank=%d, communities=%d, similarity=%d)",
+                adjustments_applied,
+                len(pagerank),
+                1 if buyer_community is not None else 0,
+                len(similar_archetypes),
+            )
+
+        return scores
+
+    def _apply_exploration_flattening(
+        self,
+        scores: Dict[str, float],
+        atom_input: AtomInput,
+    ) -> Dict[str, float]:
+        """
+        T3.3: Flatten mechanism scores toward uniform for cold buyers.
+
+        When buyer_uncertainty is high, the atom path should explore more
+        aggressively — matching the Thompson Sampler's exploration bonus
+        in the cascade path. This widens mechanism selection for exploratory
+        impressions where information gain is highest.
+        """
+        buyer_uncertainty = atom_input.buyer_uncertainty
+        if not buyer_uncertainty:
+            return scores
+
+        # Compute aggregate uncertainty
+        constructs = buyer_uncertainty.get("constructs", {})
+        if not constructs:
+            return scores
+
+        total_variance = sum(
+            d.get("variance", 0.0) if isinstance(d, dict) else 0.0
+            for d in constructs.values()
+        )
+        avg_variance = total_variance / max(1, len(constructs))
+
+        # Only flatten if buyer is genuinely cold (high uncertainty)
+        if avg_variance < 0.15:
+            return scores
+
+        # Compute flattening factor: higher uncertainty → more flattening
+        # avg_variance of 0.25 (max for Beta(2,2)) → flatten_factor = 0.5
+        flatten_factor = min(0.5, avg_variance * 2.0)
+
+        # Flatten toward uniform mean
+        mean_score = sum(scores.values()) / max(1, len(scores))
+        flattened = {}
+        for mech, score in scores.items():
+            flattened[mech] = (1.0 - flatten_factor) * score + flatten_factor * mean_score
+
+        logger.debug(
+            "Exploration flattening: avg_variance=%.3f, flatten_factor=%.2f",
+            avg_variance, flatten_factor,
+        )
+        return flattened
+
     def _apply_credit_journey_adjustments(
         self,
         scores: Dict[str, float],
@@ -1336,12 +2344,12 @@ class MechanismActivationAtom(BaseAtom):
                 )
                 modified[mech] = max(0.05, min(0.95, modified[mech]))
         
-        # Additional direct NDF dimension → mechanism adjustments
-        # These are more fine-grained than the Cialdini mapping:
+        # Additional dimension → mechanism adjustments
+        # Uses PsychologicalConstructResolver for richer sources (graph/expanded types)
+        psy = PsychologicalConstructResolver(atom_input)
         
         # High cognitive_velocity → trust pre-cognitive mechanisms more
-        # (person is writing fast, less filtered = NDF signal is stronger)
-        cv = ndf_profile.get("cognitive_velocity", 0.0)
+        cv = psy.cognitive_velocity
         if cv > 0.6:
             # High velocity: boost quick-decision mechanisms
             for mech in ["scarcity", "attention_dynamics"]:
@@ -1349,14 +2357,14 @@ class MechanismActivationAtom(BaseAtom):
                     modified[mech] = min(0.95, modified[mech] * (1.0 + cv * 0.15))
         
         # High status_sensitivity → boost identity/aspirational mechanisms
-        rho = ndf_profile.get("status_sensitivity", 0.0)
+        rho = psy.status_sensitivity
         if rho > 0.5:
             for mech in ["identity_construction", "anchoring"]:
                 if mech in modified:
                     modified[mech] = min(0.95, modified[mech] * (1.0 + rho * 0.2))
         
         # High uncertainty_tolerance → can handle more novel mechanisms
-        upsilon = ndf_profile.get("uncertainty_tolerance", 0.5)
+        upsilon = psy.uncertainty_tolerance
         if upsilon > 0.6:
             # Tolerant of uncertainty: boost exploratory mechanisms
             for mech in ["attention_dynamics", "embodied_cognition"]:
@@ -1374,4 +2382,200 @@ class MechanismActivationAtom(BaseAtom):
             f"cv={cv:.2f}, ρ={rho:.2f}, υ={upsilon:.2f}"
         )
         
+        return modified
+
+    def _apply_alignment_and_dimensional_priors(
+        self,
+        scores: Dict[str, float],
+        atom_input: AtomInput,
+    ) -> Dict[str, float]:
+        """
+        Apply alignment matrix + dimensional priors + DSP graph intelligence
+        to mechanism scores.
+
+        This integrates:
+        1. Category-specific mechanism effectiveness from 937M+ review ingestion
+        2. Mechanism susceptibility from decision style (alignment matrix)
+        3. Dimensional priors (e.g. price sensitivity, journey stage)
+        4. [NEW] Neo4j DSP empirical effectiveness (EMPIRICALLY_EFFECTIVE edges)
+        5. [NEW] Neo4j category moderation (CONTEXTUALLY_MODERATES edges)
+        6. [NEW] Neo4j relationship amplification (MODERATES edges)
+
+        Weight: 15% blend for JSON priors, 20% blend for Neo4j graph data
+        (graph data gets higher weight because it includes sample_size confidence).
+        """
+        modified = scores.copy()
+
+        ad_context = atom_input.ad_context or {}
+
+        # =====================================================================
+        # PART A: LearnedPriorsService (JSON-based priors) — 15% blend
+        # =====================================================================
+        try:
+            from adam.core.learning.learned_priors_integration import get_learned_priors
+            priors = get_learned_priors()
+            if not priors.is_loaded:
+                priors = None
+        except ImportError:
+            priors = None
+        except Exception:
+            priors = None
+
+        archetype = ad_context.get("archetype", "explorer")
+        category = ad_context.get("category", "")
+
+        adjustments: Dict[str, float] = {}
+        adjustment_weights: Dict[str, float] = {}
+
+        if priors:
+            # 1. Category-specific mechanism effectiveness delta
+            if category:
+                for mech in modified:
+                    delta = priors.get_category_mechanism_delta(
+                        category, archetype, mech
+                    )
+                    if abs(delta) > 0.01:
+                        adjustments.setdefault(mech, 0.0)
+                        adjustment_weights.setdefault(mech, 0.0)
+                        adjustments[mech] += delta * 0.5
+                        adjustment_weights[mech] += 0.5
+
+            # 2. Mechanism susceptibility from alignment matrix
+            decision_style = ad_context.get("decision_style", "")
+            if decision_style:
+                suscept = priors.get_mechanism_susceptibility(decision_style)
+                for mech_name, score in suscept.items():
+                    mech_mapping = {
+                        "social_proof": "social_proof",
+                        "scarcity": "scarcity",
+                        "authority": "anchoring",
+                        "commitment_consistency": "regulatory_focus",
+                        "reciprocity": "embodied_cognition",
+                        "liking": "mimetic_desire",
+                        "unity": "social_proof",
+                    }
+                    adam_mech = mech_mapping.get(mech_name, mech_name)
+                    if adam_mech in modified:
+                        adjustments.setdefault(adam_mech, 0.0)
+                        adjustment_weights.setdefault(adam_mech, 0.0)
+                        adjustments[adam_mech] += (score - 0.5) * 0.4
+                        adjustment_weights[adam_mech] += 0.4
+
+            # 3. Dimensional priors: journey stage
+            journey_prior = priors.get_journey_stage_prior(category)
+            if journey_prior:
+                stage_mech_map = {
+                    "awareness": {"social_proof": 0.08, "attention_dynamics": 0.05},
+                    "consideration": {"anchoring": 0.06, "social_proof": 0.04},
+                    "decision": {"scarcity": 0.08, "regulatory_focus": 0.05},
+                    "loyalty": {"identity_construction": 0.06, "embodied_cognition": 0.05},
+                }
+                best_stage = max(journey_prior.items(), key=lambda x: x[1])[0] if journey_prior else ""
+                for mech, boost in stage_mech_map.get(best_stage, {}).items():
+                    if mech in modified:
+                        adjustments.setdefault(mech, 0.0)
+                        adjustment_weights.setdefault(mech, 0.0)
+                        adjustments[mech] += boost
+                        adjustment_weights[mech] += 0.3
+
+        # Apply JSON priors at 15% blend
+        ALIGNMENT_BLEND = 0.15
+        for mech, adj in adjustments.items():
+            if mech in modified and adjustment_weights.get(mech, 0) > 0:
+                normalized_adj = adj / adjustment_weights[mech]
+                modified[mech] = (
+                    (1 - ALIGNMENT_BLEND) * modified[mech]
+                    + ALIGNMENT_BLEND * (modified[mech] + normalized_adj)
+                )
+                modified[mech] = min(1.0, max(0.0, modified[mech]))
+
+        if adjustments:
+            logger.debug(
+                f"JSON alignment priors applied: {len(adjustments)} mechanisms adjusted "
+                f"(category={category}, archetype={archetype})"
+            )
+
+        # =====================================================================
+        # PART B: Neo4j DSP Graph Intelligence — 20% blend
+        # This uses the 2,400+ DSPConstruct edges persisted to Neo4j.
+        # Higher weight than JSON priors because Neo4j data includes
+        # sample_size for proper confidence weighting.
+        # =====================================================================
+        dsp_intel = ad_context.get("dsp_graph_intelligence", {})
+        if dsp_intel and dsp_intel.get("has_dsp"):
+            import math
+            dsp_adjustments: Dict[str, float] = {}
+            dsp_weights: Dict[str, float] = {}
+            
+            # 4. Empirical effectiveness from EMPIRICALLY_EFFECTIVE edges
+            empirical = dsp_intel.get("empirical_effectiveness", {})
+            if empirical:
+                for mech_id, stats in empirical.items():
+                    success_rate = stats.get("success_rate", 0.5)
+                    sample_size = stats.get("sample_size", 0)
+                    
+                    # Map DSP mechanism IDs to ADAM core mechanism IDs
+                    # DSP constructs may use different naming
+                    adam_mech = mech_id.lower().replace(" ", "_")
+                    if adam_mech in modified:
+                        # Weight by log(sample_size) — more samples = more trust
+                        confidence = min(1.0, math.log1p(sample_size) / 10.0) if sample_size > 0 else 0.1
+                        dsp_adjustments.setdefault(adam_mech, 0.0)
+                        dsp_weights.setdefault(adam_mech, 0.0)
+                        dsp_adjustments[adam_mech] += (success_rate - 0.5) * confidence
+                        dsp_weights[adam_mech] += confidence
+            
+            # 5. Category moderation deltas from CONTEXTUALLY_MODERATES
+            cat_mod = dsp_intel.get("category_moderation", {})
+            if cat_mod:
+                for mech_id, delta in cat_mod.items():
+                    adam_mech = mech_id.lower().replace(" ", "_")
+                    if adam_mech in modified:
+                        dsp_adjustments.setdefault(adam_mech, 0.0)
+                        dsp_weights.setdefault(adam_mech, 0.0)
+                        dsp_adjustments[adam_mech] += delta * 0.6
+                        dsp_weights[adam_mech] += 0.6
+            
+            # 6. Relationship amplification from MODERATES edges
+            rel_amp = dsp_intel.get("relationship_amplification", {})
+            if rel_amp:
+                for mech_id, boost in rel_amp.items():
+                    adam_mech = mech_id.lower().replace(" ", "_")
+                    if adam_mech in modified:
+                        # Boost is multiplicative; convert to additive adjustment
+                        adjustment = (boost - 1.0) * 0.5  # e.g., 1.3 → +0.15
+                        dsp_adjustments.setdefault(adam_mech, 0.0)
+                        dsp_weights.setdefault(adam_mech, 0.0)
+                        dsp_adjustments[adam_mech] += adjustment
+                        dsp_weights[adam_mech] += 0.4
+            
+            # 7. Decision style susceptibility from SUSCEPTIBLE_TO
+            mech_suscept = dsp_intel.get("mechanism_susceptibility", {})
+            if mech_suscept:
+                for mech_id, strength in mech_suscept.items():
+                    adam_mech = mech_id.lower().replace(" ", "_")
+                    if adam_mech in modified:
+                        dsp_adjustments.setdefault(adam_mech, 0.0)
+                        dsp_weights.setdefault(adam_mech, 0.0)
+                        dsp_adjustments[adam_mech] += (strength - 0.5) * 0.5
+                        dsp_weights[adam_mech] += 0.5
+            
+            # Apply DSP graph adjustments at 20% blend
+            DSP_GRAPH_BLEND = 0.20
+            for mech, adj in dsp_adjustments.items():
+                if mech in modified and dsp_weights.get(mech, 0) > 0:
+                    normalized_adj = adj / dsp_weights[mech]
+                    modified[mech] = (
+                        (1 - DSP_GRAPH_BLEND) * modified[mech]
+                        + DSP_GRAPH_BLEND * (modified[mech] + normalized_adj)
+                    )
+                    modified[mech] = min(1.0, max(0.0, modified[mech]))
+            
+            if dsp_adjustments:
+                logger.debug(
+                    f"DSP graph intelligence applied: {len(dsp_adjustments)} mechanisms adjusted "
+                    f"({len(empirical)} empirical, {len(cat_mod)} category mod, "
+                    f"{len(rel_amp)} relationship amp, {len(mech_suscept)} susceptibility)"
+                )
+
         return modified

@@ -26,11 +26,15 @@ logger = logging.getLogger(__name__)
 # METRICS
 # =============================================================================
 
-CIRCUIT_STATE = Gauge(
-    "adam_circuit_breaker_state",
-    "Circuit breaker state (0=closed, 1=open, 2=half-open)",
-    ["circuit"],
-)
+# CIRCUIT_STATE moved to adam/infrastructure/prometheus/metrics.py (canonical)
+# Access via: get_metrics().circuit_breaker_state.labels(service=name).set(...)
+def _set_circuit_state(name: str, value: int) -> None:
+    """Update circuit breaker state metric via canonical registry."""
+    try:
+        from adam.infrastructure.prometheus.metrics import get_metrics
+        get_metrics().circuit_breaker_state.labels(service=name).set(value)
+    except Exception:
+        pass
 
 CIRCUIT_TRIPS = Counter(
     "adam_circuit_breaker_trips_total",
@@ -119,7 +123,7 @@ class CircuitBreaker:
         self._half_open_calls = 0
         self._lock = asyncio.Lock()
         
-        CIRCUIT_STATE.labels(circuit=name).set(0)
+        _set_circuit_state(name, 0)
     
     @property
     def state(self) -> CircuitState:
@@ -234,7 +238,7 @@ class CircuitBreaker:
         
         # Update metric
         state_value = {"closed": 0, "open": 1, "half_open": 2}
-        CIRCUIT_STATE.labels(circuit=self.name).set(state_value[new_state.value])
+        _set_circuit_state(self.name, state_value[new_state.value])
         
         if new_state == CircuitState.OPEN:
             CIRCUIT_TRIPS.labels(circuit=self.name).inc()

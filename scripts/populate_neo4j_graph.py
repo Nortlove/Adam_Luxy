@@ -688,7 +688,29 @@ def main():
             n_theory_edges = 0
             theory_counts = {}
 
-        # Step 6: Validate
+        # Step 6: DSP Enrichment Knowledge Graph
+        print("\n--- Populating DSP Enrichment Knowledge Graph ---")
+        n_dsp_signals = 0
+        n_dsp_constructs = 0
+        n_dsp_edges = 0
+        n_dsp_bridges = 0
+        try:
+            from adam.dsp.graph_population import populate_dsp_graph
+            dsp_counts = populate_dsp_graph(driver, batch_size=100)
+            n_dsp_signals = dsp_counts.get("signals", 0)
+            n_dsp_constructs = dsp_counts.get("constructs", 0)
+            n_dsp_edges = dsp_counts.get("edges", 0)
+            n_dsp_bridges = dsp_counts.get("bridges", 0)
+            print(f"  DSP BehavioralSignal nodes: {n_dsp_signals}")
+            print(f"  DSP Construct nodes:        {n_dsp_constructs}")
+            print(f"  DSP Causal edges:           {n_dsp_edges}")
+            print(f"  DSP NDF bridge edges:       {n_dsp_bridges}")
+        except Exception as e:
+            print(f"  WARNING: DSP graph population failed: {e}")
+            import traceback
+            traceback.print_exc()
+
+        # Step 7: Validate
         print("\n--- Validating graph ---")
         validations = validate_graph(session)
 
@@ -709,6 +731,10 @@ def main():
     if theory_counts:
         for k, v in theory_counts.items():
             print(f"    {k}: {v}")
+    print(f"  DSP Signal nodes:         {n_dsp_signals}")
+    print(f"  DSP Construct nodes:      {n_dsp_constructs}")
+    print(f"  DSP Causal edges:         {n_dsp_edges}")
+    print(f"  DSP NDF bridges:          {n_dsp_bridges}")
     print(f"  GDS available:            {validations.get('gds_available', False)}")
     print(f"  GDS version:              {validations.get('gds_version', 'N/A')}")
 

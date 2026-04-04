@@ -73,11 +73,24 @@ class CampaignOrchestrator:
         self._cold_start = None
         self._blackboard = None
         self._atom_dag = None
+        self._unified_intelligence = None
     
     # =========================================================================
     # SERVICE ACCESSORS (lazy initialization)
     # =========================================================================
     
+    def _get_unified_intelligence(self):
+        """Get UnifiedIntelligenceService for three-layer Bayesian fusion."""
+        if self._unified_intelligence is None:
+            try:
+                from adam.intelligence.unified_intelligence_service import (
+                    get_unified_intelligence_service,
+                )
+                self._unified_intelligence = get_unified_intelligence_service()
+            except ImportError as e:
+                logger.warning(f"UnifiedIntelligenceService not available: {e}")
+        return self._unified_intelligence
+
     async def _get_review_orchestrator(self):
         """Get review intelligence orchestrator."""
         if self._review_orchestrator is None:
@@ -198,6 +211,124 @@ class CampaignOrchestrator:
         components_used.append("GraphIntelligence")
         
         # =====================================================================
+        # STEP 3b: Three-Layer Unified Intelligence
+        # =====================================================================
+        unified_intel = None
+        unified_svc = self._get_unified_intelligence()
+        if unified_svc:
+            try:
+                asin = None
+                if product_url and "amazon" in product_url.lower():
+                    import re
+                    m = re.search(r'/dp/([A-Z0-9]{10})', product_url)
+                    if m:
+                        asin = f"product_{m.group(1)}"
+                if asin:
+                    unified_intel = unified_svc.fuse_mechanism_recommendation(
+                        asin=asin,
+                        category="All_Beauty",
+                    )
+                    if unified_intel and unified_intel.get("layers_used"):
+                        components_used.append("UnifiedIntelligence")
+                        trace.steps.append(EvidenceItem(
+                            source=DataSourceType.GRAPH,
+                            description=f"Three-layer fusion: {', '.join(unified_intel['layers_used'])}",
+                            confidence=0.8,
+                            data={"layers": unified_intel["layers_used"]},
+                        ))
+            except Exception as e:
+                logger.warning(f"Unified intelligence query failed: {e}")
+
+        # =====================================================================
+        # STEP 3c: Bilateral Cascade + Information Value (StackAdapt path)
+        # =====================================================================
+        bilateral_result = None
+        buyer_uncertainty_dict = None
+        gradient_field_dict = None
+        bilateral_result = await self._run_bilateral_cascade(
+            asin=asin if unified_svc else None,
+            archetype=primary_archetype,
+            trace=trace,
+        )
+        if bilateral_result:
+            components_used.append("BilateralCascade")
+            # Extract buyer uncertainty and gradient for downstream atoms
+            if bilateral_result.get("buyer_uncertainty"):
+                buyer_uncertainty_dict = bilateral_result["buyer_uncertainty"]
+            if bilateral_result.get("gradient_field"):
+                gradient_field_dict = bilateral_result["gradient_field"]
+
+        # =====================================================================
+        # STEP 3d: Barrier Prevalence Analysis (Retargeting Intelligence)
+        #
+        # Uses learned posteriors from the retargeting system to understand
+        # which conversion barriers are most common for this archetype.
+        # This intelligence feeds into mechanism selection — if 40% of
+        # careful_trusters hit trust_deficit, first-touch should preemptively
+        # deploy evidence_proof or social_proof_matched.
+        # =====================================================================
+        barrier_intelligence = None
+        try:
+            from adam.retargeting.engines.prior_manager import get_prior_manager
+            _prior_mgr = get_prior_manager()
+            if _prior_mgr is not None:
+                barrier_prevalence = _prior_mgr.get_barrier_prevalence(primary_archetype)
+                if barrier_prevalence:
+                    # Get the top mechanism for each prevalent barrier
+                    top_barriers = sorted(
+                        barrier_prevalence.items(),
+                        key=lambda x: x[1],
+                        reverse=True,
+                    )[:3]
+
+                    barrier_intelligence = {
+                        "archetype": primary_archetype,
+                        "barrier_prevalence": {
+                            k: round(v, 4)
+                            for k, v in top_barriers
+                            if v > 0.05  # Only barriers affecting >5% of users
+                        },
+                        "recommended_preemptive_mechanisms": {},
+                    }
+
+                    # For each top barrier, get the best mechanism from posteriors
+                    for barrier_name, prevalence in top_barriers:
+                        if prevalence < 0.05:
+                            continue
+                        posteriors = _prior_mgr.get_all_posteriors_for_barrier(
+                            barrier_name, primary_archetype
+                        )
+                        if posteriors:
+                            best_mech = max(
+                                posteriors.items(),
+                                key=lambda x: x[1].mean,
+                            )
+                            barrier_intelligence["recommended_preemptive_mechanisms"][
+                                barrier_name
+                            ] = {
+                                "mechanism": best_mech[0],
+                                "posterior_mean": round(best_mech[1].mean, 4),
+                                "sample_count": best_mech[1].sample_count,
+                            }
+
+                    if barrier_intelligence["barrier_prevalence"]:
+                        components_used.append("BarrierIntelligence")
+                        trace.steps.append(EvidenceItem(
+                            source=DataSourceType.GRAPH,
+                            description=(
+                                f"Barrier analysis: top barriers for {primary_archetype} — "
+                                + ", ".join(
+                                    f"{b} ({p:.0%})"
+                                    for b, p in barrier_intelligence["barrier_prevalence"].items()
+                                )
+                            ),
+                            confidence=0.7,
+                            data=barrier_intelligence,
+                        ))
+        except Exception as e:
+            logger.debug("Barrier intelligence skipped: %s", e)
+
+        # =====================================================================
         # STEP 4: Execute AtomDAG (if available)
         # =====================================================================
         atom_result = await self._execute_atom_dag(
@@ -207,6 +338,10 @@ class CampaignOrchestrator:
             customer_intelligence=customer_intelligence,
             archetype=primary_archetype,
             trace=trace,
+            buyer_uncertainty=buyer_uncertainty_dict,
+            gradient_field=gradient_field_dict,
+            category=getattr(unified_intel, "category", None) if unified_intel else None,
+            asin=asin if unified_svc else None,
         )
         if atom_result:
             components_used.append("AtomDAG")
@@ -219,6 +354,8 @@ class CampaignOrchestrator:
             mechanism_intelligence=mechanism_intelligence,
             customer_intelligence=customer_intelligence,
             trace=trace,
+            unified_intel=unified_intel,
+            barrier_intelligence=barrier_intelligence,
         )
         components_used.append("MetaLearner")
         
@@ -490,9 +627,92 @@ class CampaignOrchestrator:
         return result
     
     # =========================================================================
+    # STEP 3c: BILATERAL CASCADE + INFORMATION VALUE
+    # =========================================================================
+
+    async def _run_bilateral_cascade(
+        self,
+        asin: Optional[str],
+        archetype: str,
+        trace: ReasoningTrace,
+        buyer_id: Optional[str] = None,
+    ) -> Optional[Dict[str, Any]]:
+        """Run the bilateral cascade to get gradient fields and information value.
+
+        Returns a dict with bilateral cascade results, buyer_uncertainty, and
+        gradient_field for injection into downstream atoms.
+        """
+        try:
+            from adam.api.stackadapt.graph_cache import get_graph_cache
+            from adam.api.stackadapt.bilateral_cascade import run_bilateral_cascade
+
+            graph_cache = get_graph_cache()
+
+            # Build a segment_id from archetype
+            segment_id = f"informativ_{archetype}"
+
+            result = run_bilateral_cascade(
+                segment_id=segment_id,
+                graph_cache=graph_cache,
+                asin=asin,
+                buyer_id=buyer_id,
+            )
+
+            cascade_dict: Dict[str, Any] = {
+                "cascade_level": result.cascade_level,
+                "primary_mechanism": result.primary_mechanism,
+                "secondary_mechanism": result.secondary_mechanism,
+                "confidence": result.confidence,
+                "edge_count": result.edge_count,
+            }
+
+            # Extract buyer uncertainty for atoms
+            if result.information_value:
+                cascade_dict["information_value"] = {
+                    "exploration_priority": result.information_value.exploration_priority,
+                    "bid_premium": result.information_value.recommended_bid_premium,
+                    "buyer_confidence": result.information_value.buyer_confidence,
+                }
+
+            # Extract gradient field for atoms
+            if result.gradient_intelligence:
+                gf = result.gradient_intelligence
+                gradient_dict = {}
+                if hasattr(gf, "optimization_priorities"):
+                    for p in gf.optimization_priorities:
+                        gradient_dict[p.dimension] = p.expected_lift_delta
+                cascade_dict["gradient_field"] = gradient_dict
+
+            # Build buyer_uncertainty dict from edge dimensions for atom injection
+            if result.edge_dimensions:
+                buyer_uncertainty = {}
+                for dim, val in result.edge_dimensions.items():
+                    buyer_uncertainty[dim] = {
+                        "current_value": val,
+                        "from_cascade_level": result.cascade_level,
+                    }
+                cascade_dict["buyer_uncertainty"] = buyer_uncertainty
+
+            trace.steps.append(EvidenceItem(
+                source=DataSourceType.GRAPH,
+                description=(
+                    f"Bilateral cascade L{result.cascade_level}: "
+                    f"{result.primary_mechanism} (conf={result.confidence:.2f})"
+                ),
+                confidence=result.confidence,
+                data={"cascade_level": result.cascade_level, "edge_count": result.edge_count},
+            ))
+
+            return cascade_dict
+
+        except Exception as e:
+            logger.warning(f"Bilateral cascade failed: {e}")
+            return None
+
+    # =========================================================================
     # STEP 4: ATOM DAG EXECUTION
     # =========================================================================
-    
+
     async def _execute_atom_dag(
         self,
         brand: str,
@@ -501,15 +721,19 @@ class CampaignOrchestrator:
         customer_intelligence,
         archetype: str,
         trace: ReasoningTrace,
+        buyer_uncertainty: Optional[Dict[str, Any]] = None,
+        gradient_field: Optional[Dict[str, float]] = None,
+        category: Optional[str] = None,
+        asin: Optional[str] = None,
     ) -> Optional[AtomDAGResult]:
         """
         Execute the AtomDAG for psychological reasoning.
-        
+
         Attempts to run the REAL AtomDAG with in-memory blackboard.
         Falls back to simulation if infrastructure isn't available.
         """
         start_time = time.time()
-        
+
         # Try to run the real AtomDAG
         try:
             real_result = await self._execute_real_atom_dag(
@@ -518,6 +742,10 @@ class CampaignOrchestrator:
                 description=description,
                 customer_intelligence=customer_intelligence,
                 archetype=archetype,
+                buyer_uncertainty=buyer_uncertainty,
+                gradient_field=gradient_field,
+                category=category,
+                asin=asin,
             )
             if real_result:
                 real_result.total_execution_time_ms = (time.time() - start_time) * 1000
@@ -545,16 +773,24 @@ class CampaignOrchestrator:
         description: str,
         customer_intelligence,
         archetype: str,
+        buyer_uncertainty: Optional[Dict[str, Any]] = None,
+        gradient_field: Optional[Dict[str, float]] = None,
+        category: Optional[str] = None,
+        asin: Optional[str] = None,
     ) -> Optional[AtomDAGResult]:
         """
         Execute the real AtomDAG using in-memory blackboard.
-        
+
+        Pre-fetches psychological intelligence from the graph before DAG
+        execution, so atoms receive real data instead of 0.5 defaults.
+
         Returns None if infrastructure isn't available.
         """
         from adam.infrastructure.neo4j.client import get_neo4j_client
         from adam.blackboard.memory_blackboard import get_memory_blackboard
         from adam.graph_reasoning.bridge.interaction_bridge import InteractionBridge
         from adam.atoms.dag import AtomDAG
+        from adam.orchestrator.intelligence_prefetch import get_intelligence_prefetch
         from adam.blackboard.models.zone1_context import (
             RequestContext,
             UserIntelligencePackage,
@@ -614,10 +850,34 @@ class CampaignOrchestrator:
             content_context=content_ctx,
         )
         
-        # Execute DAG
+        # Pre-fetch psychological intelligence from the graph
+        # This is the critical step that feeds atoms with real data instead
+        # of 0.5 defaults. Queries RESPONDS_TO edges, CustomerArchetype NDF,
+        # GranularType matching, corpus priors, and DSP intelligence.
+        ad_context = None
+        try:
+            prefetch = get_intelligence_prefetch()
+            ad_context = await prefetch.prefetch(
+                archetype=archetype,
+                category=category,
+                asin=asin,
+                buyer_uncertainty=buyer_uncertainty,
+                gradient_field=gradient_field,
+            )
+            logger.info(
+                "Intelligence prefetch populated %d sources for atom DAG",
+                ad_context.get("_prefetch_meta", {}).get("sources_count", 0),
+            )
+        except Exception as e:
+            logger.warning("Intelligence prefetch failed (atoms will use defaults): %s", e)
+
+        # Execute DAG with pre-fetched intelligence
         dag_result = await atom_dag.execute(
             request_id=request_id,
             request_context=request_context,
+            buyer_uncertainty=buyer_uncertainty,
+            gradient_field=gradient_field,
+            ad_context=ad_context,
         )
         
         # Convert to our result format
@@ -758,8 +1018,10 @@ class CampaignOrchestrator:
         mechanism_intelligence: GraphQueryResult,
         customer_intelligence,
         trace: ReasoningTrace,
+        unified_intel: dict = None,
+        barrier_intelligence: dict = None,
     ) -> MechanismSelectionResult:
-        """Select optimal mechanisms using MetaLearner."""
+        """Select optimal mechanisms using MetaLearner, with three-layer fusion."""
         
         result = MechanismSelectionResult()
         
@@ -768,50 +1030,170 @@ class CampaignOrchestrator:
         for mech in mechanism_intelligence.mechanisms:
             score = mech.archetype_effectiveness.get(archetype, 0.5)
             mechanism_scores[mech.mechanism_name.lower().replace(" ", "_")] = score
+
+        # Blend unified three-layer fusion if available (takes priority)
+        if unified_intel and unified_intel.get("mechanisms"):
+            result.priors_source = "unified_three_layer_fusion"
+            for m in unified_intel["mechanisms"]:
+                mech_key = m["mechanism"]
+                fused = m["fused_score"]
+                if mech_key in mechanism_scores:
+                    mechanism_scores[mech_key] = mechanism_scores[mech_key] * 0.4 + fused * 0.6
+                else:
+                    mechanism_scores[mech_key] = fused
+            logger.info(
+                f"Applied unified three-layer fusion ({len(unified_intel['mechanisms'])} mechanisms, "
+                f"layers: {unified_intel.get('layers_used', [])})"
+            )
         
         # If we have review intelligence, blend in its predictions
         if customer_intelligence and customer_intelligence.mechanism_predictions:
             result.review_intelligence_applied = True
-            result.priors_source = "review_intelligence"
+            if result.priors_source != "unified_three_layer_fusion":
+                result.priors_source = "review_intelligence"
             
             for mech, review_score in customer_intelligence.mechanism_predictions.items():
                 if mech in mechanism_scores:
-                    # Blend: 60% graph, 40% review
                     mechanism_scores[mech] = mechanism_scores[mech] * 0.6 + review_score * 0.4
                 else:
                     mechanism_scores[mech] = review_score
         
-        # Try to use actual MetaLearner for Thompson Sampling
-        meta_learner = await self._get_meta_learner()
-        if meta_learner:
-            try:
-                # Would call actual Thompson Sampling here
-                # For now, simulate the sampling
-                pass
-            except Exception as e:
-                logger.warning(f"MetaLearner error: {e}")
+        # Blend corpus fusion priors (from 1B+ reviews)
+        try:
+            from adam.fusion.prior_extraction import get_prior_extraction_service
+            prior_service = get_prior_extraction_service()
+            corpus_prior = prior_service.extract_prior(
+                category="",  # Cross-category priors
+                archetype=archetype,
+            )
+            if corpus_prior and corpus_prior.mechanism_priors:
+                corpus_applied = 0
+                blend_weight = min(0.20, corpus_prior.confidence * 0.25)
+                for mech_name, prior_score in corpus_prior.get_mechanism_dict().items():
+                    normalized = mech_name.lower().replace(" ", "_").replace("-", "_")
+                    if normalized in mechanism_scores:
+                        mechanism_scores[normalized] = (
+                            (1 - blend_weight) * mechanism_scores[normalized]
+                            + blend_weight * prior_score
+                        )
+                        corpus_applied += 1
+                    else:
+                        mechanism_scores[normalized] = prior_score
+                        corpus_applied += 1
+                if corpus_applied > 0:
+                    result.priors_source = result.priors_source or "corpus_fusion"
+                    logger.debug(
+                        f"Corpus fusion: blended {corpus_applied} priors "
+                        f"(weight={blend_weight:.2f}) into mechanism selection"
+                    )
+        except ImportError:
+            pass
+        except Exception as e:
+            logger.debug(f"Corpus fusion blend failed (non-fatal): {e}")
+
+        # Blend barrier-conditioned mechanism intelligence from retargeting
+        # posteriors. If retargeting has learned that evidence_proof is the
+        # best mechanism for trust_deficit (which affects 35% of careful_trusters),
+        # boost evidence_proof score proportionally.
+        if barrier_intelligence and barrier_intelligence.get("recommended_preemptive_mechanisms"):
+            barrier_boost_applied = 0
+            for barrier_name, rec in barrier_intelligence["recommended_preemptive_mechanisms"].items():
+                mech_key = rec["mechanism"]
+                prevalence = barrier_intelligence["barrier_prevalence"].get(barrier_name, 0)
+                posterior_mean = rec["posterior_mean"]
+                # Boost proportional to barrier prevalence × posterior effectiveness
+                # Capped at 15% blend weight — retargeting evidence supplements, not overrides
+                blend_weight = min(0.15, prevalence * posterior_mean)
+                if mech_key in mechanism_scores:
+                    mechanism_scores[mech_key] = (
+                        (1 - blend_weight) * mechanism_scores[mech_key]
+                        + blend_weight * posterior_mean
+                    )
+                else:
+                    mechanism_scores[mech_key] = posterior_mean * 0.6
+                barrier_boost_applied += 1
+
+            if barrier_boost_applied > 0:
+                logger.info(
+                    "Barrier intelligence: boosted %d mechanisms from retargeting posteriors",
+                    barrier_boost_applied,
+                )
+
+        # Use real Thompson Sampler for mechanism selection
+        from adam.cold_start.thompson.sampler import get_thompson_sampler
+        thompson = get_thompson_sampler()
         
-        # Simulate Thompson Sampling traces
-        import random
         sampling_traces = []
-        for mech, base_score in mechanism_scores.items():
-            # Simulate beta distribution sampling
-            alpha = max(1, base_score * 10)
-            beta = max(1, (1 - base_score) * 10)
-            sampled = random.betavariate(alpha, beta)
-            
-            sampling_traces.append(ThompsonSamplingTrace(
-                mechanism=mech,
-                prior_alpha=alpha,
-                prior_beta=beta,
-                sampled_value=sampled,
-                rank=0,  # Will be set after sorting
-            ))
+        used_real_thompson = False
         
-        # Sort by sampled value and assign ranks
-        sampling_traces.sort(key=lambda t: t.sampled_value, reverse=True)
-        for i, st in enumerate(sampling_traces):
-            st.rank = i + 1
+        try:
+            # Convert mechanism names to CognitiveMechanism enums where possible
+            from adam.cold_start.models.enums import CognitiveMechanism, ArchetypeID
+            
+            available_mechs = []
+            mech_name_map = {}  # enum -> original string name
+            for mech_name in mechanism_scores:
+                try:
+                    cm = CognitiveMechanism(mech_name)
+                    available_mechs.append(cm)
+                    mech_name_map[cm] = mech_name
+                except ValueError:
+                    pass
+            
+            # Resolve archetype enum
+            archetype_enum = None
+            try:
+                archetype_enum = ArchetypeID(archetype)
+            except (ValueError, KeyError):
+                pass
+            
+            if available_mechs:
+                # Real Thompson Sampling with exploration/exploitation
+                top_k = thompson.sample_top_k(
+                    k=len(available_mechs),
+                    archetype=archetype_enum,
+                    available_mechanisms=available_mechs,
+                )
+                
+                for rank_idx, (cm, sampled_value) in enumerate(top_k, 1):
+                    mech_name = mech_name_map.get(cm, cm.value)
+                    # Get actual posterior parameters
+                    posteriors = thompson.posteriors.get(archetype_enum, thompson.population_posteriors) if archetype_enum else thompson.population_posteriors
+                    posterior = posteriors.get(cm)
+                    alpha = posterior.alpha if posterior else 2.0
+                    beta_val = posterior.beta if posterior else 2.0
+                    
+                    sampling_traces.append(ThompsonSamplingTrace(
+                        mechanism=mech_name,
+                        prior_alpha=alpha,
+                        prior_beta=beta_val,
+                        sampled_value=sampled_value,
+                        rank=rank_idx,
+                    ))
+                
+                used_real_thompson = True
+                logger.info(f"Thompson Sampling: real posteriors used for {len(top_k)} mechanisms")
+        except Exception as e:
+            logger.warning(f"Real Thompson Sampling failed, falling back: {e}")
+        
+        if not used_real_thompson:
+            # Fallback: use mechanism_scores as pseudo-priors for Thompson Sampling
+            import random
+            for mech, base_score in mechanism_scores.items():
+                alpha = max(1.0, base_score * 10)
+                beta_val = max(1.0, (1 - base_score) * 10)
+                sampled = random.betavariate(alpha, beta_val)
+                sampling_traces.append(ThompsonSamplingTrace(
+                    mechanism=mech,
+                    prior_alpha=alpha,
+                    prior_beta=beta_val,
+                    sampled_value=sampled,
+                    rank=0,
+                ))
+            # Sort and assign ranks
+            sampling_traces.sort(key=lambda t: t.sampled_value, reverse=True)
+            for i, st in enumerate(sampling_traces):
+                st.rank = i + 1
         
         result.sampling_traces = sampling_traces
         result.mechanism_scores = mechanism_scores

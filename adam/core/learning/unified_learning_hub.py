@@ -65,6 +65,11 @@ class UnifiedSignalType(str, Enum):
     PATTERN_DISCOVERED = "pattern_discovered"     # New pattern found
     CONSTRUCT_EMERGED = "construct_emerged"       # New construct emerged
     CALIBRATION_NEEDED = "calibration_needed"     # Confidence needs adjustment
+    
+    # Corpus fusion signals (Layer 4 bidirectional learning)
+    CORPUS_CALIBRATION = "corpus_calibration"     # Platform calibration update
+    CORPUS_MODALITY_ADJUSTMENT = "corpus_modality_adjustment"  # Modality effectiveness drift
+    CORPUS_CHANNEL_ADJUSTMENT = "corpus_channel_adjustment"    # Channel effectiveness drift
 
 
 # Mapping from old signal types to unified
@@ -92,6 +97,11 @@ SIGNAL_TYPE_MAPPING = {
     "mechanism": UnifiedSignalType.CREDIT_MECHANISM,
     "bandit": UnifiedSignalType.UPDATE_THOMPSON,
     "graph": UnifiedSignalType.UPDATE_GRAPH,
+    
+    # Corpus fusion signals
+    "corpus_calibration": UnifiedSignalType.CORPUS_CALIBRATION,
+    "corpus_modality": UnifiedSignalType.CORPUS_MODALITY_ADJUSTMENT,
+    "corpus_channel": UnifiedSignalType.CORPUS_CHANNEL_ADJUSTMENT,
 }
 
 
@@ -126,6 +136,10 @@ class UnifiedLearningSignal:
     
     # Payload
     payload: Dict[str, Any] = field(default_factory=dict)
+    
+    # DSP construct tracking
+    active_constructs: List[str] = field(default_factory=list)  # DSP construct IDs active during decision
+    construct_credits: Dict[str, float] = field(default_factory=dict)  # {construct_id: credit_score}
     
     # Timing
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
@@ -254,12 +268,20 @@ class UnifiedLearningHub:
             from adam.cold_start.thompson.sampler import get_thompson_sampler
             self._thompson_sampler = get_thompson_sampler()
             
-            # Register Thompson Sampler as learning component
+            # Register Thompson Sampler as learning component.
+            #
+            # CRITICAL: OUTCOME_SUCCESS is EXCLUDED because the OutcomeHandler
+            # already calls _update_thompson() directly. Including it here
+            # caused double-counting: every outcome updated Thompson Sampling
+            # twice (once via OutcomeHandler, once via LearningHub).
+            #
+            # Thompson Sampling is updated via this hub ONLY for:
+            # - CREDIT_MECHANISM: direct mechanism feedback (not from outcomes)
+            # - UPDATE_THOMPSON: explicit Thompson update signals
             self.register_component(
                 name="thompson_sampler",
                 handler=self._update_thompson_sampler,
                 signal_types={
-                    UnifiedSignalType.OUTCOME_SUCCESS,
                     UnifiedSignalType.CREDIT_MECHANISM,
                     UnifiedSignalType.UPDATE_THOMPSON,
                 },
@@ -352,6 +374,31 @@ class UnifiedLearningHub:
         except ImportError as e:
             logger.debug(f"Bidirectional Bridge not available: {e}")
         
+        # BidirectionalLearningLoop (Corpus Fusion Layer 4)
+        # Receives outcome signals and updates platform calibrations,
+        # modality adjustments, and channel adjustments.
+        try:
+            from adam.fusion.bidirectional_learning import get_bidirectional_learning_loop
+            self._corpus_learning_loop = get_bidirectional_learning_loop()
+            
+            self.register_component(
+                name="corpus_learning_loop",
+                handler=self._update_corpus_learning_loop,
+                signal_types={
+                    UnifiedSignalType.OUTCOME_SUCCESS,
+                    UnifiedSignalType.OUTCOME_FAILURE,
+                    UnifiedSignalType.CREDIT_MECHANISM,
+                    UnifiedSignalType.CORPUS_CALIBRATION,
+                    UnifiedSignalType.CORPUS_MODALITY_ADJUSTMENT,
+                    UnifiedSignalType.CORPUS_CHANNEL_ADJUSTMENT,
+                },
+                priority=6,  # After graph service, before meta-learner
+            )
+            components_registered += 1
+            logger.debug("Corpus Learning Loop (Layer 4) connected and registered")
+        except ImportError as e:
+            logger.debug(f"Corpus Learning Loop not available: {e}")
+        
         logger.info(f"UnifiedLearningHub auto-registered {components_registered} components")
     
     async def _update_thompson_sampler(self, signal: UnifiedLearningSignal) -> bool:
@@ -424,6 +471,33 @@ class UnifiedLearningHub:
             return True
         except Exception as e:
             logger.debug(f"Priors Service update failed: {e}")
+            return False
+    
+    async def _update_corpus_learning_loop(self, signal: UnifiedLearningSignal) -> bool:
+        """Update Corpus Fusion Layer 4 (BidirectionalLearningLoop) with outcome signals."""
+        if not hasattr(self, '_corpus_learning_loop') or not self._corpus_learning_loop:
+            return False
+        
+        try:
+            platform = signal.payload.get("platform", "general")
+            mechanism = signal.mechanism or signal.payload.get("mechanism", "")
+            category = signal.payload.get("category", "") or signal.payload.get("product_category", "")
+            archetype = signal.archetype or signal.payload.get("archetype", "")
+            outcome_value = signal.value if signal.value is not None else signal.payload.get("outcome_value", 0.5)
+            
+            if mechanism and category:
+                self._corpus_learning_loop.process_campaign_outcome(
+                    platform=platform,
+                    mechanism=mechanism,
+                    category=category,
+                    observed_effectiveness=outcome_value,
+                    archetype=archetype or None,
+                    campaign_id=signal.payload.get("decision_id"),
+                )
+                return True
+            return False
+        except Exception as e:
+            logger.debug(f"Corpus Learning Loop update failed: {e}")
             return False
     
     async def _update_bidirectional_bridge(self, signal: UnifiedLearningSignal) -> bool:
@@ -505,39 +579,12 @@ class UnifiedLearningHub:
         Direct updates to critical systems (belt & suspenders).
         
         Even if signal routing fails, these updates WILL happen.
+        
+        NOTE: Thompson Sampling is NOT updated here — it is handled
+        exclusively by the registered _update_thompson_sampler component
+        handler to avoid double-counting outcomes.
         """
         updated = 0
-        
-        # Thompson Sampling update
-        if signal.signal_type in (
-            UnifiedSignalType.OUTCOME_SUCCESS,
-            UnifiedSignalType.OUTCOME_FAILURE,
-            UnifiedSignalType.UPDATE_THOMPSON,
-            UnifiedSignalType.CREDIT_MECHANISM,
-        ):
-            if self._thompson_sampler and signal.mechanism:
-                try:
-                    success = signal.signal_type in (
-                        UnifiedSignalType.OUTCOME_SUCCESS,
-                        UnifiedSignalType.UPDATE_THOMPSON,
-                    ) or signal.value >= 0.5
-                    
-                    # Find update method
-                    if hasattr(self._thompson_sampler, "update"):
-                        self._thompson_sampler.update(
-                            signal.mechanism,
-                            success,
-                            weight=signal.weight,
-                        )
-                        updated += 1
-                    elif hasattr(self._thompson_sampler, "update_posterior"):
-                        self._thompson_sampler.update_posterior(
-                            signal.mechanism,
-                            success,
-                        )
-                        updated += 1
-                except Exception as e:
-                    logger.debug(f"Thompson direct update failed: {e}")
         
         # Graph update
         if signal.signal_type in (

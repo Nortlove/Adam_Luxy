@@ -56,3 +56,4 @@ amazon_processed/
 *.cypher
 gradient_signals.json
 memory_graph.json
+CLAUDE.md

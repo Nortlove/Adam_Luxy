@@ -37,6 +37,7 @@ from adam.graph_reasoning.models.intelligence_sources import (
     IntelligenceSourceType,
     ConfidenceSemantics,
 )
+from adam.atoms.core.dsp_integration import DSPDataAccessor
 
 logger = logging.getLogger(__name__)
 
@@ -218,6 +219,7 @@ class CoherenceOptimizationAtom(BaseAtom):
     def _select_coherent_cluster(
         self,
         resolved_adjustments: Dict[str, float],
+        dsp: "DSPDataAccessor" = None,
     ) -> Dict[str, any]:
         """Select the most coherent mechanism cluster."""
         cluster_scores = {}
@@ -228,6 +230,18 @@ class CoherenceOptimizationAtom(BaseAtom):
                 for m in cluster_def["mechanisms"]
             ) / len(cluster_def["mechanisms"])
             cluster_scores[cluster_id] = score
+
+        # DSP empirical boost: favor clusters with empirically validated mechanisms
+        if dsp and dsp.has_dsp:
+            empirical = dsp.get_all_empirical()
+            if empirical:
+                for cluster_id, cluster_def in COHERENCE_GROUPS.items():
+                    empirical_bonus = 0.0
+                    for mech in cluster_def["mechanisms"]:
+                        emp = empirical.get(mech)
+                        if emp:
+                            empirical_bonus += (emp.get("success_rate", 0.5) - 0.5) * 0.1
+                    cluster_scores[cluster_id] = cluster_scores.get(cluster_id, 0) + empirical_bonus
 
         best_cluster = max(cluster_scores, key=cluster_scores.get)
         best_score = cluster_scores[best_cluster]
@@ -261,7 +275,8 @@ class CoherenceOptimizationAtom(BaseAtom):
         all_adjustments = self._collect_upstream_adjustments(atom_input)
         conflicts = self._detect_conflicts(all_adjustments)
         resolved = self._resolve_conflicts(conflicts, all_adjustments)
-        cluster = self._select_coherent_cluster(resolved)
+        dsp = DSPDataAccessor(atom_input)
+        cluster = self._select_coherent_cluster(resolved, dsp=dsp)
 
         primary = cluster["primary_cluster"]
 

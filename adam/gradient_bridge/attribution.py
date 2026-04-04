@@ -130,10 +130,12 @@ class CreditAttributor:
             attribution.primary_mechanism = request.mechanism_used
             
             # Credit primarily to the used mechanism
-            mech_credits = {request.mechanism_used: request.outcome_value * 0.6}
-            
+            from adam.config.settings import get_settings
+            primary_credit = get_settings().cascade.primary_mechanism_credit
+            mech_credits = {request.mechanism_used: request.outcome_value * primary_credit}
+
             # Distribute remaining credit to other considered mechanisms
-            remaining = request.outcome_value * 0.4
+            remaining = request.outcome_value * (1.0 - primary_credit)
             others = [m for m in request.mechanisms_considered if m != request.mechanism_used]
             if others:
                 per_mech = remaining / len(others)
@@ -142,6 +144,11 @@ class CreditAttributor:
             
             attribution.mechanism_credits = mech_credits
             attribution.primary_mechanism_credit = mech_credits.get(request.mechanism_used, 0.0)
+        
+        # Compute construct-level credits from mechanism credits
+        construct_credits = self._compute_construct_credits(attribution.mechanism_credits)
+        attribution.construct_credits = construct_credits
+        attribution.active_constructs = list(construct_credits.keys())
         
         # Compute component credits
         attribution.component_credits = self._compute_component_credits(
@@ -802,6 +809,68 @@ Atom: {summary['atom_id']}
         ))
         
         return credits
+    
+    def _compute_construct_credits(
+        self,
+        mechanism_credits: Dict[str, float],
+    ) -> Dict[str, float]:
+        """
+        Decompose mechanism-level credits to DSP construct-level credits.
+        
+        For each mechanism that received credit, find all DSP constructs
+        connected to that mechanism and distribute credit proportionally
+        by edge strength.
+        """
+        construct_credits: Dict[str, float] = {}
+        
+        try:
+            from adam.dsp.edge_registry import build_edge_registry
+            edge_registry = build_edge_registry()
+            
+            # Build mechanism -> constructs mapping from edge registry
+            mech_to_constructs: Dict[str, List[tuple]] = {}
+            for edge_id, edge in edge_registry.items():
+                mechanism = edge.get("mechanism", "")
+                if hasattr(mechanism, "value"):
+                    mechanism = mechanism.value
+                source = edge.get("source", "")
+                target = edge.get("target", "")
+                
+                # Compute strength
+                effect_sizes = edge.get("effect_sizes", [])
+                strength = 0.5
+                if effect_sizes:
+                    strength = abs(effect_sizes[0].value)
+                    if effect_sizes[0].metric == "odds_ratio":
+                        strength = min(1.0, effect_sizes[0].value / 6.0)
+                
+                if mechanism not in mech_to_constructs:
+                    mech_to_constructs[mechanism] = []
+                mech_to_constructs[mechanism].append((source, strength))
+                mech_to_constructs[mechanism].append((target, strength))
+            
+            # Distribute credit from mechanisms to constructs
+            for mech_id, mech_credit in mechanism_credits.items():
+                if mech_credit <= 0:
+                    continue
+                    
+                constructs = mech_to_constructs.get(mech_id, [])
+                if not constructs:
+                    continue
+                    
+                # Normalize strengths for this mechanism
+                total_strength = sum(s for _, s in constructs) or 1.0
+                
+                for construct_id, strength in constructs:
+                    share = (strength / total_strength) * mech_credit
+                    construct_credits[construct_id] = construct_credits.get(construct_id, 0) + share
+                    
+        except ImportError:
+            logger.debug("DSP edge registry not available for construct credit decomposition")
+        except Exception as e:
+            logger.debug(f"Construct credit decomposition failed: {e}")
+        
+        return construct_credits
     
     def _compute_confidence(self, attribution: OutcomeAttribution) -> float:
         """Compute confidence in the attribution."""

@@ -29,6 +29,7 @@ from adam.meta_learner.models import (
     ModalityConstraint,
     RoutingDecision,
     PosteriorState,
+    DataRichness,
     MODALITY_TO_PATH,
     DEFAULT_MODALITY_CONSTRAINTS,
 )
@@ -100,18 +101,32 @@ class ThompsonSamplingEngine:
             posterior = self.posterior_state.get_posterior(modality)
             sampled_values[modality.value] = posterior.sample()
         
-        # Step 3: Apply adjustments for exploration
+        # Step 3: Apply adjustments for exploration (buyer-uncertainty-aware)
+        # High buyer uncertainty → stronger exploration bonus → explore more
+        # aggressively for cold buyers where information value is highest.
+        buyer_uncertainty_multiplier = 1.0
+        if context.buyer_uncertainty_level > 0.5:
+            # Scale exploration bonus by buyer uncertainty (1x-3x)
+            buyer_uncertainty_multiplier = 1.0 + 2.0 * (context.buyer_uncertainty_level - 0.5)
+        elif context.buyer_interaction_count > 20:
+            # Well-known buyers: reduce exploration to exploit
+            buyer_uncertainty_multiplier = 0.5
+
         adjusted_values: Dict[str, float] = {}
         for modality in LearningModality:
             base_value = sampled_values[modality.value]
-            
+
             # Apply exploration bonus for under-explored modalities
             posterior = self.posterior_state.get_posterior(modality)
             if posterior.sample_count < 20:
-                exploration_factor = self.exploration_bonus * (1 - posterior.sample_count / 20)
+                exploration_factor = (
+                    self.exploration_bonus
+                    * (1 - posterior.sample_count / 20)
+                    * buyer_uncertainty_multiplier
+                )
             else:
                 exploration_factor = 0.0
-            
+
             # Zero out ineligible modalities
             if modality not in eligible:
                 adjusted_values[modality.value] = 0.0
@@ -200,8 +215,19 @@ class ThompsonSamplingEngine:
         eligible = []
         constraints_failed: Dict[LearningModality, List[str]] = {}
         
+        has_rich_dsp = (
+            context.dsp_graph_available and context.dsp_construct_count > 10
+        )
+        
         for modality, constraint in self.constraints.items():
             failed_reasons = []
+            
+            # Check graph connections (for graph-based modalities)
+            if constraint.requires_graph_connections:
+                if not context.dsp_graph_available or context.dsp_construct_count <= 10:
+                    failed_reasons.append(
+                        "requires graph connections (dsp_graph_available and dsp_construct_count > 10)"
+                    )
             
             # Check data requirements
             if context.interaction_count < constraint.min_interactions:
@@ -219,9 +245,18 @@ class ThompsonSamplingEngine:
                     f"profile {context.profile_completeness:.1%} < {constraint.min_profile_completeness:.1%}"
                 )
             
-            # Check data richness
+            # Check data richness (richer DSP relaxes by one level)
             if constraint.allowed_data_richness:
-                if context.data_richness not in constraint.allowed_data_richness:
+                effective_allowed = set(constraint.allowed_data_richness)
+                if has_rich_dsp:
+                    for r in list(effective_allowed):
+                        if r == DataRichness.SPARSE:
+                            effective_allowed.add(DataRichness.COLD_START)
+                        elif r == DataRichness.MODERATE:
+                            effective_allowed.add(DataRichness.SPARSE)
+                        elif r == DataRichness.RICH:
+                            effective_allowed.add(DataRichness.MODERATE)
+                if context.data_richness not in effective_allowed:
                     failed_reasons.append(
                         f"richness {context.data_richness.value} not in allowed"
                     )
@@ -278,19 +313,31 @@ class ThompsonSamplingEngine:
     ) -> str:
         """Generate a human-readable selection reason."""
         reasons = []
-        
+
         # Data richness explanation
         if context.data_richness == context.data_richness.COLD_START:
             reasons.append("cold-start user")
         elif context.data_richness == context.data_richness.RICH:
             reasons.append("rich historical data")
-        
+
+        # Buyer uncertainty explanation
+        if context.buyer_uncertainty_level > 0.7:
+            reasons.append(
+                f"high buyer uncertainty ({context.buyer_uncertainty_level:.0%}), "
+                f"boosted exploration for information value"
+            )
+        elif context.buyer_interaction_count > 20:
+            reasons.append(
+                f"well-characterized buyer ({context.buyer_interaction_count} interactions), "
+                f"reduced exploration"
+            )
+
         # Posterior performance
         if posterior.sample_count > 20:
             reasons.append(f"historical success rate {posterior.mean:.1%}")
         else:
             reasons.append(f"exploring (only {posterior.sample_count} observations)")
-        
+
         # Path rationale
         path = MODALITY_TO_PATH[modality]
         if path == ExecutionPath.FAST_PATH:
@@ -299,7 +346,7 @@ class ThompsonSamplingEngine:
             reasons.append("reasoning path for complex analysis")
         else:
             reasons.append("exploration path for learning")
-        
+
         return "; ".join(reasons)
     
     def get_posterior_summary(self) -> Dict[str, Dict[str, float]]:

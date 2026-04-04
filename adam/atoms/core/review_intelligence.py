@@ -41,6 +41,7 @@ from adam.graph_reasoning.models.intelligence_sources import (
     IntelligenceSourceType,
     ConfidenceSemantics,
 )
+from adam.atoms.core.dsp_integration import DSPDataAccessor, EmpiricalEffectivenessHelper
 
 logger = logging.getLogger(__name__)
 
@@ -304,7 +305,12 @@ class ReviewIntelligenceAtom(BaseAtom):
                     mechanism_predictions.update(evi.metadata["mechanism_predictions"])
                 if "language_intelligence" in evi.metadata:
                     language_intelligence.update(evi.metadata["language_intelligence"])
-        
+
+        # DSP empirical effectiveness: adjust mechanisms by review-corpus success data
+        dsp = DSPDataAccessor(atom_input)
+        if dsp.has_dsp:
+            mechanism_predictions = EmpiricalEffectivenessHelper.apply(mechanism_predictions, dsp)
+
         # Build recommended mechanisms from predictions
         recommended_mechanisms = sorted(
             mechanism_predictions.keys(),

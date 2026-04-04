@@ -204,6 +204,28 @@ class ContextFeatures(BaseModel):
     # Campaign context
     campaign_mode: str = Field(default="standard")  # "standard", "launch", "test"
     
+    # Alignment system features (for routing decisions)
+    alignment_confidence: float = Field(default=0.0, ge=0.0, le=1.0)
+    prior_richness: int = Field(default=0, ge=0)  # Count of available prior sources
+    product_known: bool = Field(default=False)  # Whether product has Neo4j data
+    dsp_graph_available: bool = Field(default=False)  # Whether DSP graph was queried
+    dsp_construct_count: int = 0  # Number of DSP constructs active
+    dsp_dominant_domain: str = ""  # Dominant psychological domain from DSP data
+
+    # Buyer uncertainty (for information-value-aware routing)
+    buyer_uncertainty_level: float = Field(
+        default=1.0, ge=0.0, le=1.0,
+        description="Aggregate buyer uncertainty (1.0 = unknown, 0.0 = fully characterized)",
+    )
+    buyer_interaction_count: int = Field(
+        default=0, ge=0,
+        description="How many times we have observed this buyer",
+    )
+    information_value_priority: str = Field(
+        default="none",
+        description="Exploration priority from information value system (none|low|medium|high|critical)",
+    )
+    
     @property
     def allows_fast_path(self) -> bool:
         """Check if fast path is viable."""

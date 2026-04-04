@@ -35,17 +35,27 @@ class GraphIntelligenceService:
     
     This is where ADAM's knowledge lives - the relationships between
     mechanisms, archetypes, personality dimensions, and persuasion strategies.
+    
+    Delegates to UnifiedIntelligenceService for mechanism/archetype queries
+    to leverage three-layer Bayesian fusion (Layer 1 + 2 + 3).
     """
     
     def __init__(self, neo4j_driver=None):
-        """
-        Initialize the graph intelligence service.
-        
-        Args:
-            neo4j_driver: Neo4j driver instance (will attempt to get from infra if None)
-        """
         self._driver = neo4j_driver
         self._connected = False
+        self._unified = None
+
+    def _get_unified(self):
+        if self._unified is not None:
+            return self._unified
+        try:
+            from adam.intelligence.unified_intelligence_service import (
+                get_unified_intelligence_service,
+            )
+            self._unified = get_unified_intelligence_service()
+        except Exception as e:
+            logger.warning(f"Could not load UnifiedIntelligenceService: {e}")
+        return self._unified
     
     async def _get_driver(self):
         """Get Neo4j driver, attempting to connect if needed."""
@@ -84,104 +94,116 @@ class GraphIntelligenceService:
     
     async def get_all_mechanisms(self) -> GraphQueryResult:
         """
-        Get all cognitive mechanisms from the graph.
-        
-        Returns mechanisms with their descriptions and optimal conditions.
+        Get all cognitive mechanisms from the graph via UnifiedIntelligenceService.
+        Falls back to direct Neo4j query, then to hardcoded data.
         """
         start_time = time.time()
         result = GraphQueryResult(
             query_name="get_all_mechanisms",
             query_type="mechanism",
         )
-        
-        driver = await self._get_driver()
-        if not driver:
-            # Return fallback data if Neo4j not available
-            return self._get_fallback_mechanisms()
-        
-        query = """
-        MATCH (m:CognitiveMechanism)
-        OPTIONAL MATCH (m)-[s:SYNERGIZES_WITH]->(m2:CognitiveMechanism)
-        OPTIONAL MATCH (m)-[a:ANTAGONIZES]->(m3:CognitiveMechanism)
-        RETURN m.name as name, 
-               m.id as id,
-               m.description as description,
-               m.optimal_construal as construal,
-               m.optimal_focus as focus,
-               collect(DISTINCT {target: m2.name, strength: s.strength}) as synergies,
-               collect(DISTINCT {target: m3.name, strength: a.strength}) as antagonisms
-        """
-        
-        result.cypher_query = query
-        
-        try:
-            async with driver.session() as session:
-                records = await session.run(query)
-                data = await records.data()
-                
-                for record in data:
-                    if record.get("name"):
-                        mechanism = MechanismIntelligence(
-                            mechanism_name=record["name"],
-                            mechanism_id=record.get("id", record["name"].lower()),
-                            description=record.get("description"),
-                            optimal_construal_level=record.get("construal"),
-                            optimal_regulatory_focus=record.get("focus"),
+
+        unified = self._get_unified()
+        if unified:
+            try:
+                kg = unified.get_mechanism_knowledge_graph()
+                if kg.get("mechanisms"):
+                    for name in kg["mechanisms"]:
+                        mech = MechanismIntelligence(
+                            mechanism_name=name,
+                            mechanism_id=name.lower().replace(" ", "_"),
                         )
-                        
-                        # Add synergies
-                        for syn in record.get("synergies", []):
-                            if syn.get("target"):
-                                mechanism.synergies.append(MechanismEdge(
-                                    target_mechanism=syn["target"],
+                        for src, tgt in kg.get("synergies", []):
+                            if src == name:
+                                mech.synergies.append(MechanismEdge(
+                                    target_mechanism=tgt,
                                     relationship_type="SYNERGIZES_WITH",
-                                    strength=syn.get("strength", 0.5),
+                                    strength=0.7,
                                 ))
-                        
-                        # Add antagonisms
-                        for ant in record.get("antagonisms", []):
-                            if ant.get("target"):
-                                mechanism.antagonisms.append(MechanismEdge(
-                                    target_mechanism=ant["target"],
+                        for src, tgt in kg.get("antagonisms", []):
+                            if src == name:
+                                mech.antagonisms.append(MechanismEdge(
+                                    target_mechanism=tgt,
                                     relationship_type="ANTAGONIZES",
-                                    strength=ant.get("strength", 0.5),
+                                    strength=0.5,
                                 ))
-                        
-                        result.mechanisms.append(mechanism)
+                        result.mechanisms.append(mech)
                         result.nodes_returned += 1
-                
-                result.edges_returned = sum(
-                    len(m.synergies) + len(m.antagonisms) 
-                    for m in result.mechanisms
-                )
-                
-        except Exception as e:
-            logger.error(f"Error querying mechanisms: {e}")
-            return self._get_fallback_mechanisms()
-        
-        result.execution_time_ms = (time.time() - start_time) * 1000
-        return result
+
+                    result.edges_returned = sum(
+                        len(m.synergies) + len(m.antagonisms)
+                        for m in result.mechanisms
+                    )
+                    result.execution_time_ms = (time.time() - start_time) * 1000
+                    logger.info(
+                        f"UnifiedService [get_all_mechanisms]: {result.nodes_returned} mechanisms "
+                        f"in {result.execution_time_ms:.0f}ms"
+                    )
+                    return result
+            except Exception as e:
+                logger.warning(f"UnifiedService unavailable for get_all_mechanisms: {e}")
+
+        logger.warning("FALLBACK [get_all_mechanisms]: using hardcoded mechanisms")
+        return self._get_fallback_mechanisms()
     
     async def get_mechanism_for_archetype(
         self, 
-        archetype: str
+        archetype: str,
+        asin: Optional[str] = None,
+        category: str = "All_Beauty",
     ) -> GraphQueryResult:
         """
         Get mechanism effectiveness for a specific archetype.
         
         This is the key query: "What mechanisms work best for Achievers?"
         
-        Note: Mechanism effectiveness is stored as properties on BuyerArchetype nodes
-        (mech_authority, mech_social_proof, etc.) rather than as relationships.
+        When an ASIN is provided, enriches with three-layer Bayesian fusion
+        from UnifiedIntelligenceService (Layer 3 annotated + Layer 2 structural
+        + Layer 1 corpus priors).
         """
         start_time = time.time()
         result = GraphQueryResult(
             query_name=f"get_mechanisms_for_{archetype}",
             query_type="archetype_mechanism",
         )
+
+        # Try UnifiedIntelligenceService first when ASIN available
+        unified = self._get_unified()
+        if unified and asin:
+            try:
+                intel = unified.get_intelligence(
+                    category=category, asin=asin, archetype=archetype
+                )
+                fused_mechs = intel.get("fused_mechanisms", [])
+                if fused_mechs:
+                    for m in fused_mechs:
+                        mi = MechanismIntelligence(
+                            mechanism_name=m["mechanism"].replace("_", " ").title(),
+                            mechanism_id=m["mechanism"],
+                            archetype_effectiveness={
+                                archetype: m["fused_score"],
+                            },
+                        )
+                        result.mechanisms.append(mi)
+                        result.nodes_returned += 1
+                    result.mechanisms.sort(
+                        key=lambda x: x.archetype_effectiveness.get(archetype, 0),
+                        reverse=True,
+                    )
+                    result.execution_time_ms = (time.time() - start_time) * 1000
+                    logger.info(
+                        f"UnifiedIntelligence [{archetype}, {asin}]: "
+                        f"{result.nodes_returned} mechanisms, "
+                        f"layers={intel.get('layers_used', [])}, "
+                        f"{result.execution_time_ms:.0f}ms"
+                    )
+                    return result
+            except Exception as e:
+                logger.debug(f"Unified intelligence enrichment failed: {e}")
         
         driver = await self._get_driver()
         if not driver:
+            logger.warning(f"FALLBACK [get_mechanism_for_archetype({archetype})]: Neo4j driver not available — using hardcoded")
             return self._get_fallback_archetype_mechanisms(archetype)
         
         # Query archetype for mechanism effectiveness properties
@@ -265,6 +287,12 @@ class GraphIntelligenceService:
             return self._get_fallback_archetype_mechanisms(archetype)
         
         result.execution_time_ms = (time.time() - start_time) * 1000
+        
+        if not result.mechanisms:
+            logger.warning(f"FALLBACK [get_mechanism_for_archetype({archetype})]: Neo4j returned no mechanisms — using hardcoded")
+            return self._get_fallback_archetype_mechanisms(archetype)
+        
+        logger.info(f"Neo4j [get_mechanism_for_archetype({archetype})]: returned {result.nodes_returned} mechanisms in {result.execution_time_ms:.0f}ms")
         return result
     
     # =========================================================================
@@ -281,6 +309,7 @@ class GraphIntelligenceService:
         
         driver = await self._get_driver()
         if not driver:
+            logger.warning("FALLBACK [get_all_archetypes]: Neo4j driver not available — using hardcoded")
             return self._get_fallback_archetypes()
         
         # Query archetypes with their properties (mechanism effectiveness stored as properties)
@@ -342,6 +371,12 @@ class GraphIntelligenceService:
             return self._get_fallback_archetypes()
         
         result.execution_time_ms = (time.time() - start_time) * 1000
+        
+        if not result.archetypes:
+            logger.warning("FALLBACK [get_all_archetypes]: Neo4j returned no BuyerArchetype nodes — using hardcoded")
+            return self._get_fallback_archetypes()
+        
+        logger.info(f"Neo4j [get_all_archetypes]: returned {result.nodes_returned} archetypes in {result.execution_time_ms:.0f}ms")
         return result
     
     async def get_archetype_by_name(self, name: str) -> Optional[ArchetypeIntelligence]:
@@ -360,65 +395,68 @@ class GraphIntelligenceService:
         self, 
         mechanism: str
     ) -> List[MechanismEdge]:
-        """Get mechanisms that synergize with the given mechanism."""
-        driver = await self._get_driver()
-        if not driver:
-            return self._get_fallback_synergies(mechanism)
-        
-        query = """
-        MATCH (m1:CognitiveMechanism {name: $mechanism})
-        MATCH (m1)-[r:SYNERGIZES_WITH]->(m2:CognitiveMechanism)
-        RETURN m2.name as target, r.strength as strength, r.context as context
-        ORDER BY r.strength DESC
-        """
-        
-        synergies = []
-        
-        try:
-            async with driver.session() as session:
-                records = await session.run(query, mechanism=mechanism)
-                data = await records.data()
-                
-                for record in data:
-                    synergies.append(MechanismEdge(
-                        target_mechanism=record["target"],
-                        relationship_type="SYNERGIZES_WITH",
-                        strength=record.get("strength", 0.5),
-                        context=record.get("context"),
-                    ))
-                    
-        except Exception as e:
-            logger.error(f"Error querying synergies for {mechanism}: {e}")
-            return self._get_fallback_synergies(mechanism)
-        
-        return synergies
+        """Get mechanisms that synergize with the given mechanism via UnifiedIntelligenceService."""
+        unified = self._get_unified()
+        if unified:
+            try:
+                kg = unified.get_mechanism_knowledge_graph()
+                mech_lower = mechanism.lower().replace(" ", "_")
+                edges = []
+                for src, tgt in kg.get("synergies", []):
+                    if src.lower().replace(" ", "_") == mech_lower:
+                        edges.append(MechanismEdge(
+                            target_mechanism=tgt,
+                            relationship_type="SYNERGIZES_WITH",
+                            strength=0.7,
+                        ))
+                if edges:
+                    return edges
+            except Exception as e:
+                logger.warning(f"UnifiedService unavailable for synergies: {e}")
+        return self._get_fallback_synergies(mechanism)
     
     async def find_optimal_mechanism_combination(
         self,
         archetype: str,
         max_mechanisms: int = 3,
+        asin: Optional[str] = None,
     ) -> List[MechanismIntelligence]:
         """
         Find the optimal combination of mechanisms for an archetype.
         
-        This considers:
-        1. Individual mechanism effectiveness for the archetype
-        2. Synergies between mechanisms
-        3. Avoiding antagonisms
+        Uses UnifiedIntelligenceService's fuse_mechanism_recommendation when an
+        ASIN is available (three-layer Bayesian fusion). Falls back to archetype-only
+        scoring otherwise.
         """
-        # Get mechanisms for archetype
+        unified = self._get_unified()
+        if unified and asin:
+            try:
+                fused = unified.fuse_mechanism_recommendation(asin=asin)
+                results = []
+                for m in fused.get("mechanisms", [])[:max_mechanisms]:
+                    mi = MechanismIntelligence(
+                        mechanism_name=m["mechanism"].replace("_", " ").title(),
+                        mechanism_id=m["mechanism"],
+                        archetype_effectiveness={archetype: m["fused_score"]},
+                    )
+                    results.append(mi)
+                if results:
+                    logger.info(
+                        f"UnifiedService [find_optimal_mechanism_combination]: "
+                        f"returned {len(results)} fused mechanisms for {archetype}/{asin}"
+                    )
+                    return results
+            except Exception as e:
+                logger.warning(f"UnifiedService fusion failed: {e}")
+
         mech_result = await self.get_mechanism_for_archetype(archetype)
         mechanisms = mech_result.mechanisms
-        
         if not mechanisms:
             return []
-        
-        # Score each mechanism considering synergies
+
         scored = []
         for mech in mechanisms:
             base_score = mech.archetype_effectiveness.get(archetype, 0.5)
-            
-            # Boost score based on synergies with other high-scoring mechanisms
             synergy_bonus = 0.0
             for other in mechanisms:
                 if other.mechanism_name != mech.mechanism_name:
@@ -426,10 +464,8 @@ class GraphIntelligenceService:
                         if syn.target_mechanism == other.mechanism_name:
                             other_score = other.archetype_effectiveness.get(archetype, 0.5)
                             synergy_bonus += syn.strength * other_score * 0.1
-            
             scored.append((mech, base_score + synergy_bonus))
-        
-        # Sort by combined score and return top N
+
         scored.sort(key=lambda x: x[1], reverse=True)
         return [m for m, _ in scored[:max_mechanisms]]
     
@@ -809,6 +845,7 @@ class GraphIntelligenceService:
         """
         driver = await self._get_driver()
         if not driver:
+            logger.warning(f"FALLBACK [get_show_psycholinguistic_profile({show_name})]: Neo4j driver not available — returning None")
             return None
         
         query = """
@@ -874,6 +911,7 @@ class GraphIntelligenceService:
         """
         driver = await self._get_driver()
         if not driver:
+            logger.warning("FALLBACK [get_optimal_time_slots]: Neo4j driver not available — using hardcoded")
             return self._get_fallback_time_slots()
         
         query = """
@@ -907,6 +945,7 @@ class GraphIntelligenceService:
         """
         driver = await self._get_driver()
         if not driver:
+            logger.warning(f"FALLBACK [get_shows_by_persuasion_technique({technique})]: Neo4j driver not available — returning empty")
             return []
         
         query = """

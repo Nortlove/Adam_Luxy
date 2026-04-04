@@ -158,6 +158,10 @@ class OutcomeAttribution(BaseModel):
     primary_mechanism: Optional[str] = None
     primary_mechanism_credit: float = Field(ge=0.0, le=1.0, default=0.0)
     
+    # Construct-level credit (DSP constructs)
+    construct_credits: Dict[str, float] = Field(default_factory=dict)  # {construct_id: credit}
+    active_constructs: List[str] = Field(default_factory=list)  # Constructs active at decision time
+    
     # Component-level credit
     component_credits: List[ComponentCredit] = Field(default_factory=list)
     

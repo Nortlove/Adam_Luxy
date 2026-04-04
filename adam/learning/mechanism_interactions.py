@@ -190,18 +190,25 @@ class InteractionMatrix(BaseModel):
 class MechanismInteractionLearner:
     """
     Learns mechanism interactions from outcome data.
-    
+
     This tracks:
     1. Which mechanisms are co-activated
     2. Outcomes when both are high/low
     3. Interaction strength (synergy vs suppression)
-    
+
     The learned interactions inform:
     1. Mechanism selection (avoid suppressions)
     2. Message optimization (leverage synergies)
     3. Meta-learner routing
+
+    T2.3: Observation buffer is persisted to Redis (write-through) so
+    learned synergies survive restarts. Graceful degradation if Redis
+    is unavailable — falls back to in-memory-only.
     """
-    
+
+    REDIS_KEY = "adam:mechanism_interactions:observations"
+    REDIS_MAX_SIZE = 5000  # Max observations in Redis sorted set
+
     def __init__(
         self,
         activation_threshold: float = 0.6,
@@ -209,18 +216,21 @@ class MechanismInteractionLearner:
     ):
         self.activation_threshold = activation_threshold
         self.min_samples = min_samples_for_confidence
-        
+
         # Learned interactions
         self._interactions: Dict[str, LearnedInteraction] = {}
-        
+
         # Observation buffer
         self._observation_buffer: List[InteractionObservation] = []
-        
+
         # Known mechanism list
         self._all_mechanisms = [m.value for m in CognitiveMechanism]
-        
+
         # Initialize all pairs
         self._initialize_pairs()
+
+        # T2.3: Load persisted observations from Redis on init
+        self._load_from_redis()
     
     def _initialize_pairs(self) -> None:
         """Initialize all mechanism pairs."""
@@ -228,6 +238,69 @@ class MechanismInteractionLearner:
             for mech_b in self._all_mechanisms[i+1:]:
                 pair = MechanismPair(mechanism_a=mech_a, mechanism_b=mech_b)
                 self._interactions[pair.pair_id] = LearnedInteraction(pair=pair)
+
+    def _get_redis(self):
+        """Get Redis client, returns None if unavailable."""
+        try:
+            from adam.config.settings import get_settings
+            import redis
+            settings = get_settings()
+            return redis.Redis.from_url(settings.redis.url, decode_responses=True)
+        except Exception:
+            return None
+
+    def _load_from_redis(self) -> None:
+        """Load persisted observations from Redis on init."""
+        try:
+            r = self._get_redis()
+            if not r:
+                return
+
+            # Read all observations from sorted set (scored by timestamp)
+            raw_entries = r.zrange(self.REDIS_KEY, 0, -1)
+            if not raw_entries:
+                return
+
+            import json
+            loaded = 0
+            for raw in raw_entries:
+                try:
+                    data = json.loads(raw)
+                    obs = InteractionObservation(**data)
+                    self._observation_buffer.append(obs)
+                    # Replay into interaction matrix
+                    interaction = self._interactions.get(obs.pair.pair_id)
+                    if interaction:
+                        self._update_interaction(interaction, obs)
+                    loaded += 1
+                except Exception:
+                    continue
+
+            if loaded > 0:
+                logger.info(
+                    "Loaded %d mechanism interaction observations from Redis", loaded,
+                )
+        except Exception as e:
+            logger.debug("Redis load for mechanism interactions failed: %s", e)
+
+    def _persist_to_redis(self, obs: InteractionObservation) -> None:
+        """Write-through: persist a single observation to Redis sorted set."""
+        try:
+            r = self._get_redis()
+            if not r:
+                return
+
+            import json
+            data = obs.model_dump(mode="json")
+            timestamp = obs.observed_at.timestamp()
+            r.zadd(self.REDIS_KEY, {json.dumps(data, default=str): timestamp})
+
+            # Cap the sorted set size
+            current_size = r.zcard(self.REDIS_KEY)
+            if current_size > self.REDIS_MAX_SIZE:
+                r.zremrangebyrank(self.REDIS_KEY, 0, current_size - self.REDIS_MAX_SIZE - 1)
+        except Exception as e:
+            logger.debug("Redis persist for mechanism interaction failed: %s", e)
     
     def record_observation(
         self,
@@ -274,7 +347,10 @@ class MechanismInteractionLearner:
                     category=category,
                 )
                 self._observation_buffer.append(obs)
-                
+
+                # T2.3: Write-through to Redis
+                self._persist_to_redis(obs)
+
                 # Update learned interaction
                 interaction = self._interactions.get(pair.pair_id)
                 if interaction:
@@ -548,3 +624,87 @@ class MechanismInteractionLearner:
             adjusted_eff = avg_eff
         
         return max(0.0, min(1.0, adjusted_eff))
+
+    def compute_portfolio_weights(
+        self,
+        base_effectiveness: Dict[str, float],
+        max_mechanisms: int = 4,
+    ) -> List[Dict[str, Any]]:
+        """Compute optimal mechanism portfolio weights using MPT-inspired optimization.
+
+        Instead of picking one mechanism independently, this treats mechanism
+        selection as a portfolio problem:
+        - "Return" = expected mechanism effectiveness (from base_effectiveness)
+        - "Risk" = variance in outcomes (from quadrant outcome variance)
+        - "Covariance" = learned synergies and antagonisms between mechanisms
+
+        The optimizer maximizes the Sharpe-like ratio:
+            portfolio_score = sum(weight_i * effectiveness_i)
+                            + sum(weight_i * weight_j * interaction_ij)
+
+        Returns:
+            List of {mechanism, weight, base_score, interaction_bonus, portfolio_score}
+            sorted by portfolio_score descending, limited to max_mechanisms.
+        """
+        if not base_effectiveness:
+            return []
+
+        # Rank mechanisms by base effectiveness
+        ranked = sorted(base_effectiveness.items(), key=lambda x: x[1], reverse=True)
+        candidates = ranked[:max_mechanisms + 2]  # Consider a few extra
+
+        # Compute interaction-adjusted scores
+        portfolio = []
+        for mech, base_score in candidates:
+            # Sum interaction bonuses with ALL other candidates
+            interaction_bonus = 0.0
+            interaction_count = 0
+            for other_mech, other_score in candidates:
+                if other_mech == mech:
+                    continue
+                pair_id = "::".join(sorted([mech, other_mech]))
+                interaction = self._interactions.get(pair_id)
+                if interaction and interaction.confidence >= 0.3:
+                    # Weight by partner's base effectiveness
+                    interaction_bonus += interaction.interaction_strength * other_score
+                    interaction_count += 1
+
+            # Normalize interaction bonus
+            if interaction_count > 0:
+                interaction_bonus /= interaction_count
+
+            # Portfolio score: base effectiveness + synergy premium
+            portfolio_score = base_score + interaction_bonus * 0.3
+
+            portfolio.append({
+                "mechanism": mech,
+                "weight": 0.0,  # Computed below
+                "base_score": round(base_score, 4),
+                "interaction_bonus": round(interaction_bonus, 4),
+                "portfolio_score": round(max(0.0, portfolio_score), 4),
+            })
+
+        # Sort by portfolio score and take top N
+        portfolio.sort(key=lambda x: x["portfolio_score"], reverse=True)
+        portfolio = portfolio[:max_mechanisms]
+
+        # Compute weights proportional to portfolio scores
+        total_score = sum(p["portfolio_score"] for p in portfolio)
+        if total_score > 0:
+            for p in portfolio:
+                p["weight"] = round(p["portfolio_score"] / total_score, 3)
+
+        return portfolio
+
+
+# ── Singleton ──────────────────────────────────────────────────────────────
+
+_learner: Optional["MechanismInteractionLearner"] = None
+
+
+def get_mechanism_interaction_learner() -> "MechanismInteractionLearner":
+    """Get or create the singleton interaction learner."""
+    global _learner
+    if _learner is None:
+        _learner = MechanismInteractionLearner()
+    return _learner

@@ -178,6 +178,16 @@ class GradientBridgeService:
             mechanism_used=mechanism_used,
         )
         
+        # Step 5e: Feed outcome to BidirectionalLearningLoop (Corpus Fusion Layer 4)
+        # This closes the feedback loop: campaign outcomes update platform calibrations
+        # and modality/channel adjustments in the corpus fusion system.
+        await self._forward_to_bidirectional_learning(
+            decision_id=decision_id,
+            outcome_value=outcome_value,
+            mechanism_used=mechanism_used,
+            atom_outputs=atom_outputs or {},
+        )
+        
         # Step 6: Cache attribution
         await self._cache_attribution(attribution)
         
@@ -190,7 +200,18 @@ class GradientBridgeService:
             component="gradient_bridge",
         ).inc()
         
-        # Step 7: Clean up atom contribution cache
+        # Step 7: Forward to CognitiveLearningSystem for alignment-based learning
+        # The OutcomeHandler path has alignment wiring but gradient_bridge is the
+        # PRIMARY outcome path. This ensures alignment predictions get compared
+        # against actual outcomes for theory revision.
+        await self._forward_to_cognitive_learning(
+            decision_id=decision_id,
+            outcome_value=outcome_value,
+            mechanism_used=mechanism_used,
+            atom_outputs=atom_outputs or {},
+        )
+        
+        # Step 8: Clean up atom contribution cache
         try:
             from adam.atoms.core.base import BaseAtom
             BaseAtom.clear_contribution_cache(request_id)
@@ -627,6 +648,146 @@ class GradientBridgeService:
             
         except Exception as e:
             logger.error(f"Relationship learning update failed: {e}")
+    
+    async def _forward_to_cognitive_learning(
+        self,
+        decision_id: str,
+        outcome_value: float,
+        mechanism_used: Optional[str],
+        atom_outputs: Dict[str, Any],
+    ) -> None:
+        """
+        Forward outcome to CognitiveLearningSystem for alignment-based learning.
+        
+        This bridges the gap between gradient_bridge (primary outcome path)
+        and CognitiveLearningSystem (which was only reachable via OutcomeHandler).
+        
+        The CognitiveLearningSystem compares alignment predictions against
+        actual outcomes and updates alignment matrices, enabling theory revision
+        at the construct level.
+        """
+        try:
+            from adam.intelligence.cognitive_learning_system import (
+                get_cognitive_learning_system,
+            )
+            
+            cls = get_cognitive_learning_system()
+            if cls is None:
+                return
+            
+            # Reconstruct prediction state from cached learning context
+            # The learning_context was persisted by persist_for_learning with
+            # alignment_scores, expanded_customer_type, ad_copy_profile
+            cache_key = f"adam:learning_context:{decision_id}"
+            learning_context = None
+            
+            try:
+                learning_context = await self.cache.get(cache_key, dict)
+            except Exception:
+                pass
+            
+            if not learning_context:
+                # Try to reconstruct minimal context from atom outputs
+                learning_context = {}
+            
+            # Extract alignment prediction for comparison
+            alignment_scores = learning_context.get("alignment_scores", {})
+            predicted_effectiveness = alignment_scores.get("overall_alignment", 0.0)
+            
+            if predicted_effectiveness > 0 or alignment_scores:
+                # We have alignment predictions — observe the outcome
+                success = outcome_value >= 0.5
+                
+                prediction_state = {
+                    "archetype": learning_context.get("archetype", ""),
+                    "mechanism": mechanism_used or "",
+                    "alignment_scores": alignment_scores,
+                    "predicted_effectiveness": predicted_effectiveness,
+                    "expanded_customer_type": learning_context.get("expanded_customer_type", {}),
+                    "ad_copy_profile": learning_context.get("ad_copy_profile", {}),
+                    "product_category": learning_context.get("product_category", ""),
+                }
+                
+                # CognitiveLearningSystem.observe_outcome expects:
+                #   prediction_state, conversion, engagement, sentiment
+                cls.observe_outcome(
+                    prediction_state=prediction_state,
+                    conversion=success,
+                    engagement=outcome_value,
+                    sentiment=outcome_value,
+                )
+                
+                logger.debug(
+                    f"Forwarded outcome to CognitiveLearningSystem: "
+                    f"decision={decision_id}, predicted={predicted_effectiveness:.2f}, "
+                    f"actual={outcome_value:.2f}"
+                )
+            
+        except ImportError:
+            logger.debug("CognitiveLearningSystem not available for gradient bridge forwarding")
+        except Exception as e:
+            logger.debug(f"Cognitive learning forwarding failed (non-fatal): {e}")
+    
+    async def _forward_to_bidirectional_learning(
+        self,
+        decision_id: str,
+        outcome_value: float,
+        mechanism_used: Optional[str],
+        atom_outputs: Dict[str, Any],
+    ) -> None:
+        """
+        Forward outcome to BidirectionalLearningLoop (Corpus Fusion Layer 4).
+        
+        This closes the corpus fusion feedback loop: campaign outcomes update
+        platform calibrations, modality adjustments, and channel adjustments
+        so the corpus priors become increasingly accurate over time.
+        """
+        try:
+            from adam.fusion.bidirectional_learning import get_bidirectional_learning_loop
+            
+            loop = get_bidirectional_learning_loop()
+            
+            # Extract context from cached learning context or atom outputs
+            cache_key = f"adam:learning_context:{decision_id}"
+            learning_context = None
+            try:
+                learning_context = await self.cache.get(cache_key, dict)
+            except Exception:
+                pass
+            
+            if not learning_context:
+                learning_context = {}
+            
+            platform = learning_context.get("platform", "general")
+            mechanism = mechanism_used or learning_context.get("mechanism", "")
+            category = learning_context.get("product_category", "") or learning_context.get("category", "")
+            archetype = learning_context.get("archetype", "")
+            
+            if mechanism and category:
+                result = loop.process_campaign_outcome(
+                    platform=platform,
+                    mechanism=mechanism,
+                    category=category,
+                    observed_effectiveness=outcome_value,
+                    archetype=archetype or None,
+                    campaign_id=decision_id,
+                )
+                
+                logger.debug(
+                    f"Forwarded outcome to BidirectionalLearningLoop: "
+                    f"decision={decision_id}, platform={platform}, "
+                    f"mechanism={mechanism}, adjustments={len(result.get('adjustments', []))}"
+                )
+            else:
+                logger.debug(
+                    f"Skipping bidirectional learning forward — missing mechanism or category "
+                    f"(mechanism={mechanism!r}, category={category!r})"
+                )
+                
+        except ImportError:
+            logger.debug("BidirectionalLearningLoop not available for gradient bridge forwarding")
+        except Exception as e:
+            logger.debug(f"Bidirectional learning forwarding failed (non-fatal): {e}")
     
     async def get_attribution(
         self,

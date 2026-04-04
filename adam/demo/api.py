@@ -138,6 +138,9 @@ class RecommendationResponse(BaseModel):
     
     # Sources & Attribution
     inference_sources: List[Dict[str, Any]]
+    
+    # Corpus Fusion Intelligence (from 1B+ verified purchase reviews)
+    corpus_fusion: Optional[Dict[str, Any]] = None
 
 
 class PlatformStatusResponse(BaseModel):
@@ -527,9 +530,11 @@ IHEART_SCENARIOS = {
             "attention_level": "Partial (driving)",
         },
         "brand_example": {
-            "name": "Starbucks",
-            "product": "Mobile Order & Pay",
-            "goal": "Drive app downloads and usage",
+            "name": "Premium Skincare Brand",
+            "product": "Clinical Anti-Aging Serum",
+            "goal": "Drive trial and subscription",
+            "asin": "B001LY7FRK",
+            "category": "All_Beauty",
         },
         "profile": {
             "openness": 0.65,
@@ -559,9 +564,11 @@ IHEART_SCENARIOS = {
             "attention_level": "High (relaxed environment)",
         },
         "brand_example": {
-            "name": "Lexus",
-            "product": "2024 ES Hybrid",
-            "goal": "Brand consideration for luxury sedan",
+            "name": "Natural Beauty Brand",
+            "product": "Organic Face Oil",
+            "goal": "Brand discovery and trial",
+            "asin": "B06XRZ6Q4Z",
+            "category": "All_Beauty",
         },
         "profile": {
             "openness": 0.82,
@@ -591,9 +598,11 @@ IHEART_SCENARIOS = {
             "attention_level": "Variable (task-switching)",
         },
         "brand_example": {
-            "name": "Fidelity Investments",
-            "product": "Retirement Planning Services",
-            "goal": "Lead generation for financial consultation",
+            "name": "Expert Beauty Brand",
+            "product": "Professional Treatment System",
+            "goal": "Authority-driven conversion",
+            "asin": "B00KCTER3U",
+            "category": "All_Beauty",
         },
         "profile": {
             "openness": 0.70,
@@ -623,9 +632,11 @@ IHEART_SCENARIOS = {
             "attention_level": "Unknown",
         },
         "brand_example": {
-            "name": "Target",
-            "product": "Weekly Deals",
-            "goal": "Drive store visits",
+            "name": "Trending Beauty Brand",
+            "product": "Viral Skincare Discovery Kit",
+            "goal": "First purchase and social sharing",
+            "asin": "B01NB1ZBA1",
+            "category": "All_Beauty",
         },
         "profile": {
             "openness": 0.58,
@@ -830,6 +841,8 @@ async def get_recommendation(request: RecommendationRequest) -> RecommendationRe
     
     request_id = f"demo_{uuid4().hex[:12]}"
     user_id = request.user_id or f"user_{uuid4().hex[:8]}"
+    brand_name = request.brand_name or "Unknown Brand"
+    product_name = request.product_name or "Unknown Product"
     components_used = []
     inference_sources = []
     
@@ -979,6 +992,33 @@ async def get_recommendation(request: RecommendationRequest) -> RecommendationRe
     except Exception as e:
         logger.warning(f"Learning monitor error: {e}")
     
+    # 8b. Corpus fusion intelligence — blend priors from 1B+ reviews
+    corpus_fusion_result = None
+    try:
+        from adam.fusion.prior_extraction import get_prior_extraction_service
+        corpus_svc = get_prior_extraction_service()
+        corpus_prior = corpus_svc.extract_prior(
+            category="",
+            archetype=profile.archetype,
+        )
+        if corpus_prior and corpus_prior.mechanism_priors:
+            corpus_fusion_result = {
+                "active": True,
+                "confidence": round(corpus_prior.confidence, 4),
+                "evidence_count": corpus_prior.total_evidence,
+                "mechanism_priors": {k: round(v, 4) for k, v in corpus_prior.get_mechanism_dict().items()},
+                "transfer_sources": corpus_prior.transfer_sources,
+            }
+            components_used.append("CorpusFusion")
+            inference_sources.append({
+                "source": "corpus_fusion",
+                "type": "empirical_priors",
+                "description": f"Empirical mechanism priors from {corpus_prior.total_evidence:,} verified purchase reviews",
+                "confidence": round(corpus_prior.confidence, 4),
+            })
+    except (ImportError, Exception):
+        pass
+    
     # 9. Generate copy suggestions based on profile and mechanisms
     generated_copy = _generate_copy_from_profile(
         profile=profile,
@@ -1001,6 +1041,7 @@ async def get_recommendation(request: RecommendationRequest) -> RecommendationRe
         components_used=components_used,
         processing_time_ms=processing_time,
         inference_sources=inference_sources,
+        corpus_fusion=corpus_fusion_result,
     )
 
 
@@ -2613,9 +2654,7 @@ async def analyze_campaign(request: CampaignRequest) -> CampaignAnalysisResponse
             call_to_action=request.call_to_action,
             product_url=request.product_url,
             target_audience=request.target_audience,
-            category=request.category,  # Pass category for precise review lookup
-            subcategory=request.subcategory,  # Pass subcategory for more precise matching
-            return_reasoning=True,  # Include full reasoning for demo
+            return_reasoning=True,
         )
         
         logger.info(
@@ -4705,71 +4744,8 @@ async def analyze_product_reviews(request: ReviewIntelligenceRequest) -> ReviewI
         )
         
     except ImportError as e:
-        logger.warning(f"Review intelligence not available: {e}")
-        # Return mock data for demo
-        return ReviewIntelligenceResponse(
-            request_id=request_id,
-            timestamp=datetime.now(timezone.utc).isoformat(),
-            product_name=request.product_name,
-            brand=request.brand,
-            reviews_analyzed=0,
-            sources_used=[],
-            buyer_archetypes={"Achiever": 0.35, "Explorer": 0.25, "Connector": 0.20, "Guardian": 0.15, "Pragmatist": 0.05},
-            dominant_archetype="Achiever",
-            archetype_confidence=0.65,
-            personality_traits={
-                "openness": 0.68,
-                "conscientiousness": 0.72,
-                "extraversion": 0.65,
-                "agreeableness": 0.58,
-                "neuroticism": 0.42,
-            },
-            regulatory_focus={"promotion": 0.62, "prevention": 0.38},
-            purchase_motivations=["quality", "convenience", "value"],
-            primary_motivation="quality",
-            language_intelligence={
-                "phrases": ["love this product", "exactly what I needed"],
-                "power_words": ["amazing", "perfect", "excellent"],
-                "tone": "enthusiastic",
-            },
-            mechanism_predictions={
-                "authority": 0.78,
-                "social_proof": 0.72,
-                "scarcity": 0.65,
-            },
-            ideal_customer={
-                "archetype": "Achiever",
-                "archetype_confidence": 0.75,
-                "primary_motivations": ["quality", "status"],
-                "characteristic_phrases": ["best purchase ever"],
-            },
-            # Mock unified psychological intelligence
-            flow_state={
-                "arousal": 0.65,
-                "valence": 0.72,
-                "optimal_formats": ["classic_rock", "top_40", "adult_contemporary"],
-                "ad_receptivity": 0.68,
-            },
-            psychological_needs={
-                "primary_needs": [{"need_id": "identity_self_expression", "activation": 0.75}],
-                "unmet_needs": ["relationship_trust"],
-                "alignment_score": 0.65,
-                "alignment_gaps": [],
-            },
-            unified_ad_recommendations=[
-                {
-                    "priority_score": 0.85,
-                    "construct_name": "Construal Level",
-                    "recommendation": "Use abstract, values-based messaging emphasizing 'why'",
-                    "confidence": 0.72,
-                }
-            ],
-            unified_archetype="Achiever",
-            unified_archetype_confidence=0.68,
-            avg_rating=4.2,
-            overall_confidence=0.65,
-            processing_time_ms=(time.time() - start_time) * 1000,
-        )
+        logger.error(f"Review intelligence module not available: {e}")
+        raise HTTPException(status_code=503, detail=f"Review intelligence module not available: {e}")
     except Exception as e:
         logger.error(f"Error analyzing reviews: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -6835,38 +6811,34 @@ async def get_top_level_categories() -> Dict[str, Any]:
     """
     Get top-level Amazon categories for dropdown selection.
     
-    Returns the main categories with product counts for the demo UI.
+    Returns the main categories with product counts from ProductDescription nodes.
     """
     try:
-        from adam.intelligence.review_learnings_service import get_review_learnings_service
-        
-        service = get_review_learnings_service()
-        categories = service.get_category_hierarchy()
-        
+        from neo4j import GraphDatabase
+        import os
+        driver = GraphDatabase.driver(
+            os.getenv("NEO4J_URI", "neo4j://127.0.0.1:7687"),
+            auth=(os.getenv("NEO4J_USER", "neo4j"), os.getenv("NEO4J_PASS", "atomofthought")),
+        )
+        with driver.session() as s:
+            data = s.run("""
+                MATCH (pd:ProductDescription)
+                WHERE pd.main_category IS NOT NULL
+                WITH pd.main_category AS cat, count(pd) AS cnt
+                ORDER BY cnt DESC
+                LIMIT 30
+                RETURN cat, cnt
+            """).data()
+        driver.close()
+        categories = [{"name": r["cat"], "level": 0, "product_count": r["cnt"]} for r in data]
         return {
             "categories": categories,
             "count": len(categories),
-            "source": "Neo4j AmazonCategoryLevel nodes"
+            "source": "Neo4j ProductDescription main_category"
         }
     except Exception as e:
         logger.error(f"Error fetching top-level categories: {e}")
-        # Return fallback categories
-        return {
-            "categories": [
-                {"name": "Electronics", "level": 0, "product_count": 1481570},
-                {"name": "Beauty & Personal Care", "level": 0, "product_count": 1028914},
-                {"name": "Home & Kitchen", "level": 0, "product_count": 3344847},
-                {"name": "Clothing, Shoes & Jewelry", "level": 0, "product_count": 7218481},
-                {"name": "Sports & Outdoors", "level": 0, "product_count": 1497591},
-                {"name": "Books", "level": 0, "product_count": 3919508},
-                {"name": "Toys & Games", "level": 0, "product_count": 801922},
-                {"name": "Health & Household", "level": 0, "product_count": 797560},
-                {"name": "Automotive", "level": 0, "product_count": 1897346},
-                {"name": "Pet Supplies", "level": 0, "product_count": 439915},
-            ],
-            "count": 10,
-            "source": "fallback"
-        }
+        raise
 
 
 @demo_router.get("/categories/{parent_category}/subcategories")
@@ -7163,26 +7135,10 @@ async def get_brand_categories(brand_name: str) -> Dict[str, Any]:
                 ORDER BY product_count DESC
                 LIMIT 30
             """, (f'brand:{brand_name}',))
-        except sqlite3.OperationalError:
-            # Fallback: Use learned priors categories if FTS fails
-            logger.warning(f"FTS search failed for {brand_name}, using learned priors categories")
+        except sqlite3.OperationalError as fts_err:
+            logger.warning(f"FTS search failed for {brand_name}: {fts_err}, falling back to LIKE")
             conn.close()
-            
-            # Return categories from learned priors instead
-            return {
-                "brand": brand_name,
-                "categories": [
-                    {"main_category": "Clothing_Shoes_and_Jewelry", "subcategory": "Women's Activewear", "product_count": 0, "display_name": "Clothing > Women's Activewear"},
-                    {"main_category": "Clothing_Shoes_and_Jewelry", "subcategory": "Men's Activewear", "product_count": 0, "display_name": "Clothing > Men's Activewear"},
-                    {"main_category": "Sports_and_Outdoors", "subcategory": "Exercise & Fitness", "product_count": 0, "display_name": "Sports > Exercise & Fitness"},
-                    {"main_category": "Beauty_and_Personal_Care", "subcategory": None, "product_count": 0, "display_name": "Beauty & Personal Care"},
-                ],
-                "count": 4,
-                "total_products": 0,
-                "source": "learned_priors_fallback",
-                "raw_reviews_available_for": ["Beauty_and_Personal_Care"],
-                "note": "Using category suggestions based on typical brand patterns. Select a category to access psychological intelligence from 941M+ reviews."
-            }
+            raise Exception(f"FTS unavailable: {fts_err}")
         
         categories = []
         for row in cursor.fetchall():
@@ -7209,11 +7165,8 @@ async def get_brand_categories(brand_name: str) -> Dict[str, Any]:
         
         return {
             "brand": brand_name,
-            "categories": categories if categories else [
-                # Default categories if no FTS results
-                {"main_category": "General", "subcategory": None, "product_count": 0, "display_name": "General Category"}
-            ],
-            "count": len(categories) or 1,
+            "categories": categories,
+            "count": len(categories),
             "total_products": total,
             "source": "amazon_fts_index",
             "raw_reviews_available_for": available_review_categories,
@@ -7222,20 +7175,38 @@ async def get_brand_categories(brand_name: str) -> Dict[str, Any]:
         
     except Exception as e:
         logger.error(f"Error fetching categories for brand {brand_name}: {e}")
-        # Graceful fallback with common categories
-        return {
-            "brand": brand_name,
-            "categories": [
-                {"main_category": "Clothing_Shoes_and_Jewelry", "subcategory": None, "product_count": 0, "display_name": "Clothing, Shoes & Jewelry"},
-                {"main_category": "Sports_and_Outdoors", "subcategory": None, "product_count": 0, "display_name": "Sports & Outdoors"},
-                {"main_category": "Health_and_Household", "subcategory": None, "product_count": 0, "display_name": "Health & Household"},
-                {"main_category": "Beauty_and_Personal_Care", "subcategory": None, "product_count": 0, "display_name": "Beauty & Personal Care"},
-            ],
-            "count": 4,
-            "source": "fallback_categories",
-            "raw_reviews_available_for": ["Beauty_and_Personal_Care"],
-            "note": "Select a category to access psychological intelligence from 941M+ learned reviews."
-        }
+        try:
+            import os
+            from neo4j import GraphDatabase as GD
+            _drv = GD.driver(
+                os.getenv("NEO4J_URI", "neo4j://127.0.0.1:7687"),
+                auth=(os.getenv("NEO4J_USER", "neo4j"), os.getenv("NEO4J_PASS", "atomofthought")),
+            )
+            with _drv.session() as _s:
+                _data = _s.run("""
+                    MATCH (pd:ProductDescription)
+                    WHERE pd.main_category IS NOT NULL
+                    WITH pd.main_category AS cat, count(pd) AS cnt
+                    ORDER BY cnt DESC
+                    RETURN cat, cnt
+                """).data()
+            _drv.close()
+            db_cats = [
+                {"main_category": r["cat"].replace(" ", "_"), "subcategory": None,
+                 "product_count": r["cnt"], "display_name": r["cat"]}
+                for r in _data
+            ]
+            return {
+                "brand": brand_name,
+                "categories": db_cats,
+                "count": len(db_cats),
+                "total_products": sum(r["cnt"] for r in _data),
+                "source": "Neo4j ProductDescription categories",
+                "note": f"Brand '{brand_name}' not found in SQLite index; showing all Neo4j categories."
+            }
+        except Exception as e2:
+            logger.error(f"Neo4j fallback also failed: {e2}")
+            raise HTTPException(status_code=503, detail=f"Brand lookup failed: {e}")
 
 
 @demo_router.get("/brands/{brand_name}/reviews")

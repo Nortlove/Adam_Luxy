@@ -27,7 +27,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, TypedDict
 
-from langgraph.graph import StateGraph, END
+from langgraph.graph import StateGraph, START, END
 
 logger = logging.getLogger(__name__)
 
@@ -99,6 +99,10 @@ class OrchestratorState(TypedDict, total=False):
     # Injected intelligence from pattern persistence
     injected_intelligence: Dict[str, Any]
     
+    # Graph-inferred construct activations (inferential core)
+    construct_activation_profile: Any  # ConstructActivationProfile
+    graph_mechanism_priors: Dict[str, float]  # Mechanism priors from graph traversal
+    
     # NEW: Bidirectional AoT ↔ LangGraph feedback
     atom_feedback: List[Dict[str, Any]]  # Feedback from atoms
     prior_validation: Dict[str, Any]  # Did atoms agree with LangGraph priors?
@@ -106,6 +110,17 @@ class OrchestratorState(TypedDict, total=False):
     langgraph_learnings: List[Dict[str, Any]]  # Processed learnings
     mechanism_updates_from_atoms: Dict[str, Any]  # Mechanism-specific updates
     archetype_validation: Dict[str, Any]  # Archetype alignment status
+
+    # CORPUS FUSION: Intelligence from 1B+ reviews (Layers 1-5)
+    corpus_fusion_intelligence: Dict[str, Any]  # Full corpus fusion output (priors, constraints, resonance)
+    corpus_mechanism_priors: Dict[str, float]    # Mechanism name → corpus-calibrated prior score
+    corpus_creative_constraints: Dict[str, Any]  # Creative pattern constraints from Layer 2
+    corpus_platform_calibration: Dict[str, Any]  # Platform-specific calibration factors from Layer 3
+
+    # ALIGNMENT SYSTEM: Ad copy profiling + expanded type inference + alignment
+    ad_copy_profile: Dict[str, Any]  # Psychological profile of ad copy
+    expanded_customer_type: Dict[str, Any]  # 1.9M expanded type (motivation, decision_style, etc.)
+    alignment_scores: Dict[str, Any]  # Alignment matrix scores across all 7 matrices
 
 
 # =============================================================================
@@ -174,6 +189,50 @@ async def prefetch_graph_intelligence(state: OrchestratorState) -> OrchestratorS
     except Exception as e:
         logger.debug(f"Could not fetch brand relationships: {e}")
     
+    # --- Type System Graph Inference ---
+    graph_type_inference = {}
+    graph_mechanism_priors = {}
+    try:
+        from neo4j import GraphDatabase
+        from adam.config.settings import get_settings
+        from adam.dsp.graph_type_inference import GraphTypeInferenceService
+
+        settings = get_settings()
+        neo4j_driver = GraphDatabase.driver(
+            settings.neo4j.uri,
+            auth=(settings.neo4j.username, settings.neo4j.password),
+        )
+        type_service = GraphTypeInferenceService(neo4j_driver)
+
+        # Extract type dimensions from state (from prior inference or defaults)
+        motivation = state.get("motivation", state.get("primary_motivation"))
+        decision_style = state.get("decision_style", state.get("primary_decision_style"))
+        regulatory_focus = state.get("regulatory_focus", state.get("primary_regulatory_focus"))
+        product_category = state.get("product_category", state.get("category"))
+
+        if motivation and decision_style:
+            type_result = type_service.infer(
+                motivation=motivation,
+                decision_style=decision_style,
+                regulatory_focus=regulatory_focus or "pragmatic_balanced",
+                emotional_intensity=state.get("emotional_intensity", "moderate_positive"),
+                cognitive_load=state.get("cognitive_load", "moderate_cognitive"),
+                temporal_orientation=state.get("temporal_orientation", "medium_term"),
+                social_influence=state.get("social_influence", "socially_aware"),
+                product_category=product_category,
+            )
+            graph_type_inference = type_result.to_ad_context()
+            graph_mechanism_priors = type_result.to_mechanism_priors()
+            logger.info(f"Graph type inference: type_found={type_result.type_found}, mechanisms={list(graph_mechanism_priors.keys())}")
+        else:
+            logger.debug("Insufficient dimensions for graph type inference (need motivation + decision_style)")
+
+        neo4j_driver.close()
+    except ImportError:
+        logger.debug("Graph type inference dependencies not available")
+    except Exception as e:
+        logger.debug(f"Graph type inference failed: {e}")
+
     return {
         **state,
         "graph_intelligence": graph_intel,
@@ -181,6 +240,9 @@ async def prefetch_graph_intelligence(state: OrchestratorState) -> OrchestratorS
         "mechanism_history": graph_intel["mechanism_history"],
         "archetype_match": graph_intel["archetype_match"],
         "brand_relationships": graph_intel["brand_relationships"],
+        # Type system graph inference results
+        "graph_type_inference": graph_type_inference,
+        "graph_mechanism_priors": graph_mechanism_priors,
     }
 
 
@@ -340,6 +402,59 @@ async def prefetch_full_intelligence(state: OrchestratorState) -> OrchestratorSt
         if injected.get("journey_products"):
             full_intel["journey_intelligence"]["journey_products"] = injected["journey_products"]
     
+    # =========================================================================
+    # GRAPH STATE INFERENCE: The inferential core
+    # Instead of heuristic if/else rules, traverse the Neo4j graph:
+    #   Observable Signals → BehavioralSignal → DSPConstruct → Mechanism
+    # This produces a ConstructActivationProfile with uncertainty bounds
+    # and mechanism priors derived from causal chains, not correlations.
+    # =========================================================================
+    construct_activation_profile = None
+    graph_mechanism_priors = {}
+    try:
+        from adam.dsp.graph_state_inference import get_graph_state_inference_engine
+        graph_engine = get_graph_state_inference_engine()
+
+        # Build context from state for signal extraction
+        inference_context = {
+            "content_category": state.get("product_category", ""),
+            "navigation_directness": state.get("navigation_directness"),
+            "comparison_behavior": state.get("comparison_behavior"),
+            "session_duration_seconds": state.get("session_duration_seconds"),
+            "local_hour": state.get("local_hour"),
+            "referrer_type": state.get("referrer_type"),
+            "device_type": state.get("device_type"),
+            "content_sentiment": state.get("content_sentiment"),
+            "scroll_velocity": state.get("scroll_velocity"),
+            "category_changes": state.get("category_changes"),
+        }
+        # Also merge any ad_context signals
+        ad_ctx = state.get("ad_context", {})
+        if isinstance(ad_ctx, dict):
+            inference_context.update({
+                k: v for k, v in ad_ctx.items()
+                if k in (
+                    "scroll_depth", "time_on_page_seconds", "pages_viewed",
+                    "dark_mode", "connection_speed_mbps", "content_arousal",
+                    "content_complexity", "subscriber_status", "session_phase",
+                    "ad_density", "mouse_max_deviation", "backspace_frequency",
+                )
+            })
+
+        construct_activation_profile = graph_engine.infer(inference_context)
+        graph_mechanism_priors = construct_activation_profile._mechanism_priors
+
+        logger.debug(
+            f"Graph state inference: {construct_activation_profile.total_constructs_activated} "
+            f"constructs activated from {construct_activation_profile.total_signals_observed} signals, "
+            f"{len(graph_mechanism_priors)} mechanism priors derived"
+        )
+
+    except ImportError:
+        logger.debug("GraphStateInferenceEngine not available — using heuristic fallback")
+    except Exception as e:
+        logger.debug(f"Graph state inference failed: {e}")
+
     return {
         **state,
         "full_intelligence_profile": full_intel,
@@ -347,6 +462,9 @@ async def prefetch_full_intelligence(state: OrchestratorState) -> OrchestratorSt
         "brand_copy_analysis": full_intel["brand_copy_analysis"],
         "journey_intelligence": full_intel["journey_intelligence"],
         "injected_intelligence": injected_intel,  # Pass through for atoms
+        # NEW: Graph-inferred construct activations and mechanism priors
+        "construct_activation_profile": construct_activation_profile,
+        "graph_mechanism_priors": graph_mechanism_priors,
     }
 
 
@@ -678,24 +796,120 @@ async def synthesize_decision(state: OrchestratorState) -> OrchestratorState:
     archetype_confidence = deep_archetype.get("confidence", 0.5)
     
     # =================================================================
-    # STEP 1: Extract base mechanisms from AoT
+    # STEP 0: Graph-Inferred Mechanism Priors (PRIMARY — inferential)
+    #
+    # This is the core inferential step. Instead of starting from atom
+    # heuristics (correlational), we start from graph-traversal priors:
+    #   Observable Signals → Constructs → Causal Edges → Mechanisms
+    #
+    # These priors represent what the validated psychological science
+    # (encoded in graph edge effect sizes) predicts should work.
     # =================================================================
+    graph_priors = state.get("graph_mechanism_priors", {})
+    construct_profile = state.get("construct_activation_profile")
+
     mechanisms_applied = []
-    
+
+    if graph_priors:
+        # Graph priors are the PRIMARY mechanism source
+        max_prior = max(graph_priors.values()) if graph_priors else 0
+        for mech, prior_strength in graph_priors.items():
+            if prior_strength < 0.05:
+                continue
+            mechanisms_applied.append({
+                "name": mech,
+                "intensity": prior_strength,
+                "base_score": prior_strength,
+                "source": "graph_inference",
+                "is_primary": prior_strength == max_prior,
+                "boosts_applied": ["graph_inferred"],
+            })
+        logger.debug(
+            f"Graph inference produced {len(mechanisms_applied)} mechanism priors "
+            f"(top: {max(graph_priors, key=graph_priors.get) if graph_priors else 'none'})"
+        )
+
+    # =================================================================
+    # STEP 1: AoT Atom Mechanism Validation (SECONDARY — heuristic)
+    #
+    # Atom outputs validate and calibrate the graph-inferred priors.
+    # If graph priors exist, atom scores are blended at 40% weight.
+    # If graph priors are empty, atoms become the primary source.
+    # =================================================================
     if "atom_mechanism_activation" in atom_outputs:
         mech_output = atom_outputs["atom_mechanism_activation"]
         if isinstance(mech_output, dict):
-            max_score = max(mech_output.get("mechanism_scores", {}).values() or [0])
-            for mech, score in mech_output.get("mechanism_scores", {}).items():
-                mechanisms_applied.append({
-                    "name": mech,
-                    "intensity": score,
-                    "base_score": score,
-                    "source": "aot",
-                    "is_primary": score == max_score,
-                    "boosts_applied": [],
-                })
+            atom_scores = mech_output.get("mechanism_scores", {})
+            max_score = max(atom_scores.values()) if atom_scores else 0
+
+            if mechanisms_applied:
+                # BLEND: graph priors (60%) + atom scores (40%)
+                mech_map = {m["name"]: m for m in mechanisms_applied}
+                for mech, score in atom_scores.items():
+                    if mech in mech_map:
+                        graph_val = mech_map[mech]["intensity"]
+                        blended = 0.60 * graph_val + 0.40 * score
+                        mech_map[mech]["intensity"] = blended
+                        mech_map[mech]["boosts_applied"].append(f"aot_blend:{score:.2f}")
+                    else:
+                        # Atom found a mechanism the graph didn't — add at reduced weight
+                        mechanisms_applied.append({
+                            "name": mech,
+                            "intensity": score * 0.40,
+                            "base_score": score,
+                            "source": "aot_only",
+                            "is_primary": False,
+                            "boosts_applied": ["aot_only_reduced"],
+                        })
+            else:
+                # No graph priors — atoms are the primary source (fallback)
+                for mech, score in atom_scores.items():
+                    mechanisms_applied.append({
+                        "name": mech,
+                        "intensity": score,
+                        "base_score": score,
+                        "source": "aot",
+                        "is_primary": score == max_score,
+                        "boosts_applied": [],
+                    })
     
+    # =================================================================
+    # STEP 1b: Apply DSP graph intelligence to mechanism scoring
+    # =================================================================
+    dsp_intel = state.get("injected_intelligence", {}).get("dsp_graph_intelligence", {})
+    if dsp_intel.get("has_dsp"):
+        import math as _math
+
+        # Empirical effectiveness boost (15% weight)
+        empirical = dsp_intel.get("empirical_effectiveness", {})
+        for mech in mechanisms_applied:
+            emp = empirical.get(mech["name"])
+            if emp:
+                success_rate = emp.get("success_rate", 0.5)
+                sample_size = emp.get("sample_size", 0)
+                confidence = min(1.0, _math.log1p(sample_size) / 10.0) if sample_size > 0 else 0.1
+                emp_boost = 1 + 0.15 * (success_rate - 0.5) * confidence
+                mech["intensity"] = min(1.0, mech["intensity"] * emp_boost)
+                mech["boosts_applied"].append(f"dsp_empirical:{emp_boost:.3f}")
+
+        # Category moderation (10% weight)
+        cat_mod = dsp_intel.get("category_moderation", {})
+        for mech in mechanisms_applied:
+            delta = cat_mod.get(mech["name"])
+            if delta is not None:
+                cat_boost = 1 + 0.10 * delta
+                mech["intensity"] = min(1.0, max(0.0, mech["intensity"] * cat_boost))
+                mech["boosts_applied"].append(f"dsp_category:{cat_boost:.3f}")
+
+        # Susceptibility adjustment (10% weight)
+        suscept = dsp_intel.get("mechanism_susceptibility", {})
+        for mech in mechanisms_applied:
+            sus = suscept.get(mech["name"])
+            if sus is not None:
+                sus_boost = 1 + 0.10 * (sus - 0.5)
+                mech["intensity"] = min(1.0, max(0.0, mech["intensity"] * sus_boost))
+                mech["boosts_applied"].append(f"dsp_susceptibility:{sus_boost:.3f}")
+
     # =================================================================
     # STEP 2: Apply helpful vote effectiveness boost
     # =================================================================
@@ -861,6 +1075,32 @@ async def synthesize_decision(state: OrchestratorState) -> OrchestratorState:
         "atom_outputs_summary": {
             k: type(v).__name__ for k, v in atom_outputs.items()
         },
+        
+        # Alignment system context (for CognitiveLearningSystem outcome comparison)
+        "alignment_scores": state.get("alignment_scores", {}),
+        "alignment_recommendation": state.get("alignment_recommendation", ""),
+        "expanded_customer_type": state.get("expanded_customer_type", {}),
+        "ad_copy_profile": state.get("ad_copy_profile", {}),
+        "predicted_effectiveness": state.get("alignment_scores", {}).get("overall_alignment", 0.0),
+        
+        # DSP graph enrichment summary
+        "dsp_enrichment": {
+            "has_empirical_effectiveness": bool(state.get("injected_intelligence", {}).get("dsp_graph_intelligence", {}).get("empirical_effectiveness")),
+            "has_category_moderation": bool(state.get("injected_intelligence", {}).get("dsp_graph_intelligence", {}).get("category_moderation")),
+            "has_alignment_edges": bool(state.get("injected_intelligence", {}).get("dsp_graph_intelligence", {}).get("alignment_edges")),
+        },
+        
+        # Graph inference context (for learning loop)
+        "graph_inference": {
+            "method": getattr(construct_profile, "inference_method", "not_available") if construct_profile else "not_available",
+            "constructs_activated": getattr(construct_profile, "total_constructs_activated", 0) if construct_profile else 0,
+            "signals_observed": getattr(construct_profile, "total_signals_observed", 0) if construct_profile else 0,
+            "top_constructs": [
+                {"id": c.construct_id, "activation": c.activation, "confidence": c.confidence}
+                for c in (construct_profile.get_top_constructs(5) if construct_profile else [])
+            ],
+            "mechanism_priors_from_graph": graph_priors,
+        },
     }
     
     logger.info(
@@ -945,17 +1185,69 @@ async def persist_for_learning(state: OrchestratorState) -> OrchestratorState:
         mechanisms = state.get("mechanisms_applied", [])
         primary_mechanism = mechanisms[0]["name"] if mechanisms else "unknown"
         
+        # Build enriched payload with alignment + DSP context
+        # This ensures CognitiveLearningSystem receives alignment predictions
+        # for outcome comparison when OutcomeHandler processes outcomes
+        alignment_scores = state.get("alignment_scores", {})
+        learning_ctx = state.get("learning_context", {})
+        
+        # Extract active constructs — primarily from graph inference (inferential)
+        active_constructs = []
+        construct_profile = state.get("construct_activation_profile")
+        if construct_profile and hasattr(construct_profile, "get_top_constructs"):
+            for act in construct_profile.get_top_constructs(20):
+                if act.construct_id not in active_constructs:
+                    active_constructs.append(act.construct_id)
+
+        # Also include DSP injected constructs as supplementary evidence
+        dsp_intel = state.get("injected_intelligence", {}).get("dsp_graph_intelligence", {})
+        if dsp_intel.get("has_dsp"):
+            for key in list(dsp_intel.get("empirical_effectiveness", {}).keys()):
+                if key not in active_constructs:
+                    active_constructs.append(key)
+            for edge in dsp_intel.get("alignment_edges", []):
+                target = edge.get("target_id", "")
+                if target and target not in active_constructs:
+                    active_constructs.append(target)
+        
+        # Collect corpus fusion state for learning attribution
+        corpus_fusion_intel = state.get("corpus_fusion_intelligence", {})
+        corpus_mechanism_priors = state.get("corpus_mechanism_priors", {})
+        corpus_platform_cal = state.get("corpus_platform_calibration", {})
+        corpus_creative = state.get("corpus_creative_constraints", {})
+        
         signal = UnifiedLearningSignal(
             signal_type=UnifiedSignalType.CREDIT_MECHANISM,
             source_component="synergy_orchestrator",
             archetype=state.get("archetype_match", {}).get("primary_archetype", "everyman"),
             mechanism=primary_mechanism,
             confidence=state.get("confidence_scores", {}).get("overall", 0.5),
+            active_constructs=active_constructs,
             payload={
                 "decision_id": decision_id,
                 "user_id": user_id,
                 "mechanisms": [m["name"] for m in mechanisms],
                 "event_type": "decision_persisted",
+                # Alignment system context (for CognitiveLearningSystem)
+                "alignment_scores": alignment_scores,
+                "predicted_effectiveness": alignment_scores.get("overall_alignment", 0.0),
+                "alignment_recommendation": state.get("alignment_recommendation", ""),
+                "expanded_customer_type": state.get("expanded_customer_type", {}),
+                "ad_copy_profile": state.get("ad_copy_profile", {}),
+                "product_category": state.get("product_category", ""),
+                "active_dsp_constructs": active_constructs,
+                "dsp_construct_count": len(active_constructs),
+                # Corpus Fusion tracking — enables post-hoc analysis of
+                # how corpus intelligence correlates with outcomes
+                "corpus_fusion": {
+                    "mechanism_priors": corpus_mechanism_priors,
+                    "prior_confidence": corpus_fusion_intel.get("confidence", 0.0),
+                    "evidence_count": corpus_fusion_intel.get("evidence_count", 0),
+                    "platform_calibration": corpus_platform_cal,
+                    "creative_constraints": corpus_creative,
+                    "transfer_sources": corpus_fusion_intel.get("transfer_sources", []),
+                    "had_corpus": bool(corpus_mechanism_priors),
+                },
             },
         )
         
@@ -1106,6 +1398,171 @@ async def prefetch_competitive_intelligence(state: OrchestratorState) -> Orchest
     }
 
 
+async def prefetch_corpus_fusion(state: OrchestratorState) -> OrchestratorState:
+    """
+    Pre-fetch corpus fusion intelligence from the 1B+ review corpus.
+    
+    Provides:
+    - Empirical mechanism priors from corpus (Layer 1)
+    - Creative pattern constraints (Layer 2)
+    - Platform-specific calibration factors (Layer 3)
+    - Resonance templates from helpful-vote-validated reviews (Layer 5)
+    
+    This runs in parallel with all other prefetch nodes.
+    """
+    product_category = state.get("product_category", "")
+    brand_name = state.get("brand_name", "")
+    # Archetype may not be determined yet in prefetch; use best available
+    archetype = (
+        state.get("deep_archetype", {}).get("primary_archetype")
+        or state.get("archetype_match", {}).get("primary_archetype")
+    )
+    
+    corpus_intel = {
+        "mechanism_priors": {},
+        "prior_confidence": 0.0,
+        "evidence_count": 0,
+        "creative_constraints": {},
+        "platform_calibration": {},
+        "resonance_templates": [],
+        "available": False,
+    }
+    mechanism_priors = {}
+    creative_constraints = {}
+    platform_calibration = {}
+    
+    if not product_category:
+        logger.debug("Corpus fusion: no product_category — skipping")
+        return {
+            **state,
+            "corpus_fusion_intelligence": corpus_intel,
+            "corpus_mechanism_priors": mechanism_priors,
+            "corpus_creative_constraints": creative_constraints,
+            "corpus_platform_calibration": platform_calibration,
+        }
+    
+    # Layer 1: Extract empirical priors
+    try:
+        from adam.fusion.prior_extraction import get_prior_extraction_service
+        prior_service = get_prior_extraction_service()
+        
+        corpus_prior = prior_service.extract_prior(
+            category=product_category,
+            archetype=archetype,
+            brand=brand_name or None,
+        )
+        
+        if corpus_prior and corpus_prior.mechanism_priors:
+            mechanism_priors = corpus_prior.get_mechanism_dict()
+            corpus_intel["mechanism_priors"] = mechanism_priors
+            corpus_intel["prior_confidence"] = corpus_prior.confidence
+            corpus_intel["evidence_count"] = corpus_prior.evidence_count
+            corpus_intel["available"] = True
+            
+            logger.debug(
+                f"Corpus fusion Layer 1: {len(mechanism_priors)} mechanism priors "
+                f"(confidence={corpus_prior.confidence:.2f}, n={corpus_prior.evidence_count})"
+            )
+    except ImportError:
+        logger.debug("PriorExtractionService not available")
+    except Exception as e:
+        logger.warning(f"Corpus fusion Layer 1 failed: {e}")
+    
+    # Layer 2: Extract creative constraints
+    try:
+        from adam.fusion.creative_patterns import get_creative_pattern_extractor
+        creative_service = get_creative_pattern_extractor()
+        
+        constraints = creative_service.extract_creative_constraints(
+            category=product_category,
+            target_archetype=archetype,
+        )
+        
+        if constraints:
+            creative_constraints = {
+                "framing_guidance": constraints.framing_guidance if hasattr(constraints, 'framing_guidance') else {},
+                "emotional_register": constraints.emotional_register if hasattr(constraints, 'emotional_register') else {},
+                "mechanism_deployment": constraints.mechanism_deployment if hasattr(constraints, 'mechanism_deployment') else {},
+                "ranked_patterns": [
+                    {"pattern": p.pattern_type if hasattr(p, 'pattern_type') else str(p), 
+                     "effectiveness": p.effectiveness if hasattr(p, 'effectiveness') else 0.5}
+                    for p in (constraints.ranked_patterns if hasattr(constraints, 'ranked_patterns') else [])[:5]
+                ],
+            }
+            corpus_intel["creative_constraints"] = creative_constraints
+            
+            logger.debug(f"Corpus fusion Layer 2: creative constraints extracted")
+    except ImportError:
+        logger.debug("CreativePatternExtractor not available")
+    except Exception as e:
+        logger.warning(f"Corpus fusion Layer 2 failed: {e}")
+    
+    # Layer 3: Platform calibration
+    try:
+        from adam.fusion.platform_calibration import get_platform_calibration_layer
+        calibration = get_platform_calibration_layer()
+        
+        # Get calibration for top mechanisms
+        platform = "general"  # Will be refined when platform context is available
+        calibration_factors = {}
+        for mech_name, prior_score in list(mechanism_priors.items())[:10]:
+            calibrated, confidence, source = calibration.get_calibrated_score(
+                platform=platform,
+                mechanism=mech_name,
+                category=product_category,
+                corpus_prior=prior_score,
+            )
+            calibration_factors[mech_name] = {
+                "calibrated_score": calibrated,
+                "confidence": confidence,
+                "source": source,
+            }
+        
+        if calibration_factors:
+            platform_calibration = calibration_factors
+            corpus_intel["platform_calibration"] = platform_calibration
+            logger.debug(f"Corpus fusion Layer 3: {len(calibration_factors)} mechanisms calibrated")
+    except ImportError:
+        logger.debug("PlatformCalibrationLayer not available")
+    except Exception as e:
+        logger.warning(f"Corpus fusion Layer 3 failed: {e}")
+    
+    # Layer 5: Resonance templates
+    try:
+        from adam.fusion.resonance_index import get_persuasion_resonance_index
+        resonance = get_persuasion_resonance_index()
+        
+        templates = resonance.get_resonance_templates(
+            category=product_category,
+            archetype=archetype,
+            top_k=5,
+        )
+        
+        if templates:
+            corpus_intel["resonance_templates"] = [
+                {
+                    "mechanism": t.mechanism if hasattr(t, 'mechanism') else "",
+                    "pattern": t.pattern if hasattr(t, 'pattern') else str(t),
+                    "effectiveness": t.effectiveness if hasattr(t, 'effectiveness') else 0.5,
+                    "helpful_vote_score": t.helpful_vote_score if hasattr(t, 'helpful_vote_score') else 0.0,
+                }
+                for t in templates[:5]
+            ]
+            logger.debug(f"Corpus fusion Layer 5: {len(templates)} resonance templates")
+    except ImportError:
+        logger.debug("PersuasionResonanceIndex not available")
+    except Exception as e:
+        logger.warning(f"Corpus fusion Layer 5 failed: {e}")
+    
+    return {
+        **state,
+        "corpus_fusion_intelligence": corpus_intel,
+        "corpus_mechanism_priors": mechanism_priors,
+        "corpus_creative_constraints": creative_constraints,
+        "corpus_platform_calibration": platform_calibration,
+    }
+
+
 async def validate_and_merge_prefetch(state: OrchestratorState) -> OrchestratorState:
     """
     Validate and merge all prefetch intelligence before continuing pipeline.
@@ -1124,6 +1581,7 @@ async def validate_and_merge_prefetch(state: OrchestratorState) -> OrchestratorS
         "helpful_vote_intelligence": bool(state.get("helpful_vote_intelligence")),
         "full_intelligence_profile": bool(state.get("full_intelligence_profile")),
         "competitive_intelligence": state.get("competitive_intelligence", {}).get("available", False),
+        "corpus_fusion_intelligence": state.get("corpus_fusion_intelligence", {}).get("available", False),
     }
     
     successful_prefetches = sum(prefetch_results.values())
@@ -1318,12 +1776,17 @@ async def select_personalized_templates(state: OrchestratorState) -> Orchestrato
     """
     Select the best templates for this specific user/context combination.
     
+    ENHANCED: Now includes alignment-based scoring from the 7 alignment matrices
+    and DSP graph intelligence alongside existing competitive and helpful vote scoring.
+    
     Uses:
     - User's archetype
     - Selected mechanisms
     - Brand personality alignment
     - Competitive differentiation
     - Helpful vote effectiveness scores
+    - Alignment scores (optimal mechanism + linguistic style match) [NEW]
+    - DSP graph intelligence (empirical effectiveness) [NEW]
     """
     archetype = state.get("archetype_match", {}).get("primary_archetype") or "everyman"
     mechanisms = state.get("mechanisms_applied", [])
@@ -1331,20 +1794,26 @@ async def select_personalized_templates(state: OrchestratorState) -> Orchestrato
     helpful_intel = state.get("helpful_vote_intelligence", {})
     brand_copy = state.get("brand_copy_analysis", {})
     
+    # NEW: Get alignment and ad profile data
+    alignment_scores = state.get("alignment_scores", {})
+    ad_copy_profile = state.get("ad_copy_profile", {})
+    expanded_type = state.get("expanded_customer_type", {})
+    
     selected_templates = []
     
     # Get templates from helpful vote intelligence (already filtered by archetype)
     available_templates = helpful_intel.get("templates", [])
     
     # Also try to get from pattern persistence (Neo4j)
+    # FIX: Use correct method name (was query_templates_for_archetype_mechanism which doesn't exist)
     try:
-        from adam.infrastructure.neo4j.pattern_persistence import GraphPatternPersistence
-        persistence = GraphPatternPersistence()
+        from adam.infrastructure.neo4j.pattern_persistence import get_pattern_persistence
+        persistence = get_pattern_persistence()
         
         for mech in mechanisms[:3]:  # Focus on top 3 mechanisms
             mechanism_name = mech.get("name")
             
-            neo4j_templates = await persistence.query_templates_for_archetype_mechanism(
+            neo4j_templates = await persistence.get_best_templates_for_archetype(
                 archetype=archetype,
                 mechanism=mechanism_name,
                 limit=5,
@@ -1363,6 +1832,12 @@ async def select_personalized_templates(state: OrchestratorState) -> Orchestrato
     # Score and rank templates
     underutilized = set(competitive.get("underutilized_mechanisms", []))
     brand_personality = brand_copy.get("primary_personality", "")
+    
+    # NEW: Extract alignment-optimal mechanism and linguistic style
+    optimal_mechanisms = expanded_type.get("optimal_mechanism_sequence", [])
+    optimal_mechanism_primary = optimal_mechanisms[0] if optimal_mechanisms else ""
+    ad_linguistic_style = ad_copy_profile.get("linguistic_style", "")
+    product_category = state.get("product_category", "").lower()
     
     for template in available_templates:
         score = template.get("effectiveness_score", 0.5)
@@ -1394,18 +1869,443 @@ async def select_personalized_templates(state: OrchestratorState) -> Orchestrato
         elif votes > 50:
             score *= 1.1
         
+        # =====================================================================
+        # NEW: Alignment-based scoring
+        # =====================================================================
+        
+        # +30% if template mechanism matches alignment-optimal mechanism
+        if optimal_mechanism_primary and template_mechanism == optimal_mechanism_primary:
+            score *= 1.3
+            template["alignment_optimal_match"] = True
+        
+        # +15% if template linguistic style matches ad copy linguistic style
+        template_pattern = template.get("pattern", "").lower()
+        if ad_linguistic_style:
+            style_markers = {
+                "technical": ["specification", "performance", "benchmark", "feature"],
+                "emotional": ["feel", "love", "amazing", "transform", "beautiful"],
+                "professional": ["clinical", "proven", "research", "expert", "certified"],
+                "storytelling": ["journey", "story", "discover", "experience", "imagine"],
+                "urgent": ["now", "limited", "hurry", "today", "fast"],
+            }
+            markers = style_markers.get(ad_linguistic_style, [])
+            if markers and any(m in template_pattern for m in markers):
+                score *= 1.15
+                template["linguistic_style_match"] = True
+        
+        # +10% if template category aligns with product category
+        template_category = template.get("category", "").lower()
+        if product_category and template_category and product_category in template_category:
+            score *= 1.1
+            template["category_match"] = True
+
+        # =====================================================================
+        # DSP Graph Intelligence scoring
+        # =====================================================================
+        dsp_intel = state.get("injected_intelligence", {}).get("dsp_graph_intelligence", {})
+        if dsp_intel.get("has_dsp"):
+            empirical = dsp_intel.get("empirical_effectiveness", {})
+            cat_mod = dsp_intel.get("category_moderation", {})
+
+            # Empirical effectiveness boost
+            emp_data = empirical.get(template_mechanism)
+            if emp_data and emp_data.get("sample_size", 0) > 100:
+                success = emp_data.get("success_rate", 0.5)
+                score *= 1 + 0.2 * (success - 0.5)
+                template["dsp_empirical_boost"] = True
+
+            # Category moderation delta
+            delta = cat_mod.get(template_mechanism)
+            if delta is not None:
+                score *= 1 + 0.1 * delta
+                template["dsp_category_boost"] = True
+
         template["final_score"] = score
     
     # Sort by final score and take top 10
     available_templates.sort(key=lambda t: t.get("final_score", 0), reverse=True)
     selected_templates = available_templates[:10]
     
-    logger.debug(f"Selected {len(selected_templates)} personalized templates")
+    logger.debug(
+        f"Selected {len(selected_templates)} personalized templates "
+        f"(alignment_optimal={optimal_mechanism_primary}, style={ad_linguistic_style})"
+    )
     
     return {
         **state,
         "selected_templates": selected_templates,
     }
+
+
+# =============================================================================
+# ALIGNMENT SYSTEM NODES (Phase D3)
+# =============================================================================
+
+async def profile_ad_copy(state: OrchestratorState) -> OrchestratorState:
+    """
+    Profile the ad/product copy psychologically.
+
+    Uses brand_name, product_name, product_category to build an
+    AdvertisementProfile containing value propositions, emotional tone,
+    linguistic style, and persuasion techniques detected in the copy.
+    """
+    brand_name = state.get("brand_name", "")
+    product_name = state.get("product_name", "")
+    product_category = state.get("product_category", "")
+    brand_copy = state.get("brand_copy_analysis", {})
+
+    ad_profile: Dict[str, Any] = {
+        "brand": brand_name,
+        "product": product_name,
+        "category": product_category,
+        "detected_value_propositions": [],
+        "detected_persuasion_techniques": [],
+        "emotional_tone": {},
+        "linguistic_style": "conversational",
+        "brand_personality": {},
+    }
+
+    try:
+        from adam.core.learning.learned_priors_integration import get_learned_priors
+        priors = get_learned_priors()
+
+        # Infer category-level product profile
+        cat_profile = priors.get_product_category_profile(product_category)
+        if cat_profile:
+            ad_profile["category_profile"] = cat_profile
+
+        # If brand_copy_analysis was prefetched, extract ad characteristics
+        if brand_copy:
+            copy_text = brand_copy.get("copy_text", "")
+            detected_techniques = brand_copy.get("persuasion_techniques", [])
+            ad_profile["detected_persuasion_techniques"] = detected_techniques
+            ad_profile["emotional_tone"] = brand_copy.get("emotional_tone", {})
+
+        # Infer value propositions from category
+        vp_map = {
+            "Electronics": ["vp_performance_superiority", "vp_novelty_innovation", "vp_reliability_durability"],
+            "Beauty": ["vp_transformation", "vp_self_expression", "vp_pleasure_enjoyment"],
+            "Health": ["vp_peace_of_mind", "vp_reliability_durability", "vp_knowledge_expertise"],
+            "Books": ["vp_knowledge_expertise", "vp_pleasure_enjoyment", "vp_transformation"],
+            "Clothing": ["vp_self_expression", "vp_status_prestige", "vp_pleasure_enjoyment"],
+            "Baby": ["vp_peace_of_mind", "vp_reliability_durability", "vp_belonging_connection"],
+            "Grocery": ["vp_convenience_ease", "vp_pleasure_enjoyment", "vp_cost_efficiency"],
+            "Home": ["vp_convenience_ease", "vp_reliability_durability", "vp_cost_efficiency"],
+            "Sports": ["vp_performance_superiority", "vp_transformation", "vp_pleasure_enjoyment"],
+        }
+        for key, vps in vp_map.items():
+            if key.lower() in product_category.lower():
+                ad_profile["detected_value_propositions"] = vps
+                break
+        if not ad_profile["detected_value_propositions"]:
+            ad_profile["detected_value_propositions"] = ["vp_cost_efficiency", "vp_convenience_ease"]
+
+        # Detect linguistic style from brand copy or category
+        style_map = {
+            "Electronics": "technical", "Beauty": "emotional", "Health": "professional",
+            "Books": "storytelling", "Clothing": "emotional", "Sports": "urgent",
+        }
+        for key, style in style_map.items():
+            if key.lower() in product_category.lower():
+                ad_profile["linguistic_style"] = style
+                break
+
+    except Exception as e:
+        logger.debug(f"Ad copy profiling partial failure: {e}")
+
+    logger.debug(f"Ad copy profiled: {len(ad_profile.get('detected_value_propositions', []))} VPs, style={ad_profile.get('linguistic_style')}")
+
+    # Write to BOTH keys: our new key and the key PriorContext.from_langgraph_state reads
+    return {**state, "ad_copy_profile": ad_profile, "product_ad_profile": ad_profile}
+
+
+async def infer_expanded_customer_type(state: OrchestratorState) -> OrchestratorState:
+    """
+    Infer expanded customer type from the 1.9M type system.
+
+    Uses archetype, behavioral signals, NDF, and context to infer:
+    - Primary motivation (from 37)
+    - Decision style (from 12)
+    - Regulatory focus (from 8)
+    - Emotional intensity (from 9)
+    - Social influence type (from 5)
+    """
+    archetype_data = state.get("deep_archetype", state.get("archetype_match", {}))
+    primary_archetype = archetype_data.get("primary_archetype", "explorer")
+    behavioral = state.get("user_behavioral_signals", {})
+    ndf = state.get("atom_outputs", {}).get("ndf_profile", {})
+
+    expanded_type: Dict[str, Any] = {
+        "archetype": primary_archetype,
+        "motivation": "problem_solving_mot",  # default
+        "decision_style": "ds_satisficing",    # default
+        "regulatory_focus": "rf_pragmatic_balanced",
+        "emotional_intensity": "ei_moderate_positive",
+        "social_influence_type": "si_socially_aware",
+        "confidence": 0.4,
+    }
+
+    try:
+        from adam.core.learning.learned_priors_integration import get_learned_priors
+        priors = get_learned_priors()
+
+        # 1. Infer decision style from priors
+        ds_priors = priors.get_decision_style(primary_archetype)
+        if ds_priors:
+            best_style = max(ds_priors.items(), key=lambda x: x[1]) if ds_priors else None
+            if best_style:
+                expanded_type["decision_style"] = f"ds_{best_style[0]}"
+                expanded_type["decision_style_distribution"] = ds_priors
+                expanded_type["confidence"] = min(0.85, expanded_type["confidence"] + 0.15)
+
+        # 2. Infer social influence type from priors
+        si_priors = priors.get_social_influence_type(primary_archetype)
+        if si_priors:
+            expanded_type["social_influence_data"] = si_priors
+            # Map from archetype patterns
+            arch_social_map = {
+                "explorer": "si_informational_seeker",
+                "achiever": "si_opinion_leader",
+                "connector": "si_normatively_driven",
+                "guardian": "si_socially_aware",
+                "analyst": "si_informational_seeker",
+                "pragmatist": "si_highly_independent",
+            }
+            expanded_type["social_influence_type"] = arch_social_map.get(
+                primary_archetype.lower(), "si_socially_aware"
+            )
+
+        # 3. Infer motivation from context
+        category = state.get("product_category", "")
+        cat_motivation_map = {
+            "Electronics": "mastery_seeking",
+            "Beauty": "self_expression",
+            "Health": "risk_mitigation",
+            "Baby": "risk_mitigation",
+            "Books": "pure_curiosity",
+            "Clothing": "self_expression",
+            "Grocery": "cost_minimization",
+            "Sports": "personal_growth",
+            "Home": "quality_assurance",
+        }
+        for key, mot in cat_motivation_map.items():
+            if key.lower() in category.lower():
+                expanded_type["motivation"] = mot
+                expanded_type["confidence"] = min(0.85, expanded_type["confidence"] + 0.1)
+                break
+
+        # 4. Infer emotional intensity from persuasion sensitivity
+        emo_priors = priors.get_emotion_sensitivity(primary_archetype)
+        if emo_priors:
+            expanded_type["emotion_sensitivity"] = emo_priors
+
+        # 5. Infer regulatory focus from archetype
+        reg_map = {
+            "explorer": "rf_optimistic_exploration",
+            "achiever": "rf_eager_advancement",
+            "connector": "rf_pragmatic_balanced",
+            "guardian": "rf_conservative_preservation",
+            "analyst": "rf_vigilant_security",
+            "pragmatist": "rf_pragmatic_balanced",
+        }
+        expanded_type["regulatory_focus"] = reg_map.get(
+            primary_archetype.lower(), "rf_pragmatic_balanced"
+        )
+
+    except Exception as e:
+        logger.debug(f"Expanded type inference partial failure: {e}")
+
+    logger.debug(
+        f"Expanded type: motivation={expanded_type['motivation']}, "
+        f"decision_style={expanded_type['decision_style']}, "
+        f"social={expanded_type['social_influence_type']}"
+    )
+
+    # Write to BOTH keys: our new key and the key PriorContext.from_langgraph_state reads
+    return {**state, "expanded_customer_type": expanded_type, "expanded_type": expanded_type}
+
+
+async def calculate_alignment_scores(state: OrchestratorState) -> OrchestratorState:
+    """
+    Calculate alignment scores across all 7 matrices.
+
+    Combines:
+    - Ad copy profile (value propositions, linguistic style, persuasion techniques)
+    - Expanded customer type (motivation, decision style, regulatory focus, etc.)
+    - Archetype personality alignment
+
+    Produces a comprehensive alignment score that feeds into mechanism selection
+    and confidence calibration.
+    """
+    ad_profile = state.get("ad_copy_profile", {})
+    customer_type = state.get("expanded_customer_type", {})
+    archetype_data = state.get("deep_archetype", state.get("archetype_match", {}))
+    primary_archetype = archetype_data.get("primary_archetype", "explorer")
+
+    alignment: Dict[str, Any] = {
+        "overall_alignment": 0.5,
+        "matrix_scores": {},
+        "best_mechanisms": [],
+        "recommended_adjustments": [],
+    }
+
+    try:
+        from adam.core.learning.learned_priors_integration import get_learned_priors
+        priors = get_learned_priors()
+        matrices = priors.get_alignment_matrices()
+
+        total_score = 0.0
+        matrix_count = 0
+
+        # 1. Motivation-Value alignment
+        motivation = customer_type.get("motivation", "problem_solving_mot")
+        ad_vps = ad_profile.get("detected_value_propositions", [])
+        mv_matrix = matrices.get("motivation_value", {})
+        mv_row = mv_matrix.get(motivation, {})
+        if mv_row and ad_vps:
+            vp_scores = [mv_row.get(vp.replace("vp_", ""), 0) for vp in ad_vps]
+            mv_score = max(vp_scores) if vp_scores else 0.5
+            alignment["matrix_scores"]["motivation_value"] = mv_score
+            total_score += mv_score
+            matrix_count += 1
+            if mv_score < 0.4:
+                best_vp = max(mv_row.items(), key=lambda x: x[1])
+                alignment["recommended_adjustments"].append(
+                    f"Shift value proposition toward '{best_vp[0]}' (alignment={best_vp[1]:.2f})"
+                )
+
+        # 2. Decision Style-Linguistic alignment
+        ds = customer_type.get("decision_style", "ds_satisficing").replace("ds_", "")
+        ad_style = ad_profile.get("linguistic_style", "conversational")
+        dsl_matrix = matrices.get("decision_style_linguistic", {})
+        dsl_row = dsl_matrix.get(ds, {})
+        if dsl_row:
+            dsl_score = dsl_row.get(ad_style, 0.5)
+            alignment["matrix_scores"]["decision_style_linguistic"] = dsl_score
+            total_score += dsl_score
+            matrix_count += 1
+            if dsl_score < 0.5:
+                best_style = max(dsl_row.items(), key=lambda x: x[1])
+                alignment["recommended_adjustments"].append(
+                    f"Switch linguistic style to '{best_style[0]}' (alignment={best_style[1]:.2f})"
+                )
+
+        # 3. Regulatory-Emotional alignment
+        rf = customer_type.get("regulatory_focus", "rf_pragmatic_balanced").replace("rf_", "")
+        re_matrix = matrices.get("regulatory_emotional", {})
+        re_row = re_matrix.get(rf, {})
+        if re_row:
+            ad_emotion = ad_profile.get("emotional_tone", {})
+            best_emotion_match = 0.5
+            for emo, score in re_row.items():
+                if score > best_emotion_match:
+                    best_emotion_match = score
+            alignment["matrix_scores"]["regulatory_emotional"] = best_emotion_match
+            total_score += best_emotion_match
+            matrix_count += 1
+
+        # 4. Archetype-Brand Personality alignment
+        abp_matrix = matrices.get("archetype_personality", {})
+        abp_row = abp_matrix.get(primary_archetype.lower(), {})
+        brand_personality = ad_profile.get("brand_personality", {})
+        if abp_row:
+            bp_score = max(abp_row.values()) if abp_row else 0.5
+            alignment["matrix_scores"]["archetype_personality"] = bp_score
+            total_score += bp_score
+            matrix_count += 1
+
+        # 5. Mechanism Susceptibility
+        ms_matrix = matrices.get("mechanism_susceptibility", {})
+        ms_row = ms_matrix.get(ds, {})
+        if ms_row:
+            sorted_mechs = sorted(ms_row.items(), key=lambda x: x[1], reverse=True)
+            alignment["best_mechanisms"] = [
+                {"mechanism": m, "susceptibility": s} for m, s in sorted_mechs[:5]
+            ]
+            ms_score = sorted_mechs[0][1] if sorted_mechs else 0.5
+            alignment["matrix_scores"]["mechanism_susceptibility"] = ms_score
+            total_score += ms_score
+            matrix_count += 1
+
+        # 6. Social Persuasion alignment
+        si = customer_type.get("social_influence_type", "si_socially_aware").replace("si_", "")
+        sp_matrix = matrices.get("social_persuasion", {})
+        sp_row = sp_matrix.get(si, {})
+        if sp_row:
+            ad_techniques = ad_profile.get("detected_persuasion_techniques", [])
+            sp_score = 0.5
+            if ad_techniques:
+                tech_scores = [sp_row.get(t, 0) for t in ad_techniques]
+                sp_score = max(tech_scores) if tech_scores else 0.5
+            alignment["matrix_scores"]["social_persuasion"] = sp_score
+            total_score += sp_score
+            matrix_count += 1
+
+        # =====================================================================
+        # DSP Graph Alignment Enhancement
+        # Blend Neo4j alignment edge strengths with static matrix scores
+        # (20% graph weight, 80% static weight)
+        # =====================================================================
+        try:
+            injected = state.get("injected_intelligence", {})
+            dsp_intel = injected.get("dsp_graph_intelligence", {})
+            alignment_edges = dsp_intel.get("alignment_edges", [])
+
+            if alignment_edges:
+                for edge in alignment_edges:
+                    matrix_name = edge.get("matrix", "")
+                    strength = edge.get("strength", 0.0)
+                    target = edge.get("target_id", "")
+
+                    # Map matrix name to alignment key
+                    matrix_key_map = {
+                        "MOTIVATION_VALUE_ALIGNMENT": "motivation_value",
+                        "DECISION_STYLE_LINGUISTIC_ALIGNMENT": "decision_style_linguistic",
+                        "REGULATORY_EMOTIONAL_ALIGNMENT": "regulatory_emotional",
+                        "ARCHETYPE_PERSONALITY_ALIGNMENT": "archetype_personality",
+                        "MECHANISM_SUSCEPTIBILITY": "mechanism_susceptibility",
+                        "COGNITIVE_COMPLEXITY_ALIGNMENT": "cognitive_complexity",
+                        "SOCIAL_PERSUASION_ALIGNMENT": "social_persuasion",
+                    }
+
+                    key = matrix_key_map.get(matrix_name, "")
+                    if key and key in alignment["matrix_scores"]:
+                        # Blend: 80% static + 20% graph
+                        static_val = alignment["matrix_scores"][key]
+                        blended = 0.80 * static_val + 0.20 * strength
+                        alignment["matrix_scores"][key] = blended
+
+                        # Recompute total
+                        total_score = sum(alignment["matrix_scores"].values())
+                        matrix_count = len(alignment["matrix_scores"])
+        except Exception as e:
+            logger.debug(f"DSP alignment edge enhancement failed: {e}")
+
+        # Calculate overall alignment
+        if matrix_count > 0:
+            alignment["overall_alignment"] = total_score / matrix_count
+
+    except Exception as e:
+        logger.debug(f"Alignment calculation partial failure: {e}")
+
+    logger.debug(
+        f"Alignment scores: overall={alignment['overall_alignment']:.2f}, "
+        f"matrices={len(alignment['matrix_scores'])}, "
+        f"adjustments={len(alignment['recommended_adjustments'])}"
+    )
+
+    # Derive alignment recommendation from overall score
+    overall = alignment.get("overall_alignment", 0.0)
+    if overall >= 0.7:
+        recommendation = "strong_match"
+    elif overall >= 0.5:
+        recommendation = "moderate_match"
+    elif overall >= 0.3:
+        recommendation = "weak_match"
+    else:
+        recommendation = "mismatch"
+
+    return {**state, "alignment_scores": alignment, "alignment_recommendation": recommendation}
 
 
 # =============================================================================
@@ -1434,35 +2334,51 @@ def build_synergy_orchestrator() -> StateGraph:
     graph.add_node("prefetch_helpful_vote", prefetch_helpful_vote_intelligence)
     graph.add_node("prefetch_full_intel", prefetch_full_intelligence)
     graph.add_node("prefetch_competitive", prefetch_competitive_intelligence)
+    graph.add_node("prefetch_corpus_fusion", prefetch_corpus_fusion)
+    graph.add_node("merge_prefetch", validate_and_merge_prefetch)
     graph.add_node("detect_archetype", detect_deep_archetype)
     graph.add_node("execute_aot", execute_aot_with_priors)
-    graph.add_node("process_feedback", process_atom_feedback)  # NEW: Bidirectional feedback
+    graph.add_node("process_feedback", process_atom_feedback)  # Bidirectional feedback
+    # ALIGNMENT SYSTEM: 3 new nodes
+    graph.add_node("profile_ad_copy", profile_ad_copy)
+    graph.add_node("infer_expanded_type", infer_expanded_customer_type)
+    graph.add_node("calculate_alignment", calculate_alignment_scores)
     graph.add_node("select_templates", select_personalized_templates)
     graph.add_node("synthesize", synthesize_decision)
     graph.add_node("persist", persist_for_learning)
     graph.add_node("maintain", trigger_graph_maintenance)
     
-    # Set entry point
-    graph.set_entry_point("prefetch_graph")
+    # TRUE PARALLEL PRE-FETCH: Fan-out from START to all 5 prefetch nodes
+    # Each runs concurrently, writing to different state keys
+    graph.add_edge(START, "prefetch_graph")
+    graph.add_edge(START, "prefetch_helpful_vote")
+    graph.add_edge(START, "prefetch_full_intel")
+    graph.add_edge(START, "prefetch_competitive")
+    graph.add_edge(START, "prefetch_corpus_fusion")
     
-    # PARALLEL PRE-FETCH: All pre-fetch nodes run simultaneously
-    # LangGraph executes nodes with no dependencies in parallel
-    # These three don't depend on each other, so they'll parallelize
-    graph.add_edge("prefetch_graph", "prefetch_helpful_vote")
-    graph.add_edge("prefetch_helpful_vote", "prefetch_full_intel")
-    graph.add_edge("prefetch_full_intel", "prefetch_competitive")
+    # Fan-in: All prefetch nodes merge into validation/merge node
+    graph.add_edge("prefetch_graph", "merge_prefetch")
+    graph.add_edge("prefetch_helpful_vote", "merge_prefetch")
+    graph.add_edge("prefetch_full_intel", "merge_prefetch")
+    graph.add_edge("prefetch_competitive", "merge_prefetch")
+    graph.add_edge("prefetch_corpus_fusion", "merge_prefetch")
     
-    # After all pre-fetch completes, detect archetype
-    graph.add_edge("prefetch_competitive", "detect_archetype")
+    # After merge, detect archetype with full prefetched context
+    graph.add_edge("merge_prefetch", "detect_archetype")
     
     # Execute AoT with full context
     graph.add_edge("detect_archetype", "execute_aot")
     
-    # NEW: Process atom feedback (bidirectional learning)
+    # Process atom feedback (bidirectional learning)
     graph.add_edge("execute_aot", "process_feedback")
     
-    # Select templates based on mechanisms AND feedback
-    graph.add_edge("process_feedback", "select_templates")
+    # ALIGNMENT SYSTEM: Profile ad copy → infer expanded type → calculate alignment
+    graph.add_edge("process_feedback", "profile_ad_copy")
+    graph.add_edge("profile_ad_copy", "infer_expanded_type")
+    graph.add_edge("infer_expanded_type", "calculate_alignment")
+    
+    # Select templates based on alignment + mechanisms + feedback
+    graph.add_edge("calculate_alignment", "select_templates")
     
     # Synthesize final decision
     graph.add_edge("select_templates", "synthesize")
@@ -1484,7 +2400,7 @@ def build_parallel_synergy_orchestrator() -> StateGraph:
     
     ENHANCED: Now includes bidirectional feedback processing.
     """
-    from langgraph.graph import StateGraph
+    from langgraph.graph import StateGraph, START
     
     graph = StateGraph(OrchestratorState)
     
@@ -1493,29 +2409,43 @@ def build_parallel_synergy_orchestrator() -> StateGraph:
     graph.add_node("prefetch_helpful_vote", prefetch_helpful_vote_intelligence)
     graph.add_node("prefetch_full_intel", prefetch_full_intelligence)
     graph.add_node("prefetch_competitive", prefetch_competitive_intelligence)
+    graph.add_node("prefetch_corpus_fusion", prefetch_corpus_fusion)
     graph.add_node("merge_prefetch", validate_and_merge_prefetch)  # Validate prefetch results
     graph.add_node("detect_archetype", detect_deep_archetype)
     graph.add_node("execute_aot", execute_aot_with_priors)
-    graph.add_node("process_feedback", process_atom_feedback)  # NEW: Bidirectional feedback
+    graph.add_node("process_feedback", process_atom_feedback)  # Bidirectional feedback
+    # ALIGNMENT SYSTEM: 3 new nodes
+    graph.add_node("profile_ad_copy", profile_ad_copy)
+    graph.add_node("infer_expanded_type", infer_expanded_customer_type)
+    graph.add_node("calculate_alignment", calculate_alignment_scores)
     graph.add_node("select_templates", select_personalized_templates)
     graph.add_node("synthesize", synthesize_decision)
     graph.add_node("persist", persist_for_learning)
     graph.add_node("maintain", trigger_graph_maintenance)
     
-    # Fan-out: Entry point branches to all prefetch nodes
-    graph.set_entry_point("prefetch_graph")
+    # TRUE PARALLEL FAN-OUT: All 5 prefetch nodes run concurrently from START
+    graph.add_edge(START, "prefetch_graph")
+    graph.add_edge(START, "prefetch_helpful_vote")
+    graph.add_edge(START, "prefetch_full_intel")
+    graph.add_edge(START, "prefetch_competitive")
+    graph.add_edge(START, "prefetch_corpus_fusion")
     
-    # Each prefetch leads to merge point
-    graph.add_edge("prefetch_graph", "prefetch_helpful_vote")
-    graph.add_edge("prefetch_helpful_vote", "prefetch_full_intel")
-    graph.add_edge("prefetch_full_intel", "prefetch_competitive")
+    # FAN-IN: All prefetch nodes converge to merge point
+    graph.add_edge("prefetch_graph", "merge_prefetch")
+    graph.add_edge("prefetch_helpful_vote", "merge_prefetch")
+    graph.add_edge("prefetch_full_intel", "merge_prefetch")
     graph.add_edge("prefetch_competitive", "merge_prefetch")
+    graph.add_edge("prefetch_corpus_fusion", "merge_prefetch")
     
-    # Fan-in: After merge, continue sequential processing
+    # After merge, continue sequential processing
     graph.add_edge("merge_prefetch", "detect_archetype")
     graph.add_edge("detect_archetype", "execute_aot")
-    graph.add_edge("execute_aot", "process_feedback")  # NEW: Process feedback
-    graph.add_edge("process_feedback", "select_templates")
+    graph.add_edge("execute_aot", "process_feedback")
+    # ALIGNMENT SYSTEM
+    graph.add_edge("process_feedback", "profile_ad_copy")
+    graph.add_edge("profile_ad_copy", "infer_expanded_type")
+    graph.add_edge("infer_expanded_type", "calculate_alignment")
+    graph.add_edge("calculate_alignment", "select_templates")
     graph.add_edge("select_templates", "synthesize")
     graph.add_edge("synthesize", "persist")
     graph.add_edge("persist", "maintain")
