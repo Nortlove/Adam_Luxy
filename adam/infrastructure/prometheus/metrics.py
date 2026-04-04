@@ -225,9 +225,155 @@ class ADAMMetrics:
             )
             
             # -----------------------------------------------------------------
+            # CASCADE & INTELLIGENCE PREFETCH METRICS
+            # -----------------------------------------------------------------
+
+            # Cascade level reached per request
+            self.cascade_level_reached = Counter(
+                "adam_cascade_level_reached_total",
+                "Cascade level reached per request",
+                ["level"],
+            )
+
+            # Edge count per L3 query
+            self.cascade_edge_count = Histogram(
+                "adam_cascade_edge_count",
+                "Number of BRAND_CONVERTED edges found at L3",
+                buckets=[0, 5, 10, 25, 50, 100, 250, 500, 1000],
+            )
+
+            # Intelligence prefetch latency
+            self.prefetch_latency = Histogram(
+                "adam_intelligence_prefetch_latency_seconds",
+                "Intelligence prefetch total latency",
+                buckets=[0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5],
+            )
+
+            # Intelligence sources populated per request
+            self.prefetch_sources = Histogram(
+                "adam_intelligence_prefetch_sources",
+                "Number of intelligence sources populated by prefetch",
+                buckets=[0, 1, 2, 3, 4, 5, 6, 7],
+            )
+
+            # Intelligence level in API responses
+            self.intelligence_level = Counter(
+                "adam_intelligence_level_total",
+                "Intelligence level in API responses",
+                ["level"],
+            )
+
+            # Prefetch empty (0 sources) — operator alert trigger
+            self.prefetch_empty_total = Counter(
+                "adam_prefetch_empty_total",
+                "Requests where prefetch returned 0 intelligence sources",
+            )
+
+            # Per-source success tracking
+            self.prefetch_source_success = Counter(
+                "adam_prefetch_source_success_total",
+                "Successful intelligence source fetches",
+                ["source"],
+            )
+
+            # Per-source failure tracking (timeout, circuit, error)
+            self.prefetch_source_failure = Counter(
+                "adam_prefetch_source_failure_total",
+                "Failed intelligence source fetches",
+                ["source", "reason"],  # reason: timeout, circuit_open, error
+            )
+
+            # -----------------------------------------------------------------
+            # MECHANISM SELECTION & POSTERIOR METRICS
+            # -----------------------------------------------------------------
+
+            # Which mechanisms are being selected (cascade output)
+            self.mechanism_selected_total = Counter(
+                "adam_mechanism_selected_total",
+                "Mechanisms selected by cascade",
+                ["mechanism"],
+            )
+
+            # Thompson posterior mean by mechanism (system-level learning state)
+            self.posterior_mean = Gauge(
+                "adam_posterior_mean",
+                "Current Thompson posterior mean by mechanism",
+                ["mechanism"],
+            )
+
+            # -----------------------------------------------------------------
+            # LATENCY BUDGET & CIRCUIT BREAKER METRICS
+            # -----------------------------------------------------------------
+
+            # Budget utilization (what % of 120ms was used)
+            self.budget_utilization = Histogram(
+                "adam_budget_utilization_ratio",
+                "Fraction of latency budget consumed per request",
+                buckets=[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.5, 2.0],
+            )
+
+            # Circuit breaker state (0=closed, 1=half_open, 2=open)
+            self.circuit_breaker_state = Gauge(
+                "adam_circuit_breaker_state",
+                "Current circuit breaker state (0=closed, 1=half_open, 2=open)",
+                ["service"],
+            )
+
+            # -----------------------------------------------------------------
+            # PAGE INTELLIGENCE CRAWL METRICS
+            # -----------------------------------------------------------------
+
+            # Page crawl totals
+            self.page_crawl_total = Counter(
+                "adam_page_crawl_total",
+                "Total page crawl attempts",
+                ["strategy", "pass_type"],
+            )
+
+            # Page crawl failures
+            self.page_crawl_failures_total = Counter(
+                "adam_page_crawl_failures_total",
+                "Total page crawl failures",
+                ["strategy", "error_type"],
+            )
+
+            # Page cache hit tiers
+            self.page_cache_hits_total = Counter(
+                "adam_page_cache_hits_total",
+                "Page intelligence cache hits by tier",
+                ["tier"],  # exact, domain, miss
+            )
+
+            # Page profile staleness
+            self.page_profile_staleness_hours = Histogram(
+                "adam_page_profile_staleness_hours",
+                "Age of page profiles when served",
+                buckets=[1, 6, 12, 24, 48, 72, 168],
+            )
+
+            # Page profile confidence
+            self.page_profile_confidence = Histogram(
+                "adam_page_profile_confidence",
+                "Confidence of served page profiles",
+                buckets=[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
+            )
+
+            # Total indexed pages
+            self.page_indexed_total = Gauge(
+                "adam_page_indexed_total",
+                "Total number of indexed page profiles",
+            )
+
+            # Page outcome learning events
+            self.page_outcome_learning_total = Counter(
+                "adam_page_outcome_learning_total",
+                "Page-conditioned outcome learning events",
+            )
+
+            # -----------------------------------------------------------------
             # INFRASTRUCTURE METRICS
             # -----------------------------------------------------------------
-            
+
             # Neo4j query latency
             self.neo4j_latency = Histogram(
                 "adam_neo4j_query_latency_seconds",
@@ -283,8 +429,65 @@ class ADAMMetrics:
                 ["station_format"],
             )
             
+            # -----------------------------------------------------------------
+            # NONCONSCIOUS SIGNAL INTELLIGENCE (Enhancement #34)
+            # -----------------------------------------------------------------
+
+            self.signal_sessions_ingested = Counter(
+                "adam_signal_sessions_ingested_total",
+                "Telemetry sessions ingested by NonconsciousSignalCollector",
+                ["referral_type"],  # ad_click, organic, direct
+            )
+
+            self.signal_processing_depth = Histogram(
+                "adam_signal_processing_depth",
+                "Processing depth weight distribution across impressions",
+                buckets=[0.05, 0.10, 0.30, 0.50, 0.80, 1.00],
+            )
+
+            self.signal_reactance_detections = Counter(
+                "adam_signal_reactance_detections_total",
+                "Individual reactance onset detections (Signal 6)",
+            )
+
+            self.signal_barrier_overrides = Counter(
+                "adam_signal_barrier_overrides_total",
+                "Self-reported barrier overrides of algorithmic diagnosis (Signal 2)",
+                ["self_reported_barrier", "algorithmic_barrier"],
+            )
+
+            self.signal_organic_stage = Counter(
+                "adam_signal_organic_stage_total",
+                "Organic return stage classifications (Signal 3)",
+                ["stage"],  # evaluating_externally, evaluating_with_interest, intending
+            )
+
+            self.signal_frustration_score = Histogram(
+                "adam_signal_frustration_score",
+                "Frustration scores across bilateral edges",
+                buckets=[0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8],
+            )
+
+            self.linucb_selections = Counter(
+                "adam_linucb_selections_total",
+                "Neural-LinUCB mechanism selections",
+                ["mechanism", "agreed_with_thompson"],
+            )
+
+            self.linucb_latency = Histogram(
+                "adam_linucb_latency_seconds",
+                "Neural-LinUCB selection latency",
+                buckets=[0.001, 0.005, 0.010, 0.025, 0.050],
+            )
+
+            self.pca_conversion_score = Histogram(
+                "adam_pca_conversion_score",
+                "PCA-based fast conversion score (PC1, r=-0.849)",
+                buckets=[0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
+            )
+
             self._initialized = True
-            logger.info("ADAM Prometheus metrics initialized")
+            logger.info("ADAM Prometheus metrics initialized (incl. Enhancement #34 signals)")
             
         except ImportError:
             logger.warning("prometheus_client not installed, metrics disabled")
@@ -414,6 +617,49 @@ class ADAMMetrics:
             operation=operation,
         ).observe(latency_seconds)
     
+    def record_page_crawl(
+        self,
+        strategy: str,
+        pass_type: str = "fast_nlp",
+    ) -> None:
+        """Record a page crawl attempt."""
+        if not self._initialized:
+            return
+        self.page_crawl_total.labels(
+            strategy=strategy,
+            pass_type=pass_type,
+        ).inc()
+
+    def record_page_crawl_failure(
+        self,
+        strategy: str,
+        error_type: str = "fetch_failed",
+    ) -> None:
+        """Record a page crawl failure."""
+        if not self._initialized:
+            return
+        self.page_crawl_failures_total.labels(
+            strategy=strategy,
+            error_type=error_type,
+        ).inc()
+
+    def record_page_cache_hit(self, tier: str) -> None:
+        """Record a page cache hit by tier (exact, domain, miss)."""
+        if not self._initialized:
+            return
+        self.page_cache_hits_total.labels(tier=tier).inc()
+
+    def record_page_profile_served(
+        self,
+        staleness_hours: float,
+        confidence: float,
+    ) -> None:
+        """Record when a page profile is served."""
+        if not self._initialized:
+            return
+        self.page_profile_staleness_hours.observe(staleness_hours)
+        self.page_profile_confidence.observe(confidence)
+
     def record_ad_outcome(
         self,
         outcome_type: str,
