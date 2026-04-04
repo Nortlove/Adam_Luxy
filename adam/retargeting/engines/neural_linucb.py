@@ -95,6 +95,17 @@ BILATERAL_CONTEXT_DIMS = [
     "click_latency_slope",             # Negative = resolving, positive = building reactance
     "organic_surge_multiplier",        # Individual organic ratio / population baseline
     "reactance_h4_modifier",           # -0.10 to +0.30 from frequency decay
+    # PCA-compressed dimensions (Session 34-2 CCA follow-up)
+    # PC1 alone correlates r=-0.849 with conversion. Including PCs gives
+    # LinUCB the conversion axis directly as a feature, plus orthogonal
+    # variance components that raw dims don't cleanly separate.
+    "pca_pc1",  # Conversion axis: reactance(+), emotion(-), trust(-)
+    "pca_pc2",  # Processing depth axis
+    "pca_pc3",  # Value-anchor tension axis
+    "pca_pc4",  # Identity-signaling axis
+    "pca_pc5",  # Ownership-uniqueness axis
+    "pca_pc6",  # Disgust sensitivity axis
+    "pca_pc7",  # Ownership-distinctiveness axis
 ]
 
 # Number of mechanism arms
@@ -397,10 +408,35 @@ class NeuralLinUCBSelector:
             arm.update(embedding, reward)
 
     def _build_context_vector(self, bilateral_edge: Dict[str, float]) -> np.ndarray:
-        """Build ordered context vector from bilateral edge dict."""
+        """Build ordered context vector from bilateral edge dict.
+
+        Automatically computes PCA features if the DimensionCompressor
+        is available and the edge has sufficient raw dimensions.
+        """
+        enriched = self._enrich_with_pca(bilateral_edge)
         return np.array([
-            bilateral_edge.get(dim, 0.0) for dim in BILATERAL_CONTEXT_DIMS
+            enriched.get(dim, 0.0) for dim in BILATERAL_CONTEXT_DIMS
         ], dtype=np.float64)
+
+    @staticmethod
+    def _enrich_with_pca(edge: Dict[str, float]) -> Dict[str, float]:
+        """Add PCA-compressed features to the edge dict if not already present."""
+        if "pca_pc1" in edge:
+            return edge  # Already enriched
+
+        try:
+            from adam.intelligence.dimension_compressor import get_dimension_compressor
+            comp = get_dimension_compressor()
+            if comp.is_fitted:
+                pcs = comp.compress(edge)
+                enriched = dict(edge)
+                for i, val in enumerate(pcs):
+                    enriched[f"pca_pc{i+1}"] = float(val)
+                return enriched
+        except Exception:
+            pass
+
+        return edge
 
     def _normalize(self, raw: np.ndarray) -> np.ndarray:
         """Online normalization using running mean/std."""
