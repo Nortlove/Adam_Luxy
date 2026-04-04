@@ -129,6 +129,29 @@ class RetargetingLearningLoop:
         )
         results["levels_updated"] = levels
 
+        # 3b. Update Neural-LinUCB arms (Session 34-3)
+        # Neural-LinUCB needs the bilateral edge context + mechanism + reward
+        # to update its per-arm ridge regression parameters.
+        if context and context.get("bilateral_edge"):
+            try:
+                from adam.retargeting.engines.mechanism_selector import (
+                    BayesianMechanismSelector,
+                )
+                from adam.core.dependencies import Infrastructure, LearningComponents
+                infra = Infrastructure.get_instance()
+                components = LearningComponents.get_instance(infra)
+                if hasattr(components, '_barrier_diagnostic_engine'):
+                    diag_engine = components.barrier_diagnostic_engine
+                    if diag_engine and hasattr(diag_engine, '_mechanism_selector'):
+                        diag_engine._mechanism_selector.update_neural_linucb(
+                            bilateral_edge=context["bilateral_edge"],
+                            mechanism=touch.mechanism.value,
+                            reward=reward * processing_depth_weight,
+                        )
+                        results["neural_linucb_updated"] = True
+            except Exception as e:
+                logger.debug("Neural-LinUCB arm update skipped: %s", e)
+
         # 3. Generate learning signal for Gradient Bridge
         signal = MechanismEffectivenessSignal(
             sequence_id=sequence.sequence_id,
