@@ -230,7 +230,18 @@ cutting-edge psychological personalization and multi-source intelligence.
 
     # Register routers
     register_routers(app)
-    
+
+    # Serve static files (INFORMATIV telemetry JS, deployment docs)
+    try:
+        from pathlib import Path
+        from fastapi.staticfiles import StaticFiles
+        static_dir = Path(__file__).parent.parent / "static"
+        if static_dir.exists():
+            app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
+            logger.info("Static files mounted at /static from %s", static_dir)
+    except Exception as e:
+        logger.debug("Static file serving not available: %s", e)
+
     # Register exception handlers
     register_exception_handlers(app)
     
