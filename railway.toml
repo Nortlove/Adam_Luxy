@@ -1,0 +1,28 @@
+# =============================================================================
+# Railway.app Deployment Configuration — INFORMATIV Pilot
+# =============================================================================
+#
+# Deploys the INFORMATIV FastAPI server on Railway with:
+#   - Auto-HTTPS with custom domain support
+#   - Docker-based build from deployment/Dockerfile
+#   - Health check on /health
+#   - Managed Redis (add as Railway service)
+#
+# Setup:
+#   1. Install Railway CLI: npm i -g @railway/cli
+#   2. Login: railway login
+#   3. Create project: railway init
+#   4. Add Redis: railway add --plugin redis
+#   5. Set env vars: railway variables set KEY=VALUE
+#   6. Deploy: railway up
+#
+# =============================================================================
+
+[build]
+dockerfilePath = "deployment/Dockerfile"
+
+[deploy]
+healthcheckPath = "/health"
+healthcheckTimeout = 120
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3

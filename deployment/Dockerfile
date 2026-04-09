@@ -39,15 +39,14 @@ USER informativ
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-# Expose port
+# Expose port (Railway uses $PORT env var; default 8000 for local)
 EXPOSE 8000
 
-# Start with uvicorn — 2 workers for pilot (sufficient for <100 rps)
-CMD ["uvicorn", "adam.main:create_app", \
-     "--host", "0.0.0.0", \
-     "--port", "8000", \
-     "--workers", "2", \
-     "--loop", "uvloop", \
-     "--http", "httptools", \
-     "--timeout-keep-alive", "30", \
-     "--access-log"]
+# Start with uvicorn — Railway sets $PORT; fallback to 8000
+# 2 workers sufficient for pilot (<100 rps)
+CMD uvicorn adam.main:create_app \
+    --host 0.0.0.0 \
+    --port ${PORT:-8000} \
+    --workers 2 \
+    --timeout-keep-alive 30 \
+    --access-log
