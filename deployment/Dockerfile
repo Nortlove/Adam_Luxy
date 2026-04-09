@@ -10,8 +10,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN useradd -m -s /bin/bash informativ
 WORKDIR /app
 
-# Install Python dependencies
-COPY requirements.txt .
+# Install Python dependencies (production-only set — no ML training, scraping optional pkgs)
+COPY deployment/requirements.production.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
