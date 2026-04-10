@@ -1,0 +1,73 @@
+"""
+Pre-built demo scenarios for the StackAdapt standalone demo.
+All scenarios use All_Beauty category to leverage full annotated depth
+(54K+ Claude-annotated reviews, 27-dimension edges, Bayesian priors).
+"""
+
+SCENARIOS = [
+    {
+        "id": "anti_aging_skincare",
+        "name": "Anti-Aging Skincare",
+        "subtitle": "All Beauty — High-Sincerity Premium Skincare",
+        "description": "Target: Women 35-55 researching anti-aging products. StackAdapt places ads on beauty sites — ADAM understands the prevention-focused psychology from 54K+ Claude-annotated reviews.",
+        "segment_name": "Anti-Aging Skincare Shoppers 35-55",
+        "category": "All_Beauty",
+        "product_name": "Premium Anti-Aging Serum",
+        "asin": "B001LY7FRK",
+        "ad_copy": "Clinically proven to reduce fine lines by 47% in 8 weeks. Dermatologist-developed. Backed by 12 peer-reviewed studies. Join 2M women who refuse to compromise on ingredients.",
+        "sample_review": "I've tried every expensive cream on the market. This is the only one that actually delivers visible results. After 6 weeks my fine lines around the eyes are noticeably reduced. The ingredients list is transparent and clean. Worth every penny.",
+        "icon": "sparkle",
+    },
+    {
+        "id": "bold_color_cosmetics",
+        "name": "Bold Color Cosmetics",
+        "subtitle": "All Beauty — High-Excitement Trend Products",
+        "description": "Target: Trend-forward beauty consumers 20-35. StackAdapt finds them on social beauty content — ADAM identifies the novelty-seeking psychology and optimal creative approach.",
+        "segment_name": "Beauty Innovators 20-35",
+        "category": "All_Beauty",
+        "product_name": "Innovative Color Palette",
+        "asin": "B01NB1ZBA1",
+        "ad_copy": "The color revolution dermatologists are calling 'unprecedented.' Limited first-run batch. 12 never-before-seen shades that adapt to your skin tone. Discover it before everyone else.",
+        "sample_review": "OMG these colors are INCREDIBLE. I've been a makeup artist for 10 years and have never seen pigmentation like this. The staying power is insane — lasted through a 12-hour event. Already ordered backup palettes before they sell out.",
+        "icon": "zap",
+    },
+    {
+        "id": "natural_organic_beauty",
+        "name": "Natural & Organic Beauty",
+        "subtitle": "All Beauty — High-Authenticity Clean Products",
+        "description": "Target: Health-conscious consumers researching clean beauty. StackAdapt reaches them on wellness sites — ADAM knows the trust-orientation and prevention-focused psychology.",
+        "segment_name": "Clean Beauty Seekers 25-45",
+        "category": "All_Beauty",
+        "product_name": "Organic Face Oil",
+        "asin": "B06XRZ6Q4Z",
+        "ad_copy": "100% organic. Zero synthetics. Every ingredient traceable to its source farm. Third-party tested for purity. Because your skin absorbs 60% of what you put on it.",
+        "sample_review": "Finally a truly clean beauty product that actually works. I have extremely sensitive skin and this is the only face oil that doesn't cause irritation. The transparency about sourcing is refreshing. I've converted my entire routine to their products.",
+        "icon": "heart",
+    },
+    {
+        "id": "premium_fragrance",
+        "name": "Premium Fragrance",
+        "subtitle": "All Beauty — High-Sophistication Luxury Products",
+        "description": "Target: Affluent consumers seeking prestige beauty. StackAdapt places ads on luxury content — ADAM understands the status-signaling and identity-expression psychology.",
+        "segment_name": "Luxury Beauty Consumers 28-55",
+        "category": "All_Beauty",
+        "product_name": "Luxury Fragrance Collection",
+        "asin": "B00KCTER3U",
+        "ad_copy": "Hand-crafted in Grasse. Only 2,000 bottles per batch. The fragrance that fashion editors call 'the most important launch of the decade.' By invitation only.",
+        "sample_review": "This is art in a bottle. I've collected niche fragrances for 20 years and this is genuinely special. The longevity is exceptional — compliments 8 hours after application. Worth the premium price. This is the one fragrance I'd take to a desert island.",
+        "icon": "star",
+    },
+    {
+        "id": "social_proof_beauty",
+        "name": "Community-Validated Skincare",
+        "subtitle": "All Beauty — Social Proof Driven Products",
+        "description": "Target: Community-oriented beauty buyers who trust peer recommendations. ADAM's PEER_INFLUENCED edges reveal authentic social influence dynamics.",
+        "segment_name": "Community Beauty Enthusiasts 22-40",
+        "category": "All_Beauty",
+        "product_name": "Viral Skincare Product",
+        "asin": "B01IDOV7TC",
+        "ad_copy": "2.3 million women switched this year. See why #SkincareTok can't stop talking about it. Real reviews. Real results. Try it risk-free for 30 days.",
+        "sample_review": "My best friend recommended this and I'm SO glad I listened. Three of us in our group chat now use it and we compare results weekly. It's become our little ritual. My skin has never looked better and I love being part of this community of women who actually care about what works.",
+        "icon": "users",
+    },
+]
