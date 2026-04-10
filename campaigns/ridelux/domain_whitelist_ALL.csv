@@ -1,0 +1,42 @@
+domain,track,match_score,mechanism,reason
+cnbc.com,status_seeker,0.92,self_expression,Business content primes status identity
+bloomberg.com,status_seeker,0.90,self_expression,Financial news = high-status context
+forbes.com,status_seeker,0.88,status_visibility,Executive lifestyle content
+wsj.com,status_seeker,0.87,self_expression,Premium business audience
+hbr.org,status_seeker,0.85,authority,Leadership/strategy content
+ft.com,status_seeker,0.85,self_expression,Global business elite
+barrons.com,status_seeker,0.83,self_expression,Wealth management context
+vogue.com,status_seeker,0.80,social_visibility,Luxury lifestyle
+townandcountrymag.com,status_seeker,0.80,social_visibility,Premium lifestyle
+fortune.com,status_seeker,0.82,self_expression,Fortune 500 context
+linkedin.com,status_seeker,0.78,status_visibility,Professional identity platform
+fastcompany.com,status_seeker,0.75,self_expression,Innovation leaders
+kayak.com,easy_decider,0.88,frictionless,Active travel booking = ready to decide
+booking.com,easy_decider,0.85,frictionless,Travel booking mode
+expedia.com,easy_decider,0.83,frictionless,Trip planning
+opentable.com,easy_decider,0.78,frictionless,Event planning = needs transport
+hoteltonight.com,easy_decider,0.82,frictionless,Last-minute = fast decider
+weather.com,careful_truster,0.90,evidence,Pre-travel research mode
+flightaware.com,careful_truster,0.88,evidence,Flight tracking = travel imminent
+tripadvisor.com,careful_truster,0.87,social_proof,Review-reading mode
+thepointsguy.com,careful_truster,0.85,comparative,Travel comparison mindset
+cntraveler.com,careful_truster,0.84,comparative,Travel evaluation content
+seatguru.com,careful_truster,0.82,evidence,Detail-oriented traveler
+tsa.gov,careful_truster,0.80,evidence,Travel logistics focus
+flightradar24.com,careful_truster,0.80,evidence,Tracking = planning mindset
+usatoday.com,careful_truster,0.72,evidence,"General news, travel section"
+cnn.com,"status_seeker,careful_truster",0.75,context_dependent,"Business section=status, Travel section=truster"
+nytimes.com,"status_seeker,careful_truster",0.75,context_dependent,"Opinion=status, Travel=truster"
+people.com,easy_decider,0.70,frictionless,Entertainment = low cognitive load
+espn.com,easy_decider,0.68,frictionless,Sports = low deliberation context
+theknot.com,status_seeker,0.85,self_expression,Wedding = status + occasion
+brides.com,status_seeker,0.83,self_expression,Wedding luxury context
+weddingwire.com,careful_truster,0.80,comparative,Wedding vendor comparison
+zola.com,status_seeker,0.78,self_expression,Premium wedding registry
+marthastewart.com,status_seeker,0.75,self_expression,Premium lifestyle
+pinterest.com,status_seeker,0.72,self_expression,Aspiration/planning
+politico.com,status_seeker,0.73,self_expression,Political power context
+axios.com,status_seeker,0.72,self_expression,Business/policy brevity
+inc.com,status_seeker,0.70,self_expression,Entrepreneur context
+economist.com,status_seeker,0.82,self_expression,Global elite readership
+miserymap.com,careful_truster,0.88,evidence,Flight disruption = highest anxiety

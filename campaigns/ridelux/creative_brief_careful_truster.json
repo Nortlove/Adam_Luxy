@@ -1,0 +1,164 @@
+{
+  "archetype": "careful_truster",
+  "display_name": "Careful Truster",
+  "segment_id": "informativ_careful_truster_luxury_transportation_t1",
+  "bilateral_evidence": {
+    "sample_size": 643,
+    "conversion_rate": 0.6501,
+    "alignment_drivers": [
+      {
+        "dim": "brand_trust_fit",
+        "r": 0.6187909047036413,
+        "p": 3.267202064873209e-69,
+        "conv": 0.42812105263157896,
+        "fail": 0.31937777777777776
+      },
+      {
+        "dim": "emotional_resonance",
+        "r": 0.6069673193184637,
+        "p": 5.671141556814759e-66,
+        "conv": 0.5005614832535885,
+        "fail": 0.3583297777777778
+      },
+      {
+        "dim": "negativity_bias_match",
+        "r": -0.6042677627940902,
+        "p": 2.9808261658134336e-65,
+        "conv": 0.1689708133971292,
+        "fail": 0.4688222222222223
+      },
+      {
+        "dim": "appeal_resonance",
+        "r": 0.4498231761828818,
+        "p": 2.3720884816300007e-33,
+        "conv": 0.571794019138756,
+        "fail": 0.5057951111111111
+      },
+      {
+        "dim": "regulatory_fit_score",
+        "r": 0.4077236926760144,
+        "p": 3.7891528749819e-27,
+        "conv": -0.026116985645933014,
+        "fail": -0.07252266666666668
+      },
+      {
+        "dim": "involvement_weight_modifier",
+        "r": -0.2770303025223648,
+        "p": 8.580503237746038e-13,
+        "conv": 1.363243062200957,
+        "fail": 1.4237764444444443
+      }
+    ],
+    "optimal_seller": {
+      "appeals_narrative": {
+        "conv": 0.526,
+        "fail": 0.635,
+        "diff": -0.109
+      },
+      "persuasion_techniques_storytelling": {
+        "conv": 0.48,
+        "fail": 0.58,
+        "diff": -0.1
+      },
+      "value_propositions_social_responsibility": {
+        "conv": 0.555,
+        "fail": 0.642,
+        "diff": -0.086
+      },
+      "emotional_specificity": {
+        "conv": 0.465,
+        "fail": 0.551,
+        "diff": -0.086
+      },
+      "mental_simulation_vividness": {
+        "conv": 0.523,
+        "fail": 0.607,
+        "diff": -0.084
+      },
+      "appeals_emotional": {
+        "conv": 0.686,
+        "fail": 0.754,
+        "diff": -0.069
+      },
+      "framing_loss": {
+        "conv": 0.519,
+        "fail": 0.584,
+        "diff": -0.065
+      },
+      "persuasion_techniques_liking": {
+        "conv": 0.619,
+        "fail": 0.683,
+        "diff": -0.064
+      },
+      "evolutionary_targets_affiliation": {
+        "conv": 0.517,
+        "fail": 0.581,
+        "diff": -0.064
+      },
+      "appeals_comparative": {
+        "conv": 0.344,
+        "fail": 0.282,
+        "diff": 0.061
+      },
+      "attachment_positioning_warmth": {
+        "conv": 0.67,
+        "fail": 0.729,
+        "diff": -0.059
+      },
+      "brand_personality_warmth": {
+        "conv": 0.685,
+        "fail": 0.743,
+        "diff": -0.058
+      }
+    }
+  },
+  "primary_mechanism": "Brand trust + Evidence-based rational appeal",
+  "primary_evidence": "Alignment: brand_trust_fit (r=+0.619), emotional_resonance (r=+0.607), appeal_resonance (r=+0.450). Seller: comparative (r=+0.163), rational (r=+0.126), social_proof (r=+0.148)",
+  "anti_mechanism": "Emotional narrative, warmth, sincerity, belonging",
+  "anti_evidence": "Seller: emotional_specificity (r=-), framing_gain (r=-), persuasion_techniques_liking (r=-0.229), appeals_narrative (r=-0.226), value_propositions_belonging (r=-0.222)",
+  "alignment_key": "brand_trust_fit (r=+0.619) \u2014 THE most powerful predictor of any dimension in any cluster. Trust is not built by warmth. It is built by EVIDENCE.",
+  "headlines": [
+    "4.8 stars. 3,000+ rides. See why travelers switch to LUXY Ride.",
+    "Compare us. We welcome it.",
+    "\"I was skeptical until the driver arrived 10 minutes early.\" \u2014 David K.",
+    "Transparent pricing. Professional chauffeurs. Zero surge. Read the reviews.",
+    "The reviews say more than we ever could."
+  ],
+  "body_copies": [
+    {
+      "approach": "Evidence-First (primary)",
+      "rationale": "appeals_comparative (r=+0.163) and appeals_rational (r=+0.126) HELP. appeals_narrative (r=-0.226) HURTS. These buyers reject stories and trust data.",
+      "copy": "LUXY Ride vs. the alternatives: Professional chauffeur (not gig driver). Flight tracking included (not optional). Price guaranteed at booking (no surge). Cancel free 24h before (no penalty). 4.8 average rating across 3,000+ rides. Compare us at luxyride.com."
+    },
+    {
+      "approach": "Testimonial-as-Evidence (secondary)",
+      "rationale": "social_proof (r=+0.148) works for this cluster \u2014 but as EVIDENCE, not as social pressure. The testimonial must be specific and verifiable.",
+      "copy": "\"I have used Blacklane, GroundLink, and Uber Black. LUXY Ride is the only service where the driver has been early every single time. Seven rides, seven early arrivals. The pricing is transparent and the cars are consistently clean.\" \u2014 Michael R., management consultant. See all reviews at luxyride.com."
+    },
+    {
+      "approach": "Anti-Warmth Trust",
+      "rationale": "brand_personality_sincerity (r=-), persuasion_techniques_liking (r=-0.229). Warmth DESTROYS trust for this segment. They interpret friendliness as salesmanship.",
+      "copy": "We will not tell you we are the best car service. We will tell you this: 4.8 stars. 3,247 completed rides. Zero surge pricing. Flight tracking on every airport pickup. Professional chauffeurs with background checks and 3+ years experience. The data is at luxyride.com/reviews. You decide."
+    }
+  ],
+  "ctas": [
+    "Read the reviews",
+    "Compare services",
+    "See the data"
+  ],
+  "tone": "Factual. Evidence-based. Deliberately un-emotional. Clinical trust.",
+  "framing": "NEITHER gain NOR loss. Pure informational. Let evidence speak.",
+  "what_to_say": [
+    "Hard numbers (rating, ride count, on-time %)",
+    "Comparison language (vs alternatives)",
+    "Verifiable testimonials with names and specifics",
+    "Transparent guarantees (price, cancellation)"
+  ],
+  "what_not_to_say": [
+    "Emotional appeals of ANY kind",
+    "Warmth/friendliness/sincerity language",
+    "Story-driven narratives",
+    "Belonging/community language",
+    "Superlatives (best, #1, unmatched)"
+  ]
+}

@@ -1,0 +1,163 @@
+{
+  "archetype": "status_seeker",
+  "display_name": "Status Seeker",
+  "segment_id": "informativ_status_seeker_luxury_transportation_t1",
+  "bilateral_evidence": {
+    "sample_size": 688,
+    "conversion_rate": 0.9448,
+    "alignment_drivers": [
+      {
+        "dim": "negativity_bias_match",
+        "r": -0.25668305649228174,
+        "p": 8.181264661684045e-12,
+        "conv": -0.014847384615384616,
+        "fail": 0.20559999999999998
+      },
+      {
+        "dim": "involvement_weight_modifier",
+        "r": -0.21611378908685605,
+        "p": 1.02761991465891e-08,
+        "conv": 1.2964595384615385,
+        "fail": 1.3872105263157894
+      },
+      {
+        "dim": "composite_alignment",
+        "r": -0.1876733903059621,
+        "p": 7.129842191024152e-07,
+        "conv": 0.6252098461538462,
+        "fail": 0.6747499999999998
+      },
+      {
+        "dim": "regulatory_fit_score",
+        "r": 0.15765868199368982,
+        "p": 3.269506360928391e-05,
+        "conv": 0.0914043076923077,
+        "fail": 0.0364842105263158
+      },
+      {
+        "dim": "brand_trust_fit",
+        "r": 0.13956123300930556,
+        "p": 0.00024067351853898264,
+        "conv": 0.47051892307692306,
+        "fail": 0.42865000000000003
+      },
+      {
+        "dim": "emotional_resonance",
+        "r": 0.1373599704758354,
+        "p": 0.0003020816651162944,
+        "conv": 0.5202893846153845,
+        "fail": 0.47682894736842113
+      }
+    ],
+    "optimal_seller": {
+      "appeals_narrative": {
+        "conv": 0.492,
+        "fail": 0.619,
+        "diff": -0.127
+      },
+      "persuasion_techniques_storytelling": {
+        "conv": 0.446,
+        "fail": 0.564,
+        "diff": -0.118
+      },
+      "framing_loss": {
+        "conv": 0.462,
+        "fail": 0.572,
+        "diff": -0.109
+      },
+      "value_propositions_social_responsibility": {
+        "conv": 0.537,
+        "fail": 0.644,
+        "diff": -0.107
+      },
+      "mental_simulation_vividness": {
+        "conv": 0.519,
+        "fail": 0.612,
+        "diff": -0.092
+      },
+      "emotional_specificity": {
+        "conv": 0.449,
+        "fail": 0.54,
+        "diff": -0.091
+      },
+      "appeals_fear": {
+        "conv": 0.335,
+        "fail": 0.421,
+        "diff": -0.086
+      },
+      "evolutionary_targets_affiliation": {
+        "conv": 0.493,
+        "fail": 0.572,
+        "diff": -0.078
+      },
+      "appeals_emotional": {
+        "conv": 0.667,
+        "fail": 0.741,
+        "diff": -0.075
+      },
+      "persuasion_techniques_commitment": {
+        "conv": 0.476,
+        "fail": 0.548,
+        "diff": -0.071
+      },
+      "persuasion_techniques_liking": {
+        "conv": 0.607,
+        "fail": 0.677,
+        "diff": -0.07
+      },
+      "persuasion_techniques_reciprocity": {
+        "conv": 0.335,
+        "fail": 0.401,
+        "diff": -0.066
+      }
+    }
+  },
+  "primary_mechanism": "Self-expression + Status visibility",
+  "primary_evidence": "Seller dims: value_propositions_self_expression (r=+), social_visibility (r=+), evolutionary_targets_status (r=+)",
+  "anti_mechanism": "Sincerity, commitment pressure, peace_of_mind framing",
+  "anti_evidence": "Seller dims: brand_personality_sincerity (r=-), persuasion_techniques_commitment (r=-), value_propositions_peace_of_mind (r=-)",
+  "alignment_key": "regulatory_fit_score (r=+0.158) \u2014 promotion framing MUST match their promotion focus",
+  "headlines": [
+    "Your arrival is your introduction.",
+    "Mercedes S-Class. Professional chauffeur. Flight tracked. This is how you travel.",
+    "Some people get there. You arrive.",
+    "The ground transportation that matches how you fly.",
+    "Not a ride. A statement."
+  ],
+  "body_copies": [
+    {
+      "approach": "Status Confirmation (primary)",
+      "rationale": "High status motive (z=+0.90), high optimal_distinctiveness (z=+0.92). Ad must confirm their self-image as someone who naturally chooses premium.",
+      "copy": "You already know the difference between getting there and arriving. Between a car and a chauffeur. Between a service and a standard. LUXY Ride exists for people who made that distinction a long time ago. Mercedes S-Class fleet. Professional chauffeurs who understand discretion. Flight tracking that means you never wait. luxyride.com."
+    },
+    {
+      "approach": "Social Visibility (secondary)",
+      "rationale": "social_visibility correlates with conversion (r=+0.077). The ad should make the CHOICE visible, not the service.",
+      "copy": "400+ companies trust LUXY Ride for executive ground transportation. Not because we asked them to \u2014 because their people kept booking us. When your standard is the standard, the choice makes itself. luxyride.com."
+    },
+    {
+      "approach": "Anti-Sincerity (counterintuitive)",
+      "rationale": "brand_personality_sincerity HURTS conversion (r=-). These buyers distrust warmth. They want competence, not friendliness.",
+      "copy": "We do not send you heartfelt text messages. We send you your driver name, vehicle details, and real-time ETA. Professional. Precise. On time. luxyride.com."
+    }
+  ],
+  "ctas": [
+    "Reserve your chauffeur",
+    "Book now",
+    "Schedule your ride"
+  ],
+  "tone": "Understated premium. Confident, not warm. Direct, not effusive.",
+  "framing": "Pure gain/promotion. Zero loss framing \u2014 these buyers are not afraid.",
+  "what_to_say": [
+    "Specific vehicle models",
+    "Professional chauffeur (never driver)",
+    "Numbers that signal scale (400+ companies)",
+    "Self-expression language (your standard, your arrival)"
+  ],
+  "what_not_to_say": [
+    "Sincerity/warmth language (we care, we love)",
+    "Commitment pressure (book now, limited)",
+    "Peace of mind / safety-first",
+    "Discount/deal language"
+  ]
+}

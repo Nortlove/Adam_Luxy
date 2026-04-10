@@ -1,0 +1,210 @@
+{
+  "retargeting_system": "Sequential Bilateral Mechanism Deployment",
+  "principle": "Each retargeting touch addresses the specific alignment threshold that FAILED on the previous touch. Standard retargeting repeats the same message. This system deploys a DIFFERENT mechanism each time, targeting the buyer's weakest alignment dimension.",
+  "data_foundation": "3,103 bilateral edges, non-converter sub-clustering, threshold failure analysis with inferential statistics (t-test, p<0.05)",
+
+  "careful_truster": {
+    "non_converter_count": 225,
+    "non_converter_pct": "35%",
+    "why_they_fail": "High negativity_bias_match (fail=0.469 vs conv=0.169) means they weight negative information too heavily. Low brand_trust_fit (fail=0.319 vs conv=0.428) means the brand hasn't earned their trust yet. Low emotional_resonance (fail=0.358 vs conv=0.501) means the messaging felt transactional, not human.",
+    "sub_clusters": {
+      "sub_0": {
+        "n": 89,
+        "label": "The Almost-Convinced",
+        "description": "Good processing and appeal scores but low anchor_susceptibility. They evaluated but couldn't justify the price relative to alternatives.",
+        "retargeting_mechanism": "price_anchor",
+        "creative": "Compare LUXY Ride price to hotel car service or Uber Black surge. 'JFK to Manhattan: Uber Black surge at 9 PM = $85-120. LUXY Ride = $65 guaranteed. Always.' Make the value comparison explicit."
+      },
+      "sub_1": {
+        "n": 25,
+        "label": "The Fear-Frozen",
+        "description": "Very high negativity_bias — they read the bad reviews and froze. Can't get past the fear of no-show/bad experience.",
+        "retargeting_mechanism": "resolved_anxiety_narrative",
+        "creative": "Testimonial from someone who was ALSO skeptical: 'After 2 no-shows with [competitor], I was done with car services. My colleague insisted I try LUXY Ride. Driver was early. Car was clean. I've used them 11 times since.' The key: the testimonial author SHARES their psychology."
+      },
+      "sub_2": {
+        "n": 111,
+        "label": "The Uninspired",
+        "description": "Low mental_simulation and appeal resonance. The messaging didn't create a vivid picture of the experience. They couldn't imagine themselves using the service.",
+        "retargeting_mechanism": "vivid_scenario",
+        "creative": "Specific, sensory-rich scene: 'Tuesday morning. 5:47 AM. Your LUXY Ride driver David is already at your building. Black Mercedes, engine running. Your name on the screen. Coffee-temperature water in the door. You get in, review your deck on the way to JFK. You arrive at Terminal 4 at 6:23 — exactly when you planned.'"
+      }
+    },
+    "sequence": [
+      {
+        "touch": 1,
+        "type": "prospecting",
+        "mechanism": "evidence_proof",
+        "creative_type": "Comparative rational — numbers, ratings, guarantee details",
+        "rationale": "First touch establishes credibility. appeals_comparative (r=+0.163) and appeals_rational (r=+0.126) convert this archetype."
+      },
+      {
+        "touch": 2,
+        "type": "retargeting",
+        "trigger": "Visited site but did not book within 48h",
+        "mechanism": "evidence_proof_deeper",
+        "creative_type": "Deeper evidence — specific review quotes with names, verified ride count, guarantee details",
+        "rationale": "brand_trust_fit is the #1 converter (r=+0.619). Touch 2 deepens the trust evidence. NOT warmer — more factual.",
+        "alignment_target": "brand_trust_fit (gap=+0.109, d=+1.622)"
+      },
+      {
+        "touch": 3,
+        "type": "retargeting",
+        "trigger": "Returned to site OR 72h after touch 2",
+        "mechanism": "testimonial_as_evidence",
+        "creative_type": "Specific customer testimonial — but framed as EVIDENCE, not emotional story. 'Michael R., 47 rides, zero issues.'",
+        "rationale": "emotional_resonance is the #2 converter (r=+0.607) but must be deployed as PROOF not warmth. The testimonial creates emotional identification without triggering the anti-sincerity reaction.",
+        "alignment_target": "emotional_resonance (gap=+0.142, d=+1.439)"
+      },
+      {
+        "touch": 4,
+        "type": "retargeting",
+        "trigger": "Started booking but abandoned",
+        "mechanism": "price_anchor_guarantee",
+        "creative_type": "Direct price comparison + risk removal. 'Your ride to JFK: $65 guaranteed. No surge. Cancel free 24h before. Book now.'",
+        "rationale": "Abandoned booking = price/commitment friction. Address spending_pain directly with guarantee.",
+        "alignment_target": "anchor_susceptibility_match + spending_pain_match"
+      },
+      {
+        "touch": 5,
+        "type": "retargeting_final",
+        "trigger": "14 days after first visit, no conversion",
+        "mechanism": "social_proof_volume",
+        "creative_type": "Pure numbers: '3,247 rides. 4.8 stars. Join them.' Minimal copy, maximum evidence.",
+        "rationale": "Last attempt uses social_proof (r=+0.148). If 5 touches haven't converted, move to suppression.",
+        "alignment_target": "optimal_distinctiveness_fit"
+      }
+    ],
+    "suppression_rules": [
+      "After touch 5 with no conversion: suppress 30 days",
+      "If CTR drops below 0.03% after touch 3: suppress immediately",
+      "If user visits a competitor site (detected via 3rd party): restart sequence at touch 1 with urgency variant"
+    ]
+  },
+
+  "status_seeker": {
+    "non_converter_count": 38,
+    "non_converter_pct": "6%",
+    "why_they_fail": "Regulatory fit failure (fail=0.036 vs conv=0.091) — the ad wasn't aspirational enough. Brand trust gap (fail=0.429 vs conv=0.471) — they need more status confirmation.",
+    "sub_clusters": {
+      "sub_0": {
+        "n": 30,
+        "label": "The Negativity-Blocked",
+        "description": "Low negativity_bias_match — they encountered negative information about luxury car services and it blocked their promotion-focused decision.",
+        "retargeting_mechanism": "positive_reframe",
+        "creative": "Override negative with status: 'Fortune 500 executives don't worry about rideshare reviews. They book LUXY Ride. luxyride.com'"
+      },
+      "sub_1": {
+        "n": 7,
+        "label": "The Trust-Gap",
+        "description": "High negativity but low emotional resonance and low brand trust. They want to believe but haven't seen enough proof.",
+        "retargeting_mechanism": "authority_credentials",
+        "creative": "Credential-heavy: '400+ companies. Mercedes S-Class fleet. Chauffeurs with 3+ years experience and background verification. luxyride.com'"
+      }
+    },
+    "sequence": [
+      {
+        "touch": 1,
+        "type": "prospecting",
+        "mechanism": "status_confirmation",
+        "creative_type": "Self-expression + social visibility. 'Your arrival is your introduction.'",
+        "rationale": "Primary mechanism for this archetype."
+      },
+      {
+        "touch": 2,
+        "type": "retargeting",
+        "trigger": "Visited site but did not book within 24h",
+        "mechanism": "promotion_framing",
+        "creative_type": "Stronger aspirational framing. 'Not a ride. A statement. Book your chauffeur.'",
+        "rationale": "regulatory_fit_score gap (d=+0.742). Push harder on promotion/gain framing.",
+        "alignment_target": "regulatory_fit_score"
+      },
+      {
+        "touch": 3,
+        "type": "retargeting",
+        "trigger": "48h after touch 2",
+        "mechanism": "trust_credentials",
+        "creative_type": "Authority proof: fleet specs, company stats, named client testimonial.",
+        "rationale": "brand_trust_fit gap (d=+0.510). Status seekers trust credentials, not warmth.",
+        "alignment_target": "brand_trust_fit"
+      }
+    ],
+    "suppression_rules": [
+      "After touch 3 with no conversion: suppress 14 days",
+      "Status seekers have LOW reactance — can re-engage after 14-day cooling"
+    ]
+  },
+
+  "easy_decider": {
+    "non_converter_count": 47,
+    "non_converter_pct": "9%",
+    "why_they_fail": "Processing_route_match failure (fail=0.480 vs conv=0.618, d=+1.364) — the messaging was too complex for their low-deliberation style. Composite alignment also low — overall fit was poor.",
+    "sub_clusters": {
+      "sub_0": {
+        "n": 18,
+        "label": "The Motive-Mismatch",
+        "description": "Very low evolutionary_motive_match — the ad spoke to the wrong need entirely.",
+        "retargeting_mechanism": "direct_motive",
+        "creative": "Simple motive-match: 'Airport pickup? LUXY Ride. Done.' or 'Client dinner? Your car is booked. luxyride.com'"
+      },
+      "sub_1": {
+        "n": 23,
+        "label": "The Over-Processed",
+        "description": "Higher involvement and construal than typical easy deciders — they were asked to think too much.",
+        "retargeting_mechanism": "simplify_radically",
+        "creative": "Maximum simplicity: 'LUXY Ride. Tap. Book. Arrive. luxyride.com' — under 10 words total."
+      }
+    },
+    "sequence": [
+      {
+        "touch": 1,
+        "type": "prospecting",
+        "mechanism": "frictionless",
+        "creative_type": "Ultra-simple. 'Book in 30 seconds. Arrive in style.'",
+        "rationale": "Low maximizer (z=-1.51), low information search (z=-1.27)."
+      },
+      {
+        "touch": 2,
+        "type": "retargeting",
+        "trigger": "Visited site but did not book within 24h",
+        "mechanism": "even_simpler",
+        "creative_type": "Reduce to absolute minimum: 'Your ride is waiting. [Book Now button]'",
+        "rationale": "processing_route_match is the #1 failure (d=+1.364). The original ad was still too complex.",
+        "alignment_target": "processing_route_match"
+      },
+      {
+        "touch": 3,
+        "type": "retargeting",
+        "trigger": "Started booking but abandoned",
+        "mechanism": "remove_last_friction",
+        "creative_type": "'Cancel free anytime. No commitment. Just book.' — address the commitment anxiety.",
+        "rationale": "composite_alignment gap (d=+1.318) suggests overall friction. Remove ALL barriers.",
+        "alignment_target": "composite_alignment"
+      }
+    ],
+    "suppression_rules": [
+      "After touch 3: suppress 7 days (they decide fast or not at all)",
+      "Easy deciders don't deliberate — if 3 touches don't work, more won't help"
+    ]
+  },
+
+  "cross_archetype_rules": {
+    "archetype_reclassification": "If a user classified as status_seeker on touch 1 shows careful_truster behavior (returns to compare, reads reviews), reclassify and switch to careful_truster sequence.",
+    "booking_abandonment": "Any archetype that starts booking and abandons gets a UNIVERSAL touch within 2 hours: 'Your ride is saved. Complete your booking: [link]' — pure CTA, no persuasion.",
+    "competitive_signal": "If a user visits LUXY Ride site AND a competitor site within 72h (detected via pixel/3rd party), escalate to comparison creative: 'LUXY Ride vs [competitor]: [differentiator].'",
+    "post_conversion": "After conversion, STOP all retargeting. Switch to retention track (easy_decider sequence with recognition language: 'Welcome back').",
+    "frequency_across_sequence": "Maximum 1 retargeting impression per 24h. Maximum 5 total in sequence. Reactance recovery: if CTR < 0.03% at any point, pause 72h."
+  },
+
+  "implementation_in_stackadapt": {
+    "pixel_setup": "Install retargeting pixel on: (1) homepage, (2) pricing page, (3) booking start page, (4) booking confirmation page",
+    "audience_segments": [
+      "Visit but no booking start (Touch 2)",
+      "Booking started but abandoned (Touch 3-4)",
+      "Multiple visits, no action (Touch 3-5)",
+      "Converted — EXCLUDE from retargeting"
+    ],
+    "creative_rotation": "Do NOT use StackAdapt's standard creative rotation. Each touch MUST use a DIFFERENT creative mapped to the sequence above. Set up as sequential campaigns with audience exclusion rules.",
+    "measurement": "Track per-touch conversion rate separately. The hypothesis: each subsequent touch should convert at a HIGHER rate than the previous (because it addresses a more specific failure). If touch N converts lower than touch N-1, the mechanism mapping is wrong for that archetype."
+  }
+}

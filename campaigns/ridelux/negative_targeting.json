@@ -1,0 +1,46 @@
+{
+  "domain_exclusions": [
+    "carmellimo.com",
+    "uber.com",
+    "lyft.com",
+    "tmz.com",
+    "dailymail.co.uk",
+    "foxnews.com",
+    "breitbart.com",
+    "infowars.com",
+    "groupon.com",
+    "retailmenot.com",
+    "slickdeals.net",
+    "buzzfeed.com",
+    "reddit.com/r/personalfinance",
+    "complaint.com",
+    "ripoffreport.com",
+    "yelp.com/topic/worst",
+    "accidentnews.net",
+    "flightcompensation.com",
+    "airlinecomplaints.org",
+    "gethumanservice.com",
+    "consumeraffairs.com/transportation"
+  ],
+  "keyword_exclusions": [
+    "stranded airport",
+    "rideshare horror",
+    "car accident",
+    "driver assault",
+    "taxi scam",
+    "hidden fees complaint",
+    "surge pricing",
+    "flight cancelled chaos"
+  ],
+  "contextual_exclusions": [
+    "Breaking negative news (high arousal + negative valence)",
+    "Coupon/deal content",
+    "Competitor advertising adjacency",
+    "Crime/accident reporting"
+  ],
+  "audience_exclusions": [
+    "Recent LUXY Ride bookers (7-day window)",
+    "Users with 5+ impressions and 0 clicks (reactance recovery)",
+    "Users classified as skeptical_analyst or disillusioned (suppress or minimal)"
+  ]
+}

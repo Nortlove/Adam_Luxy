@@ -1,0 +1,171 @@
+{
+  "principle": "Each retargeting touch deploys a DIFFERENT mechanism targeting the specific bilateral alignment gap. Standard retargeting repeats the same message. This system deploys a diagnostic intervention.",
+  "critical_rules": [
+    "Do NOT use StackAdapt standard creative rotation",
+    "Each touch MUST use the specific creative mapped to that position",
+    "Set up as SEQUENTIAL campaigns with audience EXCLUSION rules",
+    "After conversion: IMMEDIATELY exclude from ALL retargeting",
+    "If CTR drops below 0.03% after 3 touches: pause 72 hours"
+  ],
+  "per_archetype_sequences": [
+    {
+      "archetype": "careful_truster",
+      "max_touches": 5,
+      "max_duration_days": 21,
+      "suppression_after_max": "14 days",
+      "touches": [
+        {
+          "position": 1,
+          "mechanism": "social_proof_matched",
+          "barrier": "negativity_block",
+          "trigger": "site_revisit",
+          "min_hours_after_previous": 24,
+          "max_hours_after_previous": 72,
+          "audience_rule": "All qualified visitors"
+        },
+        {
+          "position": 2,
+          "mechanism": "evidence_proof",
+          "barrier": "negativity_block",
+          "trigger": "site_revisit",
+          "min_hours_after_previous": 24,
+          "max_hours_after_previous": 72,
+          "audience_rule": "Touch 1 served AND NOT engaged"
+        },
+        {
+          "position": 3,
+          "mechanism": "evidence_proof",
+          "barrier": "negativity_block",
+          "trigger": "site_revisit",
+          "min_hours_after_previous": 24,
+          "max_hours_after_previous": 72,
+          "audience_rule": "Touch 2 served AND NOT engaged"
+        },
+        {
+          "position": 4,
+          "mechanism": "social_proof_matched",
+          "barrier": "negativity_block",
+          "trigger": "site_revisit",
+          "min_hours_after_previous": 24,
+          "max_hours_after_previous": 72,
+          "audience_rule": "Touch 3 served AND NOT engaged"
+        },
+        {
+          "position": 5,
+          "mechanism": "anxiety_resolution",
+          "barrier": "negativity_block",
+          "trigger": "site_revisit",
+          "min_hours_after_previous": 24,
+          "max_hours_after_previous": 72,
+          "audience_rule": "Touch 4 served AND NOT engaged"
+        }
+      ]
+    },
+    {
+      "archetype": "status_seeker",
+      "max_touches": 5,
+      "max_duration_days": 21,
+      "suppression_after_max": "14 days",
+      "touches": [
+        {
+          "position": 1,
+          "mechanism": "narrative_transportation",
+          "barrier": "identity_misalignment",
+          "trigger": "site_revisit",
+          "min_hours_after_previous": 24,
+          "max_hours_after_previous": 72,
+          "audience_rule": "All qualified visitors"
+        },
+        {
+          "position": 2,
+          "mechanism": "social_proof_matched",
+          "barrier": "identity_misalignment",
+          "trigger": "site_revisit",
+          "min_hours_after_previous": 24,
+          "max_hours_after_previous": 72,
+          "audience_rule": "Touch 1 served AND NOT engaged"
+        },
+        {
+          "position": 3,
+          "mechanism": "narrative_transportation",
+          "barrier": "identity_misalignment",
+          "trigger": "site_revisit",
+          "min_hours_after_previous": 24,
+          "max_hours_after_previous": 72,
+          "audience_rule": "Touch 2 served AND NOT engaged"
+        },
+        {
+          "position": 4,
+          "mechanism": "social_proof_matched",
+          "barrier": "identity_misalignment",
+          "trigger": "site_revisit",
+          "min_hours_after_previous": 24,
+          "max_hours_after_previous": 72,
+          "audience_rule": "Touch 3 served AND NOT engaged"
+        },
+        {
+          "position": 5,
+          "mechanism": "claude_argument",
+          "barrier": "identity_misalignment",
+          "trigger": "site_revisit",
+          "min_hours_after_previous": 24,
+          "max_hours_after_previous": 72,
+          "audience_rule": "Touch 4 served AND NOT engaged"
+        }
+      ]
+    },
+    {
+      "archetype": "easy_decider",
+      "max_touches": 5,
+      "max_duration_days": 21,
+      "suppression_after_max": "14 days",
+      "touches": [
+        {
+          "position": 1,
+          "mechanism": "loss_framing",
+          "barrier": "intention_action_gap",
+          "trigger": "site_revisit",
+          "min_hours_after_previous": 24,
+          "max_hours_after_previous": 72,
+          "audience_rule": "All qualified visitors"
+        },
+        {
+          "position": 2,
+          "mechanism": "implementation_intention",
+          "barrier": "intention_action_gap",
+          "trigger": "site_revisit",
+          "min_hours_after_previous": 24,
+          "max_hours_after_previous": 72,
+          "audience_rule": "Touch 1 served AND NOT engaged"
+        },
+        {
+          "position": 3,
+          "mechanism": "micro_commitment",
+          "barrier": "intention_action_gap",
+          "trigger": "site_revisit",
+          "min_hours_after_previous": 24,
+          "max_hours_after_previous": 72,
+          "audience_rule": "Touch 2 served AND NOT engaged"
+        },
+        {
+          "position": 4,
+          "mechanism": "ownership_reactivation",
+          "barrier": "intention_action_gap",
+          "trigger": "site_revisit",
+          "min_hours_after_previous": 24,
+          "max_hours_after_previous": 72,
+          "audience_rule": "Touch 3 served AND NOT engaged"
+        },
+        {
+          "position": 5,
+          "mechanism": "micro_commitment",
+          "barrier": "intention_action_gap",
+          "trigger": "site_revisit",
+          "min_hours_after_previous": 24,
+          "max_hours_after_previous": 72,
+          "audience_rule": "Touch 4 served AND NOT engaged"
+        }
+      ]
+    }
+  ]
+}

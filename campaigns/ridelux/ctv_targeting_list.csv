@@ -1,0 +1,26 @@
+show_name,genre,network,track,mechanism,immersion_depth,reason
+Succession,Drama,HBO,status_seeker,self_expression,very_high,Corporate power dynamics mirrors status_seeker identity
+Industry,Drama,HBO,status_seeker,self_expression,very_high,Finance/ambition context
+The Morning Show,Drama,Apple TV+,status_seeker,self_expression,high,Media elite setting
+Billions,Drama,Showtime,status_seeker,self_expression,high,Wealth/power
+Mad Men,Drama,AMC,status_seeker,self_expression,high,Professional identity construction
+Suits,Drama,USA/Netflix,status_seeker,authority,high,Legal professional context
+The White Lotus,Drama,HBO,status_seeker,social_visibility,very_high,Luxury travel setting
+Emily in Paris,Comedy,Netflix,status_seeker,social_visibility,medium,Aspirational travel
+The Amazing Race,Reality,CBS,careful_truster,evidence,high,Travel logistics under pressure
+Anthony Bourdain Parts Unknown,Travel,CNN,careful_truster,evidence,very_high,Travel discovery mindset
+Rick Steves Europe,Travel,PBS,careful_truster,comparative,high,Travel comparison
+House Hunters International,Reality,HGTV,careful_truster,evidence,medium,Relocation/travel planning
+Airport 24/7,Documentary,Travel Channel,careful_truster,evidence,very_high,Airport environment
+CNN Airport Network,News,CNN,careful_truster,evidence,very_high,Literal airport context
+Departures,Travel,Netflix,careful_truster,evidence,high,Premium travel documentary
+Planet Earth,Documentary,BBC,easy_decider,frictionless,high,"Low cognitive load, premium feel"
+The Great British Baking Show,Reality,Netflix,easy_decider,frictionless,medium,"Warm, low-stress content"
+Ted Lasso,Comedy,Apple TV+,easy_decider,frictionless,medium,"Feel-good, low deliberation"
+Formula 1: Drive to Survive,Documentary,Netflix,status_seeker,self_expression,high,Luxury/performance
+Bridgerton,Drama,Netflix,status_seeker,social_visibility,very_high,Cinematic luxury
+The Crown,Drama,Netflix,status_seeker,self_expression,very_high,Elite status setting
+60 Minutes,News,CBS,careful_truster,evidence,high,Investigative = evidence mindset
+Bloomberg TV,News,Bloomberg,status_seeker,self_expression,medium,Financial market context
+CNBC Squawk Box,News,CNBC,status_seeker,self_expression,medium,Morning business
+Say Yes to the Dress,Reality,TLC,status_seeker,self_expression,high,Wedding luxury occasion

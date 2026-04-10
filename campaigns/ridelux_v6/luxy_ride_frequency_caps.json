@@ -1,0 +1,23 @@
+{
+  "careful_truster": {
+    "max_impressions_per_day": 2,
+    "max_impressions_per_week": 7,
+    "min_hours_between_impressions": 8,
+    "conversion_rate_basis": 0.6501,
+    "rationale": "Lower conversion rate (65%) — needs more touches and tighter spacing to build trust before interest decays. 7/week allows full 5-touch sequence in first week."
+  },
+  "status_seeker": {
+    "max_impressions_per_day": 2,
+    "max_impressions_per_week": 4,
+    "min_hours_between_impressions": 16,
+    "conversion_rate_basis": 0.9448,
+    "rationale": "Highest conversion rate (94.5%) — converts quickly, avoid over-saturation. Wider spacing preserves exclusivity perception aligned with status archetype."
+  },
+  "easy_decider": {
+    "max_impressions_per_day": 3,
+    "max_impressions_per_week": 6,
+    "min_hours_between_impressions": 6,
+    "conversion_rate_basis": 0.9093,
+    "rationale": "Action-oriented archetype with 91% conversion. Higher daily cap (3) to capitalize on impulse windows. Shorter spacing — these buyers decide fast but need the right moment."
+  }
+}

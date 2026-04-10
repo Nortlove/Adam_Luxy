@@ -1,0 +1,17 @@
+hours,day_type,track,bid_multiplier,reason
+6-9,weekday,status_seeker,1.3,Morning commute planning — peak status-seeker engagement
+9-17,weekday,status_seeker,1.1,Business hours
+17-20,weekday,status_seeker,0.9,Decompression — lower receptivity
+20-23,weekday,status_seeker,0.7,Evening leisure — wrong mindset
+8-12,weekend,status_seeker,0.8,Weekend morning — moderate
+12-22,weekend,status_seeker,0.6,Weekend leisure — status frame inactive
+0-6,any,easy_decider,0.7,Low traffic but pre-dawn travel = high intent
+6-9,weekday,easy_decider,1.2,Morning booking window
+9-17,weekday,easy_decider,0.9,Work hours — distracted
+17-22,any,easy_decider,1.1,Evening booking — trip planning
+8-22,weekend,easy_decider,1.0,Flat — easy deciders convert anytime
+5-8,any,careful_truster,1.3,Pre-travel morning — highest anxiety/research
+8-12,weekday,careful_truster,1.0,Research hours
+12-17,weekday,careful_truster,0.8,Afternoon — lower research intensity
+17-22,any,careful_truster,1.2,Evening research/comparison mode
+22-5,any,careful_truster,1.4,"Late night — travel anxiety peaks, research mode active"

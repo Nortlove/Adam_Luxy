@@ -1,0 +1,99 @@
+{
+  "conversion_pixels": [
+    {
+      "name": "LUXY Ride \u2014 Site Visit",
+      "event_name": "site_visit",
+      "trigger": "page_url contains https://luxyride.com",
+      "attribution_window_days": 30,
+      "pixel_id": "<<REPLACE: Created in StackAdapt Pixels page>>",
+      "implementation": "StackAdapt Universal Pixel + custom event triggers"
+    },
+    {
+      "name": "LUXY Ride \u2014 Pricing View",
+      "event_name": "pricing_view",
+      "trigger": "page_url contains /pricing OR page_url contains /rates",
+      "attribution_window_days": 14,
+      "pixel_id": "<<REPLACE: Created in StackAdapt Pixels page>>",
+      "implementation": "StackAdapt Universal Pixel + custom event triggers"
+    },
+    {
+      "name": "LUXY Ride \u2014 Booking Start",
+      "event_name": "booking_start",
+      "trigger": "custom_event = booking_initiated",
+      "attribution_window_days": 7,
+      "pixel_id": "<<REPLACE: Created in StackAdapt Pixels page>>",
+      "implementation": "StackAdapt Universal Pixel + custom event triggers"
+    },
+    {
+      "name": "LUXY Ride \u2014 Booking Complete (PRIMARY)",
+      "event_name": "booking_complete",
+      "trigger": "custom_event = booking_confirmed",
+      "attribution_window_days": 7,
+      "revenue_tracking": true,
+      "is_primary_conversion": true,
+      "pixel_id": "<<REPLACE: Created in StackAdapt Pixels page>>",
+      "implementation": "StackAdapt Universal Pixel + custom event triggers"
+    }
+  ],
+  "kpis": {
+    "primary": "cost_per_booking",
+    "stackadapt_reportable": [
+      "per_touch_conversion_rate",
+      "stage_advancement_rate",
+      "click_through_rate",
+      "cost_per_click",
+      "impressions_by_campaign",
+      "frequency_per_user"
+    ],
+    "informativ_internal": [
+      "barrier_resolution_rate",
+      "retargeting_sequence_efficiency",
+      "mechanism_effectiveness_by_archetype",
+      "resonance_score_by_page_cluster",
+      "copy_variant_conversion_delta"
+    ],
+    "informativ_unified_system": [
+      "bong_posterior_convergence_rate",
+      "bong_calibration_coverage_pct",
+      "diagnostic_hypothesis_distribution",
+      "counterfactual_learning_multiplier",
+      "trilateral_epistemic_decomposition",
+      "propagation_multiplier_by_barrier",
+      "within_subject_icc",
+      "design_effect_weight_distribution",
+      "page_cluster_prescription_accuracy",
+      "information_value_bid_premium_avg",
+      "frustrated_pair_resolution_rate",
+      "mechanism_probability_entropy"
+    ],
+    "metric_definitions": {
+      "bong_posterior_convergence_rate": "How quickly per-buyer BONG posteriors narrow. Measured as entropy reduction per observation.",
+      "diagnostic_hypothesis_distribution": "Frequency of H1-H5 across all non-conversion outcomes. Healthy: no single hypothesis >50%.",
+      "counterfactual_learning_multiplier": "Total BONG updates / direct observations. Target: 2-4x. Higher = faster convergence.",
+      "trilateral_epistemic_decomposition": "% of exploration driven by buyer uncertainty vs page×mechanism uncertainty vs buyer×page uncertainty.",
+      "propagation_multiplier_by_barrier": "Ratio of propagated conversion lift to direct lift per barrier. >1.0 means correlation structure adds value.",
+      "within_subject_icc": "Intraclass correlation — how much of outcome variance is due to the person vs the intervention. High ICC = consistent person, design-effect discount applies.",
+      "page_cluster_prescription_accuracy": "% of touches where the prescribed page cluster matches the actual delivery. Measures StackAdapt targeting fidelity.",
+      "information_value_bid_premium_avg": "Average bid premium from information value. Should decrease over campaign lifetime as buyers get characterized.",
+      "mechanism_probability_entropy": "Shannon entropy of mechanism selection probabilities. High = uncertain selection (exploring). Low = confident (exploiting)."
+    },
+    "note": "informativ_internal KPIs are computed by INFORMATIV's outcome handler and resonance learner. informativ_unified_system KPIs track the new BONG, DiagnosticReasoner, and counterfactual learning components."
+  },
+  "reporting": {
+    "frequency": "daily",
+    "breakdowns": [
+      "archetype",
+      "touch_position",
+      "mechanism",
+      "creative"
+    ],
+    "informativ_hypothesis": "Each subsequent touch should convert at a HIGHER rate than the previous. If touch N converts lower than touch N-1, the DiagnosticReasoner will identify WHY (H1-H5) and adapt the next touch accordingly.",
+    "unified_system_hypotheses": [
+      "BONG correlated posteriors converge faster than independent Betas (measure: observations-to-80%-confidence)",
+      "Propagation-aware barrier targeting selects different (better) barriers than largest-gap in >20% of cases",
+      "Counterfactual learning multiplier reaches 2-4x by week 2",
+      "Trilateral epistemic page prescription produces higher engagement than population-default page targeting",
+      "Within-subject design-effect weight correctly discounts correlated observations (verify ICC estimation)"
+    ]
+  }
+}

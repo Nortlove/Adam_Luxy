@@ -1,0 +1,163 @@
+{
+  "archetype": "easy_decider",
+  "display_name": "Easy Decider",
+  "segment_id": "informativ_easy_decider_luxury_transportation_t1",
+  "bilateral_evidence": {
+    "sample_size": 518,
+    "conversion_rate": 0.9093,
+    "alignment_drivers": [
+      {
+        "dim": "evolutionary_motive_match",
+        "r": 0.4840689055695916,
+        "p": 8.741945383955886e-32,
+        "conv": 0.45875626326963903,
+        "fail": 0.34042765957446813
+      },
+      {
+        "dim": "composite_alignment",
+        "r": 0.454673214712802,
+        "p": 8.61969014239699e-28,
+        "conv": 0.5203709129511677,
+        "fail": 0.4250744680851064
+      },
+      {
+        "dim": "processing_route_match",
+        "r": 0.41963518594169963,
+        "p": 1.641249653673854e-23,
+        "conv": 0.6177176220806795,
+        "fail": 0.4796808510638299
+      },
+      {
+        "dim": "appeal_resonance",
+        "r": 0.41797501418521166,
+        "p": 2.5457363611060394e-23,
+        "conv": 0.5051072186836518,
+        "fail": 0.4321340425531914
+      },
+      {
+        "dim": "construal_fit_score",
+        "r": 0.39805366792619806,
+        "p": 4.0942590201786166e-21,
+        "conv": 0.8628237791932062,
+        "fail": 0.7259574468085106
+      },
+      {
+        "dim": "involvement_weight_modifier",
+        "r": 0.37391378101300093,
+        "p": 1.2381531378254642e-18,
+        "conv": 1.1393698513800428,
+        "fail": 0.9996617021276594
+      }
+    ],
+    "optimal_seller": {
+      "appeals_narrative": {
+        "conv": 0.517,
+        "fail": 0.602,
+        "diff": -0.085
+      },
+      "value_propositions_social_responsibility": {
+        "conv": 0.539,
+        "fail": 0.618,
+        "diff": -0.079
+      },
+      "framing_loss": {
+        "conv": 0.501,
+        "fail": 0.58,
+        "diff": -0.078
+      },
+      "persuasion_techniques_storytelling": {
+        "conv": 0.47,
+        "fail": 0.545,
+        "diff": -0.075
+      },
+      "mental_simulation_vividness": {
+        "conv": 0.522,
+        "fail": 0.594,
+        "diff": -0.072
+      },
+      "emotional_specificity": {
+        "conv": 0.461,
+        "fail": 0.53,
+        "diff": -0.069
+      },
+      "persuasion_techniques_reciprocity": {
+        "conv": 0.345,
+        "fail": 0.409,
+        "diff": -0.064
+      },
+      "appeals_fear": {
+        "conv": 0.363,
+        "fail": 0.423,
+        "diff": -0.06
+      },
+      "evolutionary_targets_affiliation": {
+        "conv": 0.506,
+        "fail": 0.56,
+        "diff": -0.053
+      },
+      "appeals_emotional": {
+        "conv": 0.678,
+        "fail": 0.729,
+        "diff": -0.051
+      },
+      "persuasion_techniques_commitment": {
+        "conv": 0.486,
+        "fail": 0.534,
+        "diff": -0.049
+      },
+      "persuasion_techniques_liking": {
+        "conv": 0.614,
+        "fail": 0.663,
+        "diff": -0.049
+      }
+    }
+  },
+  "primary_mechanism": "Evolutionary motive match + Processing ease",
+  "primary_evidence": "Alignment: evolutionary_motive_match (r=+0.484), processing_route_match (r=+0.420), composite_alignment (r=+0.455)",
+  "anti_mechanism": "Complexity, commitment, reciprocity, sincerity",
+  "anti_evidence": "Seller dims: linguistic_style_complexity (r=-), persuasion_techniques_commitment (r=-), reciprocity (r=-)",
+  "alignment_key": "composite_alignment (r=+0.455) \u2014 the OVERALL fit must be high. Every dimension matters for these buyers.",
+  "headlines": [
+    "Book in 30 seconds. Arrive in style.",
+    "Your car. Your chauffeur. Done.",
+    "Flight tracked. Car ready. You sorted.",
+    "The easiest way to get a professional car.",
+    "Tap. Book. Arrive."
+  ],
+  "body_copies": [
+    {
+      "approach": "Frictionless (primary)",
+      "rationale": "Low maximizer (z=-1.51), low information_search (z=-1.27). They decide FAST. The ad must match that speed.",
+      "copy": "LUXY Ride. Professional chauffeur. Premium car. Flight tracked. Price guaranteed. Book in 30 seconds at luxyride.com."
+    },
+    {
+      "approach": "Motive Match",
+      "rationale": "evolutionary_motive_match is the #1 alignment predictor (r=+0.484). Match their underlying need directly.",
+      "copy": "Need to get to the airport? LUXY Ride. Client meeting downtown? LUXY Ride. Wedding next month? LUXY Ride. One app. Every ride. luxyride.com."
+    },
+    {
+      "approach": "Remove Complexity",
+      "rationale": "linguistic_style_complexity HURTS (r=-0.130). Keep copy SHORT.",
+      "copy": "Professional car service. No surge. No surprises. luxyride.com."
+    }
+  ],
+  "ctas": [
+    "Book now",
+    "Get a quote",
+    "Download the app"
+  ],
+  "tone": "Simple. Fast. No fluff. Almost terse.",
+  "framing": "Neither gain nor loss \u2014 just FUNCTIONAL. Here is the service, here is how to get it.",
+  "what_to_say": [
+    "Short sentences",
+    "Action verbs (book, tap, arrive)",
+    "One clear benefit per ad",
+    "Price guarantee (removes friction)"
+  ],
+  "what_not_to_say": [
+    "Long copy",
+    "Multiple features listed",
+    "Obligation language (commitment, loyalty)",
+    "Complex comparisons"
+  ]
+}

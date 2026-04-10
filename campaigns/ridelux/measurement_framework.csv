@@ -1,0 +1,16 @@
+metric,target,method,track,frequency
+CTR,"status_seeker: >0.15%, careful_truster: >0.10%, easy_decider: >0.12%",StackAdapt reporting,all,daily
+Conversion Rate,"status_seeker: >2.5%, careful_truster: >1.5%, easy_decider: >2.0%",Pixel on luxyride.com booking confirmation,all,daily
+CPA,"< (status_seeker), < (careful_truster), < (easy_decider)",Total spend / conversions per track,all,weekly
+ROAS,> 3:1 across all tracks,Revenue / ad spend,all,weekly
+Video Completion Rate,"> 65% (CTV), > 40% (pre-roll)",StackAdapt video metrics,"status_seeker,careful_truster",daily
+Brand Lift — Awareness,> 15% lift,Pre/post survey via brand lift study,all,monthly
+Brand Lift — Consideration,> 10% lift,Pre/post survey,all,monthly
+Booking Volume,> 20% increase vs pre-campaign baseline,LUXY Ride internal,all,weekly
+New Customer %,> 30% of bookings from new customers,LUXY Ride CRM,all,weekly
+Track Differentiation,Mechanism-specific CTR variance > 20% across tracks,Compare CTR by track,all,weekly
+Frequency vs Conversion,Optimal frequency per track identified,Conversion rate by impression frequency,all,weekly
+Domain Performance,Top 10 and bottom 10 domains by conversion,StackAdapt domain reporting,all,weekly
+Daypart Performance,Peak conversion hours identified per track,Hourly conversion data,all,weekly
+CTV Attribution,CTV-exposed vs non-exposed conversion lift,Matched-market or holdout test,status_seeker,monthly
+Careful Truster Swing Rate,% of careful_truster impressions that convert,Track-specific conversion,careful_truster,daily

@@ -1,0 +1,59 @@
+{
+  "tracks": {
+    "status_seeker": {
+      "base_cpm": 10.4,
+      "multiplier": 1.3,
+      "peak_boost": 1.2,
+      "ctv_premium": 1.25,
+      "rationale": "Highest LTV, 94.5% conversion justifies premium bids."
+    },
+    "easy_decider": {
+      "base_cpm": 8.8,
+      "multiplier": 1.1,
+      "peak_boost": 1.1,
+      "ctv_premium": 1.0,
+      "rationale": "90.9% conversion, low friction. Standard bids work."
+    },
+    "careful_truster": {
+      "base_cpm": 8.0,
+      "multiplier": 1.0,
+      "peak_boost": 1.3,
+      "ctv_premium": 1.1,
+      "rationale": "65% conversion = volume play. Boost during research windows (peak_boost=1.3)."
+    },
+    "skeptical_analyst": {
+      "base_cpm": 4.0,
+      "multiplier": 0.5,
+      "peak_boost": 1.0,
+      "ctv_premium": 0.8,
+      "rationale": "0.8% conversion. Minimal bids \u2014 primarily for brand awareness."
+    },
+    "disillusioned": {
+      "base_cpm": 3.2,
+      "multiplier": 0.4,
+      "peak_boost": 1.0,
+      "ctv_premium": 0.5,
+      "rationale": "0.8% conversion. Near-zero ROI. Suppress unless retargeting."
+    }
+  },
+  "device_multipliers": {
+    "desktop": 1.0,
+    "mobile": 1.1,
+    "ctv": 1.2,
+    "tablet": 0.9
+  },
+  "special_signals": {
+    "abandoned_booking": {
+      "multiplier": 2.0,
+      "rationale": "Highest-value retargeting signal."
+    },
+    "repeat_visitor": {
+      "multiplier": 1.5,
+      "rationale": "Multiple site visits = high intent."
+    },
+    "flight_booking_detected": {
+      "multiplier": 1.8,
+      "rationale": "Imminent travel = peak conversion window."
+    }
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "status_seeker": {
+    "max_day": 2,
+    "max_week": 8,
+    "reason": "Low reactance tolerates moderate frequency. Status confirmation benefits from repetition."
+  },
+  "easy_decider": {
+    "max_day": 2,
+    "max_week": 6,
+    "reason": "Low information search means they decide fast. Beyond 2/day adds no value."
+  },
+  "careful_truster": {
+    "max_day": 3,
+    "max_week": 12,
+    "reason": "Active evaluation mode \u2014 higher frequency tolerated. They WANT information. Most valuable segment for frequency."
+  },
+  "skeptical_analyst": {
+    "max_day": 1,
+    "max_week": 3,
+    "reason": "High reactance (z=+1.02). More than 1/day triggers active resistance."
+  },
+  "disillusioned": {
+    "max_day": 1,
+    "max_week": 2,
+    "reason": "Near-zero conversion. Minimal spend only."
+  },
+  "cross_track": {
+    "rule": "If a user matches multiple tracks, use the HIGHEST-converting track creative. Deduplicate across tracks \u2014 max 4/day total."
+  },
+  "reactance_recovery": {
+    "rule": "If CTR drops below 0.05% after 5+ impressions for any user, suppress 72 hours."
+  }
+}

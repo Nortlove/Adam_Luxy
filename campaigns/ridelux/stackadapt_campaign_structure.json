@@ -1,0 +1,1031 @@
+{
+  "campaign_name": "LUXY Ride \u2014 Bilateral Psycholinguistic Intelligence Campaign",
+  "brand": "LUXY Ride",
+  "website": "luxyride.com",
+  "neo4j_asin": "lux_luxy_ride",
+  "classification": {
+    "method": "K-means clustering on 31 identity-stable buyer dimensions, k=5",
+    "classifier": "Logistic regression, 97.9% cross-validated accuracy",
+    "data": "3103 bilateral edges, 14 brands, 65+65 dims \u2192 27 alignment dims"
+  },
+  "tracks": {
+    "skeptical_analyst": {
+      "display_name": "Skeptical Analyst",
+      "description": "High need-for-cognition, high attachment avoidance, high review reliance. Only 0.8% convert with advertising. SUPPRESS or very light social proof only.",
+      "segment_id": "informativ_skeptical_analyst_luxury_transportation_t1",
+      "sample_size": 752,
+      "pct_of_market": 24.2,
+      "conversion_rate": 0.008,
+      "budget_allocation_pct": 10,
+      "bid_multiplier": 0.5,
+      "active_track": false,
+      "frequency_cap": {
+        "max_per_day": 1,
+        "max_per_week": 3
+      },
+      "targeting_guidance": "Exclude or minimal \u2014 high reactance makes advertising counterproductive.",
+      "buyer_profile": {
+        "need_for_cognition": {
+          "z_score": 0.957,
+          "value": 0.631
+        },
+        "attachment_style_avoidance": {
+          "z_score": 0.954,
+          "value": 0.579
+        },
+        "spending_pain_sensitivity": {
+          "z_score": 0.953,
+          "value": 0.758
+        },
+        "brand_trust_review_reliance": {
+          "z_score": 0.937,
+          "value": 0.724
+        },
+        "regulatory_focus_prevention": {
+          "z_score": 0.898,
+          "value": 0.835
+        },
+        "evolutionary_motives_self_protection": {
+          "z_score": 0.887,
+          "value": 0.817
+        },
+        "decision_style_maximizer": {
+          "z_score": 0.883,
+          "value": 0.73
+        },
+        "brand_trust_known_brand_trust": {
+          "z_score": -0.866,
+          "value": 0.397
+        },
+        "regulatory_focus_promotion": {
+          "z_score": -0.862,
+          "value": 0.305
+        },
+        "personality_agreeableness": {
+          "z_score": -0.835,
+          "value": 0.439
+        }
+      },
+      "bilateral_intelligence": {
+        "seller_helps": [],
+        "seller_hurts": [],
+        "alignment_drivers": [
+          {
+            "dim": "emotional_resonance",
+            "r": 0.1644435801861229,
+            "p": 5.8189067312713236e-06,
+            "conv": 0.35366666666666663,
+            "fail": 0.2094616621983914
+          },
+          {
+            "dim": "appeal_resonance",
+            "r": 0.09860401171459701,
+            "p": 0.006808280358448576,
+            "conv": 0.5284166666666666,
+            "fail": 0.4618923592493298
+          },
+          {
+            "dim": "self_monitoring_fit",
+            "r": -0.08747913703713625,
+            "p": 0.016416680193119947,
+            "conv": 0.3700666666666666,
+            "fail": 0.45123659517426273
+          },
+          {
+            "dim": "anchor_susceptibility_match",
+            "r": 0.08404337738249185,
+            "p": 0.021170237820310717,
+            "conv": 0.3067333333333333,
+            "fail": 0.22909530831099195
+          },
+          {
+            "dim": "regulatory_fit_score",
+            "r": 0.055569480235000204,
+            "p": 0.12788328229330956,
+            "conv": -0.09848333333333333,
+            "fail": -0.15096166219839144
+          },
+          {
+            "dim": "construal_fit_score",
+            "r": -0.049675077548351265,
+            "p": 0.17357854265953737,
+            "conv": 0.8633333333333333,
+            "fail": 0.9068900804289544
+          }
+        ],
+        "optimal_seller_profile": {
+          "appeals_comparative": {
+            "conv": 0.412,
+            "fail": 0.337,
+            "diff": 0.075
+          },
+          "emotional_specificity": {
+            "conv": 0.47,
+            "fail": 0.521,
+            "diff": -0.051
+          },
+          "appeals_narrative": {
+            "conv": 0.56,
+            "fail": 0.602,
+            "diff": -0.042
+          },
+          "appeals_emotional": {
+            "conv": 0.68,
+            "fail": 0.721,
+            "diff": -0.041
+          },
+          "mental_simulation_vividness": {
+            "conv": 0.548,
+            "fail": 0.588,
+            "diff": -0.04
+          },
+          "persuasion_techniques_reciprocity": {
+            "conv": 0.348,
+            "fail": 0.382,
+            "diff": -0.034
+          },
+          "value_propositions_self_expression": {
+            "conv": 0.485,
+            "fail": 0.452,
+            "diff": 0.033
+          },
+          "attachment_positioning_warmth": {
+            "conv": 0.663,
+            "fail": 0.697,
+            "diff": -0.033
+          },
+          "brand_personality_warmth": {
+            "conv": 0.678,
+            "fail": 0.709,
+            "diff": -0.031
+          }
+        }
+      }
+    },
+    "careful_truster": {
+      "display_name": "Careful Truster",
+      "description": "High agreeableness, high brand trust, disease-avoidant. Quiet evaluators who convert when TRUST is established through EVIDENCE \u2014 not warmth. 65% convert. THIS IS THE SWING SEGMENT.",
+      "segment_id": "informativ_careful_truster_luxury_transportation_t1",
+      "sample_size": 643,
+      "pct_of_market": 20.7,
+      "conversion_rate": 0.6501,
+      "budget_allocation_pct": 40,
+      "bid_multiplier": 1.0,
+      "active_track": true,
+      "frequency_cap": {
+        "max_per_day": 3,
+        "max_per_week": 12
+      },
+      "targeting_guidance": "Travel planners, comparison shoppers, review readers, weather/flight checkers before trips.",
+      "buyer_profile": {
+        "evolutionary_motives_disease_avoidance": {
+          "z_score": 0.582,
+          "value": 0.416
+        },
+        "personality_agreeableness": {
+          "z_score": 0.548,
+          "value": 0.702
+        },
+        "brand_trust_known_brand_trust": {
+          "z_score": 0.475,
+          "value": 0.655
+        },
+        "decision_style_impulse": {
+          "z_score": -0.441,
+          "value": 0.269
+        },
+        "personality_extraversion": {
+          "z_score": -0.436,
+          "value": 0.414
+        },
+        "attachment_style_avoidance": {
+          "z_score": -0.413,
+          "value": 0.37
+        },
+        "implicit_drivers_identity_signaling": {
+          "z_score": -0.365,
+          "value": 0.483
+        },
+        "personality_conscientiousness": {
+          "z_score": 0.339,
+          "value": 0.738
+        },
+        "decision_style_information_search_depth": {
+          "z_score": 0.319,
+          "value": 0.616
+        },
+        "personality_openness": {
+          "z_score": 0.278,
+          "value": 0.529
+        }
+      },
+      "bilateral_intelligence": {
+        "seller_helps": [
+          {
+            "dim": "value_propositions_self_expression",
+            "r": 0.1884867349600137,
+            "p": 1.4834556926189567e-06
+          },
+          {
+            "dim": "appeals_comparative",
+            "r": 0.1805065117254379,
+            "p": 4.10161258039469e-06
+          },
+          {
+            "dim": "appeals_rational",
+            "r": 0.1782717260830009,
+            "p": 5.4106311101673685e-06
+          },
+          {
+            "dim": "social_visibility",
+            "r": 0.16647089702035692,
+            "p": 2.208445463420981e-05
+          },
+          {
+            "dim": "brand_trust_signals_transparency",
+            "r": 0.16546560824502082,
+            "p": 2.478803420140982e-05
+          },
+          {
+            "dim": "persuasion_techniques_social_proof",
+            "r": 0.1406627220449128,
+            "p": 0.00034661815467599107
+          }
+        ],
+        "seller_hurts": [
+          {
+            "dim": "emotional_specificity",
+            "r": -0.2870735901723013,
+            "p": 1.1530236062194933e-13
+          },
+          {
+            "dim": "framing_gain",
+            "r": -0.28325239572774275,
+            "p": 2.4983207064147786e-13
+          },
+          {
+            "dim": "brand_personality_sincerity",
+            "r": -0.27944667958177155,
+            "p": 5.333465908563004e-13
+          },
+          {
+            "dim": "persuasion_techniques_liking",
+            "r": -0.2786753245162106,
+            "p": 6.210833071056706e-13
+          },
+          {
+            "dim": "mental_simulation_vividness",
+            "r": -0.26914565519741973,
+            "p": 3.92017282275553e-12
+          },
+          {
+            "dim": "evolutionary_targets_affiliation",
+            "r": -0.2664256868199702,
+            "p": 6.545924614443099e-12
+          }
+        ],
+        "alignment_drivers": [
+          {
+            "dim": "brand_trust_fit",
+            "r": 0.6187909047036413,
+            "p": 3.267202064873209e-69,
+            "conv": 0.42812105263157896,
+            "fail": 0.31937777777777776
+          },
+          {
+            "dim": "emotional_resonance",
+            "r": 0.6069673193184637,
+            "p": 5.671141556814759e-66,
+            "conv": 0.5005614832535885,
+            "fail": 0.3583297777777778
+          },
+          {
+            "dim": "negativity_bias_match",
+            "r": -0.6042677627940902,
+            "p": 2.9808261658134336e-65,
+            "conv": 0.1689708133971292,
+            "fail": 0.4688222222222223
+          },
+          {
+            "dim": "appeal_resonance",
+            "r": 0.4498231761828818,
+            "p": 2.3720884816300007e-33,
+            "conv": 0.571794019138756,
+            "fail": 0.5057951111111111
+          },
+          {
+            "dim": "regulatory_fit_score",
+            "r": 0.4077236926760144,
+            "p": 3.7891528749819e-27,
+            "conv": -0.026116985645933014,
+            "fail": -0.07252266666666668
+          },
+          {
+            "dim": "involvement_weight_modifier",
+            "r": -0.2770303025223648,
+            "p": 8.580503237746038e-13,
+            "conv": 1.363243062200957,
+            "fail": 1.4237764444444443
+          }
+        ],
+        "optimal_seller_profile": {
+          "appeals_narrative": {
+            "conv": 0.526,
+            "fail": 0.635,
+            "diff": -0.109
+          },
+          "persuasion_techniques_storytelling": {
+            "conv": 0.48,
+            "fail": 0.58,
+            "diff": -0.1
+          },
+          "value_propositions_social_responsibility": {
+            "conv": 0.555,
+            "fail": 0.642,
+            "diff": -0.086
+          },
+          "emotional_specificity": {
+            "conv": 0.465,
+            "fail": 0.551,
+            "diff": -0.086
+          },
+          "mental_simulation_vividness": {
+            "conv": 0.523,
+            "fail": 0.607,
+            "diff": -0.084
+          },
+          "appeals_emotional": {
+            "conv": 0.686,
+            "fail": 0.754,
+            "diff": -0.069
+          },
+          "framing_loss": {
+            "conv": 0.519,
+            "fail": 0.584,
+            "diff": -0.065
+          },
+          "persuasion_techniques_liking": {
+            "conv": 0.619,
+            "fail": 0.683,
+            "diff": -0.064
+          },
+          "evolutionary_targets_affiliation": {
+            "conv": 0.517,
+            "fail": 0.581,
+            "diff": -0.064
+          },
+          "appeals_comparative": {
+            "conv": 0.344,
+            "fail": 0.282,
+            "diff": 0.061
+          },
+          "attachment_positioning_warmth": {
+            "conv": 0.67,
+            "fail": 0.729,
+            "diff": -0.059
+          },
+          "brand_personality_warmth": {
+            "conv": 0.685,
+            "fail": 0.743,
+            "diff": -0.058
+          }
+        }
+      }
+    },
+    "disillusioned": {
+      "display_name": "Disillusioned",
+      "description": "Low agreeableness, low brand trust, low promotion focus. Burned by past experiences. Only 0.8% convert. Need service recovery, not advertising.",
+      "segment_id": "informativ_disillusioned_luxury_transportation_t1",
+      "sample_size": 502,
+      "pct_of_market": 16.2,
+      "conversion_rate": 0.008,
+      "budget_allocation_pct": 5,
+      "bid_multiplier": 0.4,
+      "active_track": false,
+      "frequency_cap": {
+        "max_per_day": 1,
+        "max_per_week": 2
+      },
+      "targeting_guidance": "Exclude \u2014 advertising spend on this segment is wasted.",
+      "buyer_profile": {
+        "personality_agreeableness": {
+          "z_score": -1.32,
+          "value": 0.346
+        },
+        "construal_level": {
+          "z_score": -1.306,
+          "value": 0.414
+        },
+        "brand_trust_known_brand_trust": {
+          "z_score": -1.241,
+          "value": 0.325
+        },
+        "regulatory_focus_promotion": {
+          "z_score": -1.182,
+          "value": 0.235
+        },
+        "personality_openness": {
+          "z_score": -1.149,
+          "value": 0.373
+        },
+        "optimal_distinctiveness": {
+          "z_score": -1.147,
+          "value": 0.355
+        },
+        "evolutionary_motives_affiliation": {
+          "z_score": -1.131,
+          "value": 0.302
+        },
+        "uniqueness_need_creative_choice": {
+          "z_score": -1.032,
+          "value": 0.154
+        },
+        "personality_conscientiousness": {
+          "z_score": -1.029,
+          "value": 0.558
+        },
+        "attachment_style_avoidance": {
+          "z_score": 1.024,
+          "value": 0.59
+        }
+      },
+      "bilateral_intelligence": {
+        "seller_helps": [
+          {
+            "dim": "brand_personality_competence",
+            "r": 0.13053409823508944,
+            "p": 0.003390518567132846
+          },
+          {
+            "dim": "persuasion_techniques_authority",
+            "r": 0.12331048546755646,
+            "p": 0.0056662763639434635
+          },
+          {
+            "dim": "brand_trust_signals_credibility_cues",
+            "r": 0.09922267447692854,
+            "p": 0.0262113705652106
+          },
+          {
+            "dim": "persuasion_techniques_social_proof",
+            "r": 0.09873550146352666,
+            "p": 0.026959971024369006
+          },
+          {
+            "dim": "value_propositions_reliability",
+            "r": 0.09859801221195238,
+            "p": 0.027174541133000094
+          },
+          {
+            "dim": "evolutionary_targets_status",
+            "r": 0.08755830903563658,
+            "p": 0.049919690116376196
+          }
+        ],
+        "seller_hurts": [
+          {
+            "dim": "value_propositions_cost",
+            "r": -0.14642059918249162,
+            "p": 0.0010012454389732779
+          },
+          {
+            "dim": "agency_framing_locus",
+            "r": -0.1204959552791566,
+            "p": 0.006874174490821499
+          }
+        ],
+        "alignment_drivers": [
+          {
+            "dim": "emotional_resonance",
+            "r": 0.30282947138156247,
+            "p": 4.1639409675435366e-12,
+            "conv": 0.39465,
+            "fail": 0.18262429718875503
+          },
+          {
+            "dim": "appeal_resonance",
+            "r": 0.10605307682747785,
+            "p": 0.01745691952535933,
+            "conv": 0.4292,
+            "fail": 0.3507785140562249
+          },
+          {
+            "dim": "negativity_bias_match",
+            "r": -0.0829957670158287,
+            "p": 0.063151848884989,
+            "conv": 0.43975,
+            "fail": 0.5364987951807227
+          },
+          {
+            "dim": "regulatory_fit_score",
+            "r": 0.058147221788700534,
+            "p": 0.193374123342843,
+            "conv": -0.121775,
+            "fail": -0.18730803212851407
+          },
+          {
+            "dim": "brand_trust_fit",
+            "r": 0.05516522240600873,
+            "p": 0.21725695150184032,
+            "conv": 0.2811,
+            "fail": 0.20819136546184738
+          },
+          {
+            "dim": "composite_alignment",
+            "r": 0.053111357441740524,
+            "p": 0.23489215315185732,
+            "conv": 0.60615,
+            "fail": 0.5639387550200803
+          }
+        ],
+        "optimal_seller_profile": {
+          "value_propositions_cost": {
+            "conv": 0.32,
+            "fail": 0.553,
+            "diff": -0.233
+          },
+          "value_propositions_social_responsibility": {
+            "conv": 0.378,
+            "fail": 0.58,
+            "diff": -0.203
+          },
+          "persuasion_techniques_authority": {
+            "conv": 0.772,
+            "fail": 0.623,
+            "diff": 0.15
+          },
+          "persuasion_techniques_social_proof": {
+            "conv": 0.72,
+            "fail": 0.601,
+            "diff": 0.119
+          },
+          "agency_framing_locus": {
+            "conv": 0.552,
+            "fail": 0.662,
+            "diff": -0.109
+          },
+          "evolutionary_targets_status": {
+            "conv": 0.75,
+            "fail": 0.644,
+            "diff": 0.106
+          },
+          "value_propositions_self_expression": {
+            "conv": 0.565,
+            "fail": 0.461,
+            "diff": 0.104
+          },
+          "persuasion_techniques_storytelling": {
+            "conv": 0.665,
+            "fail": 0.562,
+            "diff": 0.103
+          },
+          "attachment_positioning_warmth": {
+            "conv": 0.583,
+            "fail": 0.678,
+            "diff": -0.095
+          },
+          "persuasion_techniques_reciprocity": {
+            "conv": 0.3,
+            "fail": 0.387,
+            "diff": -0.087
+          },
+          "brand_personality_warmth": {
+            "conv": 0.613,
+            "fail": 0.689,
+            "diff": -0.076
+          },
+          "persuasion_techniques_anchoring": {
+            "conv": 0.427,
+            "fail": 0.356,
+            "diff": 0.071
+          }
+        }
+      }
+    },
+    "status_seeker": {
+      "display_name": "Status Seeker",
+      "description": "Promotion-focused, status-driven, low spending pain. They book luxury because it signals who they are. 94.5% convert.",
+      "segment_id": "informativ_status_seeker_luxury_transportation_t1",
+      "sample_size": 688,
+      "pct_of_market": 22.2,
+      "conversion_rate": 0.9448,
+      "budget_allocation_pct": 30,
+      "bid_multiplier": 1.3,
+      "active_track": true,
+      "frequency_cap": {
+        "max_per_day": 2,
+        "max_per_week": 8
+      },
+      "targeting_guidance": "High-income professionals, frequent travelers, LinkedIn power users, business/finance content consumers.",
+      "buyer_profile": {
+        "regulatory_focus_promotion": {
+          "z_score": 1.086,
+          "value": 0.73
+        },
+        "spending_pain_sensitivity": {
+          "z_score": -1.028,
+          "value": 0.399
+        },
+        "optimal_distinctiveness": {
+          "z_score": 0.924,
+          "value": 0.551
+        },
+        "evolutionary_motives_affiliation": {
+          "z_score": 0.899,
+          "value": 0.629
+        },
+        "evolutionary_motives_status": {
+          "z_score": 0.898,
+          "value": 0.675
+        },
+        "brand_trust_known_brand_trust": {
+          "z_score": 0.894,
+          "value": 0.736
+        },
+        "evolutionary_motives_self_protection": {
+          "z_score": -0.888,
+          "value": 0.463
+        },
+        "regulatory_focus_prevention": {
+          "z_score": -0.885,
+          "value": 0.46
+        },
+        "personality_agreeableness": {
+          "z_score": 0.822,
+          "value": 0.754
+        },
+        "implicit_drivers_identity_signaling": {
+          "z_score": 0.818,
+          "value": 0.636
+        }
+      },
+      "bilateral_intelligence": {
+        "seller_helps": [
+          {
+            "dim": "value_propositions_self_expression",
+            "r": 0.10752341763803883,
+            "p": 0.004752116877230943
+          },
+          {
+            "dim": "social_visibility",
+            "r": 0.08993388456078491,
+            "p": 0.01830269098852479
+          },
+          {
+            "dim": "evolutionary_targets_status",
+            "r": 0.08025136619085112,
+            "p": 0.035331263257962
+          }
+        ],
+        "seller_hurts": [
+          {
+            "dim": "brand_personality_sincerity",
+            "r": -0.15804607345293142,
+            "p": 3.12486571327671e-05
+          },
+          {
+            "dim": "persuasion_techniques_commitment",
+            "r": -0.15422527686867793,
+            "p": 4.8599156734656375e-05
+          },
+          {
+            "dim": "evolutionary_targets_affiliation",
+            "r": -0.1490226257850847,
+            "p": 8.721799777959769e-05
+          },
+          {
+            "dim": "value_propositions_peace_of_mind",
+            "r": -0.14823586276374998,
+            "p": 9.512516642894819e-05
+          },
+          {
+            "dim": "attachment_positioning_reassurance",
+            "r": -0.14700197069189802,
+            "p": 0.00010889941166412132
+          },
+          {
+            "dim": "appeals_fear",
+            "r": -0.14654943682207208,
+            "p": 0.00011440611422503565
+          }
+        ],
+        "alignment_drivers": [
+          {
+            "dim": "negativity_bias_match",
+            "r": -0.25668305649228174,
+            "p": 8.181264661684045e-12,
+            "conv": -0.014847384615384616,
+            "fail": 0.20559999999999998
+          },
+          {
+            "dim": "involvement_weight_modifier",
+            "r": -0.21611378908685605,
+            "p": 1.02761991465891e-08,
+            "conv": 1.2964595384615385,
+            "fail": 1.3872105263157894
+          },
+          {
+            "dim": "composite_alignment",
+            "r": -0.1876733903059621,
+            "p": 7.129842191024152e-07,
+            "conv": 0.6252098461538462,
+            "fail": 0.6747499999999998
+          },
+          {
+            "dim": "regulatory_fit_score",
+            "r": 0.15765868199368982,
+            "p": 3.269506360928391e-05,
+            "conv": 0.0914043076923077,
+            "fail": 0.0364842105263158
+          },
+          {
+            "dim": "brand_trust_fit",
+            "r": 0.13956123300930556,
+            "p": 0.00024067351853898264,
+            "conv": 0.47051892307692306,
+            "fail": 0.42865000000000003
+          },
+          {
+            "dim": "emotional_resonance",
+            "r": 0.1373599704758354,
+            "p": 0.0003020816651162944,
+            "conv": 0.5202893846153845,
+            "fail": 0.47682894736842113
+          }
+        ],
+        "optimal_seller_profile": {
+          "appeals_narrative": {
+            "conv": 0.492,
+            "fail": 0.619,
+            "diff": -0.127
+          },
+          "persuasion_techniques_storytelling": {
+            "conv": 0.446,
+            "fail": 0.564,
+            "diff": -0.118
+          },
+          "framing_loss": {
+            "conv": 0.462,
+            "fail": 0.572,
+            "diff": -0.109
+          },
+          "value_propositions_social_responsibility": {
+            "conv": 0.537,
+            "fail": 0.644,
+            "diff": -0.107
+          },
+          "mental_simulation_vividness": {
+            "conv": 0.519,
+            "fail": 0.612,
+            "diff": -0.092
+          },
+          "emotional_specificity": {
+            "conv": 0.449,
+            "fail": 0.54,
+            "diff": -0.091
+          },
+          "appeals_fear": {
+            "conv": 0.335,
+            "fail": 0.421,
+            "diff": -0.086
+          },
+          "evolutionary_targets_affiliation": {
+            "conv": 0.493,
+            "fail": 0.572,
+            "diff": -0.078
+          },
+          "appeals_emotional": {
+            "conv": 0.667,
+            "fail": 0.741,
+            "diff": -0.075
+          },
+          "persuasion_techniques_commitment": {
+            "conv": 0.476,
+            "fail": 0.548,
+            "diff": -0.071
+          },
+          "persuasion_techniques_liking": {
+            "conv": 0.607,
+            "fail": 0.677,
+            "diff": -0.07
+          },
+          "persuasion_techniques_reciprocity": {
+            "conv": 0.335,
+            "fail": 0.401,
+            "diff": -0.066
+          }
+        }
+      }
+    },
+    "easy_decider": {
+      "display_name": "Easy Decider",
+      "description": "Low maximizer, low information search, low self-protection. They dont overthink \u2014 frictionless experience converts them. 90.9% convert.",
+      "segment_id": "informativ_easy_decider_luxury_transportation_t1",
+      "sample_size": 518,
+      "pct_of_market": 16.7,
+      "conversion_rate": 0.9093,
+      "budget_allocation_pct": 15,
+      "bid_multiplier": 1.1,
+      "active_track": true,
+      "frequency_cap": {
+        "max_per_day": 2,
+        "max_per_week": 6
+      },
+      "targeting_guidance": "Returning visitors, app users, retargeting pool, travel-intent with short decision window.",
+      "buyer_profile": {
+        "decision_style_maximizer": {
+          "z_score": -1.514,
+          "value": 0.431
+        },
+        "evolutionary_motives_self_protection": {
+          "z_score": -1.284,
+          "value": 0.384
+        },
+        "decision_style_information_search_depth": {
+          "z_score": -1.266,
+          "value": 0.402
+        },
+        "regulatory_focus_prevention": {
+          "z_score": -1.261,
+          "value": 0.38
+        },
+        "need_for_cognition": {
+          "z_score": -1.137,
+          "value": 0.343
+        },
+        "brand_trust_review_reliance": {
+          "z_score": -1.069,
+          "value": 0.486
+        },
+        "spending_pain_sensitivity": {
+          "z_score": -1.043,
+          "value": 0.396
+        },
+        "attachment_style_anxiety": {
+          "z_score": -1.02,
+          "value": 0.361
+        },
+        "brand_trust_unknown_brand_skepticism": {
+          "z_score": -0.989,
+          "value": 0.39
+        },
+        "decision_style_impulse": {
+          "z_score": 0.875,
+          "value": 0.462
+        }
+      },
+      "bilateral_intelligence": {
+        "seller_helps": [
+          {
+            "dim": "value_propositions_self_expression",
+            "r": 0.11484820727139698,
+            "p": 0.008890194057089981
+          },
+          {
+            "dim": "evolutionary_targets_status",
+            "r": 0.08770063173326187,
+            "p": 0.04603678479164861
+          }
+        ],
+        "seller_hurts": [
+          {
+            "dim": "brand_personality_sincerity",
+            "r": -0.14587933650275553,
+            "p": 0.0008685640027487197
+          },
+          {
+            "dim": "agency_framing_locus",
+            "r": -0.14459358353541552,
+            "p": 0.0009658043295740724
+          },
+          {
+            "dim": "persuasion_techniques_commitment",
+            "r": -0.1370971294247313,
+            "p": 0.001762882176374839
+          },
+          {
+            "dim": "persuasion_techniques_reciprocity",
+            "r": -0.13603574585264888,
+            "p": 0.001915190868259021
+          },
+          {
+            "dim": "attachment_positioning_reassurance",
+            "r": -0.13469607808384315,
+            "p": 0.002124614472999187
+          },
+          {
+            "dim": "framing_loss",
+            "r": -0.13214054880344958,
+            "p": 0.0025831556966092193
+          }
+        ],
+        "alignment_drivers": [
+          {
+            "dim": "evolutionary_motive_match",
+            "r": 0.4840689055695916,
+            "p": 8.741945383955886e-32,
+            "conv": 0.45875626326963903,
+            "fail": 0.34042765957446813
+          },
+          {
+            "dim": "composite_alignment",
+            "r": 0.454673214712802,
+            "p": 8.61969014239699e-28,
+            "conv": 0.5203709129511677,
+            "fail": 0.4250744680851064
+          },
+          {
+            "dim": "processing_route_match",
+            "r": 0.41963518594169963,
+            "p": 1.641249653673854e-23,
+            "conv": 0.6177176220806795,
+            "fail": 0.4796808510638299
+          },
+          {
+            "dim": "appeal_resonance",
+            "r": 0.41797501418521166,
+            "p": 2.5457363611060394e-23,
+            "conv": 0.5051072186836518,
+            "fail": 0.4321340425531914
+          },
+          {
+            "dim": "construal_fit_score",
+            "r": 0.39805366792619806,
+            "p": 4.0942590201786166e-21,
+            "conv": 0.8628237791932062,
+            "fail": 0.7259574468085106
+          },
+          {
+            "dim": "involvement_weight_modifier",
+            "r": 0.37391378101300093,
+            "p": 1.2381531378254642e-18,
+            "conv": 1.1393698513800428,
+            "fail": 0.9996617021276594
+          }
+        ],
+        "optimal_seller_profile": {
+          "appeals_narrative": {
+            "conv": 0.517,
+            "fail": 0.602,
+            "diff": -0.085
+          },
+          "value_propositions_social_responsibility": {
+            "conv": 0.539,
+            "fail": 0.618,
+            "diff": -0.079
+          },
+          "framing_loss": {
+            "conv": 0.501,
+            "fail": 0.58,
+            "diff": -0.078
+          },
+          "persuasion_techniques_storytelling": {
+            "conv": 0.47,
+            "fail": 0.545,
+            "diff": -0.075
+          },
+          "mental_simulation_vividness": {
+            "conv": 0.522,
+            "fail": 0.594,
+            "diff": -0.072
+          },
+          "emotional_specificity": {
+            "conv": 0.461,
+            "fail": 0.53,
+            "diff": -0.069
+          },
+          "persuasion_techniques_reciprocity": {
+            "conv": 0.345,
+            "fail": 0.409,
+            "diff": -0.064
+          },
+          "appeals_fear": {
+            "conv": 0.363,
+            "fail": 0.423,
+            "diff": -0.06
+          },
+          "evolutionary_targets_affiliation": {
+            "conv": 0.506,
+            "fail": 0.56,
+            "diff": -0.053
+          },
+          "appeals_emotional": {
+            "conv": 0.678,
+            "fail": 0.729,
+            "diff": -0.051
+          },
+          "persuasion_techniques_commitment": {
+            "conv": 0.486,
+            "fail": 0.534,
+            "diff": -0.049
+          },
+          "persuasion_techniques_liking": {
+            "conv": 0.614,
+            "fail": 0.663,
+            "diff": -0.049
+          }
+        }
+      }
+    }
+  }
+}
