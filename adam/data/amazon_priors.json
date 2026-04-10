@@ -1,0 +1,297 @@
+{
+  "category_priors": {
+    "All_Beauty": {
+      "personality": {
+        "openness": 0.49338330562692057,
+        "conscientiousness": 0.5470158362339109,
+        "extraversion": 0.6143383848924124,
+        "agreeableness": 0.5662703586161347,
+        "neuroticism": 0.4997642436149312
+      },
+      "focus": {
+        "promotion": 0.042505304928917735,
+        "prevention": 0.07269278161216675
+      },
+      "effective_mechanisms": [
+        "IdentityConstruction",
+        "EvolutionaryAdaptations",
+        "MimeticDesire",
+        "ConstrualLevel",
+        "RegulatoryFocus"
+      ],
+      "review_count": 99255,
+      "last_updated": "2026-01-23T08:51:12.965770+00:00"
+    },
+    "Beauty_and_Personal_Care": {
+      "personality": {
+        "openness": 0.48668433285944096,
+        "conscientiousness": 0.5332313102767363,
+        "extraversion": 0.6206104366828358,
+        "agreeableness": 0.6091114401018752,
+        "neuroticism": 0.4996424207842113
+      },
+      "focus": {
+        "promotion": 0.052840346580409106,
+        "prevention": 0.08954455662156433
+      },
+      "effective_mechanisms": [
+        "IdentityConstruction",
+        "EvolutionaryAdaptations",
+        "MimeticDesire",
+        "ConstrualLevel",
+        "RegulatoryFocus"
+      ],
+      "review_count": 103399,
+      "last_updated": "2026-01-23T08:51:12.986225+00:00"
+    },
+    "Books": {
+      "personality": {
+        "openness": 0.5341088293847739,
+        "conscientiousness": 0.5599315103905407,
+        "extraversion": 0.669220273537117,
+        "agreeableness": 0.5991946925540055,
+        "neuroticism": 0.5189165886504973
+      },
+      "focus": {
+        "promotion": 0.10251569032742049,
+        "prevention": 0.12950142552483523
+      },
+      "effective_mechanisms": [
+        "EvolutionaryAdaptations",
+        "IdentityConstruction",
+        "MimeticDesire",
+        "RegulatoryFocus",
+        "ConstrualLevel"
+      ],
+      "review_count": 103611,
+      "last_updated": "2026-01-23T08:51:13.008853+00:00"
+    },
+    "Clothing_Shoes_and_Jewelry": {
+      "personality": {
+        "openness": 0.48505669819216246,
+        "conscientiousness": 0.6033168911251102,
+        "extraversion": 0.6270612137952029,
+        "agreeableness": 0.6255985507811992,
+        "neuroticism": 0.4036321998650766
+      },
+      "focus": {
+        "promotion": 0.04232650247321111,
+        "prevention": 0.1056536274351422
+      },
+      "effective_mechanisms": [
+        "EvolutionaryAdaptations",
+        "IdentityConstruction",
+        "MimeticDesire",
+        "RegulatoryFocus",
+        "ConstrualLevel"
+      ],
+      "review_count": 102492,
+      "last_updated": "2026-01-23T08:51:13.027989+00:00"
+    },
+    "Grocery_and_Gourmet_Food": {
+      "personality": {
+        "openness": 0.4938690428051528,
+        "conscientiousness": 0.54151212576344,
+        "extraversion": 0.609040078266524,
+        "agreeableness": 0.5876339237659497,
+        "neuroticism": 0.5104488475535787
+      },
+      "focus": {
+        "promotion": 0.05235166328714542,
+        "prevention": 0.05744748646169223
+      },
+      "effective_mechanisms": [
+        "EvolutionaryAdaptations",
+        "IdentityConstruction",
+        "MimeticDesire",
+        "ConstrualLevel",
+        "RegulatoryFocus"
+      ],
+      "review_count": 98920,
+      "last_updated": "2026-01-23T08:51:13.048100+00:00"
+    },
+    "Amazon_Fashion": {
+      "personality": {
+        "openness": 0.48898953487591545,
+        "conscientiousness": 0.5904715005834688,
+        "extraversion": 0.6223230987618686,
+        "agreeableness": 0.5867426993620682,
+        "neuroticism": 0.45895932765437564
+      },
+      "focus": {
+        "promotion": 0.028240215988310134,
+        "prevention": 0.08496454682778111
+      },
+      "effective_mechanisms": [
+        "IdentityConstruction",
+        "EvolutionaryAdaptations",
+        "MimeticDesire",
+        "RegulatoryFocus",
+        "ConstrualLevel"
+      ],
+      "review_count": 99314,
+      "last_updated": "2026-01-23T08:51:13.067349+00:00"
+    },
+    "Kindle_Store": {
+      "personality": {
+        "openness": 0.5424834834535722,
+        "conscientiousness": 0.52395654287808,
+        "extraversion": 0.6833436690075397,
+        "agreeableness": 0.5859349391731546,
+        "neuroticism": 0.5221333031770862
+      },
+      "focus": {
+        "promotion": 0.09598334091477947,
+        "prevention": 0.1011972925086124
+      },
+      "effective_mechanisms": [
+        "EvolutionaryAdaptations",
+        "MimeticDesire",
+        "RegulatoryFocus",
+        "ConstrualLevel",
+        "IdentityConstruction"
+      ],
+      "review_count": 106114,
+      "last_updated": "2026-01-23T08:51:13.087663+00:00"
+    },
+    "Movies_and_TV": {
+      "personality": {
+        "openness": 0.5294974218770734,
+        "conscientiousness": 0.5284913567383511,
+        "extraversion": 0.6602889493505963,
+        "agreeableness": 0.5456040920861337,
+        "neuroticism": 0.5114707222479343
+      },
+      "focus": {
+        "promotion": 0.05666113679832924,
+        "prevention": 0.06708138876178013
+      },
+      "effective_mechanisms": [
+        "EvolutionaryAdaptations",
+        "ConstrualLevel",
+        "IdentityConstruction",
+        "MimeticDesire",
+        "RegulatoryFocus"
+      ],
+      "review_count": 92909,
+      "last_updated": "2026-01-23T08:51:13.106779+00:00"
+    },
+    "Digital_Music": {
+      "personality": {
+        "openness": 0.5269372213770842,
+        "conscientiousness": 0.5489565695268144,
+        "extraversion": 0.6423514725839605,
+        "agreeableness": 0.5730046886421357,
+        "neuroticism": 0.5106323767706863
+      },
+      "focus": {
+        "promotion": 0.05541263064461566,
+        "prevention": 0.07193239337020037
+      },
+      "effective_mechanisms": [
+        "EvolutionaryAdaptations",
+        "IdentityConstruction",
+        "MimeticDesire",
+        "RegulatoryFocus",
+        "ConstrualLevel"
+      ],
+      "review_count": 95655,
+      "last_updated": "2026-01-23T08:51:13.122909+00:00"
+    },
+    "Magazine_Subscriptions": {
+      "personality": {
+        "openness": 0.5190053100266003,
+        "conscientiousness": 0.5241930407305532,
+        "extraversion": 0.6308124628231149,
+        "agreeableness": 0.550924093311612,
+        "neuroticism": 0.5119032016693855
+      },
+      "focus": {
+        "promotion": 0.03674102702038983,
+        "prevention": 0.0524813248779012
+      },
+      "effective_mechanisms": [
+        "EvolutionaryAdaptations",
+        "IdentityConstruction",
+        "MimeticDesire",
+        "ConstrualLevel",
+        "RegulatoryFocus"
+      ],
+      "review_count": 71723,
+      "last_updated": "2026-01-23T08:51:13.134999+00:00"
+    }
+  },
+  "mechanism_effectiveness": {
+    "All_Beauty": {
+      "ConstrualLevel": 0.7958720330237358,
+      "IdentityConstruction": 0.8804273919378339,
+      "RegulatoryFocus": 0.7861953941882096,
+      "MimeticDesire": 0.824895046179681,
+      "EvolutionaryAdaptations": 0.848316251830161
+    },
+    "Beauty_and_Personal_Care": {
+      "ConstrualLevel": 0.8290790171468977,
+      "MimeticDesire": 0.8543294329432943,
+      "RegulatoryFocus": 0.8270037381993284,
+      "EvolutionaryAdaptations": 0.8777868517762352,
+      "IdentityConstruction": 0.88056640625
+    },
+    "Books": {
+      "RegulatoryFocus": 0.8605733602028214,
+      "MimeticDesire": 0.8664629176854116,
+      "ConstrualLevel": 0.8567413936258542,
+      "EvolutionaryAdaptations": 0.8948273391603382,
+      "IdentityConstruction": 0.8706208425720621
+    },
+    "Clothing_Shoes_and_Jewelry": {
+      "RegulatoryFocus": 0.8655866043274981,
+      "IdentityConstruction": 0.9137655916395101,
+      "ConstrualLevel": 0.8380102843950047,
+      "EvolutionaryAdaptations": 0.9167966280295047,
+      "MimeticDesire": 0.8728870858688302
+    },
+    "Grocery_and_Gourmet_Food": {
+      "RegulatoryFocus": 0.7996197162498172,
+      "IdentityConstruction": 0.8841216216216217,
+      "EvolutionaryAdaptations": 0.8910698753261815,
+      "MimeticDesire": 0.8626154414480975,
+      "ConstrualLevel": 0.8048056065409644
+    },
+    "Amazon_Fashion": {
+      "RegulatoryFocus": 0.8036240668665859,
+      "ConstrualLevel": 0.7888605442176871,
+      "IdentityConstruction": 0.8856712294361422,
+      "MimeticDesire": 0.8336542870243008,
+      "EvolutionaryAdaptations": 0.84589774078478
+    },
+    "Kindle_Store": {
+      "RegulatoryFocus": 0.8755950307674446,
+      "EvolutionaryAdaptations": 0.8948103792415171,
+      "MimeticDesire": 0.8784899724734565,
+      "IdentityConstruction": 0.8530108080288215,
+      "ConstrualLevel": 0.8536402365358937
+    },
+    "Movies_and_TV": {
+      "RegulatoryFocus": 0.8409529305086143,
+      "EvolutionaryAdaptations": 0.8993379571248423,
+      "ConstrualLevel": 0.8581814102204521,
+      "IdentityConstruction": 0.8472289156626506,
+      "MimeticDesire": 0.843912988169444
+    },
+    "Digital_Music": {
+      "ConstrualLevel": 0.8706601772120305,
+      "RegulatoryFocus": 0.8822945040858836,
+      "MimeticDesire": 0.9145572786393197,
+      "EvolutionaryAdaptations": 0.9242650285212813,
+      "IdentityConstruction": 0.9238346525945471
+    },
+    "Magazine_Subscriptions": {
+      "MimeticDesire": 0.8165605095541401,
+      "RegulatoryFocus": 0.7156234225138819,
+      "EvolutionaryAdaptations": 0.8366591647911978,
+      "ConstrualLevel": 0.7211037459534454,
+      "IdentityConstruction": 0.8248574686431015
+    }
+  },
+  "last_updated": "2026-01-23T08:51:13.884535+00:00"
+}
