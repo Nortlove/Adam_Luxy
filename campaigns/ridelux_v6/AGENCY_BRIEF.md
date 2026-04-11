@@ -134,6 +134,44 @@ Each creative is specifically designed for its position in the retargeting seque
 window.informativ.convert("booking_complete", { revenue: bookingTotal, order_id: bookingId });
 ```
 
+**Tag C: Section Tagging (Strongly Recommended)**
+
+This enables our deepest behavioral intelligence — tracking which content areas on luxyride.com visitors engage with. Create 5 Custom HTML tags in GTM:
+
+```html
+<!-- Section: Why LUXY -->
+<script>
+document.querySelector('[class*="why"], [class*="benefit"]')
+  ?.setAttribute('data-informativ-section', 'section-safety');
+</script>
+
+<!-- Section: Services/Fleet -->
+<script>
+document.querySelector('[class*="service"], [class*="fleet"]')
+  ?.setAttribute('data-informativ-section', 'section-fleet');
+</script>
+
+<!-- Section: Testimonials -->
+<script>
+document.querySelector('[class*="testimonial"], [class*="review"]')
+  ?.setAttribute('data-informativ-section', 'section-reviews');
+</script>
+
+<!-- Section: Technology/How It Works -->
+<script>
+document.querySelector('[class*="technology"], [class*="how"]')
+  ?.setAttribute('data-informativ-section', 'section-how-it-works');
+</script>
+
+<!-- Section: Corporate Booking -->
+<script>
+document.querySelector('[class*="book"], [class*="corporate"]')
+  ?.setAttribute('data-informativ-section', 'section-booking');
+</script>
+```
+
+Trigger each on **All Pages**. These tags add invisible attributes to content sections that our telemetry script reads — they don't affect the visual appearance. Without them, we can only track which PAGES visitors view, not which SECTIONS they engage with.
+
 **StackAdapt Webhook (Optional but Recommended)**: In StackAdapt, if you can configure a conversion webhook URL, point it to:
 ```
 https://focused-encouragement-production.up.railway.app/api/v1/stackadapt/webhook/conversion

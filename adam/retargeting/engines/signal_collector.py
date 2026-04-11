@@ -87,6 +87,8 @@ class NonconsciousSignalCollector:
         self._accumulate_device(profile, payload)
         self._accumulate_engagement_hour(profile, payload)
         self._accumulate_campaign_attribution(profile, payload)
+        self._accumulate_touch_outcome(profile, payload)
+        self._compute_device_mismatch(profile, payload)
         await self._store_sapid_mapping(profile, payload)
 
         # 4. Compute derived signals from accumulated data
@@ -322,6 +324,39 @@ class NonconsciousSignalCollector:
             )
         except Exception as e:
             logger.debug("Sapid mapping storage failed: %s", e)
+
+    def _accumulate_touch_outcome(
+        self, profile: StoredSignalProfile, payload: TelemetrySessionPayload
+    ) -> None:
+        """Record a touch outcome (click) for frequency decay detection.
+
+        Every ad-click session (has sapid) = the user SAW an ad AND clicked.
+        This is recorded as True in touch_outcomes. For non-click impressions,
+        we can't detect them from telemetry (we only see arrivals on the site).
+
+        The frequency decay detector compares early vs recent engagement rates.
+        If the user stops clicking ads over time, reactance is detected.
+        """
+        if payload.is_ad_attributed:
+            # Ad click = engaged with this touch
+            profile.touch_outcomes.append(True)
+
+    def _compute_device_mismatch(
+        self, profile: StoredSignalProfile, payload: TelemetrySessionPayload
+    ) -> None:
+        """Compute device-mechanism mismatch for the current session.
+
+        If this is an ad-click session, check whether the mechanism deployed
+        matches the device type (ELM processing route compatibility).
+        """
+        if not payload.is_ad_attributed or not payload.creative_id:
+            return
+
+        from adam.retargeting.engines.device_compat import DeviceEngagementTracker
+        tracker = DeviceEngagementTracker()
+        mismatch = tracker.is_mismatched(payload.creative_id, payload.device_type.value)
+        if mismatch:
+            profile.device_mechanism_mismatch = True
 
     # ─── Derived signal computation ────────────────────────────────────
 
