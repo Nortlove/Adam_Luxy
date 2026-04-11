@@ -199,14 +199,8 @@ async def ingest_conversion(
     # Trigger the outcome handler learning pipeline
     try:
         from adam.core.learning.outcome_handler import OutcomeHandler
-        from adam.core.dependencies import Infrastructure, LearningComponents
-        infra = Infrastructure.get_instance()
-        components = LearningComponents.get_instance(infra)
 
-        handler = OutcomeHandler(
-            learning_components=components,
-            infrastructure=infra,
-        )
+        handler = OutcomeHandler()
 
         # Parse campaign attribution
         archetype = ""
