@@ -253,7 +253,7 @@ async def ingest_conversion(
             "visitor_id": visitor_id,
             "conversion_type": conversion_type,
             "learning_updates": 0,
-            "note": "Conversion stored but learning pipeline unavailable",
+            "note": f"Learning error: {str(e)[:200]}",
             "latency_ms": round(elapsed_ms, 2),
         }
 
