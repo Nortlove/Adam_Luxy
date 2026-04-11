@@ -1,6 +1,3 @@
-# OpenMemory - IDE/Assistant specific rules
-.cursor/rules/openmemory.mdc
-
 # Python
 __pycache__/
 *.py[cod]
@@ -33,6 +30,7 @@ ENV/
 # IDE
 .idea/
 .vscode/
+.cursor/
 *.swp
 *.swo
 
@@ -41,19 +39,18 @@ ENV/
 .coverage
 htmlcov/
 
-# Misc
+# OS
 .DS_Store
+
+# Logs (but not source code or data)
 *.log
 
-# Large data directories
+# Large raw data directories (not needed for deployment)
 amazon/
 Neo4j/
 amazon_processed/
+/data/learning/
 
-# Large data/log files
-*.log
-*.json
-*.cypher
-gradient_signals.json
-memory_graph.json
-CLAUDE.md
+# Sensitive files
+.env.local
+.env.production.local

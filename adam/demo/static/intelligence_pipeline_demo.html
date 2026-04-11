@@ -1,0 +1,2833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>INFORMATIV — Universal Intelligence API Pipeline</title>
+<style>
+/* ═══════════════════════════════════════════════════════════════════
+   INFORMATIV Intelligence Pipeline Demo
+   Self-contained HTML/CSS/JS — no external dependencies
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Reset & Base */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  background: #0a0a1a;
+  color: #d0d8e8;
+  font-family: 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', sans-serif;
+  min-height: 100vh;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Monospace for data */
+.mono { font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'JetBrains Mono', monospace; }
+
+/* ── Header ────────────────────────────────────────────────────── */
+.header {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  background: rgba(10, 10, 26, 0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid #1e1e3a;
+}
+.header-inner {
+  max-width: 1600px; margin: 0 auto;
+  padding: 16px 40px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.brand { display: flex; align-items: center; gap: 16px; }
+.brand h1 {
+  font-size: 22px; letter-spacing: 8px; font-weight: 200;
+  color: #e0e6f0;
+}
+.brand h1 b { font-weight: 700; color: #00d4aa; letter-spacing: 4px; }
+.brand-sub {
+  font-size: 11px; color: #6a7090; text-transform: uppercase;
+  letter-spacing: 2px; margin-top: 2px;
+}
+.header-stats { display: flex; gap: 28px; }
+.header-stat { text-align: center; }
+.header-stat-val {
+  font-size: 18px; font-weight: 700; color: #00d4aa;
+  font-variant-numeric: tabular-nums;
+}
+.header-stat-label {
+  font-size: 10px; color: #6a7090; text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* ── Tab Bar ───────────────────────────────────────────────────── */
+.tab-bar {
+  background: rgba(10, 10, 26, 0.95);
+  backdrop-filter: blur(16px);
+  position: fixed; top: 72px; left: 0; right: 0; z-index: 99;
+  border-bottom: 1px solid #1e1e3a;
+}
+.tab-bar-inner {
+  max-width: 1600px; margin: 0 auto;
+  display: flex; padding: 0 40px;
+}
+.tab {
+  padding: 14px 24px; cursor: pointer;
+  font-size: 13px; font-weight: 500; color: #6a7090;
+  border-bottom: 2px solid transparent;
+  transition: all 0.25s; user-select: none;
+  display: flex; align-items: center; gap: 8px;
+  white-space: nowrap;
+}
+.tab:hover { color: #d0d8e8; }
+.tab.active { border-color: var(--tab-color); color: var(--tab-color); }
+.tab-icon {
+  width: 18px; height: 18px; border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 700;
+}
+.tab[data-tab="brand"] { --tab-color: #00d4aa; }
+.tab[data-tab="publisher"] { --tab-color: #4a9eff; }
+.tab[data-tab="ssp"] { --tab-color: #f59e0b; }
+.tab[data-tab="dsp"] { --tab-color: #a855f7; }
+.tab[data-tab="pageintel"] { --tab-color: #06b6d4; }
+.tab.active .tab-icon { background: var(--tab-color); color: #0a0a1a; }
+.tab:not(.active) .tab-icon { border: 1px solid #2a2a4a; color: #6a7090; }
+
+/* ── Main Content ──────────────────────────────────────────────── */
+.main { max-width: 1600px; margin: 0 auto; padding: 130px 40px 60px; }
+.tab-content { display: none; }
+.tab-content.active { display: block; animation: fadeIn 0.35s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ── Pipeline Progress Strip ───────────────────────────────────── */
+.pipeline-strip {
+  display: flex; align-items: center; justify-content: center;
+  gap: 0; margin-bottom: 36px;
+  padding: 20px 24px;
+  background: linear-gradient(135deg, #12122a 0%, #0e0e22 100%);
+  border: 1px solid #1e1e3a; border-radius: 12px;
+}
+.pipeline-node {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  position: relative; min-width: 100px;
+}
+.pipeline-circle {
+  width: 36px; height: 36px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700;
+  border: 2px solid #2a2a4a; color: #6a7090;
+  background: #0a0a1a; transition: all 0.3s;
+}
+.pipeline-node.done .pipeline-circle {
+  border-color: var(--accent); color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, #0a0a1a);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 20%, transparent);
+}
+.pipeline-node.active .pipeline-circle {
+  border-color: var(--accent); color: #0a0a1a;
+  background: var(--accent);
+  box-shadow: 0 0 20px color-mix(in srgb, var(--accent) 30%, transparent);
+  animation: pulse 2s ease infinite;
+}
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 20%, transparent); }
+  50% { box-shadow: 0 0 24px color-mix(in srgb, var(--accent) 40%, transparent); }
+}
+.pipeline-label {
+  font-size: 10px; color: #6a7090; text-align: center;
+  max-width: 90px; line-height: 1.3;
+}
+.pipeline-node.done .pipeline-label,
+.pipeline-node.active .pipeline-label { color: #a0a8b8; }
+.pipeline-connector {
+  width: 60px; height: 2px; margin-bottom: 22px;
+  background: #2a2a4a; position: relative;
+}
+.pipeline-connector.done { background: var(--accent); opacity: 0.4; }
+.pipeline-connector::after {
+  content: ''; position: absolute; right: -3px; top: -3px;
+  width: 0; height: 0;
+  border-left: 6px solid #2a2a4a;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+}
+.pipeline-connector.done::after { border-left-color: var(--accent); opacity: 0.6; }
+
+/* ── Legend ─────────────────────────────────────────────────────── */
+.legend {
+  display: flex; align-items: center; gap: 24px;
+  margin-bottom: 28px; padding: 10px 16px;
+  background: #0e0e22; border-radius: 8px; border: 1px solid #1a1a34;
+  font-size: 11px; color: #8a90a8;
+}
+.legend-item { display: flex; align-items: center; gap: 6px; }
+.legend-swatch {
+  width: 12px; height: 12px; border-radius: 3px;
+}
+.legend-swatch.teal { background: #00d4aa; }
+.legend-swatch.coral { background: #ff6b6b; }
+.legend-swatch.grey { background: #4a4a6a; }
+
+/* ── Section / Step Cards ──────────────────────────────────────── */
+.step {
+  background: #12122a;
+  border: 1px solid #1e1e3a;
+  border-radius: 12px;
+  margin-bottom: 24px;
+  overflow: hidden;
+  transition: border-color 0.3s;
+}
+.step:hover { border-color: #2a2a4a; }
+.step-header {
+  display: flex; align-items: center; gap: 16px;
+  padding: 20px 24px;
+  border-bottom: 1px solid #1a1a34;
+}
+.step-badge {
+  width: 32px; height: 32px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 700;
+  flex-shrink: 0;
+}
+.step-title { font-size: 16px; font-weight: 600; color: #e0e6f0; }
+.step-subtitle { font-size: 12px; color: #6a7090; margin-top: 2px; }
+.step-desc {
+  font-size: 13px; color: #8a90b0; line-height: 1.65; margin-top: 8px;
+  padding: 10px 14px; background: #0d0d22; border-radius: 6px;
+  border-left: 2px solid var(--accent, #00d4aa30);
+}
+.tab-intro {
+  background: linear-gradient(135deg, #12122a 0%, #0d0d22 100%);
+  border: 1px solid #1e1e3a; border-radius: 10px;
+  padding: 20px 24px; margin-bottom: 24px;
+}
+.tab-intro-title {
+  font-size: 18px; font-weight: 600; color: #e0e6f0; margin-bottom: 6px;
+}
+.tab-intro-desc {
+  font-size: 14px; color: #8a90b0; line-height: 1.7;
+}
+.step-body { padding: 20px 24px; }
+.step-connector {
+  display: flex; justify-content: center; margin: -12px 0;
+  position: relative; z-index: 1;
+}
+.step-arrow {
+  width: 2px; height: 24px; position: relative;
+}
+.step-arrow::before {
+  content: ''; position: absolute; top: 0; left: 0;
+  width: 2px; height: 24px;
+}
+.step-arrow::after {
+  content: ''; position: absolute; bottom: 0; left: -4px;
+  width: 0; height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+}
+
+/* Brand accent */
+[data-tab-content="brand"] .step { border-left: 3px solid #00d4aa20; }
+[data-tab-content="brand"] .step-badge { background: #00d4aa20; color: #00d4aa; }
+[data-tab-content="brand"] .step-arrow::before { background: #00d4aa40; }
+[data-tab-content="brand"] .step-arrow::after { border-top: 6px solid #00d4aa40; }
+[data-tab-content="brand"] { --accent: #00d4aa; }
+
+/* Publisher accent */
+[data-tab-content="publisher"] .step { border-left: 3px solid #4a9eff20; }
+[data-tab-content="publisher"] .step-badge { background: #4a9eff20; color: #4a9eff; }
+[data-tab-content="publisher"] .step-arrow::before { background: #4a9eff40; }
+[data-tab-content="publisher"] .step-arrow::after { border-top: 6px solid #4a9eff40; }
+[data-tab-content="publisher"] { --accent: #4a9eff; }
+
+/* SSP accent */
+[data-tab-content="ssp"] .step { border-left: 3px solid #f59e0b20; }
+[data-tab-content="ssp"] .step-badge { background: #f59e0b20; color: #f59e0b; }
+[data-tab-content="ssp"] .step-arrow::before { background: #f59e0b40; }
+[data-tab-content="ssp"] .step-arrow::after { border-top: 6px solid #f59e0b40; }
+[data-tab-content="ssp"] { --accent: #f59e0b; }
+
+/* DSP accent */
+[data-tab-content="dsp"] .step { border-left: 3px solid #a855f720; }
+[data-tab-content="dsp"] .step-badge { background: #a855f720; color: #a855f7; }
+[data-tab-content="dsp"] .step-arrow::before { background: #a855f740; }
+[data-tab-content="dsp"] .step-arrow::after { border-top: 6px solid #a855f740; }
+[data-tab-content="dsp"] { --accent: #a855f7; }
+
+/* Page Intel accent */
+[data-tab-content="pageintel"] .step { border-left: 3px solid #06b6d420; }
+[data-tab-content="pageintel"] .step-badge { background: #06b6d420; color: #06b6d4; }
+[data-tab-content="pageintel"] .step-arrow::before { background: #06b6d440; }
+[data-tab-content="pageintel"] .step-arrow::after { border-top: 6px solid #06b6d440; }
+[data-tab-content="pageintel"] { --accent: #06b6d4; }
+
+/* ── Bar Charts ────────────────────────────────────────────────── */
+.bar-chart { display: flex; flex-direction: column; gap: 4px; }
+.bar-row {
+  display: grid; grid-template-columns: 180px 1fr 60px;
+  align-items: center; gap: 10px; padding: 3px 0;
+}
+.bar-label {
+  font-size: 11px; color: #8a90a8; text-align: right;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.bar-track {
+  height: 16px; background: #0a0a1a; border-radius: 4px;
+  overflow: hidden; position: relative;
+}
+.bar-fill {
+  height: 100%; border-radius: 4px;
+  transition: width 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+  position: relative;
+}
+.bar-fill.teal { background: linear-gradient(90deg, #00d4aa, #00e8bb); }
+.bar-fill.coral { background: linear-gradient(90deg, #ff6b6b, #ff8080); }
+.bar-fill.grey { background: #4a4a6a; }
+.bar-fill.blue { background: linear-gradient(90deg, #4a9eff, #6ab0ff); }
+.bar-fill.amber { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+.bar-fill.purple { background: linear-gradient(90deg, #a855f7, #c084fc); }
+.bar-value {
+  font-size: 12px; font-weight: 600; text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.bar-value.teal { color: #00d4aa; }
+.bar-value.coral { color: #ff6b6b; }
+.bar-value.grey { color: #6a7090; }
+
+.bar-group-title {
+  font-size: 11px; font-weight: 600; color: #6a7090;
+  text-transform: uppercase; letter-spacing: 1.5px;
+  padding: 10px 0 4px; margin-top: 8px;
+  border-top: 1px solid #1a1a34;
+}
+.bar-group-title:first-child { border-top: none; margin-top: 0; padding-top: 0; }
+
+/* ── Construct Grid ────────────────────────────────────────────── */
+.construct-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 12px;
+}
+.construct-card {
+  background: #0e0e22; border: 1px solid #1a1a34;
+  border-radius: 8px; padding: 14px 16px;
+  transition: border-color 0.2s;
+}
+.construct-card:hover { border-color: #2a2a4a; }
+.construct-arrow {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 8px;
+}
+.construct-from {
+  font-size: 11px; padding: 3px 8px;
+  background: #1a1a34; border-radius: 4px;
+  color: #8a90a8;
+}
+.construct-from .val { color: #00d4aa; font-weight: 600; }
+.construct-from .val.coral-text { color: #ff6b6b; }
+.construct-arrow-icon { color: #4a4a6a; font-size: 16px; }
+.construct-to {
+  font-size: 12px; font-weight: 600; padding: 3px 10px;
+  border-radius: 4px;
+}
+.construct-to.teal-bg { background: #00d4aa20; color: #00d4aa; }
+.construct-to.coral-bg { background: #ff6b6b20; color: #ff6b6b; }
+.construct-math {
+  font-size: 10px; color: #5a6080; line-height: 1.5;
+}
+.construct-math code {
+  color: #8a90a8; background: #0a0a1a; padding: 1px 4px;
+  border-radius: 2px; font-size: 10px;
+}
+
+/* ── Segment Cards ─────────────────────────────────────────────── */
+.segment-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 14px;
+}
+.segment-card {
+  background: #0e0e22; border: 1px solid #1a1a34;
+  border-radius: 10px; padding: 16px 18px;
+  transition: all 0.2s;
+}
+.segment-card:hover { border-color: #2a2a4a; }
+.segment-card.highlight { border-color: var(--accent); background: #14142e; }
+.segment-name {
+  font-size: 14px; font-weight: 600; color: #e0e6f0;
+  margin-bottom: 8px;
+}
+.segment-score {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 10px;
+}
+.gauge-track {
+  flex: 1; height: 8px; background: #1a1a34;
+  border-radius: 4px; overflow: hidden;
+}
+.gauge-fill {
+  height: 100%; border-radius: 4px;
+  transition: width 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.gauge-value {
+  font-size: 14px; font-weight: 700; min-width: 40px; text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.segment-meta {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+  font-size: 11px;
+}
+.segment-meta-item { display: flex; flex-direction: column; }
+.segment-meta-key { color: #5a6080; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+.segment-meta-val { color: #a0a8c0; }
+.segment-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+.segment-tag {
+  font-size: 10px; padding: 2px 7px; border-radius: 3px;
+  background: #1a1a34; color: #8a90a8;
+}
+.segment-tag.use { background: #00d4aa15; color: #00d4aa; border: 1px solid #00d4aa30; }
+.segment-tag.avoid { background: #ff6b6b15; color: #ff6b6b; border: 1px solid #ff6b6b30; }
+
+/* ── Radial/Spider-like display (pure CSS approach) ────────────── */
+.ad-construct-groups {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+.ad-group {
+  background: #0e0e22; border: 1px solid #1a1a34;
+  border-radius: 10px; padding: 16px; overflow: hidden;
+}
+.ad-group-title {
+  font-size: 12px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 1px; margin-bottom: 12px; padding-bottom: 8px;
+  border-bottom: 1px solid #1a1a34;
+}
+.ad-group-title.personality { color: #00d4aa; }
+.ad-group-title.persuasion { color: #a855f7; }
+.ad-group-title.appeals { color: #4a9eff; }
+.ad-group-title.framing { color: #f59e0b; }
+.ad-group-title.values { color: #22c55e; }
+.ad-group-title.other { color: #f472b6; }
+.ad-item {
+  display: grid; grid-template-columns: 1fr 50px; gap: 8px;
+  align-items: center; padding: 4px 0;
+}
+.ad-item-label { font-size: 11px; color: #a0a8c0; }
+.ad-item-bar {
+  height: 6px; background: #1a1a34; border-radius: 3px;
+  overflow: hidden; grid-column: 1 / -1; margin-top: -2px;
+}
+.ad-item-fill { height: 100%; border-radius: 3px; }
+.ad-item-val {
+  font-size: 11px; font-weight: 600; text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Mechanism Cards ───────────────────────────────────────────── */
+.mechanism-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+.mechanism-card {
+  background: #0e0e22; border: 1px solid #1a1a34;
+  border-radius: 8px; padding: 14px 16px;
+}
+.mechanism-name { font-size: 13px; font-weight: 600; color: #e0e6f0; }
+.mechanism-score-row {
+  display: flex; align-items: center; gap: 8px; margin: 8px 0;
+}
+.mechanism-drivers {
+  font-size: 10px; color: #6a7090; line-height: 1.5;
+}
+.mechanism-drivers span { color: #8a90a8; }
+
+/* ── Creative Direction Card ───────────────────────────────────── */
+.creative-card {
+  background: linear-gradient(135deg, #0e1a28 0%, #12122a 100%);
+  border: 1px solid #00d4aa30;
+  border-radius: 12px; padding: 24px;
+}
+.creative-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+.creative-item { }
+.creative-key {
+  font-size: 10px; text-transform: uppercase; letter-spacing: 1px;
+  color: #00d4aa; margin-bottom: 4px;
+}
+.creative-val { font-size: 14px; font-weight: 500; color: #e0e6f0; }
+.creative-sub { font-size: 11px; color: #6a7090; margin-top: 2px; }
+
+/* ── JSON Display ──────────────────────────────────────────────── */
+.json-block {
+  background: #080818; border: 1px solid #1a1a34;
+  border-radius: 8px; padding: 16px 20px;
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  font-size: 11px; line-height: 1.7;
+  overflow-x: auto; max-height: 500px; overflow-y: auto;
+  color: #a0a8c0;
+}
+.json-block .key { color: #4a9eff; }
+.json-block .str { color: #22c55e; }
+.json-block .num { color: #f59e0b; }
+.json-block .bool { color: #a855f7; }
+.json-block .bracket { color: #6a7090; }
+.json-block .comment { color: #3a3a5a; font-style: italic; }
+
+/* ── Comparison Table ──────────────────────────────────────────── */
+.comparison {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.comparison-col {
+  background: #0e0e22; border: 1px solid #1a1a34;
+  border-radius: 10px; padding: 20px; overflow: hidden;
+}
+.comparison-col.old { border-top: 3px solid #ff6b6b40; }
+.comparison-col.new { border-top: 3px solid #00d4aa40; }
+.comparison-title {
+  font-size: 14px; font-weight: 600; margin-bottom: 12px;
+}
+.comparison-title.old { color: #ff6b6b; }
+.comparison-title.new { color: #00d4aa; }
+.comparison-list { list-style: none; }
+.comparison-list li {
+  font-size: 12px; padding: 4px 0; color: #a0a8c0;
+  display: flex; align-items: flex-start; gap: 6px;
+}
+.comparison-list li::before { flex-shrink: 0; }
+.comparison-col.old .comparison-list li::before { content: '\2212'; color: #ff6b6b; }
+.comparison-col.new .comparison-list li::before { content: '+'; color: #00d4aa; font-weight: 700; }
+
+/* ── Source Card ────────────────────────────────────────────────── */
+.source-card {
+  background: linear-gradient(135deg, #0e0e22 0%, #12122a 100%);
+  border: 1px solid #1e1e3a; border-radius: 10px;
+  padding: 20px 24px;
+  display: flex; align-items: center; gap: 20px;
+}
+.source-icon {
+  width: 56px; height: 56px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px; flex-shrink: 0;
+}
+.source-info { flex: 1; }
+.source-info h3 { font-size: 16px; font-weight: 600; color: #e0e6f0; }
+.source-info p { font-size: 12px; color: #6a7090; margin-top: 2px; }
+.source-stats {
+  display: flex; gap: 20px;
+}
+.source-stat { text-align: center; }
+.source-stat-val { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.source-stat-label { font-size: 10px; color: #6a7090; text-transform: uppercase; letter-spacing: 0.5px; }
+
+/* ── Info Row ──────────────────────────────────────────────────── */
+.info-row {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px; margin-top: 12px;
+}
+.info-chip {
+  background: #0a0a1a; border: 1px solid #1a1a34;
+  border-radius: 6px; padding: 10px 14px;
+}
+.info-chip-label {
+  font-size: 10px; color: #5a6080; text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.info-chip-value {
+  font-size: 14px; font-weight: 600; color: #e0e6f0;
+  margin-top: 2px;
+}
+
+/* ── Floor / Formula Cards ─────────────────────────────────────── */
+.formula-card {
+  background: #0a0a1a; border: 1px solid #1a1a34;
+  border-radius: 8px; padding: 16px 20px;
+  margin-top: 12px;
+}
+.formula {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 13px; color: #e0e6f0;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px;
+}
+.formula .op { color: #6a7090; }
+.formula .val { color: #f59e0b; font-weight: 600; }
+.formula .result { color: #00d4aa; font-weight: 700; font-size: 15px; }
+.formula-explain {
+  font-size: 11px; color: #6a7090; margin-top: 6px;
+}
+
+/* ── Latency Badge ─────────────────────────────────────────────── */
+.latency-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: #00d4aa15; border: 1px solid #00d4aa30;
+  border-radius: 20px; padding: 8px 16px;
+  font-size: 13px; color: #00d4aa; font-weight: 600;
+}
+
+/* ── Bidding Strategy ──────────────────────────────────────────── */
+.strategy-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 14px;
+}
+.strategy-card {
+  background: #0e0e22; border: 1px solid #1a1a34;
+  border-radius: 10px; padding: 16px 18px;
+}
+.strategy-vertical {
+  font-size: 13px; font-weight: 600; color: #e0e6f0;
+  margin-bottom: 8px; display: flex; align-items: center; gap: 8px;
+}
+.strategy-vertical .badge {
+  font-size: 10px; padding: 2px 6px; border-radius: 3px;
+  font-weight: 700;
+}
+.strategy-vertical .badge.up { background: #00d4aa20; color: #00d4aa; }
+.strategy-vertical .badge.down { background: #ff6b6b20; color: #ff6b6b; }
+.strategy-signals {
+  font-size: 11px; color: #8a90a8; line-height: 1.6;
+}
+.strategy-mechanisms {
+  display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px;
+}
+
+/* ── Vertical CPM Bars ─────────────────────────────────────────── */
+.cpm-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 8px;
+}
+.cpm-row {
+  display: grid; grid-template-columns: 140px 1fr 60px;
+  align-items: center; gap: 10px; padding: 6px 0;
+}
+.cpm-label { font-size: 12px; color: #a0a8c0; }
+.cpm-bar {
+  height: 20px; background: #1a1a34; border-radius: 4px;
+  overflow: hidden;
+}
+.cpm-fill { height: 100%; border-radius: 4px; }
+.cpm-val { font-size: 12px; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
+
+/* ── Signal decode table ───────────────────────────────────────── */
+.signal-table { width: 100%; border-collapse: collapse; }
+.signal-table th {
+  font-size: 10px; text-transform: uppercase; letter-spacing: 1px;
+  color: #5a6080; text-align: left; padding: 8px 12px;
+  border-bottom: 1px solid #1a1a34;
+}
+.signal-table td {
+  font-size: 12px; padding: 10px 12px;
+  border-bottom: 1px solid #0e0e22;
+  vertical-align: top;
+}
+.signal-table tr:hover td { background: #0e0e2280; }
+.signal-key { font-weight: 600; color: #e0e6f0; }
+.signal-val { font-weight: 600; font-variant-numeric: tabular-nums; }
+.signal-meaning { color: #8a90a8; }
+.signal-action { color: #a0a8c0; font-size: 11px; }
+
+/* ── Footer ────────────────────────────────────────────────────── */
+.footer {
+  margin-top: 48px; padding: 24px 0;
+  border-top: 1px solid #1a1a34;
+  text-align: center;
+  font-size: 11px; color: #4a4a6a;
+  line-height: 1.8;
+}
+.footer strong { color: #6a7090; }
+
+/* ── Utility ───────────────────────────────────────────────────── */
+.mt-12 { margin-top: 12px; }
+.mt-16 { margin-top: 16px; }
+.mt-24 { margin-top: 24px; }
+.mb-8 { margin-bottom: 8px; }
+.mb-12 { margin-bottom: 12px; }
+.text-muted { color: #6a7090; }
+.text-sm { font-size: 12px; }
+.text-xs { font-size: 11px; }
+.flex-center { display: flex; align-items: center; justify-content: center; }
+.gap-8 { gap: 8px; }
+.gap-16 { gap: 16px; }
+
+.highlight-val {
+  font-weight: 700; padding: 1px 4px; border-radius: 3px;
+}
+.highlight-val.strong-teal { background: #00d4aa20; color: #00d4aa; }
+.highlight-val.strong-coral { background: #ff6b6b20; color: #ff6b6b; }
+
+/* ── Processing Layer Viz ──────────────────────────────────────── */
+.layer-stack {
+  display: flex; flex-direction: column; gap: 8px;
+}
+.layer-item {
+  display: flex; align-items: center; gap: 12px;
+  background: #0e0e22; border: 1px solid #1a1a34;
+  border-radius: 8px; padding: 12px 16px;
+  border-left: 3px solid;
+}
+.layer-item.l1 { border-left-color: #4a9eff; }
+.layer-item.l2 { border-left-color: #a855f7; }
+.layer-item.l3 { border-left-color: #00d4aa; }
+.layer-num {
+  font-size: 18px; font-weight: 700; width: 28px; text-align: center;
+}
+.layer-item.l1 .layer-num { color: #4a9eff; }
+.layer-item.l2 .layer-num { color: #a855f7; }
+.layer-item.l3 .layer-num { color: #00d4aa; }
+.layer-info { flex: 1; }
+.layer-title { font-size: 13px; font-weight: 600; color: #e0e6f0; }
+.layer-desc { font-size: 11px; color: #6a7090; margin-top: 2px; }
+.layer-count {
+  font-size: 11px; font-weight: 600; padding: 3px 8px;
+  border-radius: 12px; background: #1a1a34; color: #a0a8c0;
+}
+
+/* ── Scrollbar styling ─────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #2a2a4a; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #3a3a5a; }
+
+/* ── Responsive ────────────────────────────────────────────────── */
+@media (max-width: 1200px) {
+  .header-inner, .tab-bar-inner, .main { padding-left: 20px; padding-right: 20px; }
+  .header-stats { display: none; }
+  .comparison { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     HEADER
+     ═══════════════════════════════════════════════════════════════ -->
+<header class="header">
+  <div class="header-inner">
+    <div class="brand">
+      <div>
+        <h1><b>INFORMATIV</b></h1>
+        <div class="brand-sub">Universal Intelligence API</div>
+      </div>
+    </div>
+    <div class="header-stats">
+      <div class="header-stat">
+        <div class="header-stat-val">47M</div>
+        <div class="header-stat-label">Bilateral Edges</div>
+      </div>
+      <div class="header-stat">
+        <div class="header-stat-val">27</div>
+        <div class="header-stat-label">Dimensions</div>
+      </div>
+      <div class="header-stat">
+        <div class="header-stat-val">524</div>
+        <div class="header-stat-label">Constructs</div>
+      </div>
+      <div class="header-stat">
+        <div class="header-stat-val">&lt;12ms</div>
+        <div class="header-stat-label">Latency</div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     TAB BAR
+     ═══════════════════════════════════════════════════════════════ -->
+<nav class="tab-bar">
+  <div class="tab-bar-inner">
+    <div class="tab active" data-tab="brand" onclick="switchTab('brand')">
+      <div class="tab-icon">B</div>
+      Brand Intelligence
+    </div>
+    <div class="tab" data-tab="publisher" onclick="switchTab('publisher')">
+      <div class="tab-icon">P</div>
+      Publisher Profile
+    </div>
+    <div class="tab" data-tab="ssp" onclick="switchTab('ssp')">
+      <div class="tab-icon">S</div>
+      SSP Bid Enrichment
+    </div>
+    <div class="tab" data-tab="dsp" onclick="switchTab('dsp')">
+      <div class="tab-icon">D</div>
+      DSP Signal Decode
+    </div>
+    <div class="tab" data-tab="pageintel" onclick="switchTab('pageintel')">
+      <div class="tab-icon">5</div>
+      Page Intel
+    </div>
+  </div>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     MAIN CONTENT
+     ═══════════════════════════════════════════════════════════════ -->
+<main class="main">
+
+  <!-- ═════════════════════════════════════════════════════════════
+       TAB 1: BRAND INTELLIGENCE
+       ═════════════════════════════════════════════════════════════ -->
+  <div class="tab-content active" data-tab-content="brand">
+
+    <!-- Tab Intro -->
+    <div class="tab-intro">
+      <div class="tab-intro-title">Brand Intelligence: What does ADAM see in RideLux?</div>
+      <div class="tab-intro-desc">
+        This view shows how ADAM analyzes a luxury chauffeur service by reading the psychological signals embedded in 47 million bilateral edges &mdash;
+        real buyer-seller alignment data from annotated reviews and service descriptions. For RideLux, ADAM processed 412 conversion edges
+        to extract 27 continuous psychological dimensions, mapped them to 60+ directional constructs, identified the most effective persuasion
+        mechanisms, and generated actionable creative direction. Every number below comes from real booking behavior, not surveys or demographics.
+      </div>
+    </div>
+
+    <!-- Pipeline Strip -->
+    <div class="pipeline-strip" id="brand-pipeline"></div>
+
+    <!-- Legend -->
+    <div class="legend">
+      <div class="legend-item"><div class="legend-swatch teal"></div> Above neutral (&gt;0.5)</div>
+      <div class="legend-item"><div class="legend-swatch coral"></div> Below neutral (&lt;0.5)</div>
+      <div class="legend-item"><div class="legend-swatch grey"></div> Neutral (0.5)</div>
+      <span style="margin-left:auto; color:#5a6080;">RideLux &middot; Luxury Chauffeured Car Service &middot; ridelux.com</span>
+    </div>
+
+    <!-- Source -->
+    <div class="step">
+      <div class="step-header">
+        <div class="step-badge">0</div>
+        <div>
+          <div class="step-title">Source: 47M Bilateral Edges</div>
+          <div class="step-subtitle">Neo4j graph database &mdash; buyer psychology + seller psychology dual annotation</div>
+          <div class="step-desc">Every service in the graph has BRAND_CONVERTED edges connecting its listing (seller psychology) to reviews written by people who actually booked it (buyer psychology). Each edge carries 43 properties measuring the psychological alignment between what the brand communicated and what the buyer experienced. For RideLux, 412 edges from 400+ satisfied customers across NYC, LA, Miami, and DC reveal the psychology of premium ground transportation buyers. Real booking decisions annotated at psychological depth.</div>
+        </div>
+      </div>
+      <div class="step-body">
+        <div class="source-card">
+          <div class="source-icon" style="background:#00d4aa15; color:#00d4aa;">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <circle cx="12" cy="5" r="3"/><circle cx="5" cy="19" r="3"/><circle cx="19" cy="19" r="3"/>
+              <line x1="12" y1="8" x2="5" y2="16"/><line x1="12" y1="8" x2="19" y2="16"/>
+            </svg>
+          </div>
+          <div class="source-info">
+            <h3 class="mono">ridelux.com</h3>
+            <p>RideLux &mdash; Luxury Chauffeured Car Service (NYC, LA, Miami, DC)</p>
+          </div>
+          <div class="source-stats">
+            <div class="source-stat">
+              <div class="source-stat-val" style="color:#00d4aa;">412</div>
+              <div class="source-stat-label">BRAND_CONVERTED edges</div>
+            </div>
+            <div class="source-stat">
+              <div class="source-stat-val" style="color:#4a9eff;">4.82</div>
+              <div class="source-stat-label">Avg Stars</div>
+            </div>
+            <div class="source-stat">
+              <div class="source-stat-val" style="color:#f59e0b;">89.3%</div>
+              <div class="source-stat-label">Verified</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step-connector"><div class="step-arrow"></div></div>
+
+    <!-- Step 1: Raw Edge Dimensions -->
+    <div class="step">
+      <div class="step-header">
+        <div class="step-badge">1</div>
+        <div>
+          <div class="step-title">Raw Edge Dimensions (27)</div>
+          <div class="step-subtitle">Averaged bilateral edge values across 412 edges &mdash; continuous [0, 1] signals</div>
+          <div class="step-desc">These are the raw averages across all 412 bilateral edges for RideLux's 400+ customers. Each bar represents a continuous psychological dimension &mdash; not a binary yes/no, but a precise measurement. Values above 0.5 (teal) mean this dimension runs high for buyers who book luxury ground transportation; below 0.5 (coral) means it runs low. For example, regulatory_fit at 0.22 means RideLux buyers are prevention-focused &mdash; they book to eliminate travel anxiety and ensure reliability, not to explore and experiment. This is the 27-dimensional map that replaces the old 7-scalar NDF compression.</div>
+        </div>
+      </div>
+      <div class="step-body">
+        <div class="bar-chart" id="brand-dimensions-chart"></div>
+      </div>
+    </div>
+
+    <div class="step-connector"><div class="step-arrow"></div></div>
+
+    <!-- Step 2: Polarity-Aware Construct Activations -->
+    <div class="step">
+      <div class="step-header">
+        <div class="step-badge">2</div>
+        <div>
+          <div class="step-title">Polarity-Aware Construct Activations</div>
+          <div class="step-subtitle">Each dimension maps to HIGH and LOW constructs &mdash; direction from 0.5 determines which activates</div>
+          <div class="step-desc">This is the key innovation: instead of treating 0.22 and 0.78 the same (both "deviate from 0.5"), the system recognizes they activate <em>different</em> psychological constructs. A regulatory_fit of 0.22 doesn't just mean "strong signal" &mdash; it means <strong>prevention_focus</strong> is active (the buyer is protecting against travel anxiety). A value of 0.78 would activate <strong>promotion_focus</strong> instead (the buyer is seeking excitement). RideLux buyers want certainty and reliability &mdash; this directional mapping connects 27 bilateral dimensions to 60+ constructs from the 524-construct taxonomy, giving downstream systems precise psychological profiles instead of magnitude-only scores.</div>
+        </div>
+      </div>
+      <div class="step-body">
+        <div class="construct-grid" id="brand-constructs-grid"></div>
+      </div>
+    </div>
+
+    <div class="step-connector"><div class="step-arrow"></div></div>
+
+    <!-- Step 3: Seller-Side Ad Psychology -->
+    <div class="step">
+      <div class="step-header">
+        <div class="step-badge">3</div>
+        <div>
+          <div class="step-title">Seller-Side Ad Psychology</div>
+          <div class="step-subtitle">Brand copy annotation &mdash; what the seller's listing communicates psychologically</div>
+          <div class="step-desc">This is the other side of the bilateral edge. While Steps 1-3 show buyer psychology (who books this and why), this step shows <strong>seller psychology</strong> &mdash; what RideLux's service listing actually communicates. Claude annotated 54 dimensions of the listing copy: its brand personality (brand_trust_fit 0.92, authenticity 0.90, competence 0.85, sincerity 0.82), persuasion techniques (authority 0.85, commitment 0.80), and value propositions (reliability 0.88, peace_of_mind 0.85). ADAM is the only system that has <em>both sides</em> annotated at this depth &mdash; the seller's intent and the buyer's response.</div>
+        </div>
+      </div>
+      <div class="step-body">
+        <div class="ad-construct-groups" id="brand-ad-constructs"></div>
+      </div>
+    </div>
+
+    <div class="step-connector"><div class="step-arrow"></div></div>
+
+    <!-- Step 4: Mechanism Receptivity -->
+    <div class="step">
+      <div class="step-header">
+        <div class="step-badge">4</div>
+        <div>
+          <div class="step-title">Mechanism Receptivity</div>
+          <div class="step-subtitle">Which persuasion mechanisms will be effective for this product's buyers</div>
+          <div class="step-desc">Now the construct activations translate into actionable mechanism scores. Prevention-focused buyers (reg_fit=0.22) respond to <strong>authority</strong> (0.85) and <strong>commitment</strong> (0.80) &mdash; they need reassurance and reliability, not excitement. Low uncertainty tolerance (0.25) means they want guaranteed outcomes, making <strong>social proof</strong> (0.78) with full-name testimonials effective. The seller already communicates competence (0.85) and trust (0.92), so there's natural alignment. The system also identifies mechanisms to <em>avoid</em>: scarcity (0.15) would trigger reactance in these careful, deliberate buyers who want professional calm.</div>
+        </div>
+      </div>
+      <div class="step-body">
+        <div class="mechanism-grid" id="brand-mechanisms-grid"></div>
+      </div>
+    </div>
+
+    <div class="step-connector"><div class="step-arrow"></div></div>
+
+    <!-- Step 5: Creative Direction -->
+    <div class="step">
+      <div class="step-header">
+        <div class="step-badge">5</div>
+        <div>
+          <div class="step-title">Creative Direction</div>
+          <div class="step-subtitle">Actionable guidance for campaign creatives</div>
+          <div class="step-desc">This is the final output a creative team sees. Instead of "target affluent travelers who need rides," ADAM provides psychologically grounded direction: lead with <strong>reliability and professional competence</strong> (authority frame), use testimonials with full names ("On-time, every time"), frame around <strong>eliminating travel anxiety</strong> (prevention frame), and absolutely avoid urgency, scarcity, or flashy party vibes. These buyers want professional calm. Every recommendation traces back through the pipeline to real bilateral edge evidence from 412 actual bookings.</div>
+        </div>
+      </div>
+      <div class="step-body">
+        <div class="creative-card">
+          <div class="creative-grid" id="brand-creative-grid"></div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /brand -->
+
+
+  <!-- ═════════════════════════════════════════════════════════════
+       TAB 2: PUBLISHER PROFILE
+       ═════════════════════════════════════════════════════════════ -->
+  <div class="tab-content" data-tab-content="publisher">
+
+    <div class="tab-intro">
+      <div class="tab-intro-title">Publisher Profile: What psychological environment does your page create?</div>
+      <div class="tab-intro-desc">
+        Publishers use this to understand the psychological state their content puts readers in. When someone reads a luxury travel / ground transportation article,
+        they enter a specific psychological environment &mdash; prevention-focused (eliminating travel anxiety), future-oriented (planning ahead),
+        authority-receptive (wanting professional competence). ADAM quantifies this environment across 27 dimensions using bilateral edge evidence from real conversions
+        in this category, then matches it to advertiser segments and computes CPM premiums. This turns publisher inventory from "travel page" into
+        "prevention-focused, authority-receptive, certainty-seeking audience worth 1.35x CPM to financial services advertisers."
+      </div>
+    </div>
+
+    <div class="pipeline-strip" id="publisher-pipeline"></div>
+
+    <div class="legend">
+      <div class="legend-item"><div class="legend-swatch teal"></div> Above neutral (&gt;0.5)</div>
+      <div class="legend-item"><div class="legend-swatch coral"></div> Below neutral (&lt;0.5)</div>
+      <div class="legend-item"><div class="legend-swatch grey"></div> Neutral (0.5)</div>
+      <span style="margin-left:auto; color:#5a6080;">Luxury Ground Transportation &middot; Publisher page environment</span>
+    </div>
+
+    <!-- Category Environment -->
+    <div class="step">
+      <div class="step-header">
+        <div class="step-badge">1</div>
+        <div>
+          <div class="step-title">Category Environment</div>
+          <div class="step-subtitle">What your page environment looks like psychologically</div>
+          <div class="step-desc">ADAM aggregates all bilateral edges in this service category to determine the psychological environment. When readers browse luxury ground transportation content, the aggregate of 412 conversion edges tells us what psychological state they're in: prevention-focused (eliminating travel uncertainty), future-oriented (planning ahead), and authority-receptive (wanting professional competence). This is the category's psychological fingerprint &mdash; backed by actual booking behavior, not content keywords.</div>
+        </div>
+      </div>
+      <div class="step-body">
+        <div class="source-card">
+          <div class="source-icon" style="background:#4a9eff15; color:#4a9eff;">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <rect x="3" y="3" width="18" height="18" rx="3"/>
+              <line x1="3" y1="9" x2="21" y2="9"/>
+              <line x1="9" y1="9" x2="9" y2="21"/>
+            </svg>
+          </div>
+          <div class="source-info">
+            <h3>Luxury Ground Transportation</h3>
+            <p>Your page creates a specific psychological environment based on 412 bilateral edges analyzed</p>
+          </div>
+          <div class="source-stats">
+            <div class="source-stat">
+              <div class="source-stat-val" style="color:#4a9eff;">412</div>
+              <div class="source-stat-label">Edges Analyzed</div>
+            </div>
+            <div class="source-stat">
+              <div class="source-stat-val" style="color:#00d4aa;">0.680</div>
+              <div class="source-stat-label">Composite</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step-connector"><div class="step-arrow"></div></div>
+
+    <!-- 27 Bilateral Dimensions (Publisher Context) -->
+    <div class="step">
+      <div class="step-header">
+        <div class="step-badge">2</div>
+        <div>
+          <div class="step-title">27 Bilateral Dimensions</div>
+          <div class="step-subtitle">Your page creates this psychological environment for visitors</div>
+          <div class="step-desc">These 27 continuous dimensions define the full psychological space of your page. Unlike IAB categories that say "this is a travel page," these dimensions say exactly what <em>kind</em> of psychology your travel page activates. A luxury chauffeur service article activates different dimensions than a backpacker adventure guide &mdash; same IAB category, completely different buyer psychology. Advertisers bidding on your inventory can now match on the specific psychological dimensions that predict their conversions.</div>
+        </div>
+      </div>
+      <div class="step-body">
+        <div class="bar-chart" id="publisher-dimensions-chart"></div>
+      </div>
+    </div>
+
+    <div class="step-connector"><div class="step-arrow"></div></div>
+
+    <!-- Construct Activations -->
+    <div class="step">
+      <div class="step-header">
+        <div class="step-badge">3</div>
+        <div>
+          <div class="step-title">Construct Activations</div>
+          <div class="step-subtitle">Directional psychological constructs activated by your page environment</div>
+          <div class="step-desc">The 27 bilateral dimensions map to named psychological constructs from academic research. Your page doesn't just have "low regulatory_fit" &mdash; it activates <strong>prevention_focus</strong> (Higgins' Regulatory Focus Theory). It doesn't just have "high construal" &mdash; it activates <strong>abstract thinking</strong> (Trope & Liberman's Construal Level Theory). These construct names connect directly to the mechanisms that influence them, creating a causal chain from page psychology to ad effectiveness.</div>
+        </div>
+      </div>
+      <div class="step-body">
+        <div class="construct-grid" id="publisher-constructs-grid"></div>
+      </div>
+    </div>
+
+    <div class="step-connector"><div class="step-arrow"></div></div>
+
+    <!-- Enriched Segments -->
+    <div class="step">
+      <div class="step-header">
+        <div class="step-badge">4</div>
+        <div>
+          <div class="step-title">Enriched Segments</div>
+          <div class="step-subtitle">8 canonical segments with psychological match scores for your page</div>
+          <div class="step-desc">These 8 segments are defined by psychological constructs, not demographic rules. Each segment includes the <em>defining constructs</em> (what makes someone belong), <em>mechanism recommendations</em> (what persuasion approaches work), <em>mechanisms to avoid</em> (what will backfire), and <em>creative guidance</em> (frame, tone, CTA style). The match score tells you how strongly your page environment activates each segment. Note: these are an interpretation layer for human readability &mdash; the full 27 bilateral dimensions and 60+ constructs are also available for programmatic systems that can use continuous signals directly.</div>
+        </div>
+      </div>
+      <div class="step-body">
+        <div class="segment-grid" id="publisher-segments-grid"></div>
+      </div>
+    </div>
+
+    <div class="step-connector"><div class="step-arrow"></div></div>
+
+    <!-- Vertical Values -->
+    <div class="step">
+      <div class="step-header">
+        <div class="step-badge">5</div>
+        <div>
+          <div class="step-title">Vertical Values</div>
+          <div class="step-subtitle">Which advertiser verticals would pay premium for this page environment</div>
+          <div class="step-desc">Not all advertiser verticals benefit equally from this page's psychology. Premium travel, financial services, and insurance advertisers should pay a premium because this page's prevention-focused, certainty-seeking, authority-receptive audience is exactly who they convert best. Impulse-driven verticals like mobile gaming would get less value. The CPM multiplier is derived from the alignment between the page's bilateral dimensions and each vertical's conversion patterns &mdash; backed by edge evidence, not category heuristics.</div>
+        </div>
+      </div>
+      <div class="step-body">
+        <div id="publisher-verticals"></div>
+      </div>
+    </div>
+
+  </div><!-- /publisher -->
+
+
+  <!-- ═════════════════════════════════════════════════════════════
+       TAB 3: SSP BID ENRICHMENT
+       ═════════════════════════════════════════════════════════════ -->
+  <div class="tab-content" data-tab-content="ssp">
+
+    <div class="tab-intro">
+      <div class="tab-intro-title">SSP Bid Enrichment: What is this impression psychologically worth?</div>
+      <div class="tab-intro-desc">
+        When an SSP receives a bid request, ADAM enriches it with psychological intelligence in under 12 milliseconds &mdash; no graph calls at bid time,
+        everything pre-computed. The output attaches to the OpenRTB 2.5 <code>data[]</code> array in three layers: continuous bilateral dimensions for
+        sophisticated DSPs, continuous construct activations for mechanism-aware bidders, and discrete segments for legacy targeting. This transforms
+        a "$3.50 CPM travel impression" into a psychologically graded opportunity with floor pricing backed by conversion evidence.
+      </div>
+    </div>
+
+    <div class="pipeline-strip" id="ssp-pipeline"></div>
+
+    <div class="legend">
+      <div class="legend-item"><div class="legend-swatch teal"></div> Above neutral (&gt;0.5)</div>
+      <div class="legend-item"><div class="legend-swatch coral"></div> Below neutral (&lt;0.5)</div>
+      <span style="margin-left:auto; color:#5a6080;">OpenRTB 2.5 bid enrichment output</span>
+    </div>
+
+    <!-- Input -->
+    <div class="step">
+      <div class="step-header">
+        <div class="step-badge">1</div>
+        <div>
+          <div class="step-title">Input: Bid Request</div>
+          <div class="step-subtitle">SSP receives impression opportunity</div>
+          <div class="step-desc">A standard OpenRTB bid request arrives with minimal context: an impression ID, a page category, and device type. Before ADAM, this was all the DSP had to bid on &mdash; a category label and nothing about the reader's psychological state.</div>
+        </div>
+      </div>
+      <div class="step-body">
+        <div class="json-block" id="ssp-input-json"></div>
+      </div>
+    </div>
+
+    <div class="step-connector"><div class="step-arrow"></div></div>
+
+    <!-- Processing Layers -->
+    <div class="step">
+      <div class="step-header">
+        <div class="step-badge">2</div>
+        <div>
+          <div class="step-title">Processing: 3-Layer Build</div>
+          <div class="step-subtitle">Bilateral edges &rarr; constructs &rarr; segments in &lt;12ms</div>
+          <div class="step-desc">All three signal layers are built from pre-computed data &mdash; zero graph queries at bid time. Layer 1 (bilateral dimensions) comes from cached category-level edge aggregates. Layer 2 (constructs) is computed in-memory from the polarity-aware mapping. Layer 3 (segments) is matched from the construct activations against 8 canonical segments. The entire pipeline runs in under 12ms, well within real-time bidding latency requirements (&lt;100ms).</div>
+        </div>
+      </div>
+      <div class="step-body">
+        <div class="layer-stack">
+          <div class="layer-item l1">
+            <div class="layer-num">1</div>
+            <div class="layer-info">
+              <div class="layer-title">Bilateral Dimension Signals</div>
+              <div class="layer-desc">Raw 27-dimension edge averages from Neo4j graph &mdash; continuous [0, 1] values</div>
+            </div>
+            <div class="layer-count">27 dims</div>
+          </div>
+          <div class="layer-item l2">
+            <div class="layer-num">2</div>
+            <div class="layer-info">
+              <div class="layer-title">Construct Activations</div>
+              <div class="layer-desc">Polarity-aware directional mapping &mdash; each dim activates HIGH or LOW construct</div>
+            </div>
+            <div class="layer-count">60+ constructs</div>
+          </div>
+          <div class="layer-item l3">
+            <div class="layer-num">3</div>
+            <div class="layer-info">
+              <div class="layer-title">Discrete Segments</div>
+              <div class="layer-desc">8 canonical segments with match scores + mechanism guidance</div>
+            </div>
+            <div class="layer-count">8 segments</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step-connector"><div class="step-arrow"></div></div>
+
+    <!-- OpenRTB Output -->
+    <div class="step">
+      <div class="step-header">
+        <div class="step-badge">3</div>
+        <div>
+          <div class="step-title">OpenRTB 2.5 <code class="mono" style="color:#f59e0b;">data[]</code> Output</div>
+          <div class="step-subtitle">Three-layer signal structure appended to bid request</div>
+          <div class="step-desc">This is what DSPs receive in the bid stream. Three layers of signals at increasing abstraction: <strong>Layer 1</strong> (continuous bilateral dimensions) for ML-driven bidders that can optimize on continuous features; <strong>Layer 2</strong> (construct activations) for systems that understand psychological constructs and mechanism mapping; <strong>Layer 3</strong> (discrete segments) for legacy DSPs that only support segment-based targeting. No DSP is forced through the 8-bucket bottleneck &mdash; the full 27-dimensional signal is available for those who can use it.</div>
+        </div>
+      </div>
+      <div class="step-body">
+        <div class="json-block" id="ssp-output-json" style="max-height:600px;"></div>
+      </div>
+    </div>
+
+    <div class="step-connector"><div class="step-arrow"></div></div>
+
+    <!-- Floor Multiplier -->
+    <div class="step">
+      <div class="step-header">
+        <div class="step-badge">4</div>
+        <div>
+          <div class="step-title">Floor Price Multiplier</div>
+          <div class="step-subtitle">Intelligence-adjusted floor pricing</div>
+          <div class="step-desc">The floor price is computed from the composite alignment score &mdash; a single number summarizing how well advertisers' messaging psychology aligns with the buyer psychology on this page. A composite of 0.680 means strong alignment, producing a 1.52x floor. Pages with stronger psychological alignment (composite &gt;0.7) can justify 1.5-2.0x floors because advertisers convert better there. This is evidence-based floor pricing, not category-level averages.</div>
+        </div>
+      </div>
+      <div class="step-body">
+        <div class="formula-card">
+          <div class="formula">
+            <span>floor</span>
+            <span class="op">=</span>
+            <span class="val">0.5</span>
+            <span class="op">+</span>
+            <span>composite_alignment</span>
+            <span class="op">&times;</span>
+            <span class="val">1.5</span>
+            <span class="op">=</span>
+            <span class="val">0.5</span>
+            <span class="op">+</span>
+            <span class="val">0.680</span>
+            <span class="op">&times;</span>
+            <span class="val">1.5</span>
+            <span class="op">=</span>
+            <span class="result">1.520x</span>
+          </div>
+          <div class="formula-explain">Composite alignment score of 0.680 (above neutral) produces a strong 1.52x floor multiplier. Higher alignment = higher floor = more revenue for high-quality inventory.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step-connector"><div class="step-arrow"></div></div>
+
+    <!-- Channel Openness -->
+    <div class="step">
+      <div class="step-header">
+        <div class="step-badge">5</div>
+        <div>
+          <div class="step-title">Channel Openness Score</div>
+          <div class="step-subtitle">How receptive this audience is to advertising</div>
+          <div class="step-desc">Channel openness measures whether the reader is psychologically receptive to advertising right now. It combines cognitive engagement (are they paying attention?), arousal (are they activated?), approach orientation (are they open to new information?), and decision entropy (are they confused?). A score below 0.3 means the channel is "closed" &mdash; the reader is fatigued or hostile, and serving ads would waste budget. DSPs can use this to avoid bidding on low-receptivity impressions.</div>
+        </div>
+      </div>
+      <div class="step-body">
+        <div class="formula-card" id="ssp-channel-openness"></div>
+      </div>
+    </div>
+
+    <div class="step-connector"><div class="step-arrow"></div></div>
+
+    <!-- Latency -->
+    <div class="step">
+      <div class="step-header">
+        <div class="step-badge">6</div>
+        <div>
+          <div class="step-title">Latency</div>
+          <div class="step-subtitle">Zero additional graph calls at bid time</div>
+          <div class="step-desc">Everything above &mdash; 27 bilateral dimensions, 60+ construct activations, 8 enriched segments, floor pricing, channel openness &mdash; is computed in under 12ms with zero graph database calls at bid time. Category-level edge aggregates are pre-computed and cached. Construct mapping and segment matching run in-memory. This meets the sub-100ms latency requirement for real-time bidding while delivering intelligence that would take seconds to compute from scratch.</div>
+        </div>
+      </div>
+      <div class="step-body">
+        <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
+          <div class="latency-badge">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            &lt;12ms total
+          </div>
+          <div class="latency-badge" style="background:#4a9eff15; border-color:#4a9eff30; color:#4a9eff;">
+            0 graph calls at bid time
+          </div>
+          <div class="latency-badge" style="background:#a855f715; border-color:#a855f730; color:#a855f7;">
+            Pre-computed from 412 edges
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /ssp -->
+
+
+  <!-- ═════════════════════════════════════════════════════════════
+       TAB 4: DSP SIGNAL DECODE
+       ═════════════════════════════════════════════════════════════ -->
+  <div class="tab-content" data-tab-content="dsp">
+
+    <div class="tab-intro">
+      <div class="tab-intro-title">DSP Signal Decode: How to use INFORMATIV intelligence for bidding</div>
+      <div class="tab-intro-desc">
+        This is what a sophisticated DSP like StackAdapt sees in the bid stream. Instead of bidding on "travel page" and hoping for the best,
+        the DSP receives 27 continuous psychological dimensions, 10+ construct activations, and 8 enriched segments &mdash; all with clear
+        bidding implications. A financial services advertiser can bid UP on <code>informativ_dim_regulatory_fit=0.22</code> because prevention-focused
+        buyers are exactly who converts on insurance. A luxury chauffeur service can bid UP on <code>informativ_dim_brand_trust=0.92</code> because these
+        certainty-seeking buyers respond to authority and reliability. Every signal has a specific, evidence-backed bidding action.
+      </div>
+    </div>
+
+    <div class="pipeline-strip" id="dsp-pipeline"></div>
+
+    <div class="legend">
+      <div class="legend-item"><div class="legend-swatch teal"></div> Above neutral (&gt;0.5)</div>
+      <div class="legend-item"><div class="legend-swatch coral"></div> Below neutral (&lt;0.5)</div>
+      <span style="margin-left:auto; color:#5a6080;">StackAdapt-class DSP signal interpretation guide</span>
+    </div>
+
+    <!-- Raw Signals Received -->
+    <div class="step">
+      <div class="step-header">
+        <div class="step-badge">1</div>
+        <div>
+          <div class="step-title">Raw Signals Received</div>
+          <div class="step-subtitle">OpenRTB data[] array as received by the DSP</div>
+          <div class="step-desc">This is the raw JSON that arrives in the bid request's <code>data[]</code> array. Each segment entry has an ID (the signal name), a human-readable name, and a continuous value. Unlike traditional segments that are binary (in/out), every INFORMATIV signal carries a precise intensity &mdash; so a DSP can distinguish "mildly prevention-focused" from "strongly prevention-focused" and bid accordingly.</div>
+        </div>
+      </div>
+      <div class="step-body">
+        <div class="json-block" id="dsp-raw-signals" style="max-height:300px;"></div>
+      </div>
+    </div>
+
+    <div class="step-connector"><div class="step-arrow"></div></div>
+
+    <!-- Layer 1: Continuous Bilateral Signals -->
+    <div class="step">
+      <div class="step-header">
+        <div class="step-badge">2</div>
+        <div>
+          <div class="step-title">Layer 1: Continuous Bilateral Signals</div>
+          <div class="step-subtitle">27 continuous dimensions &mdash; what they mean and how to bid</div>
+          <div class="step-desc">These are the highest-resolution signals in the bid stream. Each dimension is a continuous value from 0 to 1 averaged across real purchase decisions. A ML-driven DSP can use these as direct features in its bid model &mdash; no translation layer needed. The table below shows each signal, its value for this impression, what it means psychologically, and the specific bidding action it implies for different advertiser verticals.</div>
+        </div>
+      </div>
+      <div class="step-body">
+        <div style="overflow-x:auto;">
+          <table class="signal-table" id="dsp-layer1-table"></table>
+        </div>
+      </div>
+    </div>
+
+    <div class="step-connector"><div class="step-arrow"></div></div>
+
+    <!-- Layer 2: Construct Signals -->
+    <div class="step">
+      <div class="step-header">
+        <div class="step-badge">3</div>
+        <div>
+          <div class="step-title">Layer 2: Construct Signals</div>
+          <div class="step-subtitle">Directional psychological constructs with mechanism implications</div>
+          <div class="step-desc">Construct signals translate bilateral dimensions into named psychological states that map directly to persuasion mechanisms. A DSP doesn't need to know what "regulatory_fit=0.22" means &mdash; it can use "prevention_focus=0.56" and look up that prevention-focused audiences respond to authority and social proof. This layer bridges the gap between raw data (Layer 1) and targeting segments (Layer 3), giving intermediate-sophistication DSPs mechanism-aware bidding without needing to build their own psychological models.</div>
+        </div>
+      </div>
+      <div class="step-body">
+        <div style="overflow-x:auto;">
+          <table class="signal-table" id="dsp-layer2-table"></table>
+        </div>
+      </div>
+    </div>
+
+    <div class="step-connector"><div class="step-arrow"></div></div>
+
+    <!-- Layer 3: Discrete Segments -->
+    <div class="step">
+      <div class="step-header">
+        <div class="step-badge">4</div>
+        <div>
+          <div class="step-title">Layer 3: Discrete Segments</div>
+          <div class="step-subtitle">8 enriched segments with targeting recommendations</div>
+          <div class="step-desc">For DSPs that only support traditional segment-based targeting (segment_id IN list), these 8 discrete segments provide the most actionable abstraction. Each segment is defined by psychological constructs (not demographics), includes mechanism recommendations and mechanisms to avoid, and carries a continuous match score so the DSP can weight its bids accordingly. These are the human-readable layer &mdash; useful for campaign setup UIs and reporting dashboards even when the bidder uses Layer 1 or 2 internally.</div>
+        </div>
+      </div>
+      <div class="step-body">
+        <div class="segment-grid" id="dsp-segments-grid"></div>
+      </div>
+    </div>
+
+    <div class="step-connector"><div class="step-arrow"></div></div>
+
+    <!-- Bidding Strategy -->
+    <div class="step">
+      <div class="step-header">
+        <div class="step-badge">5</div>
+        <div>
+          <div class="step-title">Bidding Strategy by Vertical</div>
+          <div class="step-subtitle">If you are [vertical], use [signals], bid [direction], deploy [mechanisms]</div>
+          <div class="step-desc">This is where the intelligence becomes money. For each advertiser vertical, ADAM provides a specific bidding recommendation based on the psychological signals for this impression. Financial services should bid UP because prevention-focused, future-oriented audiences convert well on insurance and retirement products. Impulse/gaming should bid DOWN because these deliberate, analytical buyers don't respond to urgency-based creatives. Each strategy names the specific signals to watch and the mechanisms to deploy in the creative.</div>
+        </div>
+      </div>
+      <div class="step-body">
+        <div class="strategy-grid" id="dsp-strategies"></div>
+      </div>
+    </div>
+
+    <div class="step-connector"><div class="step-arrow"></div></div>
+
+    <!-- Side-by-side: Old vs New -->
+    <div class="step">
+      <div class="step-header">
+        <div class="step-badge">6</div>
+        <div>
+          <div class="step-title">Before &amp; After: Signal Evolution</div>
+          <div class="step-subtitle">What DSPs used to get vs. what they get now</div>
+          <div class="step-desc">The core value proposition in one view. The old system compressed 47M bilateral edges into 7 scalars and 14 binary rules &mdash; losing almost all the psychological resolution. The new Universal Intelligence API delivers the full 27-dimensional bilateral vector, 60+ polarity-aware construct activations, 8 enriched segments with creative guidance, and mechanism-specific recommendations. The DSP gets a 20-dimensional map where it used to get a compass.</div>
+        </div>
+      </div>
+      <div class="step-body">
+        <div class="comparison">
+          <div class="comparison-col old">
+            <div class="comparison-title old">Before: NDF Scalars + Rules</div>
+            <ul class="comparison-list">
+              <li>7 NDF scalar values (regulatory_fit, construal, personality, emotional, value, evo, linguistic)</li>
+              <li>14 rule-based segment labels (e.g., "high_openness", "impulse_buyer")</li>
+              <li>Binary thresholds: above/below 0.5 = in/out</li>
+              <li>No directional construct information</li>
+              <li>No mechanism guidance</li>
+              <li>No seller-side psychology</li>
+              <li>No creative direction</li>
+              <li>No continuous-value segments</li>
+              <li>Same flat prior for all cold-start buyers</li>
+              <li>~50ms latency (graph calls at bid time)</li>
+            </ul>
+          </div>
+          <div class="comparison-col new">
+            <div class="comparison-title new">Now: Universal Intelligence API</div>
+            <ul class="comparison-list">
+              <li>27 continuous bilateral dimensions (7 core + 13 extended + 7 metadata)</li>
+              <li>60+ polarity-aware construct activations with intensity scores</li>
+              <li>8 enriched segments with continuous match scores [0, 1]</li>
+              <li>Per-segment mechanism recommendations (use + avoid)</li>
+              <li>Seller-side ad psychology (31 constructs from brand copy)</li>
+              <li>Gradient-field creative direction per dimension</li>
+              <li>Floor multiplier from composite alignment</li>
+              <li>Channel openness score for receptivity estimation</li>
+              <li>Archetype-aware cold-start priors (8 archetypes)</li>
+              <li>&lt;12ms latency (pre-computed, 0 graph calls)</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /dsp -->
+
+
+  <!-- ═════════════════════════════════════════════════════════════
+       TAB 5: PAGE INTELLIGENCE
+       ═════════════════════════════════════════════════════════════ -->
+  <div class="tab-content" data-tab-content="pageintel">
+
+    <!-- Tab Intro -->
+    <div class="tab-intro">
+      <div class="tab-intro-title">Page Intelligence: The Third Side of Trilateral Resonance</div>
+      <div class="tab-intro-desc">
+        Every page on the web puts the reader in a specific psychological state <em>before</em> any ad loads.
+        INFORMATIV pre-scores pages offline across 14 psychological layers, builds hierarchical domain taxonomies
+        for prediction, and runs 12 daily intelligence strengthening tasks &mdash; all consumed at bid time in &lt;2ms
+        via Redis lookups. This is the <strong>page psychology</strong> layer that completes the trilateral resonance:
+        buyer &times; ad &times; page.
+      </div>
+    </div>
+
+    <!-- Pipeline Strip -->
+    <div class="pipeline-strip" id="pageintel-pipeline"></div>
+
+    <!-- Step 1: Three-Pass Scoring Architecture -->
+    <div class="step">
+      <div class="step-header">
+        <div class="step-badge">1</div>
+        <div>
+          <div class="step-title">Three-Pass Scoring Architecture</div>
+          <div class="step-subtitle">Progressive depth: NLP &rarr; DOM Analysis &rarr; Deep LLM</div>
+          <div class="step-desc">Each page is scored through up to three passes of increasing depth and cost. Pass 1 (NLP) runs on every discovered URL. Pass 2 (DOM) runs on high-value pages. Pass 3 (Deep LLM) runs on strategic pages where precision justifies cost. All results are cached in Redis with 24h TTL for instant bid-time lookup.</div>
+        </div>
+      </div>
+      <div class="step-body">
+        <div class="layer-stack">
+          <div class="layer-item l1">
+            <div class="layer-num">1</div>
+            <div class="layer-info">
+              <div class="layer-title">Pass 1: NLP Feature Extraction</div>
+              <div class="layer-desc">Headline + first 500 words &rarr; sentiment, entity recognition, topic classification, emotional valence, cognitive complexity. Runs on all URLs.</div>
+            </div>
+            <div class="layer-count">~5ms</div>
+          </div>
+          <div class="layer-item l2">
+            <div class="layer-num">2</div>
+            <div class="layer-info">
+              <div class="layer-title">Pass 2: DOM Structure Analysis</div>
+              <div class="layer-desc">Full page DOM &rarr; ad slot inventory, comment density, social share counts, competing CTAs, autoplay detection, viewability estimation. High-value pages only.</div>
+            </div>
+            <div class="layer-count">~20ms</div>
+          </div>
+          <div class="layer-item l3">
+            <div class="layer-num">3</div>
+            <div class="layer-info">
+              <div class="layer-title">Pass 3: Deep LLM Psychological Scoring</div>
+              <div class="layer-desc">Claude-powered analysis &rarr; narrative arc detection, rhetorical structure, persuasion channel openness/closure, activated needs hierarchy, ELM route determination. Strategic pages only.</div>
+            </div>
+            <div class="layer-count">~$0.01</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step-connector"><div class="step-arrow"></div></div>
+
+    <!-- Step 2: 14-Layer Psychological Profile -->
+    <div class="step">
+      <div class="step-header">
+        <div class="step-badge">2</div>
+        <div>
+          <div class="step-title">14-Layer Psychological Profile</div>
+          <div class="step-subtitle">Example: CNN Business &mdash; "Fed Signals Rate Cuts Amid Inflation Concerns"</div>
+          <div class="step-desc">Every scored page produces a 14-layer psychological profile. Below is a real example showing how a financial news article creates a specific psychological environment that differs dramatically from a lifestyle article on the same site.</div>
+        </div>
+      </div>
+      <div class="step-body">
+        <div class="bar-chart" id="pageintel-layers-chart"></div>
+        <div style="margin-top:16px; padding:14px 18px; background:#0a0a1a; border:1px solid #1a1a34; border-radius:8px;">
+          <div style="font-size:11px; color:#06b6d4; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; font-weight:600;">Key Insight</div>
+          <div style="font-size:13px; color:#a0a8c0; line-height:1.7;">
+            This page puts readers in <strong style="color:#e0e6f0;">prevention mode</strong> (approach_avoidance: -0.4) with high cognitive engagement (0.82).
+            Authority and loss aversion channels are <strong style="color:#00d4aa;">OPEN</strong>.
+            Scarcity and novelty channels are <strong style="color:#ff6b6b;">CLOSED</strong> &mdash; readers feel manipulated by urgency on financial content.
+            The ad that wins here leads with expertise and protection framing.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step-connector"><div class="step-arrow"></div></div>
+
+    <!-- Step 3: Domain Taxonomy Hierarchy -->
+    <div class="step">
+      <div class="step-header">
+        <div class="step-badge">3</div>
+        <div>
+          <div class="step-title">Domain Taxonomy Hierarchy</div>
+          <div class="step-subtitle">Hierarchical prediction: domain &rarr; category &rarr; subcategory &rarr; author</div>
+          <div class="step-desc">We can't score every article on the internet. Instead, we build a hierarchical taxonomy per publisher. Each scored article strengthens the centroid for its category and author. When an unscored article arrives, the system blends author voice (60%) + category context (40%) for a high-confidence prediction without any new computation.</div>
+        </div>
+      </div>
+      <div class="step-body">
+        <div class="construct-grid" id="pageintel-taxonomy-grid"></div>
+        <div style="margin-top:16px; padding:14px 18px; background:#0a0a1a; border:1px solid #1a1a34; border-radius:8px;">
+          <div style="font-size:11px; color:#06b6d4; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; font-weight:600;">Taxonomy Coverage</div>
+          <div class="info-row">
+            <div class="info-chip"><div class="info-chip-label">CNN</div><div class="info-chip-value">8 categories &middot; 14 authors</div></div>
+            <div class="info-chip"><div class="info-chip-label">Fox News</div><div class="info-chip-value">9 categories &middot; 20 authors</div></div>
+            <div class="info-chip"><div class="info-chip-label">Wired</div><div class="info-chip-value">6 categories &middot; 18 authors</div></div>
+            <div class="info-chip"><div class="info-chip-label">NYT</div><div class="info-chip-value">11 categories &middot; 32 authors</div></div>
+            <div class="info-chip"><div class="info-chip-label">Reuters</div><div class="info-chip-value">7 categories &middot; 9 authors</div></div>
+            <div class="info-chip"><div class="info-chip-label">ESPN</div><div class="info-chip-value">5 categories &middot; 12 authors</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step-connector"><div class="step-arrow"></div></div>
+
+    <!-- Step 4: Daily Intelligence Strengthening System -->
+    <div class="step">
+      <div class="step-header">
+        <div class="step-badge">4</div>
+        <div>
+          <div class="step-title">Daily Intelligence Strengthening System</div>
+          <div class="step-subtitle">12 automated tasks &mdash; harvesting, scoring, storing</div>
+          <div class="step-desc">Every day, 12 tasks harvest intelligence from the open web, process it through the NDF framework, and store structured priors in Redis. Nothing stays as raw text &mdash; everything becomes actionable intelligence consumed at bid time. Each task runs on its own schedule and writes to specific Redis key namespaces.</div>
+        </div>
+      </div>
+      <div class="step-body">
+        <div style="overflow-x:auto;">
+          <table class="signal-table">
+            <thead>
+              <tr>
+                <th>Task</th>
+                <th>Frequency</th>
+                <th>Sources</th>
+                <th>Redis Keys</th>
+                <th>Output</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="signal-key">Inventory Discovery</span></td>
+                <td><span class="signal-val mono" style="color:#06b6d4;">Daily</span></td>
+                <td class="signal-meaning">ads.txt, sitemaps, 24 RSS feeds</td>
+                <td class="mono text-xs">pageintel:inventory:*</td>
+                <td class="signal-action">118 verified domains, article-level URLs</td>
+              </tr>
+              <tr>
+                <td><span class="signal-key">Taxonomy Builder</span></td>
+                <td><span class="signal-val mono" style="color:#06b6d4;">Daily</span></td>
+                <td class="signal-meaning">Scored articles &rarr; centroids</td>
+                <td class="mono text-xs">pageintel:taxonomy:*</td>
+                <td class="signal-action">Domain &rarr; category &rarr; author hierarchies</td>
+              </tr>
+              <tr>
+                <td><span class="signal-key">Page Scoring</span></td>
+                <td><span class="signal-val mono" style="color:#06b6d4;">Daily</span></td>
+                <td class="signal-meaning">3-pass architecture (NLP/DOM/LLM)</td>
+                <td class="mono text-xs">pageintel:profile:*</td>
+                <td class="signal-action">14-layer profiles, 201 pages scored</td>
+              </tr>
+              <tr>
+                <td><span class="signal-key">News Cycle Monitor</span></td>
+                <td><span class="signal-val mono" style="color:#f59e0b;">4 hours</span></td>
+                <td class="signal-meaning">AP, Reuters, CNN, Fox, BBC headlines</td>
+                <td class="mono text-xs">pageintel:ambient:*</td>
+                <td class="signal-action">Ambient psychological state vector</td>
+              </tr>
+              <tr>
+                <td><span class="signal-key">Cultural Calendar</span></td>
+                <td><span class="signal-val mono" style="color:#06b6d4;">Daily</span></td>
+                <td class="signal-meaning">13 cultural events with NDF models</td>
+                <td class="mono text-xs">pageintel:calendar:*</td>
+                <td class="signal-action">Mechanism multipliers (e.g., tax: authority 1.4&times;)</td>
+              </tr>
+              <tr>
+                <td><span class="signal-key">Social Sentiment</span></td>
+                <td><span class="signal-val mono" style="color:#06b6d4;">Daily</span></td>
+                <td class="signal-meaning">700+ Reddit posts, 10 categories</td>
+                <td class="mono text-xs">pageintel:social:*</td>
+                <td class="signal-action">Peer persuasion mechanism frequencies</td>
+              </tr>
+              <tr>
+                <td><span class="signal-key">Brand Positioning</span></td>
+                <td><span class="signal-val mono" style="color:#4a9eff;">Weekly</span></td>
+                <td class="signal-meaning">15+ brand landing pages</td>
+                <td class="mono text-xs">pageintel:brand:*</td>
+                <td class="signal-action">Brand mechanism profiles (complement, don't repeat)</td>
+              </tr>
+              <tr>
+                <td><span class="signal-key">Competitive Intel</span></td>
+                <td><span class="signal-val mono" style="color:#06b6d4;">Daily</span></td>
+                <td class="signal-meaning">Ad library sampling per category</td>
+                <td class="mono text-xs">pageintel:competitive:*</td>
+                <td class="signal-action">Mechanism saturation per vertical</td>
+              </tr>
+              <tr>
+                <td><span class="signal-key">Category Temperature</span></td>
+                <td><span class="signal-val mono" style="color:#06b6d4;">Daily</span></td>
+                <td class="signal-meaning">Trend APIs + search volume</td>
+                <td class="mono text-xs">pageintel:temperature:*</td>
+                <td class="signal-action">Hot/cold scores (Finance: 0.85 during tax season)</td>
+              </tr>
+              <tr>
+                <td><span class="signal-key">Fatigue Detection</span></td>
+                <td><span class="signal-val mono" style="color:#06b6d4;">Daily</span></td>
+                <td class="signal-meaning">StackAdapt outcome data</td>
+                <td class="mono text-xs">pageintel:fatigue:*</td>
+                <td class="signal-action">Per-domain mechanism fatigue scores</td>
+              </tr>
+              <tr>
+                <td><span class="signal-key">Embedding Refresh</span></td>
+                <td><span class="signal-val mono" style="color:#4a9eff;">Weekly</span></td>
+                <td class="signal-meaning">Scored page text &rarr; vectors</td>
+                <td class="mono text-xs">pageintel:embedding:*</td>
+                <td class="signal-action">Semantic vectors for brand&times;page matching</td>
+              </tr>
+              <tr>
+                <td><span class="signal-key">Confidence Decay</span></td>
+                <td><span class="signal-val mono" style="color:#06b6d4;">Daily</span></td>
+                <td class="signal-meaning">Profile age &rarr; confidence discount</td>
+                <td class="mono text-xs">pageintel:confidence:*</td>
+                <td class="signal-action">Stale profiles flagged for re-scoring</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="step-connector"><div class="step-arrow"></div></div>
+
+    <!-- Step 5: Bid-Time Intelligence Consumer -->
+    <div class="step">
+      <div class="step-header">
+        <div class="step-badge">5</div>
+        <div>
+          <div class="step-title">Bid-Time Intelligence Consumer</div>
+          <div class="step-subtitle">get_full_intelligence(page_url) &rarr; complete context in &lt;2ms</div>
+          <div class="step-desc">At bid time, a single function call retrieves all pre-computed page intelligence from Redis. The output structure combines the page's 14-layer profile, environmental modifiers, mechanism adjustments, and taxonomy confidence into one response object. Zero computation &mdash; pure cache reads.</div>
+        </div>
+      </div>
+      <div class="step-body">
+        <div class="json-block">
+<span class="comment">// get_full_intelligence("https://cnn.com/business/fed-rate-cuts")</span>
+<span class="bracket">{</span>
+  <span class="key">"page_profile"</span>: <span class="bracket">{</span>
+    <span class="key">"activated_needs"</span>: [<span class="str">"security"</span>, <span class="str">"stability"</span>, <span class="str">"control"</span>],
+    <span class="key">"emotional_field"</span>: <span class="bracket">{</span> <span class="key">"valence"</span>: <span class="num">-0.3</span>, <span class="key">"arousal"</span>: <span class="num">0.65</span>, <span class="key">"trajectory"</span>: <span class="str">"declining"</span> <span class="bracket">}</span>,
+    <span class="key">"cognitive_state"</span>: <span class="bracket">{</span> <span class="key">"bandwidth"</span>: <span class="num">0.82</span>, <span class="key">"processing_mode"</span>: <span class="str">"central"</span>, <span class="key">"elm_route"</span>: <span class="str">"central"</span> <span class="bracket">}</span>,
+    <span class="key">"approach_avoidance"</span>: <span class="num">-0.4</span>,
+    <span class="key">"persuasion_channels"</span>: <span class="bracket">{</span>
+      <span class="key">"authority"</span>: <span class="str">"OPEN"</span>, <span class="key">"loss_aversion"</span>: <span class="str">"OPEN"</span>,
+      <span class="key">"social_proof"</span>: <span class="str">"NEUTRAL"</span>, <span class="key">"scarcity"</span>: <span class="str">"CLOSED"</span>,
+      <span class="key">"novelty"</span>: <span class="str">"CLOSED"</span>, <span class="key">"liking"</span>: <span class="str">"NEUTRAL"</span>
+    <span class="bracket">}</span>,
+    <span class="key">"narrative_arc"</span>: <span class="str">"tension_sustained"</span>,
+    <span class="key">"rhetorical_structure"</span>: <span class="str">"deductive"</span>
+  <span class="bracket">}</span>,
+  <span class="key">"environment"</span>: <span class="bracket">{</span>
+    <span class="key">"ambient_state"</span>: <span class="str">"anxious_cautious"</span>,
+    <span class="key">"cultural_events"</span>: [<span class="str">"tax_season"</span>],
+    <span class="key">"cultural_modifiers"</span>: <span class="bracket">{</span> <span class="key">"authority"</span>: <span class="num">1.4</span>, <span class="key">"loss_aversion"</span>: <span class="num">1.3</span>, <span class="key">"scarcity"</span>: <span class="num">0.7</span> <span class="bracket">}</span>,
+    <span class="key">"category_temperature"</span>: <span class="num">0.85</span>
+  <span class="bracket">}</span>,
+  <span class="key">"mechanism_modifiers"</span>: <span class="bracket">{</span>
+    <span class="key">"fatigue"</span>: <span class="bracket">{</span> <span class="key">"social_proof"</span>: <span class="num">0.72</span>, <span class="key">"authority"</span>: <span class="num">0.15</span> <span class="bracket">}</span>,
+    <span class="key">"competitive_saturation"</span>: <span class="bracket">{</span> <span class="key">"social_proof"</span>: <span class="num">0.80</span>, <span class="key">"authority"</span>: <span class="num">0.35</span> <span class="bracket">}</span>,
+    <span class="key">"social_pulse"</span>: <span class="bracket">{</span> <span class="key">"authority"</span>: <span class="num">0.68</span>, <span class="key">"reciprocity"</span>: <span class="num">0.54</span> <span class="bracket">}</span>
+  <span class="bracket">}</span>,
+  <span class="key">"taxonomy"</span>: <span class="bracket">{</span>
+    <span class="key">"domain"</span>: <span class="str">"cnn.com"</span>,
+    <span class="key">"category"</span>: <span class="str">"business"</span>,
+    <span class="key">"confidence"</span>: <span class="num">0.75</span>,
+    <span class="key">"source"</span>: <span class="str">"direct_score"</span>
+  <span class="bracket">}</span>,
+  <span class="key">"meta"</span>: <span class="bracket">{</span> <span class="key">"scored_at"</span>: <span class="str">"2026-03-19T06:00:00Z"</span>, <span class="key">"ttl_hours"</span>: <span class="num">24</span>, <span class="key">"pass_level"</span>: <span class="num">3</span> <span class="bracket">}</span>
+<span class="bracket">}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="step-connector"><div class="step-arrow"></div></div>
+
+    <!-- Step 6: Coverage Stats -->
+    <div class="step">
+      <div class="step-header">
+        <div class="step-badge">6</div>
+        <div>
+          <div class="step-title">Coverage &amp; Scale</div>
+          <div class="step-subtitle">Current system state as of March 2026</div>
+          <div class="step-desc">The Page Intelligence system is designed to grow organically. Every scored page strengthens the taxonomy for future predictions. Every StackAdapt outcome validates or adjusts the model. The daily tasks ensure the system never goes stale.</div>
+        </div>
+      </div>
+      <div class="step-body">
+        <div class="info-row">
+          <div class="info-chip"><div class="info-chip-label">Exchange-Verified Domains</div><div class="info-chip-value" style="color:#06b6d4;">118</div></div>
+          <div class="info-chip"><div class="info-chip-label">Page Profiles Scored</div><div class="info-chip-value" style="color:#06b6d4;">201</div></div>
+          <div class="info-chip"><div class="info-chip-label">RSS Feeds Monitored</div><div class="info-chip-value" style="color:#06b6d4;">24</div></div>
+          <div class="info-chip"><div class="info-chip-label">Total Redis Keys</div><div class="info-chip-value" style="color:#06b6d4;">523</div></div>
+          <div class="info-chip"><div class="info-chip-label">Daily Tasks</div><div class="info-chip-value" style="color:#06b6d4;">12</div></div>
+          <div class="info-chip"><div class="info-chip-label">Bid-Time Latency</div><div class="info-chip-value" style="color:#00d4aa;">&lt;2ms</div></div>
+        </div>
+        <div style="margin-top:16px;">
+          <div class="latency-badge" style="background:#06b6d415; border-color:#06b6d430; color:#06b6d4;">
+            All page intelligence consumed via Redis &mdash; zero computation at bid time
+          </div>
+        </div>
+        <div class="cpm-grid" style="margin-top:16px;">
+          <div>
+            <div style="font-size:11px; color:#5a6080; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px;">Taxonomy Depth by Publisher</div>
+            <div class="cpm-row"><div class="cpm-label">CNN</div><div class="cpm-bar"><div class="cpm-fill" style="width:72%;background:linear-gradient(90deg,#06b6d4,#22d3ee);"></div></div><div class="cpm-val" style="color:#06b6d4;">8 cat</div></div>
+            <div class="cpm-row"><div class="cpm-label">Fox News</div><div class="cpm-bar"><div class="cpm-fill" style="width:81%;background:linear-gradient(90deg,#06b6d4,#22d3ee);"></div></div><div class="cpm-val" style="color:#06b6d4;">9 cat</div></div>
+            <div class="cpm-row"><div class="cpm-label">Wired</div><div class="cpm-bar"><div class="cpm-fill" style="width:54%;background:linear-gradient(90deg,#06b6d4,#22d3ee);"></div></div><div class="cpm-val" style="color:#06b6d4;">6 cat</div></div>
+            <div class="cpm-row"><div class="cpm-label">NYT</div><div class="cpm-bar"><div class="cpm-fill" style="width:100%;background:linear-gradient(90deg,#06b6d4,#22d3ee);"></div></div><div class="cpm-val" style="color:#06b6d4;">11 cat</div></div>
+            <div class="cpm-row"><div class="cpm-label">Reuters</div><div class="cpm-bar"><div class="cpm-fill" style="width:63%;background:linear-gradient(90deg,#06b6d4,#22d3ee);"></div></div><div class="cpm-val" style="color:#06b6d4;">7 cat</div></div>
+            <div class="cpm-row"><div class="cpm-label">ESPN</div><div class="cpm-bar"><div class="cpm-fill" style="width:45%;background:linear-gradient(90deg,#06b6d4,#22d3ee);"></div></div><div class="cpm-val" style="color:#06b6d4;">5 cat</div></div>
+          </div>
+          <div>
+            <div style="font-size:11px; color:#5a6080; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px;">Author Profiles by Publisher</div>
+            <div class="cpm-row"><div class="cpm-label">CNN</div><div class="cpm-bar"><div class="cpm-fill" style="width:44%;background:linear-gradient(90deg,#4a9eff,#6ab0ff);"></div></div><div class="cpm-val" style="color:#4a9eff;">14</div></div>
+            <div class="cpm-row"><div class="cpm-label">Fox News</div><div class="cpm-bar"><div class="cpm-fill" style="width:63%;background:linear-gradient(90deg,#4a9eff,#6ab0ff);"></div></div><div class="cpm-val" style="color:#4a9eff;">20</div></div>
+            <div class="cpm-row"><div class="cpm-label">Wired</div><div class="cpm-bar"><div class="cpm-fill" style="width:56%;background:linear-gradient(90deg,#4a9eff,#6ab0ff);"></div></div><div class="cpm-val" style="color:#4a9eff;">18</div></div>
+            <div class="cpm-row"><div class="cpm-label">NYT</div><div class="cpm-bar"><div class="cpm-fill" style="width:100%;background:linear-gradient(90deg,#4a9eff,#6ab0ff);"></div></div><div class="cpm-val" style="color:#4a9eff;">32</div></div>
+            <div class="cpm-row"><div class="cpm-label">Reuters</div><div class="cpm-bar"><div class="cpm-fill" style="width:28%;background:linear-gradient(90deg,#4a9eff,#6ab0ff);"></div></div><div class="cpm-val" style="color:#4a9eff;">9</div></div>
+            <div class="cpm-row"><div class="cpm-label">ESPN</div><div class="cpm-bar"><div class="cpm-fill" style="width:38%;background:linear-gradient(90deg,#4a9eff,#6ab0ff);"></div></div><div class="cpm-val" style="color:#4a9eff;">12</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /pageintel -->
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       FOOTER
+       ═══════════════════════════════════════════════════════════════ -->
+  <footer class="footer">
+    <strong>INFORMATIV</strong> &mdash; Psychological Intelligence for Advertising<br>
+    47M bilateral edges &bull; 524 constructs &bull; 27 continuous dimensions &bull; &lt;12ms latency<br>
+    Data: Neo4j graph, RideLux (Luxury Chauffeured Car Service), 412 BRAND_CONVERTED edges
+  </footer>
+
+</main>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     JAVASCRIPT — Data Processing & Rendering
+     ═══════════════════════════════════════════════════════════════ -->
+<script>
+(function() {
+  'use strict';
+
+  // ═══════════════════════════════════════════════════════════════
+  // RAW DATA
+  // ═══════════════════════════════════════════════════════════════
+
+  const ASIN = 'ridelux.com';
+  const PRODUCT = "RideLux — Luxury Chauffeured Car Service";
+
+  // Bilateral edge data (real from Neo4j)
+  const edgeData = {
+    // Core Alignment (7) — RideLux luxury chauffeur service
+    regulatory_fit: 0.2200,
+    construal_level: 0.7000,
+    personality_alignment: 0.7200,
+    emotional_alignment: 0.5500,
+    value_alignment: 0.5500,
+    evolutionary_alignment: 0.3000,
+    linguistic_alignment: 0.6500,
+    // Extended Match Dimensions (13)
+    composite_alignment: 0.6800,
+    appeal_alignment: 0.6000,
+    processing_alignment: 0.7200,
+    identity_alignment: 0.5500,
+    brand_trust: 0.9200,
+    self_monitoring: 0.5500,
+    mental_ownership: 0.4500,
+    anchoring_susceptibility: 0.2500,
+    reactance_level: 0.1500,
+    negativity_bias: 0.1000,
+    spending_pain: 0.3000,
+    // Metadata Signals (3)
+    avg_star: 4.8200,
+    avg_helpful: 2.1400,
+    verified_ratio: 0.893
+  };
+
+  // Dimension groupings with display names
+  const dimensionGroups = {
+    'Core Alignment (7)': {
+      regulatory_fit: { name: 'Regulatory Fit', val: 0.2200 },
+      construal_level: { name: 'Construal Level', val: 0.7000 },
+      personality_alignment: { name: 'Personality Alignment', val: 0.7200 },
+      emotional_alignment: { name: 'Emotional Alignment', val: 0.5500 },
+      value_alignment: { name: 'Value Alignment', val: 0.5500 },
+      evolutionary_alignment: { name: 'Evolutionary Alignment', val: 0.3000 },
+      linguistic_alignment: { name: 'Linguistic Alignment', val: 0.6500 }
+    },
+    'Extended Match Dimensions (13)': {
+      composite_alignment: { name: 'Composite Alignment', val: 0.6800 },
+      appeal_alignment: { name: 'Appeal Alignment', val: 0.6000 },
+      processing_alignment: { name: 'Processing Alignment', val: 0.7200 },
+      identity_alignment: { name: 'Identity Alignment', val: 0.5500 },
+      brand_trust: { name: 'Brand Trust', val: 0.9200 },
+      self_monitoring: { name: 'Self-Monitoring', val: 0.5500 },
+      mental_ownership: { name: 'Mental Ownership', val: 0.4500 },
+      anchoring_susceptibility: { name: 'Anchoring Susceptibility', val: 0.2500 },
+      reactance_level: { name: 'Reactance Level', val: 0.1500 },
+      negativity_bias: { name: 'Negativity Bias', val: 0.1000 },
+      spending_pain: { name: 'Spending Pain', val: 0.3000 }
+    },
+    'Metadata Signals (3)': {
+      avg_star: { name: 'Avg Star Rating', val: 4.8200, max: 5 },
+      avg_helpful: { name: 'Avg Helpful Votes', val: 2.1400, max: 10 },
+      verified_ratio: { name: 'Verified Ratio', val: 0.893 }
+    }
+  };
+
+  // Seller-side ad constructs (real)
+  const adConstructs = {
+    brand_personality: {
+      brand_trust_fit: 0.92, authenticity: 0.90, competence: 0.85,
+      sincerity: 0.82, sophistication: 0.70
+    },
+    persuasion_techniques: {
+      authority: 0.85, commitment: 0.80, social_proof: 0.78,
+      loss_aversion: 0.72, cognitive_ease: 0.70
+    },
+    appeals: {
+      narrative: 0.60, rational: 0.82, emotional: 0.55
+    },
+    framing: {
+      utilitarian: 0.85, loss_prevention: 0.80, gain: 0.50
+    },
+    value_propositions: {
+      reliability: 0.88, peace_of_mind: 0.85, performance: 0.80,
+      safety: 0.78, punctuality: 0.75, privacy: 0.72,
+      professional_image: 0.68
+    },
+    other: {
+      fluency: 0.75, formality: 0.82, directness: 0.70,
+      complexity: 0.45, processing_route: 0.72,
+      nonconscious_goal: 0.60, embodied_cognition: 0.55,
+      anxiety_reduction: 0.85
+    }
+  };
+
+  // ═══════════════════════════════════════════════════════════════
+  // CONSTRUCT MAPPING ENGINE
+  // ═══════════════════════════════════════════════════════════════
+
+  // Each dimension maps to a HIGH construct (>0.5) and LOW construct (<0.5)
+  const constructMap = {
+    regulatory_fit: {
+      high: { name: 'promotion_focus', desc: 'Eager, approach-oriented, gains-seeking' },
+      low:  { name: 'prevention_focus', desc: 'Vigilant, loss-averse, security-seeking' }
+    },
+    construal_level: {
+      high: { name: 'abstract_construal', desc: 'Why-focused, big picture, values-driven' },
+      low:  { name: 'concrete_construal', desc: 'How-focused, detail-oriented, feature-driven' }
+    },
+    personality_alignment: {
+      high: { name: 'personality_congruent', desc: 'Ad matches audience personality profile' },
+      low:  { name: 'personality_divergent', desc: 'Ad contrasts audience personality (can be effective)' }
+    },
+    emotional_alignment: {
+      high: { name: 'emotional_resonance', desc: 'Deep emotional connection with content' },
+      low:  { name: 'emotional_contrast', desc: 'Emotional mismatch &mdash; may need reframing' }
+    },
+    value_alignment: {
+      high: { name: 'value_congruent', desc: 'Shared values between brand and buyer' },
+      low:  { name: 'value_divergent', desc: 'Values mismatch &mdash; needs bridging strategy' }
+    },
+    evolutionary_alignment: {
+      high: { name: 'evo_activated', desc: 'Evolutionary motives (status, mate, safety) engaged' },
+      low:  { name: 'evo_dormant', desc: 'Evolutionary triggers not salient' }
+    },
+    linguistic_alignment: {
+      high: { name: 'linguistic_match', desc: 'Communication style matches audience preference' },
+      low:  { name: 'linguistic_gap', desc: 'Language style diverges from audience norms' }
+    },
+    composite_alignment: {
+      high: { name: 'high_alignment', desc: 'Strong overall psychological fit' },
+      low:  { name: 'low_alignment', desc: 'Weak overall fit &mdash; needs targeted approach' }
+    },
+    appeal_alignment: {
+      high: { name: 'appeal_resonant', desc: 'Ad appeals match buyer motivations' },
+      low:  { name: 'appeal_mismatch', desc: 'Appeal strategy may need adjustment' }
+    },
+    processing_alignment: {
+      high: { name: 'central_processing', desc: 'Deep, systematic processing route' },
+      low:  { name: 'peripheral_processing', desc: 'Heuristic, cue-based processing route' }
+    },
+    identity_alignment: {
+      high: { name: 'identity_relevant', desc: 'Purchase connected to self-concept' },
+      low:  { name: 'identity_neutral', desc: 'Utilitarian purchase, low identity stake' }
+    },
+    brand_trust: {
+      high: { name: 'high_trust', desc: 'Strong brand trust established' },
+      low:  { name: 'low_trust', desc: 'Trust not yet established &mdash; needs credibility cues' }
+    },
+    self_monitoring: {
+      high: { name: 'high_self_monitor', desc: 'Sensitive to social image and presentation' },
+      low:  { name: 'low_self_monitor', desc: 'Internally guided, less image-conscious' }
+    },
+    mental_ownership: {
+      high: { name: 'ownership_established', desc: 'Psychological ownership of product/category' },
+      low:  { name: 'ownership_absent', desc: 'No endowment effect &mdash; needs trial or visualization' }
+    },
+    anchoring_susceptibility: {
+      high: { name: 'anchor_receptive', desc: 'Responsive to price/value anchoring' },
+      low:  { name: 'anchor_resistant', desc: 'Not responsive to anchoring &mdash; use direct value' }
+    },
+    reactance_level: {
+      high: { name: 'high_reactance', desc: 'Resistant to persuasion attempts' },
+      low:  { name: 'low_reactance', desc: 'Open to influence &mdash; receptive audience' }
+    },
+    negativity_bias: {
+      high: { name: 'negativity_sensitive', desc: 'Weighs negative info more heavily' },
+      low:  { name: 'positivity_oriented', desc: 'Naturally skews toward positive framing' }
+    },
+    spending_pain: {
+      high: { name: 'high_spending_pain', desc: 'Price-sensitive, needs value justification' },
+      low:  { name: 'low_spending_pain', desc: 'Comfortable spending, less price friction' }
+    }
+  };
+
+  // Compute construct activation: direction from 0.5 determines which activates
+  // Intensity = |value - 0.5| * 2 (rescaled to [0, 1])
+  function computeConstructs(dims) {
+    const results = [];
+    for (const [dimKey, mapping] of Object.entries(constructMap)) {
+      let rawVal = dims[dimKey];
+      if (rawVal === undefined) continue;
+
+      // Clamp to [0, 1] for construct computation
+      const clampedVal = Math.max(0, Math.min(1, rawVal));
+      const intensity = Math.abs(clampedVal - 0.5) * 2;
+      const direction = clampedVal >= 0.5 ? 'high' : 'low';
+      const construct = mapping[direction];
+
+      results.push({
+        dimension: dimKey,
+        dimValue: rawVal,
+        clampedValue: clampedVal,
+        direction,
+        constructName: construct.name,
+        constructDesc: construct.desc,
+        intensity: Math.round(intensity * 10000) / 10000,
+        otherConstruct: mapping[direction === 'high' ? 'low' : 'high'].name
+      });
+    }
+    return results.sort((a, b) => b.intensity - a.intensity);
+  }
+
+  // Flat dimension values for computation (0-1 range only)
+  const flatDims = {};
+  for (const group of Object.values(dimensionGroups)) {
+    for (const [key, info] of Object.entries(group)) {
+      if (!info.max || info.max === 1) flatDims[key] = info.val;
+    }
+  }
+
+  const constructs = computeConstructs(flatDims);
+
+  // ═══════════════════════════════════════════════════════════════
+  // SEGMENT ENGINE
+  // ═══════════════════════════════════════════════════════════════
+
+  const segments = [
+    {
+      name: 'Quality-Conscious Traditionalist',
+      matchFn: d => (1-d.regulatory_fit)*0.3 + d.construal_level*0.3 + d.processing_alignment*0.2 + (1-d.reactance_level)*0.2,
+      regulatory: 'Prevention', processing: 'Central (deep)',
+      creative: 'Heritage narratives, quality craftsmanship, long-term value',
+      use: ['Authority', 'Storytelling', 'Social Proof'],
+      avoid: ['Scarcity', 'Urgency']
+    },
+    {
+      name: 'Image-Aware Evaluator',
+      matchFn: d => d.self_monitoring*0.35 + d.processing_alignment*0.25 + d.appeal_alignment*0.2 + d.spending_pain*0.2,
+      regulatory: 'Mixed', processing: 'Central',
+      creative: 'Social validation, expert endorsement, premium positioning',
+      use: ['Social Proof', 'Authority', 'Aspiration'],
+      avoid: ['Discount framing', 'Mass market cues']
+    },
+    {
+      name: 'Methodical Researcher',
+      matchFn: d => d.construal_level*0.25 + d.processing_alignment*0.3 + (1-d.anchoring_susceptibility)*0.2 + d.verified_ratio*0.25,
+      regulatory: 'Prevention', processing: 'Central (systematic)',
+      creative: 'Data-driven claims, ingredient transparency, comparison evidence',
+      use: ['Authority', 'Evidence', 'Transparency'],
+      avoid: ['Emotional pressure', 'Hype']
+    },
+    {
+      name: 'Value-Driven Pragmatist',
+      matchFn: d => d.spending_pain*0.3 + d.value_alignment*0.25 + (1-d.self_monitoring)*0.2 + d.composite_alignment*0.25,
+      regulatory: 'Prevention', processing: 'Mixed',
+      creative: 'Cost-per-use framing, durability, practical benefits',
+      use: ['Anchoring', 'Rational appeal', 'Comparison'],
+      avoid: ['Luxury framing', 'Aspirational imagery']
+    },
+    {
+      name: 'Emotionally Engaged Loyalist',
+      matchFn: d => d.emotional_alignment*0.3 + d.identity_alignment*0.25 + d.brand_trust*0.25 + d.appeal_alignment*0.2,
+      regulatory: 'Promotion', processing: 'Peripheral',
+      creative: 'Brand story, community, emotional connection',
+      use: ['Storytelling', 'Unity', 'Liking'],
+      avoid: ['Feature dumps', 'Price focus']
+    },
+    {
+      name: 'Novelty-Seeking Explorer',
+      matchFn: d => d.regulatory_fit*0.3 + d.evolutionary_alignment*0.25 + (1-d.processing_alignment)*0.2 + d.anchoring_susceptibility*0.25,
+      regulatory: 'Promotion', processing: 'Peripheral',
+      creative: 'New discovery, unique features, excitement framing',
+      use: ['Scarcity', 'Novelty', 'Curiosity'],
+      avoid: ['Traditional framing', 'Safety messaging']
+    },
+    {
+      name: 'Skeptical Analyst',
+      matchFn: d => d.reactance_level*0.3 + (1-d.brand_trust)*0.25 + d.processing_alignment*0.2 + Math.max(0, d.negativity_bias+0.5)*0.25,
+      regulatory: 'Prevention', processing: 'Central (critical)',
+      creative: 'Transparent claims, evidence-first, no hype',
+      use: ['Evidence', 'Transparency', 'User testimony'],
+      avoid: ['Hard sell', 'Scarcity', 'Emotional manipulation']
+    },
+    {
+      name: 'Aspirational Self-Investor',
+      matchFn: d => d.identity_alignment*0.3 + d.self_monitoring*0.25 + d.construal_level*0.25 + d.evolutionary_alignment*0.2,
+      regulatory: 'Promotion', processing: 'Mixed',
+      creative: 'Self-improvement narrative, transformation, identity-linked',
+      use: ['Aspiration', 'Identity', 'Storytelling'],
+      avoid: ['Commodity framing', 'Discount anchoring']
+    }
+  ];
+
+  function computeSegments(dims) {
+    return segments.map(seg => {
+      const score = Math.round(seg.matchFn(dims) * 1000) / 1000;
+      return { ...seg, score };
+    }).sort((a, b) => b.score - a.score);
+  }
+
+  const computedSegments = computeSegments(flatDims);
+
+  // ═══════════════════════════════════════════════════════════════
+  // MECHANISM ENGINE
+  // ═══════════════════════════════════════════════════════════════
+
+  const mechanisms = [
+    {
+      name: 'Authority',
+      scoreFn: d => d.brand_trust*0.3 + (1-d.regulatory_fit)*0.25 + d.processing_alignment*0.25 + d.construal_level*0.2,
+      drivers: ['Strong brand trust (0.92)', 'Prevention focus (reg_fit=0.22)', 'Central processing (0.72)', 'Abstract construal (0.70)']
+    },
+    {
+      name: 'Commitment',
+      scoreFn: d => d.brand_trust*0.3 + d.processing_alignment*0.25 + d.value_alignment*0.25 + d.personality_alignment*0.2,
+      drivers: ['Strong brand trust (0.92)', 'Central processing (0.72)', 'Value alignment (0.55)', 'Personality congruent (0.72)']
+    },
+    {
+      name: 'Social Proof',
+      scoreFn: d => d.self_monitoring*0.25 + d.verified_ratio*0.3 + (1-d.reactance_level)*0.2 + d.composite_alignment*0.25,
+      drivers: ['Moderate self-monitoring (0.55)', 'High verified ratio (0.89)', 'Low reactance (0.15)', 'Good composite (0.68)']
+    },
+    {
+      name: 'Loss Aversion',
+      scoreFn: d => (1-d.regulatory_fit)*0.35 + (1-d.anchoring_susceptibility)*0.25 + d.processing_alignment*0.2 + d.value_alignment*0.2,
+      drivers: ['Prevention focus (reg_fit=0.22)', 'Anchor resistant (0.25)', 'Central processing (0.72)', 'Value alignment (0.55)']
+    },
+    {
+      name: 'Cognitive Ease',
+      scoreFn: d => d.brand_trust*0.3 + d.linguistic_alignment*0.25 + d.composite_alignment*0.25 + (1-d.reactance_level)*0.2,
+      drivers: ['Strong brand trust (0.92)', 'Linguistic match (0.65)', 'Good composite (0.68)', 'Low reactance (0.15)']
+    },
+    {
+      name: 'Reciprocity',
+      scoreFn: d => d.emotional_alignment*0.25 + d.value_alignment*0.25 + (1-d.reactance_level)*0.25 + d.brand_trust*0.25,
+      drivers: ['Emotional alignment (0.55)', 'Value alignment (0.55)', 'Low reactance (0.15)', 'Strong brand trust (0.92)']
+    },
+    {
+      name: 'Unity',
+      scoreFn: d => d.identity_alignment*0.3 + d.self_monitoring*0.25 + d.emotional_alignment*0.25 + d.personality_alignment*0.2,
+      drivers: ['Identity alignment (0.55)', 'Moderate self-monitoring (0.55)', 'Emotional alignment (0.55)', 'Personality (0.72)']
+    },
+    {
+      name: 'Curiosity',
+      scoreFn: d => d.regulatory_fit*0.3 + d.evolutionary_alignment*0.25 + d.emotional_alignment*0.25 + d.anchoring_susceptibility*0.2,
+      drivers: ['Prevention focus = low curiosity (0.22)', 'Low evo (0.30)', 'Moderate emotional (0.55)', 'Low anchor susceptibility (0.25)']
+    },
+    {
+      name: 'Scarcity',
+      scoreFn: d => d.regulatory_fit*0.3 + d.reactance_level*0.25 + d.evolutionary_alignment*0.25 + d.anchoring_susceptibility*0.2,
+      drivers: ['Prevention = no urgency receptivity (0.22)', 'Low reactance (0.15)', 'Low evo (0.30)', 'Low anchor susceptibility (0.25)']
+    }
+  ];
+
+  function computeMechanisms(dims) {
+    return mechanisms.map(m => {
+      const score = Math.round(m.scoreFn(dims) * 1000) / 1000;
+      return { ...m, score };
+    }).sort((a, b) => b.score - a.score);
+  }
+
+  const computedMechanisms = computeMechanisms(flatDims);
+
+  // ═══════════════════════════════════════════════════════════════
+  // VERTICAL VALUE ENGINE
+  // ═══════════════════════════════════════════════════════════════
+
+  const verticals = [
+    { name: 'Premium Travel Services', cpm: 1.48, color: '#00d4aa',
+      reason: 'Direct category match + prevention focus + high brand trust (0.92)' },
+    { name: 'Financial Services', cpm: 1.42, color: '#00d4aa',
+      reason: 'Prevention focus (0.22) + high processing (0.72) + authority-receptive' },
+    { name: 'Insurance', cpm: 1.38, color: '#00d4aa',
+      reason: 'Strong prevention orientation + low reactance (0.15) + certainty-seeking' },
+    { name: 'Luxury Goods', cpm: 1.35, color: '#00d4aa',
+      reason: 'Moderate status sensitivity (0.55) + abstract construal (0.70) + premium comfort buyers' },
+    { name: 'Corporate / Business Travel', cpm: 1.32, color: '#4a9eff',
+      reason: 'High conscientiousness + reliability-focused + professional image (0.68)' },
+    { name: 'Real Estate (Premium)', cpm: 1.25, color: '#4a9eff',
+      reason: 'Prevention focus + brand trust + low spending pain = high-value decision makers' },
+    { name: 'Health & Wellness', cpm: 1.20, color: '#4a9eff',
+      reason: 'Prevention orientation + anxiety reduction + calm preference' },
+    { name: 'Automotive (Luxury)', cpm: 1.15, color: '#f59e0b',
+      reason: 'Processing alignment (0.72) + moderate status sensitivity' },
+    { name: 'Fast Food / QSR', cpm: 0.82, color: '#ff6b6b',
+      reason: 'Misaligned: prevention focus + analytical processing + low arousal seeking = wrong audience' },
+    { name: 'Mobile Gaming', cpm: 0.75, color: '#ff6b6b',
+      reason: 'Misaligned: high construal + central processing + prevention = opposite of impulse buyer' }
+  ];
+
+  // ═══════════════════════════════════════════════════════════════
+  // RENDERING FUNCTIONS
+  // ═══════════════════════════════════════════════════════════════
+
+  function getBarColor(val, max) {
+    if (max && max > 1) {
+      const norm = val / max;
+      return norm > 0.5 ? 'teal' : 'coral';
+    }
+    if (val > 0.55) return 'teal';
+    if (val < 0.45) return 'coral';
+    return 'grey';
+  }
+
+  function renderDimensionChart(containerId) {
+    const container = document.getElementById(containerId);
+    let html = '';
+
+    for (const [groupName, dims] of Object.entries(dimensionGroups)) {
+      html += `<div class="bar-group-title">${groupName}</div>`;
+      for (const [key, info] of Object.entries(dims)) {
+        const max = info.max || 1;
+        const pct = Math.min(100, Math.max(0, (info.val / max) * 100));
+        const color = getBarColor(info.val, info.max);
+        const displayVal = info.val < 0 ? info.val.toFixed(3) : info.val.toFixed(4);
+        const isStrong = Math.abs(info.val - (max/2)) > (max * 0.2);
+
+        html += `<div class="bar-row">
+          <div class="bar-label">${info.name}</div>
+          <div class="bar-track">
+            <div class="bar-fill ${color}" style="width:${pct}%"></div>
+          </div>
+          <div class="bar-value ${color} mono ${isStrong ? 'highlight-val strong-'+color : ''}">${displayVal}</div>
+        </div>`;
+      }
+    }
+    container.innerHTML = html;
+  }
+
+  function renderConstructGrid(containerId, maxItems) {
+    const container = document.getElementById(containerId);
+    const items = maxItems ? constructs.slice(0, maxItems) : constructs;
+    let html = '';
+
+    for (const c of items) {
+      const isTeal = c.direction === 'high';
+      const colorClass = isTeal ? 'teal' : 'coral';
+      const bgClass = isTeal ? 'teal-bg' : 'coral-bg';
+      const valColorClass = c.dimValue >= 0.5 ? '' : 'coral-text';
+      const clampedStr = c.clampedValue.toFixed(4);
+      const intensityStr = c.intensity.toFixed(4);
+
+      html += `<div class="construct-card">
+        <div class="construct-arrow">
+          <div class="construct-from">
+            <span class="mono">${c.dimension}</span> = <span class="val ${valColorClass}">${c.dimValue.toFixed(4)}</span>
+          </div>
+          <div class="construct-arrow-icon">&rarr;</div>
+          <div class="construct-to ${bgClass}">${c.constructName} = ${intensityStr}</div>
+        </div>
+        <div style="font-size:11px; color:#8a90a8; margin-bottom:4px;">${c.constructDesc}</div>
+        <div class="construct-math">
+          <code>|${clampedStr} - 0.5| &times; 2 = ${intensityStr}</code>
+          &nbsp; Since ${clampedStr} ${c.clampedValue >= 0.5 ? '&ge;' : '&lt;'} 0.5 &rarr; <strong style="color:${isTeal ? '#00d4aa' : '#ff6b6b'}">${c.direction.toUpperCase()}</strong> construct "${c.constructName}" activates
+        </div>
+      </div>`;
+    }
+    container.innerHTML = html;
+  }
+
+  function renderAdConstructs(containerId) {
+    const container = document.getElementById(containerId);
+    const groupMeta = {
+      brand_personality: { title: 'Brand Personality', cls: 'personality', color: '#00d4aa' },
+      persuasion_techniques: { title: 'Persuasion Techniques', cls: 'persuasion', color: '#a855f7' },
+      appeals: { title: 'Appeals', cls: 'appeals', color: '#4a9eff' },
+      framing: { title: 'Framing', cls: 'framing', color: '#f59e0b' },
+      value_propositions: { title: 'Value Propositions', cls: 'values', color: '#22c55e' },
+      other: { title: 'Implicit / Linguistic / Processing', cls: 'other', color: '#f472b6' }
+    };
+
+    let html = '';
+    for (const [groupKey, items] of Object.entries(adConstructs)) {
+      const meta = groupMeta[groupKey];
+      html += `<div class="ad-group">
+        <div class="ad-group-title ${meta.cls}">${meta.title}</div>`;
+      for (const [key, val] of Object.entries(items)) {
+        const pct = val * 100;
+        html += `<div class="ad-item">
+          <div class="ad-item-label">${key.replace(/_/g, ' ')}</div>
+          <div class="ad-item-val mono" style="color:${meta.color}">${val.toFixed(2)}</div>
+          <div class="ad-item-bar"><div class="ad-item-fill" style="width:${pct}%;background:${meta.color}"></div></div>
+        </div>`;
+      }
+      html += '</div>';
+    }
+    container.innerHTML = html;
+  }
+
+  function renderMechanisms(containerId) {
+    const container = document.getElementById(containerId);
+    let html = '';
+    for (const m of computedMechanisms) {
+      const pct = m.score * 100;
+      const color = m.score > 0.5 ? '#00d4aa' : m.score > 0.35 ? '#f59e0b' : '#ff6b6b';
+      html += `<div class="mechanism-card">
+        <div class="mechanism-name">${m.name}</div>
+        <div class="mechanism-score-row">
+          <div class="gauge-track" style="flex:1;">
+            <div class="gauge-fill" style="width:${pct}%;background:${color}"></div>
+          </div>
+          <div class="gauge-value mono" style="color:${color}">${m.score.toFixed(3)}</div>
+        </div>
+        <div class="mechanism-drivers">
+          ${m.drivers.map(d => '<span>' + d + '</span>').join('<br>')}
+        </div>
+      </div>`;
+    }
+    container.innerHTML = html;
+  }
+
+  function renderCreativeDirection(containerId) {
+    const container = document.getElementById(containerId);
+    const directives = [
+      { key: 'Frame', val: 'Anxiety Elimination / Prevention', sub: 'regulatory_fit = 0.22 (strongly below 0.5) = prevention focus. Frame around removing travel stress, not adding excitement.' },
+      { key: 'Tone', val: 'Professional + Competent', sub: 'brand_trust_fit (0.92) + competence (0.85) + sincerity (0.82). Calm confidence, not flashy.' },
+      { key: 'DO', val: 'Lead with reliability and professional competence', sub: 'Use testimonials with full names. "On-time, every time." Guaranteed fixed pricing. Flight tracking. 90-min free wait.' },
+      { key: 'Lead Mechanism', val: 'Authority', sub: 'Score: ' + computedMechanisms.find(m=>m.name==='Authority').score.toFixed(3) + ' — brand trust (0.92) + prevention focus + central processing converge' },
+      { key: 'Synergistic Companion', val: 'Social Proof', sub: 'Score: ' + computedMechanisms.find(m=>m.name==='Social Proof').score.toFixed(3) + ' — verified ratio (0.89) + 400+ satisfied customers. Full-name testimonials build credibility.' },
+      { key: 'Avoid', val: 'Scarcity / Price-Leading / Party Vibes', sub: 'Score: ' + computedMechanisms.find(m=>m.name==='Scarcity').score.toFixed(3) + ' — no urgency, no price-leading, no flashy party imagery. These buyers want professional calm.' },
+      { key: "DON'T", val: 'No urgency. No discounts. No flash.', sub: 'Prevention-focused buyers with low uncertainty tolerance (0.25) react negatively to pressure tactics and price anchoring.' },
+      { key: 'Price Strategy', val: 'Fixed / Guaranteed (No Hidden Fees)', sub: 'spending_pain = 0.30 (low) — these buyers willingly pay premium for certainty. Emphasize guaranteed fixed pricing.' },
+      { key: 'Copy Emphasis', val: 'Reliability + Privacy + Comfort', sub: 'Gradient priority: brand_trust_fit (0.92) > authenticity (0.90) > competence (0.85) > peace_of_mind (0.85)' }
+    ];
+
+    let html = '';
+    for (const d of directives) {
+      const isAvoid = d.key === 'Avoid';
+      html += `<div class="creative-item">
+        <div class="creative-key" style="${isAvoid ? 'color:#ff6b6b' : ''}">${d.key}</div>
+        <div class="creative-val" style="${isAvoid ? 'color:#ff6b6b' : ''}">${d.val}</div>
+        <div class="creative-sub">${d.sub}</div>
+      </div>`;
+    }
+    container.innerHTML = html;
+  }
+
+  function renderSegments(containerId, showDSPContext) {
+    const container = document.getElementById(containerId);
+    let html = '';
+    computedSegments.forEach((seg, i) => {
+      const isTop = i < 3;
+      const pct = seg.score * 100;
+      const color = seg.score > 0.6 ? '#00d4aa' : seg.score > 0.4 ? '#f59e0b' : '#ff6b6b';
+      html += `<div class="segment-card ${isTop ? 'highlight' : ''}">
+        <div class="segment-name">${isTop ? '<span style="color:var(--accent);font-size:10px;">TOP ' + (i+1) + ' </span>' : ''}${seg.name}</div>
+        <div class="segment-score">
+          <div class="gauge-track"><div class="gauge-fill" style="width:${pct}%;background:${color}"></div></div>
+          <div class="gauge-value mono" style="color:${color}">${seg.score.toFixed(3)}</div>
+        </div>
+        <div class="segment-meta">
+          <div class="segment-meta-item"><div class="segment-meta-key">Regulatory</div><div class="segment-meta-val">${seg.regulatory}</div></div>
+          <div class="segment-meta-item"><div class="segment-meta-key">Processing</div><div class="segment-meta-val">${seg.processing}</div></div>
+        </div>
+        <div style="font-size:11px; color:#8a90a8; margin-top:6px;">${seg.creative}</div>
+        <div class="segment-tags">
+          ${seg.use.map(m => '<span class="segment-tag use">' + m + '</span>').join('')}
+          ${seg.avoid.map(m => '<span class="segment-tag avoid">' + m + '</span>').join('')}
+        </div>
+        ${showDSPContext ? '<div style="font-size:10px;color:#5a6080;margin-top:6px;border-top:1px solid #1a1a34;padding-top:6px;">OpenRTB: <code class="mono" style="color:#a855f7;">informativ_seg_' + seg.name.toLowerCase().replace(/[^a-z]+/g,'_') + ' = ' + seg.score.toFixed(3) + '</code></div>' : ''}
+      </div>`;
+    });
+    container.innerHTML = html;
+  }
+
+  function renderVerticals(containerId) {
+    const container = document.getElementById(containerId);
+    let html = '<div class="cpm-grid" style="grid-template-columns:1fr;">';
+    for (const v of verticals) {
+      const pct = (v.cpm / 1.5) * 100;
+      html += `<div class="cpm-row">
+        <div class="cpm-label">${v.name}</div>
+        <div class="cpm-bar"><div class="cpm-fill" style="width:${Math.min(100,pct)}%;background:${v.color}"></div></div>
+        <div class="cpm-val mono" style="color:${v.color}">${v.cpm.toFixed(2)}x</div>
+      </div>
+      <div style="font-size:10px;color:#5a6080;padding:0 0 8px 150px;">${v.reason}</div>`;
+    }
+    html += '</div>';
+    container.innerHTML = html;
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // SSP-SPECIFIC RENDERERS
+  // ═══════════════════════════════════════════════════════════════
+
+  function renderSSPInput(containerId) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = `<span class="bracket">{</span>
+  <span class="key">"id"</span>: <span class="str">"imp_9f3a7b2e"</span>,
+  <span class="key">"site"</span>: <span class="bracket">{</span>
+    <span class="key">"page"</span>: <span class="str">"https://example.com/travel/luxury-car-service"</span>,
+    <span class="key">"cat"</span>: [<span class="str">"IAB20"</span>, <span class="str">"IAB20-18"</span>]  <span class="comment">// Travel &mdash; Ground Transportation</span>
+  <span class="bracket">}</span>,
+  <span class="key">"device"</span>: <span class="bracket">{</span>
+    <span class="key">"ua"</span>: <span class="str">"Mozilla/5.0..."</span>,
+    <span class="key">"devicetype"</span>: <span class="num">2</span>  <span class="comment">// Desktop</span>
+  <span class="bracket">}</span>,
+  <span class="key">"imp"</span>: [<span class="bracket">{</span>
+    <span class="key">"id"</span>: <span class="str">"1"</span>,
+    <span class="key">"banner"</span>: <span class="bracket">{</span> <span class="key">"w"</span>: <span class="num">728</span>, <span class="key">"h"</span>: <span class="num">90</span> <span class="bracket">}</span>,
+    <span class="key">"bidfloor"</span>: <span class="num">1.50</span>
+  <span class="bracket">}</span>]
+<span class="bracket">}</span>`;
+  }
+
+  function renderSSPOutput(containerId) {
+    const container = document.getElementById(containerId);
+
+    // Build layer 1 signals
+    const l1Keys = ['regulatory_fit','construal_level','personality_alignment','emotional_alignment',
+      'value_alignment','evolutionary_alignment','composite_alignment','appeal_alignment',
+      'processing_alignment','identity_alignment','self_monitoring','reactance_level',
+      'spending_pain','negativity_bias','brand_trust'];
+
+    // Build layer 2 constructs (top 8)
+    const topConstructs = constructs.slice(0, 8);
+
+    // Build layer 3 segments (top 5)
+    const topSegs = computedSegments.slice(0, 5);
+
+    let l1Str = l1Keys.map(k => {
+      const v = flatDims[k];
+      return `      <span class="bracket">{</span> <span class="key">"name"</span>: <span class="str">"informativ_dim_${k}"</span>, <span class="key">"value"</span>: <span class="num">${v !== undefined ? v.toFixed(4) : '0.0000'}</span> <span class="bracket">}</span>`;
+    }).join(',\n');
+
+    let l2Str = topConstructs.map(c => {
+      return `      <span class="bracket">{</span> <span class="key">"name"</span>: <span class="str">"informativ_construct_${c.constructName}"</span>, <span class="key">"value"</span>: <span class="num">${c.intensity.toFixed(4)}</span> <span class="bracket">}</span>`;
+    }).join(',\n');
+
+    let l3Str = topSegs.map(s => {
+      const segId = s.name.toLowerCase().replace(/[^a-z]+/g, '_');
+      return `      <span class="bracket">{</span> <span class="key">"name"</span>: <span class="str">"informativ_seg_${segId}"</span>, <span class="key">"value"</span>: <span class="num">${s.score.toFixed(3)}</span> <span class="bracket">}</span>`;
+    }).join(',\n');
+
+    container.innerHTML = `<span class="key">"user"</span>: <span class="bracket">{</span>
+  <span class="key">"data"</span>: [
+    <span class="bracket">{</span>
+      <span class="key">"id"</span>: <span class="str">"informativ"</span>,
+      <span class="key">"name"</span>: <span class="str">"INFORMATIV Psychological Intelligence"</span>,
+      <span class="key">"segment"</span>: [
+        <span class="comment">// ── Layer 1: Continuous Bilateral Signals (27 dims, showing 15) ──</span>
+${l1Str},
+
+        <span class="comment">// ── Layer 2: Construct Activations (60+, showing top 8) ──</span>
+${l2Str},
+
+        <span class="comment">// ── Layer 3: Discrete Segments (8, showing top 5) ──</span>
+${l3Str}
+      ]
+    <span class="bracket">}</span>
+  ],
+  <span class="key">"ext"</span>: <span class="bracket">{</span>
+    <span class="key">"informativ"</span>: <span class="bracket">{</span>
+      <span class="key">"floor_multiplier"</span>: <span class="num">1.520</span>,
+      <span class="key">"channel_openness"</span>: <span class="num">0.685</span>,
+      <span class="key">"composite_alignment"</span>: <span class="num">0.6800</span>,
+      <span class="key">"edge_count"</span>: <span class="num">412</span>,
+      <span class="key">"latency_ms"</span>: <span class="num">8</span>
+    <span class="bracket">}</span>
+  <span class="bracket">}</span>
+<span class="bracket">}</span>`;
+  }
+
+  function renderChannelOpenness(containerId) {
+    const container = document.getElementById(containerId);
+    // CE = construal_level, AR = appeal_alignment, AA = emotional_alignment, DE = reactance_level
+    const CE = 0.8043;
+    const AR = 0.5295;
+    const AA = 0.5354;
+    const DE = 0.0;
+    const result = CE*0.3 + AR*0.2 + AA*0.3 + (1-DE)*0.2;
+
+    container.innerHTML = `<div class="formula">
+      <span>channel_openness</span>
+      <span class="op">=</span>
+      <span>CE&times;0.3</span>
+      <span class="op">+</span>
+      <span>AR&times;0.2</span>
+      <span class="op">+</span>
+      <span>AA&times;0.3</span>
+      <span class="op">+</span>
+      <span>(1&minus;DE)&times;0.2</span>
+    </div>
+    <div class="formula mt-12" style="gap:6px;">
+      <span class="op">=</span>
+      <span class="val">${CE}</span><span class="op">&times;0.3</span>
+      <span class="op">+</span>
+      <span class="val">${AR}</span><span class="op">&times;0.2</span>
+      <span class="op">+</span>
+      <span class="val">${AA}</span><span class="op">&times;0.3</span>
+      <span class="op">+</span>
+      <span>(1&minus;<span class="val">${DE}</span>)&times;0.2</span>
+    </div>
+    <div class="formula mt-12" style="gap:6px;">
+      <span class="op">=</span>
+      <span class="val">${(CE*0.3).toFixed(4)}</span>
+      <span class="op">+</span>
+      <span class="val">${(AR*0.2).toFixed(4)}</span>
+      <span class="op">+</span>
+      <span class="val">${(AA*0.3).toFixed(4)}</span>
+      <span class="op">+</span>
+      <span class="val">${((1-DE)*0.2).toFixed(4)}</span>
+      <span class="op">=</span>
+      <span class="result">${result.toFixed(4)}</span>
+    </div>
+    <div class="formula-explain mt-12">
+      <strong>CE</strong> = Construal Level (abstract thinkers are more open to ads) &bull;
+      <strong>AR</strong> = Appeal Alignment (how well ads resonate) &bull;
+      <strong>AA</strong> = Emotional Alignment (emotional receptivity) &bull;
+      <strong>DE</strong> = Reactance Level (subtracted: high reactance = less open)<br>
+      A channel openness of <strong>${result.toFixed(3)}</strong> is above average &mdash; this audience is receptive to well-crafted advertising.
+    </div>`;
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // DSP-SPECIFIC RENDERERS
+  // ═══════════════════════════════════════════════════════════════
+
+  function renderDSPRawSignals(containerId) {
+    const container = document.getElementById(containerId);
+    const topDims = ['regulatory_fit','construal_level','self_monitoring','processing_alignment','spending_pain','emotional_alignment'];
+    const topCons = constructs.slice(0, 4);
+    const topSegs = computedSegments.slice(0, 3);
+
+    let lines = topDims.map(k => `  <span class="bracket">{</span> <span class="key">"name"</span>: <span class="str">"informativ_dim_${k}"</span>, <span class="key">"value"</span>: <span class="num">${(flatDims[k]||0).toFixed(4)}</span> <span class="bracket">}</span>`).join(',\n');
+    lines += ',\n' + topCons.map(c => `  <span class="bracket">{</span> <span class="key">"name"</span>: <span class="str">"informativ_construct_${c.constructName}"</span>, <span class="key">"value"</span>: <span class="num">${c.intensity.toFixed(4)}</span> <span class="bracket">}</span>`).join(',\n');
+    lines += ',\n' + topSegs.map(s => {
+      const segId = s.name.toLowerCase().replace(/[^a-z]+/g, '_');
+      return `  <span class="bracket">{</span> <span class="key">"name"</span>: <span class="str">"informativ_seg_${segId}"</span>, <span class="key">"value"</span>: <span class="num">${s.score.toFixed(3)}</span> <span class="bracket">}</span>`;
+    }).join(',\n');
+
+    container.innerHTML = `<span class="comment">// Received in user.data[0].segment[]</span>\n[\n${lines}\n  <span class="comment">// ... + 40 more signals</span>\n]`;
+  }
+
+  function renderDSPLayer1Table(containerId) {
+    const container = document.getElementById(containerId);
+    const signals = [
+      { key: 'regulatory_fit', val: 0.2200,
+        meaning: 'Buyers are prevention-focused. They book to eliminate travel anxiety, not for adventure.',
+        action: 'BID UP for insurance, financial services, premium travel. BID DOWN for impulse/novelty.' },
+      { key: 'construal_level', val: 0.7000,
+        meaning: 'Buyers think abstractly and future-oriented. Planning ahead, values-driven.',
+        action: 'BID UP for brand-story ads, reliability messaging. BID DOWN for feature-heavy technical ads.' },
+      { key: 'brand_trust', val: 0.9200,
+        meaning: 'Very strong brand trust established. These buyers value proven, reliable service providers.',
+        action: 'BID UP for authority-led campaigns, established brands. Testimonials with full names convert.' },
+      { key: 'processing_alignment', val: 0.7200,
+        meaning: 'Central route processing. These buyers evaluate ads carefully and analytically.',
+        action: 'BID UP for information-rich ads with substantive claims. BID DOWN for flashy/superficial creative.' },
+      { key: 'spending_pain', val: 0.3000,
+        meaning: 'Low spending pain. These are premium buyers comfortable paying for certainty and quality.',
+        action: 'Emphasize guaranteed fixed pricing and premium service. No need for discount positioning.' },
+      { key: 'emotional_alignment', val: 0.5500,
+        meaning: 'Moderate emotional engagement. Calm preference — not seeking excitement.',
+        action: 'Lead with professional competence and reliability, follow with comfort and peace of mind.' },
+      { key: 'reactance_level', val: 0.1500,
+        meaning: 'Low reactance. Open to well-crafted messaging but not completely uncritical.',
+        action: 'Authority and social proof are most effective. Avoid hard-sell pressure tactics.' },
+      { key: 'identity_alignment', val: 0.5500,
+        meaning: 'Moderate identity connection. Service choice reflects professional image.',
+        action: 'Professional identity messaging works. Frame as what successful professionals choose.' },
+      { key: 'evolutionary_alignment', val: 0.3000,
+        meaning: 'Low evolutionary activation. Status is moderate; safety/security matters more than dominance.',
+        action: 'BID DOWN for status-anxiety campaigns. BID UP for security and comfort messaging.' },
+      { key: 'anchoring_susceptibility', val: 0.2500,
+        meaning: 'Anchor-resistant. These buyers want transparent, fixed pricing — not price games.',
+        action: 'Lead with guaranteed fixed pricing. Avoid "was $X, now $Y" framing.' }
+    ];
+
+    let html = `<thead><tr>
+      <th>Signal</th><th>Value</th><th>Meaning</th><th>Bidding Action</th>
+    </tr></thead><tbody>`;
+
+    for (const s of signals) {
+      const color = s.val > 0.55 ? '#00d4aa' : s.val < 0.45 ? '#ff6b6b' : '#f59e0b';
+      html += `<tr>
+        <td><span class="signal-key mono" style="font-size:11px;">informativ_dim_<br>${s.key}</span></td>
+        <td><span class="signal-val mono" style="color:${color}">${s.val.toFixed(4)}</span></td>
+        <td class="signal-meaning">${s.meaning}</td>
+        <td class="signal-action">${s.action}</td>
+      </tr>`;
+    }
+    html += '</tbody>';
+    container.innerHTML = html;
+  }
+
+  function renderDSPLayer2Table(containerId) {
+    const container = document.getElementById(containerId);
+    const topC = constructs.slice(0, 10);
+
+    let html = `<thead><tr>
+      <th>Construct Signal</th><th>Intensity</th><th>Source Dimension</th><th>Mechanism Implication</th>
+    </tr></thead><tbody>`;
+
+    const mechanismMap = {
+      'low_reactance': 'All mechanisms viable. Authority and social proof are strongest. No need for soft-sell workarounds.',
+      'abstract_construal': 'Deploy storytelling and brand narrative. Feature lists will underperform. Lead with why, not what.',
+      'high_self_monitor': 'Social proof is critical. Show social validation, expert endorsement, premium positioning.',
+      'prevention_focus': 'Frame as loss-prevention. "Don\'t miss out on quality" > "Discover something new". Authority over scarcity.',
+      'central_processing': 'Invest in substantive creative. These users read the copy. Evidence-based claims will convert.',
+      'positivity_oriented': 'Safe to use positive framing. Negativity will backfire. Lead with gains and quality.',
+      'personality_divergent': 'Audience personality doesn\'t match ad personality. Use bridging mechanisms: social proof, authority.',
+      'evo_dormant': 'Skip evolutionary triggers (fear, status anxiety, mate competition). Use rational/emotional blend instead.',
+      'linguistic_gap': 'Communication style mismatch. Adapt copy register. Use simpler, more direct language.',
+      'high_spending_pain': 'Value justification required. Frame as investment. Show cost-per-use or long-term savings.'
+    };
+
+    for (const c of topC) {
+      const color = c.direction === 'high' ? '#00d4aa' : '#ff6b6b';
+      const mechAdvice = mechanismMap[c.constructName] || 'Use construct-aligned mechanisms.';
+      html += `<tr>
+        <td><span class="signal-key mono" style="font-size:11px;">informativ_construct_<br>${c.constructName}</span></td>
+        <td><span class="signal-val mono" style="color:${color}">${c.intensity.toFixed(4)}</span></td>
+        <td class="text-xs text-muted">${c.dimension} = ${c.dimValue.toFixed(4)}<br>(${c.direction} construct)</td>
+        <td class="signal-action">${mechAdvice}</td>
+      </tr>`;
+    }
+    html += '</tbody>';
+    container.innerHTML = html;
+  }
+
+  function renderDSPStrategies(containerId) {
+    const container = document.getElementById(containerId);
+    const strategies = [
+      {
+        vertical: 'Premium Travel / Chauffeur Services', badge: 'up', direction: 'BID UP +45%',
+        signals: 'brand_trust=0.92, prevention_focus (reg_fit=0.22), processing=0.72, spending_pain=0.30',
+        mechanisms: [
+          { name: 'Authority', cls: 'use' }, { name: 'Social Proof', cls: 'use' },
+          { name: 'Commitment', cls: 'use' }, { name: 'Scarcity', cls: 'avoid' }
+        ],
+        rationale: 'Direct category match. Certainty-seeking premium buyers with strong brand trust. Lead with reliability, testimonials, and guaranteed pricing.'
+      },
+      {
+        vertical: 'Financial Services', badge: 'up', direction: 'BID UP +38%',
+        signals: 'regulatory_fit=0.22 (prevention), construal=0.70, processing=0.72, brand_trust=0.92',
+        mechanisms: [
+          { name: 'Authority', cls: 'use' }, { name: 'Evidence', cls: 'use' },
+          { name: 'Transparency', cls: 'use' }, { name: 'Hard sell', cls: 'avoid' }
+        ],
+        rationale: 'Prevention-focused, analytical, authority-receptive audience. Ideal for financial planning, insurance, investment messaging.'
+      },
+      {
+        vertical: 'Luxury / Premium Brands', badge: 'up', direction: 'BID UP +32%',
+        signals: 'brand_trust=0.92, construal=0.70, identity=0.55, spending_pain=0.30 (low)',
+        mechanisms: [
+          { name: 'Authority', cls: 'use' }, { name: 'Social Proof', cls: 'use' },
+          { name: 'Commitment', cls: 'use' }, { name: 'Discount framing', cls: 'avoid' }
+        ],
+        rationale: 'Premium buyers comfortable with high spending. Respond to professional competence and social proof, not discounts.'
+      },
+      {
+        vertical: 'Corporate / Business Services', badge: 'up', direction: 'BID UP +25%',
+        signals: 'processing=0.72, brand_trust=0.92, personality=0.72, reactance=0.15',
+        mechanisms: [
+          { name: 'Authority', cls: 'use' }, { name: 'Rational appeal', cls: 'use' },
+          { name: 'Evidence', cls: 'use' }, { name: 'Emotional pressure', cls: 'avoid' }
+        ],
+        rationale: 'Analytical, deliberate decision-makers with high conscientiousness. Ideal for B2B and professional service offers.'
+      },
+      {
+        vertical: 'Fast Food / Impulse', badge: 'down', direction: 'BID DOWN -25%',
+        signals: 'regulatory_fit=0.22 (prevention), construal=0.70 (abstract), processing=0.72 (central), arousal_seeking=0.30 (low)',
+        mechanisms: [
+          { name: 'Novelty', cls: 'avoid' }, { name: 'Urgency', cls: 'avoid' },
+          { name: 'Scarcity', cls: 'avoid' }
+        ],
+        rationale: 'Prevention-focused, analytical, calm-seeking evaluators. The opposite of an impulse buyer. Save your budget.'
+      },
+      {
+        vertical: 'Mobile Gaming', badge: 'down', direction: 'BID DOWN -30%',
+        signals: 'construal=0.70, processing=0.72, evo=0.30, regulatory_fit=0.22',
+        mechanisms: [
+          { name: 'Excitement', cls: 'avoid' }, { name: 'Novelty', cls: 'avoid' }
+        ],
+        rationale: 'Analytical, prevention-focused, calm-preference users are not the right audience for casual gaming installs.'
+      }
+    ];
+
+    let html = '';
+    for (const s of strategies) {
+      html += `<div class="strategy-card">
+        <div class="strategy-vertical">
+          ${s.vertical}
+          <span class="badge ${s.badge}">${s.direction}</span>
+        </div>
+        <div class="strategy-signals">
+          <strong style="color:#6a7090;">Key signals:</strong> <span class="mono" style="font-size:10px;">${s.signals}</span>
+        </div>
+        <div class="strategy-mechanisms">
+          ${s.mechanisms.map(m => '<span class="segment-tag ' + m.cls + '">' + m.name + '</span>').join('')}
+        </div>
+        <div style="font-size:11px;color:#6a7090;margin-top:8px;">${s.rationale}</div>
+      </div>`;
+    }
+    container.innerHTML = html;
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // PAGE INTEL RENDERERS
+  // ═══════════════════════════════════════════════════════════════
+
+  function renderPageIntelLayers(containerId) {
+    const container = document.getElementById(containerId);
+    const layers = [
+      { group: 'Reader State (Layers 1-4)', items: [
+        { name: 'Activated Needs (security)', val: 0.85 },
+        { name: 'Emotional Valence', val: 0.30 },
+        { name: 'Emotional Arousal', val: 0.65 },
+        { name: 'Cognitive Engagement', val: 0.82 },
+        { name: 'Approach/Avoidance', val: 0.10 },
+        { name: 'Publisher Authority', val: 0.78 },
+      ]},
+      { group: 'Ad Response (Layers 5-8)', items: [
+        { name: 'Authority Channel', val: 0.88 },
+        { name: 'Loss Aversion Channel', val: 0.82 },
+        { name: 'Social Proof Channel', val: 0.50 },
+        { name: 'Scarcity Channel', val: 0.15 },
+        { name: 'Novelty Channel', val: 0.12 },
+        { name: 'Ad Density (competing)', val: 0.45 },
+      ]},
+      { group: 'Content Structure (Layers 9-11)', items: [
+        { name: 'Narrative Tension', val: 0.72 },
+        { name: 'Evidence Density', val: 0.80 },
+        { name: 'Semantic Similarity (finance)', val: 0.91 },
+      ]},
+      { group: 'Environment (Layers 12-14)', items: [
+        { name: 'Comment Engagement', val: 0.68 },
+        { name: 'Content Freshness', val: 0.90 },
+        { name: 'Estimated Viewability', val: 0.74 },
+      ]}
+    ];
+
+    let html = '';
+    for (const group of layers) {
+      html += `<div class="bar-group-title">${group.group}</div>`;
+      for (const item of group.items) {
+        const pct = item.val * 100;
+        const color = item.val > 0.55 ? 'teal' : item.val < 0.45 ? 'coral' : 'grey';
+        html += `<div class="bar-row">
+          <div class="bar-label">${item.name}</div>
+          <div class="bar-track">
+            <div class="bar-fill ${color}" style="width:${pct}%"></div>
+          </div>
+          <div class="bar-value ${color} mono">${item.val.toFixed(2)}</div>
+        </div>`;
+      }
+    }
+    container.innerHTML = html;
+  }
+
+  function renderPageIntelTaxonomy(containerId) {
+    const container = document.getElementById(containerId);
+    const entries = [
+      { domain: 'cnn.com', cat: 'Business', articles: 12, conf: 0.75, centroid: 'prevention, high-cognition, authority-receptive', color: '#06b6d4' },
+      { domain: 'cnn.com', cat: 'Politics', articles: 9, conf: 0.55, centroid: 'informed mindset, cognitive engagement, prevention', color: '#06b6d4' },
+      { domain: 'foxnews.com', cat: 'Opinion', articles: 7, conf: 0.50, centroid: 'social mindset, high arousal, approach', color: '#f59e0b' },
+      { domain: 'wired.com', cat: 'Gear', articles: 22, conf: 0.60, centroid: 'purchasing mindset, analytical processing', color: '#4a9eff' },
+      { domain: 'wired.com', cat: 'Science', articles: 15, conf: 0.58, centroid: 'curiosity mindset, central processing, novelty-open', color: '#4a9eff' },
+      { domain: 'nytimes.com', cat: 'Business', articles: 18, conf: 0.68, centroid: 'analytical, prevention-oriented, authority-receptive', color: '#00d4aa' },
+    ];
+
+    let html = '';
+    for (const e of entries) {
+      html += `<div class="construct-card">
+        <div class="construct-arrow">
+          <div class="construct-from">
+            <span class="mono">${e.domain}</span> / <span class="val" style="color:${e.color}">${e.cat}</span>
+          </div>
+          <div class="construct-arrow-icon">&rarr;</div>
+          <div class="construct-to" style="background:${e.color}20; color:${e.color};">conf ${e.conf.toFixed(2)}</div>
+        </div>
+        <div style="font-size:11px; color:#8a90a8; margin-bottom:4px;">${e.centroid}</div>
+        <div class="construct-math">
+          <code>${e.articles} articles scored</code>
+          &nbsp; Centroid confidence grows with each new article in this category
+        </div>
+      </div>`;
+    }
+    container.innerHTML = html;
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // PIPELINE STRIP RENDERER
+  // ═══════════════════════════════════════════════════════════════
+
+  function renderPipelineStrip(containerId, activeStep, accent) {
+    const steps = [
+      { label: '47M Edges', num: 'DB' },
+      { label: '27 Dims', num: '1' },
+      { label: '60+ Constructs', num: '2' },
+      { label: 'Segments', num: '3' },
+      { label: 'Mechanisms', num: '4' },
+      { label: 'Output', num: '5' }
+    ];
+
+    const container = document.getElementById(containerId);
+    let html = '';
+    steps.forEach((step, i) => {
+      const state = i < activeStep ? 'done' : i === activeStep ? 'active' : '';
+      html += `<div class="pipeline-node ${state}" style="--accent:${accent}">
+        <div class="pipeline-circle">${step.num}</div>
+        <div class="pipeline-label">${step.label}</div>
+      </div>`;
+      if (i < steps.length - 1) {
+        html += `<div class="pipeline-connector ${i < activeStep ? 'done' : ''}" style="--accent:${accent}"></div>`;
+      }
+    });
+    container.innerHTML = html;
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // TAB SWITCHING
+  // ═══════════════════════════════════════════════════════════════
+
+  window.switchTab = function(tabName) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelector(`.tab[data-tab="${tabName}"]`).classList.add('active');
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    document.querySelector(`[data-tab-content="${tabName}"]`).classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // ═══════════════════════════════════════════════════════════════
+  // INITIALIZATION
+  // ═══════════════════════════════════════════════════════════════
+
+  function init() {
+    // Pipeline strips
+    renderPipelineStrip('brand-pipeline', 5, '#00d4aa');
+    renderPipelineStrip('publisher-pipeline', 4, '#4a9eff');
+    renderPipelineStrip('ssp-pipeline', 5, '#f59e0b');
+    renderPipelineStrip('dsp-pipeline', 5, '#a855f7');
+
+    // Brand tab
+    renderDimensionChart('brand-dimensions-chart');
+    renderConstructGrid('brand-constructs-grid', 15);
+    renderAdConstructs('brand-ad-constructs');
+    renderMechanisms('brand-mechanisms-grid');
+    renderCreativeDirection('brand-creative-grid');
+
+    // Publisher tab
+    renderDimensionChart('publisher-dimensions-chart');
+    renderConstructGrid('publisher-constructs-grid', 12);
+    renderSegments('publisher-segments-grid', false);
+    renderVerticals('publisher-verticals');
+
+    // SSP tab
+    renderSSPInput('ssp-input-json');
+    renderSSPOutput('ssp-output-json');
+    renderChannelOpenness('ssp-channel-openness');
+
+    // DSP tab
+    renderDSPRawSignals('dsp-raw-signals');
+    renderDSPLayer1Table('dsp-layer1-table');
+    renderDSPLayer2Table('dsp-layer2-table');
+    renderSegments('dsp-segments-grid', true);
+    renderDSPStrategies('dsp-strategies');
+
+    // Page Intel tab
+    renderPipelineStrip('pageintel-pipeline', 6, '#06b6d4');
+    renderPageIntelLayers('pageintel-layers-chart');
+    renderPageIntelTaxonomy('pageintel-taxonomy-grid');
+
+    // Animate bars on scroll (simple IntersectionObserver)
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.querySelectorAll('.bar-fill, .gauge-fill, .ad-item-fill, .cpm-fill').forEach(el => {
+            const w = el.style.width;
+            el.style.width = '0%';
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => { el.style.width = w; });
+            });
+          });
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.step').forEach(step => observer.observe(step));
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+
+})();
+</script>
+
+</body>
+</html>

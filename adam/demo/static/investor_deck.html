@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>INFORMATIV — Investor Overview</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a1a;
+  color: #e0e6f0;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  overflow: hidden;
+  height: 100vh;
+}
+
+/* ── Slide Container ─────────────────────────────────────── */
+.deck { position: relative; width: 100vw; height: 100vh; }
+.slide {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  display: flex; flex-direction: column; justify-content: center;
+  padding: 60px 100px;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.5s ease;
+}
+.slide.active { opacity: 1; pointer-events: auto; }
+
+/* ── Navigation ──────────────────────────────────────────── */
+.nav {
+  position: fixed; bottom: 30px; right: 40px; z-index: 100;
+  display: flex; gap: 12px; align-items: center;
+}
+.nav-btn {
+  width: 40px; height: 40px; border-radius: 50%;
+  background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+  color: #8a92b0; font-size: 18px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+}
+.nav-btn:hover { background: rgba(255,255,255,0.15); color: #fff; }
+.slide-counter {
+  font-size: 13px; color: #4a5570; font-variant-numeric: tabular-nums;
+  min-width: 40px; text-align: center;
+}
+.progress {
+  position: fixed; top: 0; left: 0; height: 3px; z-index: 100;
+  background: linear-gradient(90deg, #4a9eff, #06b6d4);
+  transition: width 0.4s ease;
+}
+
+/* ── Logo bar ────────────────────────────────────────────── */
+.logo-bar {
+  position: fixed; top: 20px; left: 40px; z-index: 100;
+  display: flex; align-items: center; gap: 12px;
+}
+.logo-text { font-size: 16px; letter-spacing: 6px; font-weight: 200; }
+.logo-text b { font-weight: 700; color: #4a9eff; }
+
+/* ── Typography ──────────────────────────────────────────── */
+.s-label {
+  font-size: 12px; letter-spacing: 4px; text-transform: uppercase;
+  font-weight: 600; margin-bottom: 16px;
+}
+.s-title {
+  font-size: 48px; font-weight: 200; line-height: 1.25;
+  margin-bottom: 24px; max-width: 900px;
+}
+.s-title em { font-style: normal; font-weight: 600; }
+.s-body {
+  font-size: 20px; color: #8a92b0; line-height: 1.75;
+  max-width: 750px;
+}
+.s-body strong { color: #e0e6f0; }
+
+/* ── Stat row ────────────────────────────────────────────── */
+.stats { display: flex; gap: 60px; margin-top: 40px; flex-wrap: wrap; }
+.stat { text-align: left; }
+.stat-val { font-size: 42px; font-weight: 700; line-height: 1.1; }
+.stat-label { font-size: 13px; color: #6a7090; margin-top: 4px; text-transform: uppercase; letter-spacing: 1px; }
+
+/* ── Grid cards ──────────────────────────────────────────── */
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 32px; max-width: 1000px; }
+.card {
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px; padding: 28px;
+}
+.card-icon { font-size: 32px; margin-bottom: 12px; }
+.card-title { font-size: 18px; font-weight: 600; margin-bottom: 8px; color: #e0e6f0; }
+.card-body { font-size: 14px; color: #8a92b0; line-height: 1.7; }
+
+/* ── Comparison ──────────────────────────────────────────── */
+.cmp { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-top: 32px; max-width: 1000px; }
+.cmp-side { border-radius: 14px; padding: 32px; }
+.cmp-old { background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.15); }
+.cmp-new { background: rgba(34,197,94,0.06); border: 1px solid rgba(34,197,94,0.15); }
+.cmp-label { font-size: 13px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 16px; }
+.cmp-old .cmp-label { color: #ef4444; }
+.cmp-new .cmp-label { color: #22c55e; }
+.cmp-list { list-style: none; font-size: 16px; color: #a0a8b8; }
+.cmp-list li { padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+
+/* ── Pipeline ────────────────────────────────────────────── */
+.pipeline { display: flex; align-items: center; gap: 0; margin-top: 36px; flex-wrap: wrap; }
+.pipe-node {
+  background: rgba(74,158,255,0.08); border: 1px solid rgba(74,158,255,0.2);
+  border-radius: 10px; padding: 16px 20px; text-align: center; min-width: 140px;
+}
+.pipe-node-title { font-size: 14px; font-weight: 600; color: #4a9eff; }
+.pipe-node-desc { font-size: 11px; color: #6a7090; margin-top: 4px; }
+.pipe-arrow { font-size: 20px; color: #2a3555; padding: 0 8px; }
+
+/* ── Market ──────────────────────────────────────────────── */
+.market-bars { margin-top: 32px; max-width: 700px; }
+.market-row { display: flex; align-items: center; gap: 16px; margin-bottom: 12px; }
+.market-label { font-size: 14px; color: #a0a8b8; min-width: 180px; text-align: right; }
+.market-bar { height: 28px; border-radius: 6px; display: flex; align-items: center; padding-left: 12px; font-size: 13px; font-weight: 600; }
+
+/* ── Slide-specific ──────────────────────────────────────── */
+.slide-1 { background: linear-gradient(135deg, #0a0a1a 0%, #0d1528 50%, #0a1020 100%); }
+.slide-2 .s-label { color: #ef4444; }
+.slide-3 .s-label { color: #22c55e; }
+.slide-4 .s-label { color: #4a9eff; }
+.slide-5 .s-label { color: #a855f7; }
+.slide-6 .s-label { color: #f59e0b; }
+.slide-7 .s-label { color: #06b6d4; }
+.slide-8 .s-label { color: #22c55e; }
+
+@media (max-width: 900px) {
+  .slide { padding: 40px 30px; }
+  .s-title { font-size: 32px; }
+  .s-body { font-size: 16px; }
+  .stats { gap: 30px; }
+  .stat-val { font-size: 28px; }
+  .grid, .cmp { grid-template-columns: 1fr; }
+  .pipeline { flex-direction: column; }
+  .pipe-arrow { transform: rotate(90deg); }
+}
+</style>
+</head>
+<body>
+
+<div class="progress" id="progress"></div>
+<div class="logo-bar"><div class="logo-text">INFORM<b>ATIV</b></div></div>
+
+<div class="deck">
+
+<!-- ════════════════════════════════════════════════════════════
+     SLIDE 1: TITLE
+     ════════════════════════════════════════════════════════════ -->
+<div class="slide slide-1 active" data-slide="1">
+  <div class="s-title" style="font-size:56px;">
+    The advertising industry has a<br><em>$200 billion</em> targeting problem
+  </div>
+  <div class="s-body">
+    Every ad platform in the world decides who sees which ad based on demographics and browsing history.
+    <strong>None of them understand why people actually buy things.</strong>
+    <br><br>
+    We built the system that does.
+  </div>
+  <div class="stats">
+    <div class="stat"><div class="stat-val" style="color:#4a9eff;">937M</div><div class="stat-label">Purchase decisions analyzed</div></div>
+    <div class="stat"><div class="stat-val" style="color:#22c55e;">47M</div><div class="stat-label">Buyer-product relationships mapped</div></div>
+    <div class="stat"><div class="stat-val" style="color:#f59e0b;">&lt;12ms</div><div class="stat-label">Real-time decision speed</div></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     SLIDE 2: THE PROBLEM
+     ════════════════════════════════════════════════════════════ -->
+<div class="slide" data-slide="2">
+  <div class="s-label" style="color:#ef4444;">The Problem</div>
+  <div class="s-title">Advertising today is like<br>practicing medicine with <em>only a stethoscope</em></div>
+  <div class="s-body">
+    Current ad targeting knows <strong>what you clicked</strong> but not <strong>why you bought</strong>.
+    It's correlational — "people who visited car sites also buy insurance." No understanding.
+    No causation. No psychology.
+  </div>
+  <div class="cmp">
+    <div class="cmp-side cmp-old">
+      <div class="cmp-label">How ads target today</div>
+      <ul class="cmp-list">
+        <li>"Female, 25-34, visited beauty sites"</li>
+        <li>"Browsed running shoes last week"</li>
+        <li>"Located in New York metro"</li>
+        <li>Show the same ad to everyone who matches</li>
+      </ul>
+    </div>
+    <div class="cmp-side cmp-new">
+      <div class="cmp-label">What actually drives purchase</div>
+      <ul class="cmp-list">
+        <li>"Prevention-focused, seeks reliability over novelty"</li>
+        <li>"Trusts expert endorsements, skeptical of hype"</li>
+        <li>"Reading a financial anxiety article right now"</li>
+        <li>Match the ad's <em>psychology</em> to the buyer's <em>mindset</em></li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     SLIDE 3: THE INSIGHT
+     ════════════════════════════════════════════════════════════ -->
+<div class="slide" data-slide="3">
+  <div class="s-label">The Insight</div>
+  <div class="s-title">937 million reviews are <em>937 million recorded purchase decisions</em></div>
+  <div class="s-body">
+    When someone buys a product on Amazon and writes a review, they reveal <strong>how they think</strong>. Not their age — their decision-making psychology. Not their zip code — their motivations, fears, and what convinced them.
+    <br><br>
+    And the product listing that convinced them? That's the <strong>"ad" that worked</strong>.
+    <br><br>
+    We mapped <strong>both sides</strong> — the buyer's psychology AND the message that converted them — across 937 million purchases. No one else has this.
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     SLIDE 4: WHAT WE BUILT
+     ════════════════════════════════════════════════════════════ -->
+<div class="slide" data-slide="4">
+  <div class="s-label">What We Built</div>
+  <div class="s-title">A psychological intelligence engine for <em>real-time advertising</em></div>
+  <div class="s-body" style="margin-bottom:8px;">
+    The system reads the psychology of any webpage a person is on, knows what mental state they're in, and tells the ad platform <strong>exactly which message will resonate</strong> — in under 12 milliseconds.
+  </div>
+  <div class="pipeline">
+    <div class="pipe-node">
+      <div class="pipe-node-title">Page Psychology</div>
+      <div class="pipe-node-desc">What state is the reader in?</div>
+    </div>
+    <div class="pipe-arrow">&rarr;</div>
+    <div class="pipe-node">
+      <div class="pipe-node-title">Graph Query</div>
+      <div class="pipe-node-desc">47M edges: what works in this state?</div>
+    </div>
+    <div class="pipe-arrow">&rarr;</div>
+    <div class="pipe-node">
+      <div class="pipe-node-title">Mechanism Selection</div>
+      <div class="pipe-node-desc">Authority? Social proof? Scarcity?</div>
+    </div>
+    <div class="pipe-arrow">&rarr;</div>
+    <div class="pipe-node">
+      <div class="pipe-node-title">Creative Direction</div>
+      <div class="pipe-node-desc">Exact tone, framing, message</div>
+    </div>
+    <div class="pipe-arrow">&rarr;</div>
+    <div class="pipe-node" style="border-color:rgba(34,197,94,0.3); background:rgba(34,197,94,0.06);">
+      <div class="pipe-node-title" style="color:#22c55e;">Conversion</div>
+      <div class="pipe-node-desc">The right ad to the right mind</div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     SLIDE 5: WHY IT'S DIFFERENT
+     ════════════════════════════════════════════════════════════ -->
+<div class="slide" data-slide="5">
+  <div class="s-label">Why It's Different</div>
+  <div class="s-title">Everyone else knows <em>what</em> works.<br>We know <em>why</em> it works.</div>
+  <div class="grid">
+    <div class="card">
+      <div class="card-icon">🧠</div>
+      <div class="card-title">Causal, not correlational</div>
+      <div class="card-body">Other systems see "authority ads work on news sites." We know <strong>authority works because the page creates information-seeking + low reactance</strong>. That means authority works on ANY page with those conditions — even a health page or product review. We generalize through understanding.</div>
+    </div>
+    <div class="card">
+      <div class="card-icon">🔗</div>
+      <div class="card-title">Both sides of the equation</div>
+      <div class="card-body">We have the buyer's psychology (from their review) AND the seller's psychology (from the product listing) for 47 million actual purchases. <strong>No one else has both sides.</strong> It's like having the answer key for every ad decision.</div>
+    </div>
+    <div class="card">
+      <div class="card-icon">📈</div>
+      <div class="card-title">Self-teaching system</div>
+      <div class="card-body">Every ad impression is a micro-experiment. The system runs statistical tests on its own outcomes to discover <strong>new causal relationships</strong> and writes them back into the graph. It doesn't just learn — it learns how to learn.</div>
+    </div>
+    <div class="card">
+      <div class="card-icon">🚫</div>
+      <div class="card-title">No cookies needed</div>
+      <div class="card-body">Privacy regulations are killing cookie-based targeting. Our system reads the <strong>page psychology</strong>, not the user's browsing history. It works without any personal data — and it's more accurate than cookies ever were.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     SLIDE 6: THE MARKET
+     ════════════════════════════════════════════════════════════ -->
+<div class="slide" data-slide="6">
+  <div class="s-label">The Opportunity</div>
+  <div class="s-title">A <em>$725 billion</em> market that's<br>never had this technology</div>
+  <div class="market-bars">
+    <div class="market-row">
+      <div class="market-label">Global digital ad spend</div>
+      <div class="market-bar" style="width:100%; background: linear-gradient(90deg, #4a9eff, #6ab0ff);">$725B (2025)</div>
+    </div>
+    <div class="market-row">
+      <div class="market-label">Programmatic (automated)</div>
+      <div class="market-bar" style="width:72%; background: linear-gradient(90deg, #a855f7, #c084fc);">$520B</div>
+    </div>
+    <div class="market-row">
+      <div class="market-label">Contextual targeting</div>
+      <div class="market-bar" style="width:30%; background: linear-gradient(90deg, #f59e0b, #fbbf24);">$220B by 2027</div>
+    </div>
+    <div class="market-row">
+      <div class="market-label">CTV advertising</div>
+      <div class="market-bar" style="width:18%; background: linear-gradient(90deg, #22c55e, #4ade80);">$130B fastest growing</div>
+    </div>
+  </div>
+  <div class="s-body" style="margin-top:28px; font-size:17px;">
+    <strong>Our entry point:</strong> StackAdapt — a $2B+ DSP with 40+ exchange partners.
+    They buy billions of ad impressions per month. We tell them which psychology
+    to deploy on each one. Our revenue model: a percentage of the lift we generate.
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     SLIDE 7: THE MOAT
+     ════════════════════════════════════════════════════════════ -->
+<div class="slide" data-slide="7">
+  <div class="s-label">The Moat</div>
+  <div class="s-title">Three assets that can't be<br><em>replicated overnight</em></div>
+  <div class="grid" style="grid-template-columns: 1fr 1fr 1fr; max-width:1100px;">
+    <div class="card">
+      <div class="card-icon">📊</div>
+      <div class="card-title">The Graph</div>
+      <div class="card-body">47 million bilateral edges mapping buyer psychology to product psychology across 20 dimensions. Built from 937M real purchases. <strong>Years of processing to replicate.</strong></div>
+    </div>
+    <div class="card">
+      <div class="card-icon">🔬</div>
+      <div class="card-title">The Science</div>
+      <div class="card-body">Grounded in published psychology — Prospect Theory, Elaboration Likelihood, Regulatory Focus. Not black-box ML. <strong>We can explain every recommendation.</strong></div>
+    </div>
+    <div class="card">
+      <div class="card-icon">🌀</div>
+      <div class="card-title">The Flywheel</div>
+      <div class="card-body">Every impression teaches the system something new. More data &rarr; more causal discoveries &rarr; better predictions &rarr; more budget from advertisers &rarr; more data. <strong>The gap compounds daily.</strong></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     SLIDE 8: THE ASK
+     ════════════════════════════════════════════════════════════ -->
+<div class="slide" data-slide="8">
+  <div class="s-label">The Ask</div>
+  <div class="s-title" style="font-size:44px;">The system is built. The data is processed.<br>The partnership is <em>in motion</em>.</div>
+  <div class="s-body">
+    We've already built the technology that every other company in this space
+    is still theorizing about. What we need now is the fuel to scale it —
+    ingest more product categories, onboard more DSP partners, and let the
+    flywheel accelerate.
+  </div>
+  <div class="stats" style="margin-top:36px;">
+    <div class="stat"><div class="stat-val" style="color:#22c55e;">Built</div><div class="stat-label">Full platform operational</div></div>
+    <div class="stat"><div class="stat-val" style="color:#4a9eff;">47M</div><div class="stat-label">Bilateral edges in graph</div></div>
+    <div class="stat"><div class="stat-val" style="color:#a855f7;">118</div><div class="stat-label">Publisher domains indexed</div></div>
+    <div class="stat"><div class="stat-val" style="color:#f59e0b;">StackAdapt</div><div class="stat-label">First DSP partnership</div></div>
+  </div>
+  <div style="margin-top:40px; padding:24px 32px; background:rgba(74,158,255,0.06); border:1px solid rgba(74,158,255,0.15); border-radius:12px; max-width:700px;">
+    <div style="font-size:18px; font-weight:600; color:#4a9eff; margin-bottom:8px;">INFORMATIV</div>
+    <div style="font-size:15px; color:#8a92b0;">
+      Chris Nocera &middot; Founder<br>
+      The world's first psychological intelligence layer for programmatic advertising.
+    </div>
+  </div>
+</div>
+
+</div><!-- /deck -->
+
+<!-- Navigation -->
+<div class="nav">
+  <button class="nav-btn" onclick="prev()">&larr;</button>
+  <div class="slide-counter"><span id="current">1</span> / <span id="total">8</span></div>
+  <button class="nav-btn" onclick="next()">&rarr;</button>
+</div>
+
+<script>
+let current = 1;
+const total = 8;
+
+function go(n) {
+  if (n < 1 || n > total) return;
+  document.querySelectorAll('.slide').forEach(s => s.classList.remove('active'));
+  document.querySelector(`[data-slide="${n}"]`).classList.add('active');
+  current = n;
+  document.getElementById('current').textContent = n;
+  document.getElementById('progress').style.width = (n / total * 100) + '%';
+}
+
+function next() { go(current + 1); }
+function prev() { go(current - 1); }
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); next(); }
+  if (e.key === 'ArrowLeft') { e.preventDefault(); prev(); }
+});
+
+// Touch support
+let touchStartX = 0;
+document.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; });
+document.addEventListener('touchend', e => {
+  const diff = touchStartX - e.changedTouches[0].clientX;
+  if (Math.abs(diff) > 50) { diff > 0 ? next() : prev(); }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>INFORMATIV — System Architecture</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0a0e17; color: #e0e6f0; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; min-height: 100vh; }
+
+/* Header */
+.header { padding: 24px 40px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #2a3555; }
+.header h1 { font-size: 28px; letter-spacing: 6px; font-weight: 300; }
+.header h1 span { color: #4a9eff; font-weight: 700; }
+.stats-bar { display: flex; gap: 32px; }
+.stat { text-align: center; }
+.stat-value { font-size: 22px; font-weight: 700; color: #4a9eff; font-variant-numeric: tabular-nums; }
+.stat-label { font-size: 11px; color: #8892a8; text-transform: uppercase; letter-spacing: 1px; }
+
+/* Tabs */
+.tabs { display: flex; gap: 0; padding: 0 40px; border-bottom: 1px solid #2a3555; }
+.tab { padding: 14px 28px; cursor: pointer; font-size: 14px; font-weight: 500; color: #8892a8; border-bottom: 2px solid transparent; transition: all 0.25s; user-select: none; }
+.tab:hover { color: #e0e6f0; }
+.tab.active-blue { color: #4a9eff; border-color: #4a9eff; }
+.tab.active-green { color: #22c55e; border-color: #22c55e; }
+.tab.active-orange { color: #f59e0b; border-color: #f59e0b; }
+
+/* Flow container */
+.flow-section { display: none; padding: 32px 40px; overflow-x: auto; }
+.flow-section.active { display: block; }
+.flow-label { font-size: 13px; color: #8892a8; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 20px; }
+
+/* Swim lane */
+.swim-lane { display: flex; align-items: flex-start; gap: 12px; min-width: max-content; padding-bottom: 20px; }
+.connector { display: flex; align-items: center; padding-top: 18px; }
+.connector svg { width: 36px; height: 24px; }
+.connector svg line { stroke-dasharray: 6 4; animation: march 0.6s linear infinite; }
+@keyframes march { to { stroke-dashoffset: -10; } }
+.connector-dotted svg line { stroke-dasharray: 4 6; }
+
+/* Cards */
+.card { background: #141b2d; border: 1px solid #2a3555; border-radius: 10px; min-width: 160px; max-width: 260px; transition: all 0.25s; flex-shrink: 0; }
+.card:hover { border-color: #3a4a70; }
+.card-header { padding: 14px 16px; cursor: pointer; display: flex; align-items: center; gap: 10px; }
+.card-step { font-size: 11px; font-weight: 700; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.blue .card-step { background: #4a9eff22; color: #4a9eff; }
+.green .card-step { background: #22c55e22; color: #22c55e; }
+.orange .card-step { background: #f59e0b22; color: #f59e0b; }
+.card-title { font-size: 14px; font-weight: 600; }
+.card-subtitle { font-size: 11px; color: #8892a8; margin-top: 2px; }
+.card-body { max-height: 0; overflow: hidden; transition: max-height 0.4s ease; }
+.card.expanded .card-body { max-height: 800px; }
+.card.expanded { background: #1a2340; }
+.card-content { padding: 0 16px 14px 16px; font-size: 12px; line-height: 1.6; color: #c0c8d8; }
+.card-content code { color: #a855f7; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 11px; }
+.card-chevron { margin-left: auto; color: #8892a8; transition: transform 0.3s; font-size: 12px; }
+.card.expanded .card-chevron { transform: rotate(90deg); }
+
+/* Cascade special */
+.cascade-levels { display: flex; flex-direction: column; gap: 6px; }
+.level-badge { display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: #0d1220; border-radius: 6px; cursor: pointer; border: 1px solid #2a3555; transition: all 0.2s; }
+.level-badge:hover { border-color: #4a9eff55; }
+.level-badge.active { border-color: #4a9eff; background: #141b2d; }
+.level-label { font-size: 11px; font-weight: 700; color: #4a9eff; width: 22px; }
+.level-name { font-size: 12px; }
+.level-detail { max-height: 0; overflow: hidden; transition: max-height 0.35s ease; padding: 0 10px; }
+.level-badge.active + .level-detail { max-height: 400px; padding: 8px 10px; }
+.level-detail-content { font-size: 11px; color: #c0c8d8; line-height: 1.7; }
+
+/* Dimension bars */
+.dim-bar { display: flex; align-items: center; gap: 8px; margin: 3px 0; }
+.dim-label { font-size: 10px; color: #8892a8; width: 80px; text-align: right; }
+.dim-track { flex: 1; height: 6px; background: #0d1220; border-radius: 3px; overflow: hidden; }
+.dim-fill { height: 100%; border-radius: 3px; transition: width 0.6s ease; }
+
+/* Context layers */
+.context-layers { display: flex; flex-direction: column; gap: 4px; }
+.ctx-layer { display: flex; align-items: center; gap: 8px; padding: 5px 8px; background: #0d1220; border-radius: 4px; font-size: 11px; }
+.ctx-num { color: #f59e0b; font-weight: 700; width: 16px; }
+.ctx-name { flex: 1; }
+.ctx-val { color: #8892a8; font-size: 10px; }
+.badge-gate { background: #ef4444; color: white; font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 3px; }
+
+/* Payload tree */
+.tree-node { margin-left: 12px; }
+.tree-toggle { cursor: pointer; color: #4a9eff; font-size: 11px; padding: 2px 0; display: flex; align-items: center; gap: 4px; }
+.tree-toggle:hover { color: #6ab4ff; }
+.tree-children { max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
+.tree-node.open > .tree-children { max-height: 600px; }
+.tree-leaf { font-size: 11px; color: #8892a8; padding: 1px 0 1px 16px; }
+
+/* Learning grid */
+.learn-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 16px; }
+@media (max-width: 900px) { .learn-grid { grid-template-columns: repeat(2, 1fr); } }
+.learn-card { background: #141b2d; border: 1px solid #2a3555; border-radius: 8px; padding: 14px; cursor: pointer; transition: all 0.2s; }
+.learn-card:hover { border-color: #22c55e55; background: #1a2340; }
+.learn-card.expanded { border-color: #22c55e; }
+.learn-num { font-size: 10px; font-weight: 700; color: #22c55e; }
+.learn-name { font-size: 13px; font-weight: 600; margin: 4px 0; }
+.learn-detail { font-size: 11px; color: #8892a8; line-height: 1.5; max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
+.learn-card.expanded .learn-detail { max-height: 200px; margin-top: 8px; }
+
+/* Equations */
+.equation { font-family: 'SF Mono', 'Fira Code', monospace; color: #a855f7; font-size: 12px; background: #0d1220; padding: 6px 10px; border-radius: 4px; margin: 6px 0; display: inline-block; }
+
+/* Footer */
+.footer { padding: 20px 40px; border-top: 1px solid #2a3555; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.tech-badge { font-size: 11px; padding: 4px 12px; border-radius: 12px; background: #1a2340; border: 1px solid #2a3555; color: #8892a8; }
+
+/* Wide card override for cascade & context */
+.card-wide { min-width: 300px; max-width: 400px; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <h1><span>INFORM</span>ATIV</h1>
+  <div class="stats-bar">
+    <div class="stat"><div class="stat-value" data-target="937">0</div><div class="stat-label">Million Reviews</div></div>
+    <div class="stat"><div class="stat-value" data-target="47">0</div><div class="stat-label">Million Edges</div></div>
+    <div class="stat"><div class="stat-value">&lt;50ms</div><div class="stat-label">Decision Latency</div></div>
+  </div>
+</div>
+
+<!-- Tabs -->
+<div class="tabs">
+  <div class="tab active-blue" data-tab="forward" data-color="blue">Forward Path</div>
+  <div class="tab" data-tab="learning" data-color="green">Learning Loop</div>
+  <div class="tab" data-tab="offline" data-color="orange">Offline Pipeline</div>
+</div>
+
+<!-- TAB 1: Forward Path -->
+<div class="flow-section active" id="forward">
+  <div class="flow-label">Forward Decision Path — Bid Request → Response</div>
+  <div class="swim-lane">
+
+    <!-- 1: Bid Request -->
+    <div class="card blue" data-card>
+      <div class="card-header"><div class="card-step">1</div><div><div class="card-title">Bid Request</div><div class="card-subtitle">10 input fields</div></div><div class="card-chevron">›</div></div>
+      <div class="card-body"><div class="card-content">
+        <div><code>segment_id</code> — StackAdapt audience segment</div>
+        <div><code>page_url</code> — current page URL</div>
+        <div><code>buyer_id</code> — pseudonymous buyer hash</div>
+        <div><code>asin</code> — product identifier</div>
+        <div><code>device_type</code> — mobile / desktop / tablet</div>
+        <div><code>time_of_day</code> — hour bucket</div>
+        <div><code>geo_region</code> — geographic area</div>
+        <div><code>category</code> — product category</div>
+        <div><code>campaign_id</code> — advertiser campaign</div>
+        <div><code>creative_id</code> — ad creative variant</div>
+      </div></div>
+    </div>
+
+    <div class="connector"><svg viewBox="0 0 36 24"><line x1="0" y1="12" x2="36" y2="12" stroke="#4a9eff" stroke-width="2"/></svg></div>
+
+    <!-- 2: Decision ID -->
+    <div class="card blue" data-card>
+      <div class="card-header"><div class="card-step">2</div><div><div class="card-title">Decision ID</div><div class="card-subtitle"><code>dec_a3f7...</code></div></div><div class="card-chevron">›</div></div>
+      <div class="card-body"><div class="card-content">
+        <div>Unique hash for this decision point:</div>
+        <div class="equation">SHA256(buyer_id + page_url + timestamp + nonce)</div>
+        <div style="margin-top:6px;">Enables end-to-end attribution from bid request through conversion back to every mechanism activated.</div>
+      </div></div>
+    </div>
+
+    <div class="connector"><svg viewBox="0 0 36 24"><line x1="0" y1="12" x2="36" y2="12" stroke="#4a9eff" stroke-width="2"/></svg></div>
+
+    <!-- 3: 5-Level Cascade -->
+    <div class="card blue card-wide" data-card>
+      <div class="card-header"><div class="card-step">3</div><div><div class="card-title">5-Level Cascade</div><div class="card-subtitle">Bilateral evidence fusion</div></div><div class="card-chevron">›</div></div>
+      <div class="card-body"><div class="card-content">
+        <div class="cascade-levels">
+          <div class="level-badge" data-level="l1"><div class="level-label">L1</div><div class="level-name">Archetype Prior</div></div>
+          <div class="level-detail"><div class="level-detail-content">
+            Cold-start priors from 8 archetypes. Each archetype carries differentiated Beta(α,β) priors across 10 persuasion mechanisms — <strong>not</strong> flat priors.<br>
+            <div class="equation">Prior ~ Beta(α_archetype, β_archetype)</div>
+            Archetypes: Analytical Skeptic, Impulse Seeker, Brand Loyalist, Value Hunter, Social Validator, Quality Purist, Trend Follower, Need-Driven.
+          </div></div>
+
+          <div class="level-badge" data-level="l2"><div class="level-label">L2</div><div class="level-name">Category Posterior</div></div>
+          <div class="level-detail"><div class="level-detail-content">
+            Category-specific evidence updates the archetype prior. Cross-category transfer propagates learnings from related categories with decay.<br>
+            <div class="equation">Posterior = Beta(α + Σsuccess_cat, β + Σfail_cat)</div>
+          </div></div>
+
+          <div class="level-badge active" data-level="l3"><div class="level-label">L3</div><div class="level-name">Bilateral Edges (Core)</div></div>
+          <div class="level-detail" style="max-height:400px;padding:8px 10px;"><div class="level-detail-content">
+            The prediction power. 7-dimension alignment edge between buyer psychology and seller messaging:
+            <div class="dim-bar"><div class="dim-label">Need–Detect</div><div class="dim-track"><div class="dim-fill" style="width:82%;background:#4a9eff;"></div></div></div>
+            <div class="dim-bar"><div class="dim-label">Emo–Align</div><div class="dim-track"><div class="dim-fill" style="width:71%;background:#4a9eff;"></div></div></div>
+            <div class="dim-bar"><div class="dim-label">Cogn–Match</div><div class="dim-track"><div class="dim-fill" style="width:65%;background:#4a9eff;"></div></div></div>
+            <div class="dim-bar"><div class="dim-label">Trust–Transfer</div><div class="dim-track"><div class="dim-fill" style="width:78%;background:#4a9eff;"></div></div></div>
+            <div class="dim-bar"><div class="dim-label">Social–Proof</div><div class="dim-track"><div class="dim-fill" style="width:59%;background:#4a9eff;"></div></div></div>
+            <div class="dim-bar"><div class="dim-label">Urgency</div><div class="dim-track"><div class="dim-fill" style="width:44%;background:#4a9eff;"></div></div></div>
+            <div class="dim-bar"><div class="dim-label">Value–Frame</div><div class="dim-track"><div class="dim-fill" style="width:68%;background:#4a9eff;"></div></div></div>
+            <div style="margin-top:6px;">
+              <div class="equation">∂P(conversion) / ∂dimension</div>
+              <div class="equation">IV = P(signal) × Δ(accuracy) × PV(future)</div>
+            </div>
+            <div style="margin-top:4px;">L3 <strong>fully overrides</strong> L1/L2 when edge evidence exists. The edge is the signal.</div>
+          </div></div>
+
+          <div class="level-badge" data-level="l4"><div class="level-label">L4</div><div class="level-name">Inferential Transfer</div></div>
+          <div class="level-detail"><div class="level-detail-content">
+            Zero-shot transfer from ad creative profile. Uses construct-level causal graph to infer likely effectiveness on unseen buyer segments.<br>
+            <div class="equation">P(conv | no_edge) ≈ f(ad_profile, construct_graph)</div>
+          </div></div>
+
+          <div class="level-badge" data-level="l5"><div class="level-label" style="opacity:0.4;">L5</div><div class="level-name" style="opacity:0.4;">Future Extensions</div></div>
+          <div class="level-detail"><div class="level-detail-content" style="opacity:0.5;">
+            Temporal dynamics, real-time attention signals, cross-device identity resolution. Planned.
+          </div></div>
+        </div>
+      </div></div>
+    </div>
+
+    <div class="connector"><svg viewBox="0 0 36 24"><line x1="0" y1="12" x2="36" y2="12" stroke="#4a9eff" stroke-width="2"/></svg></div>
+
+    <!-- 4: 8-Layer Context -->
+    <div class="card blue card-wide" data-card>
+      <div class="card-header"><div class="card-step">4</div><div><div class="card-title">8-Layer Context</div><div class="card-subtitle">Page psychology</div></div><div class="card-chevron">›</div></div>
+      <div class="card-body"><div class="card-content">
+        <div class="context-layers">
+          <div class="ctx-layer"><div class="ctx-num">1</div><div class="ctx-name">Activated Needs</div><div class="ctx-val">need → 0.82</div></div>
+          <div class="ctx-layer"><div class="ctx-num">2</div><div class="ctx-name">Emotional Field</div><div class="ctx-val">val +0.6 aro 0.7</div></div>
+          <div class="ctx-layer"><div class="ctx-num">3</div><div class="ctx-name">Cognitive State</div><div class="ctx-val">load: low, mode: analytical</div></div>
+          <div class="ctx-layer"><div class="ctx-num">4</div><div class="ctx-name">Credibility</div><div class="ctx-val">publisher: 0.91</div></div>
+          <div class="ctx-layer"><div class="ctx-num">5</div><div class="ctx-name">Primed Categories</div><div class="ctx-val">electronics, mid-funnel</div></div>
+          <div class="ctx-layer"><div class="ctx-num">6</div><div class="ctx-name">Channel State</div><div class="ctx-val">open <span class="badge-gate" style="display:none;">HARD GATE</span></div></div>
+          <div class="ctx-layer"><div class="ctx-num">7</div><div class="ctx-name">Competitive Env</div><div class="ctx-val">density: 0.3</div></div>
+          <div class="ctx-layer"><div class="ctx-num">8</div><div class="ctx-name">Decision Style</div><div class="ctx-val">ELM: peripheral, fast</div></div>
+        </div>
+      </div></div>
+    </div>
+
+    <div class="connector"><svg viewBox="0 0 36 24"><line x1="0" y1="12" x2="36" y2="12" stroke="#4a9eff" stroke-width="2"/></svg></div>
+
+    <!-- 5: Portfolio -->
+    <div class="card blue" data-card>
+      <div class="card-header"><div class="card-step">5</div><div><div class="card-title">Portfolio</div><div class="card-subtitle">MPT weights</div></div><div class="card-chevron">›</div></div>
+      <div class="card-body"><div class="card-content">
+        Modern Portfolio Theory applied to mechanism selection. Diversifies across persuasion mechanisms to maximize expected return with bounded risk:
+        <div class="dim-bar"><div class="dim-label">Scarcity</div><div class="dim-track"><div class="dim-fill" style="width:35%;background:#a855f7;"></div></div></div>
+        <div class="dim-bar"><div class="dim-label">Social Proof</div><div class="dim-track"><div class="dim-fill" style="width:28%;background:#a855f7;"></div></div></div>
+        <div class="dim-bar"><div class="dim-label">Authority</div><div class="dim-track"><div class="dim-fill" style="width:22%;background:#a855f7;"></div></div></div>
+        <div class="dim-bar"><div class="dim-label">Narrative</div><div class="dim-track"><div class="dim-fill" style="width:15%;background:#a855f7;"></div></div></div>
+      </div></div>
+    </div>
+
+    <div class="connector"><svg viewBox="0 0 36 24"><line x1="0" y1="12" x2="36" y2="12" stroke="#4a9eff" stroke-width="2"/></svg></div>
+
+    <!-- 6: Counterfactual -->
+    <div class="card blue" data-card>
+      <div class="card-header"><div class="card-step">6</div><div><div class="card-title">Counterfactual</div><div class="card-subtitle">What if?</div></div><div class="card-chevron">›</div></div>
+      <div class="card-body"><div class="card-content">
+        Evaluates chosen strategy against 3 alternatives to quantify confidence and enable post-hoc attribution:
+        <div style="margin-top:6px;">
+          <div>✓ <strong>Chosen</strong>: scarcity+authority → <code>0.73</code></div>
+          <div style="color:#8892a8;">○ Alt 1: social_proof only → <code>0.58</code></div>
+          <div style="color:#8892a8;">○ Alt 2: narrative+unity → <code>0.61</code></div>
+          <div style="color:#8892a8;">○ Alt 3: random baseline → <code>0.34</code></div>
+        </div>
+      </div></div>
+    </div>
+
+    <div class="connector"><svg viewBox="0 0 36 24"><line x1="0" y1="12" x2="36" y2="12" stroke="#4a9eff" stroke-width="2"/></svg></div>
+
+    <!-- 7: Arbitrage -->
+    <div class="card blue" data-card>
+      <div class="card-header"><div class="card-step">7</div><div><div class="card-title">Arbitrage</div><div class="card-subtitle">ADAM vs Market</div></div><div class="card-chevron">›</div></div>
+      <div class="card-body"><div class="card-content">
+        <div class="equation">score = ADAM_predicted / market_baseline</div>
+        <div style="margin-top:8px;text-align:center;">
+          <div style="font-size:28px;font-weight:700;color:#22c55e;">1.8×</div>
+          <div style="font-size:10px;color:#8892a8;">Range: 0.5× — 3.0×</div>
+        </div>
+        <div style="margin-top:6px;">Scores &gt;1.0× indicate ADAM sees value the market underprices. High-arbitrage opportunities get bid priority.</div>
+      </div></div>
+    </div>
+
+    <div class="connector"><svg viewBox="0 0 36 24"><line x1="0" y1="12" x2="36" y2="12" stroke="#4a9eff" stroke-width="2"/></svg></div>
+
+    <!-- 8: Session State -->
+    <div class="card blue" data-card>
+      <div class="card-header"><div class="card-step">8</div><div><div class="card-title">Session State</div><div class="card-subtitle">Phase tracking</div></div><div class="card-chevron">›</div></div>
+      <div class="card-body"><div class="card-content">
+        5 session phases tracked per buyer:
+        <div style="margin-top:6px;">
+          <div style="color:#22c55e;">● Entry</div>
+          <div style="color:#4a9eff;">● Exploration</div>
+          <div style="color:#a855f7;">● Consideration</div>
+          <div style="color:#f59e0b;">● Decision</div>
+          <div style="color:#8892a8;">○ Post-Decision</div>
+        </div>
+        <div style="margin-top:6px;font-size:11px;color:#8892a8;">Mechanism effectiveness varies by phase — scarcity peaks at Decision, social proof at Exploration.</div>
+      </div></div>
+    </div>
+
+    <div class="connector"><svg viewBox="0 0 36 24"><line x1="0" y1="12" x2="36" y2="12" stroke="#4a9eff" stroke-width="2"/></svg></div>
+
+    <!-- 9: Persist -->
+    <div class="card blue" data-card>
+      <div class="card-header"><div class="card-step">9</div><div><div class="card-title">Persist</div><div class="card-subtitle">48h TTL</div></div><div class="card-chevron">›</div></div>
+      <div class="card-body"><div class="card-content">
+        Decision context cached for attribution:
+        <div style="margin-top:4px;font-size:11px;">
+          <div><code>decision_id</code>, <code>buyer_profile</code></div>
+          <div><code>activated_mechanisms</code> (with weights)</div>
+          <div><code>counterfactuals</code> (3 alternatives)</div>
+          <div><code>page_context</code> (8 layers)</div>
+          <div><code>cascade_state</code> (L1-L4 values)</div>
+          <div><code>gradient_field</code> snapshot</div>
+          <div style="color:#8892a8;margin-top:4px;">30 fields total → Redis with 48h TTL</div>
+          <div style="color:#8892a8;">Buyer profile → Redis with 90-day TTL</div>
+        </div>
+      </div></div>
+    </div>
+
+    <div class="connector"><svg viewBox="0 0 36 24"><line x1="0" y1="12" x2="36" y2="12" stroke="#4a9eff" stroke-width="2"/></svg></div>
+
+    <!-- 10: Response -->
+    <div class="card blue card-wide" data-card>
+      <div class="card-header"><div class="card-step">10</div><div><div class="card-title">Response Payload</div><div class="card-subtitle">114+ fields, 9 sub-models</div></div><div class="card-chevron">›</div></div>
+      <div class="card-body"><div class="card-content">
+        <div id="payload-tree">
+          <div class="tree-node" data-tree>
+            <div class="tree-toggle" onclick="toggleTree(this)">▸ decision</div>
+            <div class="tree-children">
+              <div class="tree-leaf"><code>decision_id</code>: string</div>
+              <div class="tree-leaf"><code>confidence</code>: float</div>
+              <div class="tree-leaf"><code>arbitrage_score</code>: float</div>
+              <div class="tree-node" data-tree>
+                <div class="tree-toggle" onclick="toggleTree(this)">▸ probability_model (5)</div>
+                <div class="tree-children">
+                  <div class="tree-leaf"><code>p_conversion</code>: float</div>
+                  <div class="tree-leaf"><code>p_engagement</code>: float</div>
+                  <div class="tree-leaf"><code>uncertainty_width</code>: float</div>
+                  <div class="tree-leaf"><code>information_value</code>: float</div>
+                  <div class="tree-leaf"><code>expected_gradient</code>: float[]</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="tree-node" data-tree>
+            <div class="tree-toggle" onclick="toggleTree(this)">▸ mechanisms (10+)</div>
+            <div class="tree-children">
+              <div class="tree-leaf"><code>activated</code>: string[]</div>
+              <div class="tree-leaf"><code>weights</code>: float[]</div>
+              <div class="tree-leaf"><code>portfolio_risk</code>: float</div>
+              <div class="tree-node" data-tree>
+                <div class="tree-toggle" onclick="toggleTree(this)">▸ counterfactuals (3)</div>
+                <div class="tree-children">
+                  <div class="tree-leaf"><code>alt_strategy</code>: string</div>
+                  <div class="tree-leaf"><code>alt_score</code>: float</div>
+                  <div class="tree-leaf"><code>delta</code>: float</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="tree-node" data-tree>
+            <div class="tree-toggle" onclick="toggleTree(this)">▸ buyer_state (20 dims)</div>
+            <div class="tree-children">
+              <div class="tree-leaf"><code>archetype</code>: string</div>
+              <div class="tree-leaf"><code>uncertainty</code>: float[20]</div>
+              <div class="tree-leaf"><code>session_phase</code>: string</div>
+              <div class="tree-leaf"><code>interaction_count</code>: int</div>
+              <div class="tree-leaf"><code>exploration_bonus</code>: float</div>
+            </div>
+          </div>
+          <div class="tree-node" data-tree>
+            <div class="tree-toggle" onclick="toggleTree(this)">▸ cascade_evidence (5 levels)</div>
+            <div class="tree-children">
+              <div class="tree-leaf"><code>level_used</code>: int (1-5)</div>
+              <div class="tree-leaf"><code>prior_alpha</code>: float</div>
+              <div class="tree-leaf"><code>prior_beta</code>: float</div>
+              <div class="tree-leaf"><code>edge_dimensions</code>: float[7]</div>
+              <div class="tree-leaf"><code>gradient_field</code>: float[7]</div>
+            </div>
+          </div>
+          <div class="tree-node" data-tree>
+            <div class="tree-toggle" onclick="toggleTree(this)">▸ page_context (8 layers)</div>
+            <div class="tree-children">
+              <div class="tree-leaf"><code>needs</code>: {name: score}[]</div>
+              <div class="tree-leaf"><code>emotional_field</code>: {v, a, trajectory}</div>
+              <div class="tree-leaf"><code>cognitive_state</code>: {load, mode}</div>
+              <div class="tree-leaf"><code>channel_open</code>: boolean</div>
+            </div>
+          </div>
+          <div class="tree-node" data-tree>
+            <div class="tree-toggle" onclick="toggleTree(this)">▸ copy_guidance</div>
+            <div class="tree-children">
+              <div class="tree-leaf"><code>emphasis_dims</code>: string[]</div>
+              <div class="tree-leaf"><code>tone</code>: string</div>
+              <div class="tree-leaf"><code>gradient_priority</code>: string</div>
+            </div>
+          </div>
+          <div class="tree-node" data-tree>
+            <div class="tree-toggle" onclick="toggleTree(this)">▸ attribution</div>
+            <div class="tree-children">
+              <div class="tree-leaf"><code>decision_id</code>: string</div>
+              <div class="tree-leaf"><code>shapley_credits</code>: float[]</div>
+              <div class="tree-leaf"><code>ttl_seconds</code>: int</div>
+            </div>
+          </div>
+          <div class="tree-node" data-tree>
+            <div class="tree-toggle" onclick="toggleTree(this)">▸ debug</div>
+            <div class="tree-children">
+              <div class="tree-leaf"><code>latency_ms</code>: float</div>
+              <div class="tree-leaf"><code>cache_hits</code>: string[]</div>
+              <div class="tree-leaf"><code>atoms_fired</code>: int</div>
+            </div>
+          </div>
+        </div>
+      </div></div>
+    </div>
+
+  </div>
+
+  <!-- Decision probability equation -->
+  <div style="padding:0 40px 16px;text-align:center;">
+    <div class="equation" style="font-size:14px;">P = σ(Σ wᵢ · match(buyerᵢ, messageᵢ) + bias)</div>
+  </div>
+</div>
+
+<!-- TAB 2: Learning Loop -->
+<div class="flow-section" id="learning">
+  <div class="flow-label">Learning Loop — Conversion Event → 12 Update Systems</div>
+  <div class="swim-lane">
+
+    <div class="card green" data-card>
+      <div class="card-header"><div class="card-step">1</div><div><div class="card-title">Conversion Event</div><div class="card-subtitle">Webhook from StackAdapt</div></div><div class="card-chevron">›</div></div>
+      <div class="card-body"><div class="card-content">
+        StackAdapt fires conversion webhook with:<br>
+        <code>event_id</code>, <code>segment_id</code>, <code>conversion_type</code>, <code>revenue</code>, <code>timestamp</code>, <code>decision_id</code>
+      </div></div>
+    </div>
+
+    <div class="connector"><svg viewBox="0 0 36 24"><line x1="0" y1="12" x2="36" y2="12" stroke="#22c55e" stroke-width="2"/></svg></div>
+
+    <div class="card green" data-card>
+      <div class="card-header"><div class="card-step">2</div><div><div class="card-title">HMAC Verify</div><div class="card-subtitle">SHA-256 signature</div></div><div class="card-chevron">›</div></div>
+      <div class="card-body"><div class="card-content">
+        <div class="equation">HMAC-SHA256(secret, body)</div>
+        Validates webhook authenticity. Rejects if signature mismatch.
+      </div></div>
+    </div>
+
+    <div class="connector"><svg viewBox="0 0 36 24"><line x1="0" y1="12" x2="36" y2="12" stroke="#22c55e" stroke-width="2"/></svg></div>
+
+    <div class="card green" data-card>
+      <div class="card-header"><div class="card-step">3</div><div><div class="card-title">Dedup</div><div class="card-subtitle">event_id check</div></div><div class="card-chevron">›</div></div>
+      <div class="card-body"><div class="card-content">
+        Redis set-based deduplication. If <code>event_id</code> seen within 48h window, skip processing. Prevents double-counting.
+      </div></div>
+    </div>
+
+    <div class="connector"><svg viewBox="0 0 36 24"><line x1="0" y1="12" x2="36" y2="12" stroke="#22c55e" stroke-width="2"/></svg></div>
+
+    <div class="card green" data-card>
+      <div class="card-header"><div class="card-step">4</div><div><div class="card-title">Map</div><div class="card-subtitle">decision_id → context</div></div><div class="card-chevron">›</div></div>
+      <div class="card-body"><div class="card-content">
+        Maps conversion event back to original <code>decision_id</code>. Retrieves the full decision context from Redis (30 cached fields).
+      </div></div>
+    </div>
+
+    <div class="connector"><svg viewBox="0 0 36 24"><line x1="0" y1="12" x2="36" y2="12" stroke="#22c55e" stroke-width="2"/></svg></div>
+
+    <div class="card green" data-card>
+      <div class="card-header"><div class="card-step">5</div><div><div class="card-title">Retrieve Context</div><div class="card-subtitle">Full decision snapshot</div></div><div class="card-chevron">›</div></div>
+      <div class="card-body"><div class="card-content">
+        Restores: activated mechanisms, weights, buyer profile, cascade state, page context, counterfactuals, gradient field. Everything needed for credit attribution.
+      </div></div>
+    </div>
+
+    <div class="connector"><svg viewBox="0 0 36 24"><line x1="0" y1="12" x2="36" y2="12" stroke="#22c55e" stroke-width="2"/></svg></div>
+
+    <div class="card green" data-card>
+      <div class="card-header"><div class="card-step">6</div><div><div class="card-title">12 Learning Systems</div><div class="card-subtitle">Parallel updates ↓</div></div><div class="card-chevron">›</div></div>
+      <div class="card-body"><div class="card-content" style="font-size:11px;color:#8892a8;">Click cards below for details on each system.</div></div>
+    </div>
+
+  </div>
+
+  <!-- 12 Learning System Grid -->
+  <div class="learn-grid">
+    <div class="learn-card" onclick="toggleLearn(this)">
+      <div class="learn-num">#1</div>
+      <div class="learn-name">Thompson Sampling</div>
+      <div class="learn-detail">Updates Beta posteriors for each mechanism.<br><div class="equation">Beta(α+1, β) on success<br>Beta(α, β+1) on failure</div>Buyer-aware exploration: cold buyers get 3× bonus.</div>
+    </div>
+    <div class="learn-card" onclick="toggleLearn(this)">
+      <div class="learn-num">#2</div>
+      <div class="learn-name">Meta-Orchestrator</div>
+      <div class="learn-detail">Updates strategy-level weights. Which combination of mechanisms works best for this (archetype, category) cell. EWA with decay.</div>
+    </div>
+    <div class="learn-card" onclick="toggleLearn(this)">
+      <div class="learn-num">#3</div>
+      <div class="learn-name">Neo4j Attribution</div>
+      <div class="learn-detail">Writes OUTCOME edges in the graph connecting Decision → Mechanism → Result. Enables Shapley-value credit attribution across mechanism interactions.</div>
+    </div>
+    <div class="learn-card" onclick="toggleLearn(this)">
+      <div class="learn-num">#4</div>
+      <div class="learn-name">Graph Rewriter</div>
+      <div class="learn-detail">Adjusts rule effectiveness scores based on outcomes. Rules that consistently underperform get deprioritized. Updates edge weights in the construct graph.</div>
+    </div>
+    <div class="learn-card" onclick="toggleLearn(this)">
+      <div class="learn-num">#5</div>
+      <div class="learn-name">Learning Hub</div>
+      <div class="learn-detail">Distributes outcome signal to 30 Atom-of-Thought modules. Each atom updates its internal parameters based on whether its contribution was credit-positive.</div>
+    </div>
+    <div class="learn-card" onclick="toggleLearn(this)">
+      <div class="learn-num">#6</div>
+      <div class="learn-name">ML Ensemble</div>
+      <div class="learn-detail">Online model weight adjustment. Gradient update for neural components; EWA for ensemble weights. Retrained on rolling 7-day window.</div>
+    </div>
+    <div class="learn-card" onclick="toggleLearn(this)">
+      <div class="learn-num">#7</div>
+      <div class="learn-name">Theory Learner</div>
+      <div class="learn-detail">Construct-level causal learning. Updates theory graph edges: which psychological constructs causally predict conversion in this context.</div>
+    </div>
+    <div class="learn-card" onclick="toggleLearn(this)">
+      <div class="learn-num">#8</div>
+      <div class="learn-name">DSP Learning</div>
+      <div class="learn-detail">Signal reliability scoring. Tracks which StackAdapt signals (segment, geo, device) are predictive vs noisy. Adjusts signal weights.</div>
+    </div>
+    <div class="learn-card" onclick="toggleLearn(this)">
+      <div class="learn-num">#9</div>
+      <div class="learn-name">Cognitive Learning</div>
+      <div class="learn-detail">Updates alignment matrices between cognitive styles and mechanism effectiveness. Learns which processing modes favor which persuasion approaches.</div>
+    </div>
+    <div class="learn-card" onclick="toggleLearn(this)">
+      <div class="learn-num">#10</div>
+      <div class="learn-name">Page Context Learning</div>
+      <div class="learn-detail">Learns mechanism × context interactions. "Scarcity works 2.1× better on high-cognitive-load pages." Updates context modulation weights.</div>
+    </div>
+    <div class="learn-card" onclick="toggleLearn(this)">
+      <div class="learn-num">#11</div>
+      <div class="learn-name">Mechanism Interactions</div>
+      <div class="learn-detail">Portfolio covariance matrix updates. Learns which mechanism pairs are synergistic vs antagonistic. Updates MPT optimization constraints.</div>
+    </div>
+    <div class="learn-card" onclick="toggleLearn(this)">
+      <div class="learn-num">#12</div>
+      <div class="learn-name">Buyer Profile</div>
+      <div class="learn-detail">Reduces buyer uncertainty across 20 dimensions. Well-characterized buyers (20+ interactions) get exploration bonus reduced to 0.5×. Redis 90-day TTL.</div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB 3: Offline Pipeline -->
+<div class="flow-section" id="offline">
+  <div class="flow-label">Offline Pipeline — Page Intelligence Pre-computation</div>
+  <div class="swim-lane">
+
+    <div class="card orange" data-card>
+      <div class="card-header"><div class="card-step">1</div><div><div class="card-title">Live Traffic</div><div class="card-subtitle">page_url accumulation</div></div><div class="card-chevron">›</div></div>
+      <div class="card-body"><div class="card-content">
+        Collects unique page URLs seen in bid requests. Queues unseen URLs for profiling. Tracks frequency and recency.
+      </div></div>
+    </div>
+
+    <div class="connector connector-dotted"><svg viewBox="0 0 36 24"><line x1="0" y1="12" x2="36" y2="12" stroke="#f59e0b" stroke-width="2"/></svg></div>
+
+    <div class="card orange" data-card>
+      <div class="card-header"><div class="card-step">2</div><div><div class="card-title">Inventory</div><div class="card-subtitle">Priority queue</div></div><div class="card-chevron">›</div></div>
+      <div class="card-body"><div class="card-content">
+        Prioritizes pages by: bid frequency × staleness. High-traffic pages refreshed first. New pages get highest priority. Max 10k pages/batch.
+      </div></div>
+    </div>
+
+    <div class="connector connector-dotted"><svg viewBox="0 0 36 24"><line x1="0" y1="12" x2="36" y2="12" stroke="#f59e0b" stroke-width="2"/></svg></div>
+
+    <div class="card orange" data-card>
+      <div class="card-header"><div class="card-step">3</div><div><div class="card-title">Crawler</div><div class="card-subtitle">Content extraction</div></div><div class="card-chevron">›</div></div>
+      <div class="card-body"><div class="card-content">
+        Headless browser extraction of page content, structure, and metadata. Extracts: title, body text, product data, review content, images, layout signals.
+      </div></div>
+    </div>
+
+    <div class="connector connector-dotted"><svg viewBox="0 0 36 24"><line x1="0" y1="12" x2="36" y2="12" stroke="#f59e0b" stroke-width="2"/></svg></div>
+
+    <div class="card orange card-wide" data-card>
+      <div class="card-header"><div class="card-step">4</div><div><div class="card-title">8-Layer Profiler</div><div class="card-subtitle">Claude + heuristics</div></div><div class="card-chevron">›</div></div>
+      <div class="card-body"><div class="card-content">
+        Generates all 8 context layers from raw page content:
+        <div class="context-layers" style="margin-top:6px;">
+          <div class="ctx-layer"><div class="ctx-num" style="color:#f59e0b;">1</div><div class="ctx-name">Need Detection</div><div class="ctx-val">NLP + taxonomy</div></div>
+          <div class="ctx-layer"><div class="ctx-num" style="color:#f59e0b;">2</div><div class="ctx-name">Emotional Analysis</div><div class="ctx-val">Claude inference</div></div>
+          <div class="ctx-layer"><div class="ctx-num" style="color:#f59e0b;">3</div><div class="ctx-name">Cognitive Profiling</div><div class="ctx-val">readability + structure</div></div>
+          <div class="ctx-layer"><div class="ctx-num" style="color:#f59e0b;">4</div><div class="ctx-name">Credibility Scoring</div><div class="ctx-val">domain + signals</div></div>
+          <div class="ctx-layer"><div class="ctx-num" style="color:#f59e0b;">5</div><div class="ctx-name">Category Priming</div><div class="ctx-val">product taxonomy</div></div>
+          <div class="ctx-layer"><div class="ctx-num" style="color:#f59e0b;">6</div><div class="ctx-name">Channel Assessment</div><div class="ctx-val">policy + brand safety</div></div>
+          <div class="ctx-layer"><div class="ctx-num" style="color:#f59e0b;">7</div><div class="ctx-name">Competitive Analysis</div><div class="ctx-val">ad slot density</div></div>
+          <div class="ctx-layer"><div class="ctx-num" style="color:#f59e0b;">8</div><div class="ctx-name">Decision Style Map</div><div class="ctx-val">ELM + construal</div></div>
+        </div>
+      </div></div>
+    </div>
+
+    <div class="connector connector-dotted"><svg viewBox="0 0 36 24"><line x1="0" y1="12" x2="36" y2="12" stroke="#f59e0b" stroke-width="2"/></svg></div>
+
+    <div class="card orange" data-card>
+      <div class="card-header"><div class="card-step">5</div><div><div class="card-title">Redis Cache</div><div class="card-subtitle">page_url → profile</div></div><div class="card-chevron">›</div></div>
+      <div class="card-body"><div class="card-content">
+        Stores computed 8-layer profile keyed by normalized <code>page_url</code>. TTL: 7 days for high-traffic, 30 days for stable content. ~2KB per page profile.
+      </div></div>
+    </div>
+
+    <div class="connector connector-dotted"><svg viewBox="0 0 36 24"><line x1="0" y1="12" x2="36" y2="12" stroke="#f59e0b" stroke-width="2"/></svg></div>
+
+    <div class="card orange" data-card>
+      <div class="card-header"><div class="card-step">6</div><div><div class="card-title">Bid-Time Lookup</div><div class="card-subtitle">&lt;1ms cache hit</div></div><div class="card-chevron">›</div></div>
+      <div class="card-body"><div class="card-content">
+        At bid time, Step 4 of the Forward Path reads pre-computed context from Redis instead of real-time profiling. Cache miss falls back to lightweight heuristics (~5ms).
+      </div></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Footer -->
+<div class="footer">
+  <span style="color:#8892a8;font-size:12px;margin-right:8px;">Built with</span>
+  <span class="tech-badge">Neo4j</span>
+  <span class="tech-badge">Redis</span>
+  <span class="tech-badge">FastAPI</span>
+  <span class="tech-badge">Claude</span>
+  <span class="tech-badge">Thompson Sampling</span>
+  <span class="tech-badge">LangGraph</span>
+  <span class="tech-badge">Kafka</span>
+  <span class="tech-badge">Python</span>
+</div>
+
+<script>
+// Tab switching
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.className = 'tab');
+    document.querySelectorAll('.flow-section').forEach(s => s.classList.remove('active'));
+    const color = tab.dataset.color;
+    tab.classList.add('active-' + color);
+    document.getElementById(tab.dataset.tab).classList.add('active');
+  });
+});
+
+// Card expand/collapse
+document.querySelectorAll('[data-card]').forEach(card => {
+  card.querySelector('.card-header').addEventListener('click', () => {
+    card.classList.toggle('expanded');
+  });
+});
+
+// Cascade level drill-down
+document.querySelectorAll('.level-badge').forEach(badge => {
+  badge.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const wasActive = badge.classList.contains('active');
+    // Close all levels in this cascade
+    badge.closest('.cascade-levels').querySelectorAll('.level-badge').forEach(b => b.classList.remove('active'));
+    badge.closest('.cascade-levels').querySelectorAll('.level-detail').forEach(d => { d.style.maxHeight = '0'; d.style.padding = '0 10px'; });
+    if (!wasActive) {
+      badge.classList.add('active');
+      const detail = badge.nextElementSibling;
+      if (detail && detail.classList.contains('level-detail')) {
+        detail.style.maxHeight = '400px';
+        detail.style.padding = '8px 10px';
+      }
+    }
+  });
+});
+
+// Payload tree expand/collapse
+function toggleTree(el) {
+  const node = el.closest('[data-tree]');
+  node.classList.toggle('open');
+  const children = node.querySelector('.tree-children');
+  if (node.classList.contains('open')) {
+    children.style.maxHeight = children.scrollHeight + 'px';
+    el.textContent = el.textContent.replace('▸', '▾');
+  } else {
+    children.style.maxHeight = '0';
+    el.textContent = el.textContent.replace('▾', '▸');
+  }
+}
+
+// Learning card toggle
+function toggleLearn(el) {
+  el.classList.toggle('expanded');
+}
+
+// Animated stat counters
+function animateCounters() {
+  document.querySelectorAll('.stat-value[data-target]').forEach(el => {
+    const target = parseInt(el.dataset.target);
+    const duration = 1500;
+    const start = performance.now();
+    function update(now) {
+      const elapsed = now - start;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      el.textContent = Math.round(target * eased) + 'M+';
+      if (progress < 1) requestAnimationFrame(update);
+    }
+    requestAnimationFrame(update);
+  });
+}
+animateCounters();
+</script>
+</body>
+</html>

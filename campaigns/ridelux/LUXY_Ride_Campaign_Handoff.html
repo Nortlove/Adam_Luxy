@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LUXY Ride — Bilateral Intelligence Campaign Brief</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+:root { --bg:#0a0e1a; --surface:#111827; --surface2:#1a2236; --border:#2a3548;
+  --text:#e2e8f0; --dim:#8892a4; --accent:#3b82f6; --green:#10b981; --red:#ef4444;
+  --amber:#f59e0b; --purple:#8b5cf6; }
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Inter',system-ui,sans-serif; background:var(--bg); color:var(--text); line-height:1.7; }
+.page { max-width:1100px; margin:0 auto; padding:0 40px; }
+.cover { min-height:100vh; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; border-bottom:1px solid var(--border); }
+.cover .logo { font-size:14px; letter-spacing:6px; text-transform:uppercase; color:var(--accent); margin-bottom:40px; }
+.cover h1 { font-size:42px; font-weight:300; margin-bottom:8px; }
+.cover h1 strong { font-weight:700; }
+.cover .subtitle { font-size:18px; color:var(--dim); margin-bottom:40px; }
+.cover .meta { font-size:13px; color:var(--dim); line-height:2; }
+.cover .confidential { margin-top:60px; font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--red); opacity:0.7; }
+.toc { padding:60px 0; border-bottom:1px solid var(--border); }
+.toc h2 { font-size:24px; margin-bottom:24px; }
+.toc-list { list-style:none; }
+.toc-list li { padding:8px 0; border-bottom:1px solid rgba(42,53,72,0.3); }
+.toc-list li a { color:var(--text); text-decoration:none; font-size:15px; }
+.toc-list li a:hover { color:var(--accent); }
+.toc-list .num { color:var(--dim); margin-right:12px; font-weight:600; }
+section { padding:60px 0; border-bottom:1px solid var(--border); }
+section h2 { font-size:28px; font-weight:600; margin-bottom:8px; }
+section .section-sub { font-size:14px; color:var(--dim); margin-bottom:30px; }
+section h3 { font-size:20px; margin:30px 0 12px; }
+section h4 { font-size:14px; color:var(--dim); text-transform:uppercase; letter-spacing:0.5px; margin:20px 0 8px; }
+.stat-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px; margin:20px 0; }
+.stat-card { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:20px; text-align:center; }
+.stat-card .val { font-size:32px; font-weight:700; }
+.stat-card .label { font-size:12px; color:var(--dim); margin-top:4px; }
+.insight-callout { background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.2); border-radius:8px; padding:16px 20px; margin:16px 0; font-size:14px; line-height:1.7; }
+.brief-section { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:28px; margin:20px 0; }
+.brief-meta { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:8px; margin:12px 0 20px; font-size:13px; }
+.brief-meta div { padding:6px 10px; background:var(--surface2); border-radius:4px; }
+.headline-grid { display:grid; gap:8px; margin:8px 0 16px; }
+.headline-card { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:12px 16px; font-size:14px; font-style:italic; }
+.copy-block { background:var(--surface2); border-radius:8px; padding:16px 20px; margin:10px 0; }
+.copy-approach { font-weight:600; font-size:14px; margin-bottom:4px; color:var(--accent); }
+.copy-rationale { font-size:12px; color:var(--dim); margin-bottom:10px; }
+.copy-text { font-size:14px; line-height:1.7; border-left:3px solid var(--border); padding-left:14px; }
+.cta-row { display:flex; gap:10px; margin:8px 0; flex-wrap:wrap; }
+.cta-pill { background:var(--accent); color:white; padding:8px 20px; border-radius:6px; font-size:13px; font-weight:600; }
+.two-col { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-top:16px; }
+.do-col,.dont-col { padding:16px; background:var(--surface2); border-radius:8px; }
+.do-col ul,.dont-col ul { padding-left:18px; font-size:13px; }
+.do-col li,.dont-col li { margin:6px 0; }
+.green-header { color:var(--green) !important; }
+.red-header { color:var(--red) !important; }
+table { width:100%; border-collapse:collapse; margin:12px 0; font-size:13px; }
+th { text-align:left; padding:10px 12px; font-size:11px; color:var(--dim); text-transform:uppercase; letter-spacing:0.5px; border-bottom:1px solid var(--border); background:var(--surface); }
+td { padding:8px 12px; border-bottom:1px solid rgba(42,53,72,0.3); }
+tr:hover td { background:rgba(59,130,246,0.03); }
+.footer { padding:30px 0; text-align:center; font-size:11px; color:var(--dim); }
+@media print { body { background:white; color:#1a1a1a; } section { page-break-inside:avoid; } }
+@media (max-width:900px) { .two-col { grid-template-columns:1fr; } .brief-meta { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <div class="logo">INFORMATIV</div>
+  <h1><strong>Bilateral Intelligence</strong> Campaign Brief</h1>
+  <div class="subtitle">Data-Driven Psycholinguistic Targeting for LUXY Ride</div>
+  <div class="meta">
+    <div><strong>Brand:</strong> LUXY Ride — luxyride.com</div>
+    <div><strong>Platform:</strong> StackAdapt Programmatic (Display + Native + CTV)</div>
+    <div><strong>Intelligence:</strong> 3,103 bilateral edges × 27 alignment dimensions × 14 brands</div>
+    <div><strong>Prepared by:</strong> INFORMATIV</div>
+    <div><strong>Date:</strong> March 2026</div>
+  </div>
+  <div class="confidential">CONFIDENTIAL — FOR AGENCY USE ONLY</div>
+</div>
+
+<div class="page">
+
+<div class="toc">
+  <h2>Contents</h2>
+  <ol class="toc-list">
+    <li><a href="#exec"><span class="num">1</span> Executive Summary</a></li>
+    <li><a href="#arch"><span class="num">2</span> Campaign Architecture — 5 Archetypes, 3 Active Tracks</a></li>
+    <li><a href="#segments"><span class="num">3</span> Audience Segment Definitions</a></li>
+    <li><a href="#creative"><span class="num">4</span> Creative Briefs with Bilateral Evidence</a></li>
+    <li><a href="#placements"><span class="num">5</span> Placement Strategy</a></li>
+    <li><a href="#ctv"><span class="num">6</span> CTV Strategy</a></li>
+    <li><a href="#dayparting"><span class="num">7</span> Dayparting Schedule</a></li>
+    <li><a href="#bidding"><span class="num">8</span> Bid Strategy</a></li>
+    <li><a href="#frequency"><span class="num">9</span> Frequency Capping</a></li>
+    <li><a href="#negative"><span class="num">10</span> Negative Targeting</a></li>
+    <li><a href="#retargeting"><span class="num">11</span> Retargeting Strategy — Sequential Mechanism Deployment</a></li>
+    <li><a href="#measurement"><span class="num">12</span> Measurement Framework</a></li>
+    <li><a href="#timeline"><span class="num">13</span> Campaign Timeline</a></li>
+    <li><a href="#science"><span class="num">14</span> Appendix: The Bilateral Science</a></li>
+  </ol>
+</div>
+
+<section id="exec">
+  <h2>1. Executive Summary</h2>
+  <p class="section-sub">What this document is and what makes it different from every other campaign brief.</p>
+
+  <p>This brief is built on <strong>3,103 bilateral psychological edges</strong> — computed alignments between 65-dimension buyer profiles and 65-dimension seller profiles across 14 luxury transportation brands. It identifies <strong>5 psychologically distinct buyer types</strong> through data-driven clustering on 31 identity-stable dimensions, then determines which <strong>specific seller positioning</strong> converts each type using inferential statistics.</p>
+
+  <div class="stat-grid">
+    <div class="stat-card"><div class="val">3,103</div><div class="label">Bilateral Edges Analyzed</div></div>
+    <div class="stat-card"><div class="val">5</div><div class="label">Buyer Archetypes (3 active)</div></div>
+    <div class="stat-card"><div class="val">65×65</div><div class="label">Buyer × Seller Dimensions</div></div>
+    <div class="stat-card"><div class="val">97.9%</div><div class="label">Classifier Accuracy</div></div>
+  </div>
+
+  <div class="insight-callout">
+    <strong>The Breakthrough Finding:</strong> The <strong>Careful Truster</strong> segment (21% of market, 65% conversion) is the largest opportunity. Bilateral analysis reveals that warmth, sincerity, and narrative appeals <strong>HURT</strong> conversion for this group (liking r=-0.229, narrative r=-0.226), while rational, comparative, evidence-based positioning <strong>HELPS</strong> (brand_trust_fit r=+0.619, comparative r=+0.163). This is the opposite of what intuition suggests — and the kind of insight that only comes from computing the bilateral interaction between buyer psychology and seller positioning.
+  </div>
+</section>
+
+<section id="arch">
+  <h2>2. Campaign Architecture</h2>
+  <p class="section-sub">5 buyer archetypes identified from identity-stable psychological dimensions. 3 active campaign tracks + 2 suppression targets.</p>
+
+  <div class="stat-grid">
+    <div class="stat-card" style="border-top:3px solid #3b82f6">
+      <div class="val" style="font-size:22px;color:#3b82f6">Status Seeker</div>
+      <div class="label">22% · 94.5% conv · 30% budget</div>
+    </div>
+    <div class="stat-card" style="border-top:3px solid #f59e0b">
+      <div class="val" style="font-size:22px;color:#f59e0b">Careful Truster</div>
+      <div class="label">21% · 65.0% conv · 40% budget — SWING</div>
+    </div>
+    <div class="stat-card" style="border-top:3px solid #10b981">
+      <div class="val" style="font-size:22px;color:#10b981">Easy Decider</div>
+      <div class="label">17% · 90.9% conv · 15% budget</div>
+    </div>
+    <div class="stat-card" style="border-top:3px solid #6b7280">
+      <div class="val" style="font-size:18px;color:#6b7280">Skeptical Analyst</div>
+      <div class="label">24% · 0.8% conv · SUPPRESS</div>
+    </div>
+    <div class="stat-card" style="border-top:3px solid #6b7280">
+      <div class="val" style="font-size:18px;color:#6b7280">Disillusioned</div>
+      <div class="label">16% · 0.8% conv · SUPPRESS</div>
+    </div>
+  </div>
+
+  <div class="insight-callout">
+    <strong>Why 3 active tracks, not 5:</strong> Skeptical Analyst (0.8% conv) and Disillusioned (0.8% conv) are psychologically resistant to advertising. Their high reactance, negativity bias, and attachment avoidance mean ad spend is wasted. The campaign allocates 85% of budget to the 3 convertible segments and either suppresses or minimally targets the other 2.
+  </div>
+</section>
+
+<section id="segments">
+  <h2>3. Audience Segment Definitions</h2>
+  <p class="section-sub">How to build each segment in StackAdapt. Each definition is derived from the buyer's identity-stable psychological profile.</p>
+
+  <div class="brief-section" style="border-left:4px solid #3b82f6">
+    <h3 style="color:#3b82f6">Status Seeker (30% budget)</h3>
+    <p><strong>Psychology:</strong> High promotion focus (z=+1.09), high status motive (z=+0.90), high affiliation (z=+0.90), low spending pain (z=-1.03). They book luxury because it's who they are.</p>
+    <h4>StackAdapt Targeting</h4>
+    <ul style="font-size:13px;padding-left:20px">
+      <li><strong>Behavioral:</strong> Frequent business travel, high-value purchases, LinkedIn active, premium content consumption</li>
+      <li><strong>Contextual:</strong> Business/finance news, leadership content, luxury lifestyle editorial</li>
+      <li><strong>Demographic:</strong> HHI $150K+, professional/executive, 30-60, major metro markets</li>
+    </ul>
+  </div>
+
+  <div class="brief-section" style="border-left:4px solid #f59e0b">
+    <h3 style="color:#f59e0b">Careful Truster (40% budget) — THE SWING SEGMENT</h3>
+    <p><strong>Psychology:</strong> High agreeableness (z=+0.55), high brand trust (z=+0.48), high disease avoidance (z=+0.58), low impulse (z=-0.44). They evaluate quietly and convert when trust is established through EVIDENCE — not warmth.</p>
+    <h4>StackAdapt Targeting</h4>
+    <ul style="font-size:13px;padding-left:20px">
+      <li><strong>Behavioral:</strong> Travel planning, comparison shopping, review reading, weather/flight checking</li>
+      <li><strong>Contextual:</strong> Travel comparison, review sites, airport/flight information</li>
+      <li><strong>Demographic:</strong> HHI $100K+, mixed age, research-oriented travelers</li>
+    </ul>
+    <div class="insight-callout"><strong>Critical:</strong> brand_trust_fit has the strongest correlation with conversion (r=+0.619) of ANY dimension in ANY archetype. But trust here means EVIDENCE, not WARMTH. Sincerity hurts (r=-). Comparative and rational appeals help (r=+).</div>
+  </div>
+
+  <div class="brief-section" style="border-left:4px solid #10b981">
+    <h3 style="color:#10b981">Easy Decider (15% budget)</h3>
+    <p><strong>Psychology:</strong> Low maximizer (z=-1.51), low self-protection (z=-1.28), low information search (z=-1.27). They don't overthink. Remove friction and they convert.</p>
+    <h4>StackAdapt Targeting</h4>
+    <ul style="font-size:13px;padding-left:20px">
+      <li><strong>Behavioral:</strong> Quick booking patterns, returning visitors, app users, short decision cycles</li>
+      <li><strong>Contextual:</strong> Entertainment, lifestyle, low-cognitive-load content</li>
+      <li><strong>Retargeting:</strong> Site visitors, app users, past bookers</li>
+    </ul>
+  </div>
+</section>
+
+<section id="creative">
+  <h2>4. Creative Briefs</h2>
+  <p class="section-sub">Each brief is grounded in bilateral evidence: which seller-side dimensions correlate with conversion for this specific buyer type.</p>
+  
+    <div class="brief-section" style="border-left:4px solid #3b82f6">
+        <h3 style="color:#3b82f6">Status Seeker</h3>
+        <p style="font-size:14px;margin-bottom:12px">Promotion-focused, status-driven, low spending pain. They book luxury because it signals who they are. 94.5% convert.</p>
+        <div class="brief-meta">
+            <div><strong>Sample:</strong> 688 edges (22.2% of market)</div>
+            <div><strong>Conversion:</strong> 94.5%</div>
+            <div><strong>Budget:</strong> 30%</div>
+            <div><strong>Bid:</strong> 1.3x</div>
+            <div><strong>Freq Cap:</strong> 2/day, 8/week</div>
+            <div><strong>Primary:</strong> Self-expression + Status visibility</div>
+        </div>
+
+        <div class="insight-callout"><strong>Bilateral Evidence:</strong> Seller dims: value_propositions_self_expression (r=+), social_visibility (r=+), evolutionary_targets_status (r=+)</div>
+        <div class="insight-callout" style="background:rgba(239,68,68,0.08);border-color:rgba(239,68,68,0.2)"><strong>Anti-Mechanism (hurts conversion):</strong> Seller dims: brand_personality_sincerity (r=-), persuasion_techniques_commitment (r=-), value_propositions_peace_of_mind (r=-)</div>
+
+        <h4>Seller Dims That HELP Conversion</h4>
+        <ul style="font-size:13px"><li><strong>value_propositions_self_expression</strong> (r=+0.108)</li><li><strong>social_visibility</strong> (r=+0.090)</li><li><strong>evolutionary_targets_status</strong> (r=+0.080)</li></ul>
+        <h4>Seller Dims That HURT Conversion</h4>
+        <ul style="font-size:13px"><li><strong>brand_personality_sincerity</strong> (r=-0.158)</li><li><strong>persuasion_techniques_commitment</strong> (r=-0.154)</li><li><strong>evolutionary_targets_affiliation</strong> (r=-0.149)</li><li><strong>value_propositions_peace_of_mind</strong> (r=-0.148)</li><li><strong>attachment_positioning_reassurance</strong> (r=-0.147)</li></ul>
+        <h4>Alignment Dimensions That Predict Conversion</h4>
+        <ul style="font-size:13px"><li><strong>negativity_bias_match</strong> (r=-0.257, conv=-0.015 vs fail=0.206)</li><li><strong>involvement_weight_modifier</strong> (r=-0.216, conv=1.296 vs fail=1.387)</li><li><strong>composite_alignment</strong> (r=-0.188, conv=0.625 vs fail=0.675)</li><li><strong>regulatory_fit_score</strong> (r=+0.158, conv=0.091 vs fail=0.036)</li><li><strong>brand_trust_fit</strong> (r=+0.140, conv=0.471 vs fail=0.429)</li></ul>
+
+        <h4>Headline Directions</h4>
+        <div class="headline-grid"><div class="headline-card">Your arrival is your introduction.</div><div class="headline-card">Mercedes S-Class. Professional chauffeur. Flight tracked. This is how you travel.</div><div class="headline-card">Some people get there. You arrive.</div><div class="headline-card">The ground transportation that matches how you fly.</div><div class="headline-card">Not a ride. A statement.</div></div>
+        <h4>Body Copy Approaches</h4>
+        <div class="copy-block">
+                <div class="copy-approach">Status Confirmation (primary)</div>
+                <div class="copy-rationale">High status motive (z=+0.90), high optimal_distinctiveness (z=+0.92). Ad must confirm their self-image as someone who naturally chooses premium.</div>
+                <div class="copy-text">You already know the difference between getting there and arriving. Between a car and a chauffeur. Between a service and a standard. LUXY Ride exists for people who made that distinction a long time ago. Mercedes S-Class fleet. Professional chauffeurs who understand discretion. Flight tracking that means you never wait. luxyride.com.</div>
+            </div><div class="copy-block">
+                <div class="copy-approach">Social Visibility (secondary)</div>
+                <div class="copy-rationale">social_visibility correlates with conversion (r=+0.077). The ad should make the CHOICE visible, not the service.</div>
+                <div class="copy-text">400+ companies trust LUXY Ride for executive ground transportation. Not because we asked them to — because their people kept booking us. When your standard is the standard, the choice makes itself. luxyride.com.</div>
+            </div><div class="copy-block">
+                <div class="copy-approach">Anti-Sincerity (counterintuitive)</div>
+                <div class="copy-rationale">brand_personality_sincerity HURTS conversion (r=-). These buyers distrust warmth. They want competence, not friendliness.</div>
+                <div class="copy-text">We do not send you heartfelt text messages. We send you your driver name, vehicle details, and real-time ETA. Professional. Precise. On time. luxyride.com.</div>
+            </div>
+        <h4>Call-to-Action Options</h4>
+        <div class="cta-row"><span class="cta-pill">Reserve your chauffeur</span><span class="cta-pill">Book now</span><span class="cta-pill">Schedule your ride</span></div>
+
+        <div class="two-col">
+            <div class="do-col"><h4 class="green-header">What to Say</h4><ul><li>Specific vehicle models</li><li>Professional chauffeur (never driver)</li><li>Numbers that signal scale (400+ companies)</li><li>Self-expression language (your standard, your arrival)</li></ul></div>
+            <div class="dont-col"><h4 class="red-header">What NOT to Say</h4><ul><li>Sincerity/warmth language (we care, we love)</li><li>Commitment pressure (book now, limited)</li><li>Peace of mind / safety-first</li><li>Discount/deal language</li></ul></div>
+        </div>
+    </div>
+  
+    <div class="brief-section" style="border-left:4px solid #f59e0b">
+        <h3 style="color:#f59e0b">Careful Truster</h3>
+        <p style="font-size:14px;margin-bottom:12px">High agreeableness, high brand trust, disease-avoidant. Quiet evaluators who convert when TRUST is established through EVIDENCE — not warmth. 65% convert. THIS IS THE SWING SEGMENT.</p>
+        <div class="brief-meta">
+            <div><strong>Sample:</strong> 643 edges (20.7% of market)</div>
+            <div><strong>Conversion:</strong> 65.0%</div>
+            <div><strong>Budget:</strong> 40%</div>
+            <div><strong>Bid:</strong> 1.0x</div>
+            <div><strong>Freq Cap:</strong> 3/day, 12/week</div>
+            <div><strong>Primary:</strong> Brand trust + Evidence-based rational appeal</div>
+        </div>
+
+        <div class="insight-callout"><strong>Bilateral Evidence:</strong> Alignment: brand_trust_fit (r=+0.619), emotional_resonance (r=+0.607), appeal_resonance (r=+0.450). Seller: comparative (r=+0.163), rational (r=+0.126), social_proof (r=+0.148)</div>
+        <div class="insight-callout" style="background:rgba(239,68,68,0.08);border-color:rgba(239,68,68,0.2)"><strong>Anti-Mechanism (hurts conversion):</strong> Seller: emotional_specificity (r=-), framing_gain (r=-), persuasion_techniques_liking (r=-0.229), appeals_narrative (r=-0.226), value_propositions_belonging (r=-0.222)</div>
+
+        <h4>Seller Dims That HELP Conversion</h4>
+        <ul style="font-size:13px"><li><strong>value_propositions_self_expression</strong> (r=+0.188)</li><li><strong>appeals_comparative</strong> (r=+0.181)</li><li><strong>appeals_rational</strong> (r=+0.178)</li><li><strong>social_visibility</strong> (r=+0.166)</li><li><strong>brand_trust_signals_transparency</strong> (r=+0.165)</li></ul>
+        <h4>Seller Dims That HURT Conversion</h4>
+        <ul style="font-size:13px"><li><strong>emotional_specificity</strong> (r=-0.287)</li><li><strong>framing_gain</strong> (r=-0.283)</li><li><strong>brand_personality_sincerity</strong> (r=-0.279)</li><li><strong>persuasion_techniques_liking</strong> (r=-0.279)</li><li><strong>mental_simulation_vividness</strong> (r=-0.269)</li></ul>
+        <h4>Alignment Dimensions That Predict Conversion</h4>
+        <ul style="font-size:13px"><li><strong>brand_trust_fit</strong> (r=+0.619, conv=0.428 vs fail=0.319)</li><li><strong>emotional_resonance</strong> (r=+0.607, conv=0.501 vs fail=0.358)</li><li><strong>negativity_bias_match</strong> (r=-0.604, conv=0.169 vs fail=0.469)</li><li><strong>appeal_resonance</strong> (r=+0.450, conv=0.572 vs fail=0.506)</li><li><strong>regulatory_fit_score</strong> (r=+0.408, conv=-0.026 vs fail=-0.073)</li></ul>
+
+        <h4>Headline Directions</h4>
+        <div class="headline-grid"><div class="headline-card">4.8 stars. 3,000+ rides. See why travelers switch to LUXY Ride.</div><div class="headline-card">Compare us. We welcome it.</div><div class="headline-card">&quot;I was skeptical until the driver arrived 10 minutes early.&quot; — David K.</div><div class="headline-card">Transparent pricing. Professional chauffeurs. Zero surge. Read the reviews.</div><div class="headline-card">The reviews say more than we ever could.</div></div>
+        <h4>Body Copy Approaches</h4>
+        <div class="copy-block">
+                <div class="copy-approach">Evidence-First (primary)</div>
+                <div class="copy-rationale">appeals_comparative (r=+0.163) and appeals_rational (r=+0.126) HELP. appeals_narrative (r=-0.226) HURTS. These buyers reject stories and trust data.</div>
+                <div class="copy-text">LUXY Ride vs. the alternatives: Professional chauffeur (not gig driver). Flight tracking included (not optional). Price guaranteed at booking (no surge). Cancel free 24h before (no penalty). 4.8 average rating across 3,000+ rides. Compare us at luxyride.com.</div>
+            </div><div class="copy-block">
+                <div class="copy-approach">Testimonial-as-Evidence (secondary)</div>
+                <div class="copy-rationale">social_proof (r=+0.148) works for this cluster — but as EVIDENCE, not as social pressure. The testimonial must be specific and verifiable.</div>
+                <div class="copy-text">&quot;I have used Blacklane, GroundLink, and Uber Black. LUXY Ride is the only service where the driver has been early every single time. Seven rides, seven early arrivals. The pricing is transparent and the cars are consistently clean.&quot; — Michael R., management consultant. See all reviews at luxyride.com.</div>
+            </div><div class="copy-block">
+                <div class="copy-approach">Anti-Warmth Trust</div>
+                <div class="copy-rationale">brand_personality_sincerity (r=-), persuasion_techniques_liking (r=-0.229). Warmth DESTROYS trust for this segment. They interpret friendliness as salesmanship.</div>
+                <div class="copy-text">We will not tell you we are the best car service. We will tell you this: 4.8 stars. 3,247 completed rides. Zero surge pricing. Flight tracking on every airport pickup. Professional chauffeurs with background checks and 3+ years experience. The data is at luxyride.com/reviews. You decide.</div>
+            </div>
+        <h4>Call-to-Action Options</h4>
+        <div class="cta-row"><span class="cta-pill">Read the reviews</span><span class="cta-pill">Compare services</span><span class="cta-pill">See the data</span></div>
+
+        <div class="two-col">
+            <div class="do-col"><h4 class="green-header">What to Say</h4><ul><li>Hard numbers (rating, ride count, on-time %)</li><li>Comparison language (vs alternatives)</li><li>Verifiable testimonials with names and specifics</li><li>Transparent guarantees (price, cancellation)</li></ul></div>
+            <div class="dont-col"><h4 class="red-header">What NOT to Say</h4><ul><li>Emotional appeals of ANY kind</li><li>Warmth/friendliness/sincerity language</li><li>Story-driven narratives</li><li>Belonging/community language</li><li>Superlatives (best, #1, unmatched)</li></ul></div>
+        </div>
+    </div>
+  
+    <div class="brief-section" style="border-left:4px solid #10b981">
+        <h3 style="color:#10b981">Easy Decider</h3>
+        <p style="font-size:14px;margin-bottom:12px">Low maximizer, low information search, low self-protection. They dont overthink — frictionless experience converts them. 90.9% convert.</p>
+        <div class="brief-meta">
+            <div><strong>Sample:</strong> 518 edges (16.7% of market)</div>
+            <div><strong>Conversion:</strong> 90.9%</div>
+            <div><strong>Budget:</strong> 15%</div>
+            <div><strong>Bid:</strong> 1.1x</div>
+            <div><strong>Freq Cap:</strong> 2/day, 6/week</div>
+            <div><strong>Primary:</strong> Evolutionary motive match + Processing ease</div>
+        </div>
+
+        <div class="insight-callout"><strong>Bilateral Evidence:</strong> Alignment: evolutionary_motive_match (r=+0.484), processing_route_match (r=+0.420), composite_alignment (r=+0.455)</div>
+        <div class="insight-callout" style="background:rgba(239,68,68,0.08);border-color:rgba(239,68,68,0.2)"><strong>Anti-Mechanism (hurts conversion):</strong> Seller dims: linguistic_style_complexity (r=-), persuasion_techniques_commitment (r=-), reciprocity (r=-)</div>
+
+        <h4>Seller Dims That HELP Conversion</h4>
+        <ul style="font-size:13px"><li><strong>value_propositions_self_expression</strong> (r=+0.115)</li><li><strong>evolutionary_targets_status</strong> (r=+0.088)</li></ul>
+        <h4>Seller Dims That HURT Conversion</h4>
+        <ul style="font-size:13px"><li><strong>brand_personality_sincerity</strong> (r=-0.146)</li><li><strong>agency_framing_locus</strong> (r=-0.145)</li><li><strong>persuasion_techniques_commitment</strong> (r=-0.137)</li><li><strong>persuasion_techniques_reciprocity</strong> (r=-0.136)</li><li><strong>attachment_positioning_reassurance</strong> (r=-0.135)</li></ul>
+        <h4>Alignment Dimensions That Predict Conversion</h4>
+        <ul style="font-size:13px"><li><strong>evolutionary_motive_match</strong> (r=+0.484, conv=0.459 vs fail=0.340)</li><li><strong>composite_alignment</strong> (r=+0.455, conv=0.520 vs fail=0.425)</li><li><strong>processing_route_match</strong> (r=+0.420, conv=0.618 vs fail=0.480)</li><li><strong>appeal_resonance</strong> (r=+0.418, conv=0.505 vs fail=0.432)</li><li><strong>construal_fit_score</strong> (r=+0.398, conv=0.863 vs fail=0.726)</li></ul>
+
+        <h4>Headline Directions</h4>
+        <div class="headline-grid"><div class="headline-card">Book in 30 seconds. Arrive in style.</div><div class="headline-card">Your car. Your chauffeur. Done.</div><div class="headline-card">Flight tracked. Car ready. You sorted.</div><div class="headline-card">The easiest way to get a professional car.</div><div class="headline-card">Tap. Book. Arrive.</div></div>
+        <h4>Body Copy Approaches</h4>
+        <div class="copy-block">
+                <div class="copy-approach">Frictionless (primary)</div>
+                <div class="copy-rationale">Low maximizer (z=-1.51), low information_search (z=-1.27). They decide FAST. The ad must match that speed.</div>
+                <div class="copy-text">LUXY Ride. Professional chauffeur. Premium car. Flight tracked. Price guaranteed. Book in 30 seconds at luxyride.com.</div>
+            </div><div class="copy-block">
+                <div class="copy-approach">Motive Match</div>
+                <div class="copy-rationale">evolutionary_motive_match is the #1 alignment predictor (r=+0.484). Match their underlying need directly.</div>
+                <div class="copy-text">Need to get to the airport? LUXY Ride. Client meeting downtown? LUXY Ride. Wedding next month? LUXY Ride. One app. Every ride. luxyride.com.</div>
+            </div><div class="copy-block">
+                <div class="copy-approach">Remove Complexity</div>
+                <div class="copy-rationale">linguistic_style_complexity HURTS (r=-0.130). Keep copy SHORT.</div>
+                <div class="copy-text">Professional car service. No surge. No surprises. luxyride.com.</div>
+            </div>
+        <h4>Call-to-Action Options</h4>
+        <div class="cta-row"><span class="cta-pill">Book now</span><span class="cta-pill">Get a quote</span><span class="cta-pill">Download the app</span></div>
+
+        <div class="two-col">
+            <div class="do-col"><h4 class="green-header">What to Say</h4><ul><li>Short sentences</li><li>Action verbs (book, tap, arrive)</li><li>One clear benefit per ad</li><li>Price guarantee (removes friction)</li></ul></div>
+            <div class="dont-col"><h4 class="red-header">What NOT to Say</h4><ul><li>Long copy</li><li>Multiple features listed</li><li>Obligation language (commitment, loyalty)</li><li>Complex comparisons</li></ul></div>
+        </div>
+    </div>
+</section>
+
+<section id="placements">
+  <h2>5. Placement Strategy</h2>
+  <p class="section-sub">Domains selected for the psychological environment they create.</p>
+  <h3>Domain Whitelist (41 domains)</h3>
+  <table><tr><th>domain</th><th>track</th><th>match_score</th><th>mechanism</th><th>reason</th></tr><tr><td>cnbc.com</td><td>status_seeker</td><td>0.92</td><td>self_expression</td><td>Business content primes status identity</td></tr><tr><td>bloomberg.com</td><td>status_seeker</td><td>0.90</td><td>self_expression</td><td>Financial news = high-status context</td></tr><tr><td>forbes.com</td><td>status_seeker</td><td>0.88</td><td>status_visibility</td><td>Executive lifestyle content</td></tr><tr><td>wsj.com</td><td>status_seeker</td><td>0.87</td><td>self_expression</td><td>Premium business audience</td></tr><tr><td>hbr.org</td><td>status_seeker</td><td>0.85</td><td>authority</td><td>Leadership/strategy content</td></tr><tr><td>ft.com</td><td>status_seeker</td><td>0.85</td><td>self_expression</td><td>Global business elite</td></tr><tr><td>barrons.com</td><td>status_seeker</td><td>0.83</td><td>self_expression</td><td>Wealth management context</td></tr><tr><td>vogue.com</td><td>status_seeker</td><td>0.80</td><td>social_visibility</td><td>Luxury lifestyle</td></tr><tr><td>townandcountrymag.com</td><td>status_seeker</td><td>0.80</td><td>social_visibility</td><td>Premium lifestyle</td></tr><tr><td>fortune.com</td><td>status_seeker</td><td>0.82</td><td>self_expression</td><td>Fortune 500 context</td></tr><tr><td>linkedin.com</td><td>status_seeker</td><td>0.78</td><td>status_visibility</td><td>Professional identity platform</td></tr><tr><td>fastcompany.com</td><td>status_seeker</td><td>0.75</td><td>self_expression</td><td>Innovation leaders</td></tr><tr><td>kayak.com</td><td>easy_decider</td><td>0.88</td><td>frictionless</td><td>Active travel booking = ready to decide</td></tr><tr><td>booking.com</td><td>easy_decider</td><td>0.85</td><td>frictionless</td><td>Travel booking mode</td></tr><tr><td>expedia.com</td><td>easy_decider</td><td>0.83</td><td>frictionless</td><td>Trip planning</td></tr><tr><td>opentable.com</td><td>easy_decider</td><td>0.78</td><td>frictionless</td><td>Event planning = needs transport</td></tr><tr><td>hoteltonight.com</td><td>easy_decider</td><td>0.82</td><td>frictionless</td><td>Last-minute = fast decider</td></tr><tr><td>weather.com</td><td>careful_truster</td><td>0.90</td><td>evidence</td><td>Pre-travel research mode</td></tr><tr><td>flightaware.com</td><td>careful_truster</td><td>0.88</td><td>evidence</td><td>Flight tracking = travel imminent</td></tr><tr><td>tripadvisor.com</td><td>careful_truster</td><td>0.87</td><td>social_proof</td><td>Review-reading mode</td></tr><tr><td>thepointsguy.com</td><td>careful_truster</td><td>0.85</td><td>comparative</td><td>Travel comparison mindset</td></tr><tr><td>cntraveler.com</td><td>careful_truster</td><td>0.84</td><td>comparative</td><td>Travel evaluation content</td></tr><tr><td>seatguru.com</td><td>careful_truster</td><td>0.82</td><td>evidence</td><td>Detail-oriented traveler</td></tr><tr><td>tsa.gov</td><td>careful_truster</td><td>0.80</td><td>evidence</td><td>Travel logistics focus</td></tr><tr><td>flightradar24.com</td><td>careful_truster</td><td>0.80</td><td>evidence</td><td>Tracking = planning mindset</td></tr><tr><td>usatoday.com</td><td>careful_truster</td><td>0.72</td><td>evidence</td><td>General news, travel section</td></tr><tr><td>cnn.com</td><td>status_seeker,careful_truster</td><td>0.75</td><td>context_dependent</td><td>Business section=status, Travel section=truster</td></tr><tr><td>nytimes.com</td><td>status_seeker,careful_truster</td><td>0.75</td><td>context_dependent</td><td>Opinion=status, Travel=truster</td></tr><tr><td>people.com</td><td>easy_decider</td><td>0.70</td><td>frictionless</td><td>Entertainment = low cognitive load</td></tr><tr><td>espn.com</td><td>easy_decider</td><td>0.68</td><td>frictionless</td><td>Sports = low deliberation context</td></tr><tr><td>theknot.com</td><td>status_seeker</td><td>0.85</td><td>self_expression</td><td>Wedding = status + occasion</td></tr><tr><td>brides.com</td><td>status_seeker</td><td>0.83</td><td>self_expression</td><td>Wedding luxury context</td></tr><tr><td>weddingwire.com</td><td>careful_truster</td><td>0.80</td><td>comparative</td><td>Wedding vendor comparison</td></tr><tr><td>zola.com</td><td>status_seeker</td><td>0.78</td><td>self_expression</td><td>Premium wedding registry</td></tr><tr><td>marthastewart.com</td><td>status_seeker</td><td>0.75</td><td>self_expression</td><td>Premium lifestyle</td></tr><tr><td>pinterest.com</td><td>status_seeker</td><td>0.72</td><td>self_expression</td><td>Aspiration/planning</td></tr><tr><td>politico.com</td><td>status_seeker</td><td>0.73</td><td>self_expression</td><td>Political power context</td></tr><tr><td>axios.com</td><td>status_seeker</td><td>0.72</td><td>self_expression</td><td>Business/policy brevity</td></tr><tr><td>inc.com</td><td>status_seeker</td><td>0.70</td><td>self_expression</td><td>Entrepreneur context</td></tr><tr><td>economist.com</td><td>status_seeker</td><td>0.82</td><td>self_expression</td><td>Global elite readership</td></tr><tr><td>miserymap.com</td><td>careful_truster</td><td>0.88</td><td>evidence</td><td>Flight disruption = highest anxiety</td></tr></table>
+  <h3>Domain Blacklist (21 domains)</h3>
+  <table><tr><th>Domain</th><th>Reason</th></tr>
+  <tr><td>carmellimo.com</td><td>Competitor — divergent brand psychology</td></tr><tr><td>uber.com</td><td>Competitor category</td></tr><tr><td>lyft.com</td><td>Competitor category</td></tr><tr><td>tmz.com</td><td>Tabloid — high arousal negative valence</td></tr><tr><td>dailymail.co.uk</td><td>Tabloid — brand safety</td></tr><tr><td>foxnews.com</td><td>Polarizing — high reactance context</td></tr><tr><td>breitbart.com</td><td>Brand safety</td></tr><tr><td>infowars.com</td><td>Brand safety</td></tr><tr><td>groupon.com</td><td>Deal-seeking selects for high spending_pain</td></tr><tr><td>retailmenot.com</td><td>Coupon context destroys premium frame</td></tr><tr><td>slickdeals.net</td><td>Deal-seeking audience</td></tr><tr><td>buzzfeed.com</td><td>Low authority context</td></tr><tr><td>reddit.com/r/personalfinance</td><td>Budget-focused subreddit</td></tr><tr><td>complaint.com</td><td>Negative travel context</td></tr><tr><td>ripoffreport.com</td><td>Complaint context</td></tr><tr><td>yelp.com/topic/worst</td><td>Negative review priming</td></tr><tr><td>accidentnews.net</td><td>Travel anxiety overactivation</td></tr><tr><td>flightcompensation.com</td><td>Negative travel experience context</td></tr><tr><td>airlinecomplaints.org</td><td>Negative priming</td></tr><tr><td>gethumanservice.com</td><td>Complaint resolution mode</td></tr><tr><td>consumeraffairs.com/transportation</td><td>Complaint context</td></tr></table>
+</section>
+
+<section id="ctv">
+  <h2>6. CTV Strategy</h2>
+  <table><tr><th>show_name</th><th>genre</th><th>network</th><th>track</th><th>mechanism</th><th>immersion_depth</th><th>reason</th></tr>
+  <tr><td>Succession</td><td>Drama</td><td>HBO</td><td>status_seeker</td><td>self_expression</td><td>very_high</td><td>Corporate power dynamics mirrors status_seeker identity</td></tr><tr><td>Industry</td><td>Drama</td><td>HBO</td><td>status_seeker</td><td>self_expression</td><td>very_high</td><td>Finance/ambition context</td></tr><tr><td>The Morning Show</td><td>Drama</td><td>Apple TV+</td><td>status_seeker</td><td>self_expression</td><td>high</td><td>Media elite setting</td></tr><tr><td>Billions</td><td>Drama</td><td>Showtime</td><td>status_seeker</td><td>self_expression</td><td>high</td><td>Wealth/power</td></tr><tr><td>Mad Men</td><td>Drama</td><td>AMC</td><td>status_seeker</td><td>self_expression</td><td>high</td><td>Professional identity construction</td></tr><tr><td>Suits</td><td>Drama</td><td>USA/Netflix</td><td>status_seeker</td><td>authority</td><td>high</td><td>Legal professional context</td></tr><tr><td>The White Lotus</td><td>Drama</td><td>HBO</td><td>status_seeker</td><td>social_visibility</td><td>very_high</td><td>Luxury travel setting</td></tr><tr><td>Emily in Paris</td><td>Comedy</td><td>Netflix</td><td>status_seeker</td><td>social_visibility</td><td>medium</td><td>Aspirational travel</td></tr><tr><td>The Amazing Race</td><td>Reality</td><td>CBS</td><td>careful_truster</td><td>evidence</td><td>high</td><td>Travel logistics under pressure</td></tr><tr><td>Anthony Bourdain Parts Unknown</td><td>Travel</td><td>CNN</td><td>careful_truster</td><td>evidence</td><td>very_high</td><td>Travel discovery mindset</td></tr><tr><td>Rick Steves Europe</td><td>Travel</td><td>PBS</td><td>careful_truster</td><td>comparative</td><td>high</td><td>Travel comparison</td></tr><tr><td>House Hunters International</td><td>Reality</td><td>HGTV</td><td>careful_truster</td><td>evidence</td><td>medium</td><td>Relocation/travel planning</td></tr><tr><td>Airport 24/7</td><td>Documentary</td><td>Travel Channel</td><td>careful_truster</td><td>evidence</td><td>very_high</td><td>Airport environment</td></tr><tr><td>CNN Airport Network</td><td>News</td><td>CNN</td><td>careful_truster</td><td>evidence</td><td>very_high</td><td>Literal airport context</td></tr><tr><td>Departures</td><td>Travel</td><td>Netflix</td><td>careful_truster</td><td>evidence</td><td>high</td><td>Premium travel documentary</td></tr><tr><td>Planet Earth</td><td>Documentary</td><td>BBC</td><td>easy_decider</td><td>frictionless</td><td>high</td><td>Low cognitive load, premium feel</td></tr><tr><td>The Great British Baking Show</td><td>Reality</td><td>Netflix</td><td>easy_decider</td><td>frictionless</td><td>medium</td><td>Warm, low-stress content</td></tr><tr><td>Ted Lasso</td><td>Comedy</td><td>Apple TV+</td><td>easy_decider</td><td>frictionless</td><td>medium</td><td>Feel-good, low deliberation</td></tr><tr><td>Formula 1: Drive to Survive</td><td>Documentary</td><td>Netflix</td><td>status_seeker</td><td>self_expression</td><td>high</td><td>Luxury/performance</td></tr><tr><td>Bridgerton</td><td>Drama</td><td>Netflix</td><td>status_seeker</td><td>social_visibility</td><td>very_high</td><td>Cinematic luxury</td></tr><tr><td>The Crown</td><td>Drama</td><td>Netflix</td><td>status_seeker</td><td>self_expression</td><td>very_high</td><td>Elite status setting</td></tr><tr><td>60 Minutes</td><td>News</td><td>CBS</td><td>careful_truster</td><td>evidence</td><td>high</td><td>Investigative = evidence mindset</td></tr><tr><td>Bloomberg TV</td><td>News</td><td>Bloomberg</td><td>status_seeker</td><td>self_expression</td><td>medium</td><td>Financial market context</td></tr><tr><td>CNBC Squawk Box</td><td>News</td><td>CNBC</td><td>status_seeker</td><td>self_expression</td><td>medium</td><td>Morning business</td></tr><tr><td>Say Yes to the Dress</td><td>Reality</td><td>TLC</td><td>status_seeker</td><td>self_expression</td><td>high</td><td>Wedding luxury occasion</td></tr></table>
+</section>
+
+<section id="dayparting">
+  <h2>7. Dayparting Schedule</h2>
+  <table><tr><th>Hours</th><th>Day</th><th>Track</th><th>Multiplier</th><th>Reason</th></tr><tr><td>6-9</td><td>weekday</td><td style="color:#3b82f6">Status Seeker</td><td>1.3</td><td style="font-size:12px">Morning commute planning — peak status-seeker engagement</td></tr><tr><td>9-17</td><td>weekday</td><td style="color:#3b82f6">Status Seeker</td><td>1.1</td><td style="font-size:12px">Business hours</td></tr><tr><td>17-20</td><td>weekday</td><td style="color:#3b82f6">Status Seeker</td><td>0.9</td><td style="font-size:12px">Decompression — lower receptivity</td></tr><tr><td>20-23</td><td>weekday</td><td style="color:#3b82f6">Status Seeker</td><td>0.7</td><td style="font-size:12px">Evening leisure — wrong mindset</td></tr><tr><td>8-12</td><td>weekend</td><td style="color:#3b82f6">Status Seeker</td><td>0.8</td><td style="font-size:12px">Weekend morning — moderate</td></tr><tr><td>12-22</td><td>weekend</td><td style="color:#3b82f6">Status Seeker</td><td>0.6</td><td style="font-size:12px">Weekend leisure — status frame inactive</td></tr><tr><td>0-6</td><td>any</td><td style="color:#10b981">Easy Decider</td><td>0.7</td><td style="font-size:12px">Low traffic but pre-dawn travel = high intent</td></tr><tr><td>6-9</td><td>weekday</td><td style="color:#10b981">Easy Decider</td><td>1.2</td><td style="font-size:12px">Morning booking window</td></tr><tr><td>9-17</td><td>weekday</td><td style="color:#10b981">Easy Decider</td><td>0.9</td><td style="font-size:12px">Work hours — distracted</td></tr><tr><td>17-22</td><td>any</td><td style="color:#10b981">Easy Decider</td><td>1.1</td><td style="font-size:12px">Evening booking — trip planning</td></tr><tr><td>8-22</td><td>weekend</td><td style="color:#10b981">Easy Decider</td><td>1.0</td><td style="font-size:12px">Flat — easy deciders convert anytime</td></tr><tr><td>5-8</td><td>any</td><td style="color:#f59e0b">Careful Truster</td><td>1.3</td><td style="font-size:12px">Pre-travel morning — highest anxiety/research</td></tr><tr><td>8-12</td><td>weekday</td><td style="color:#f59e0b">Careful Truster</td><td>1.0</td><td style="font-size:12px">Research hours</td></tr><tr><td>12-17</td><td>weekday</td><td style="color:#f59e0b">Careful Truster</td><td>0.8</td><td style="font-size:12px">Afternoon — lower research intensity</td></tr><tr><td>17-22</td><td>any</td><td style="color:#f59e0b">Careful Truster</td><td>1.2</td><td style="font-size:12px">Evening research/comparison mode</td></tr><tr><td>22-5</td><td>any</td><td style="color:#f59e0b">Careful Truster</td><td>1.4</td><td style="font-size:12px">Late night — travel anxiety peaks, research mode active</td></tr></table>
+</section>
+
+<section id="bidding">
+  <h2>8. Bid Strategy</h2>
+  <table><tr><th>Track</th><th>Base CPM</th><th>Multiplier</th><th>Peak Boost</th><th>CTV Premium</th><th>Rationale</th></tr>
+  <tr><td style="color:#3b82f6">Status Seeker</td>
+  <td>$10.4</td><td>1.3x</td>
+  <td>1.2x</td><td>1.25x</td>
+  <td style="font-size:12px">Highest LTV, 94.5% conversion justifies premium bids.</td></tr><tr><td style="color:#10b981">Easy Decider</td>
+  <td>$8.8</td><td>1.1x</td>
+  <td>1.1x</td><td>1.0x</td>
+  <td style="font-size:12px">90.9% conversion, low friction. Standard bids work.</td></tr><tr><td style="color:#f59e0b">Careful Truster</td>
+  <td>$8.0</td><td>1.0x</td>
+  <td>1.3x</td><td>1.1x</td>
+  <td style="font-size:12px">65% conversion = volume play. Boost during research windows (peak_boost=1.3).</td></tr><tr><td style="color:#6b7280">Skeptical Analyst</td>
+  <td>$4.0</td><td>0.5x</td>
+  <td>1.0x</td><td>0.8x</td>
+  <td style="font-size:12px">0.8% conversion. Minimal bids — primarily for brand awareness.</td></tr><tr><td style="color:#6b7280">Disillusioned</td>
+  <td>$3.2</td><td>0.4x</td>
+  <td>1.0x</td><td>0.5x</td>
+  <td style="font-size:12px">0.8% conversion. Near-zero ROI. Suppress unless retargeting.</td></tr></table>
+</section>
+
+<section id="frequency">
+  <h2>9. Frequency Capping</h2>
+  <table><tr><th>Track</th><th>Max/Day</th><th>Max/Week</th><th>Rationale</th></tr>
+  <tr><td style="color:#3b82f6">Status Seeker</td>
+  <td>2</td><td>8</td>
+  <td style="font-size:12px">Low reactance tolerates moderate frequency. Status confirmation benefits from repetition.</td></tr><tr><td style="color:#10b981">Easy Decider</td>
+  <td>2</td><td>6</td>
+  <td style="font-size:12px">Low information search means they decide fast. Beyond 2/day adds no value.</td></tr><tr><td style="color:#f59e0b">Careful Truster</td>
+  <td>3</td><td>12</td>
+  <td style="font-size:12px">Active evaluation mode — higher frequency tolerated. They WANT information. Most valuable segment for frequency.</td></tr><tr><td style="color:#6b7280">Skeptical Analyst</td>
+  <td>1</td><td>3</td>
+  <td style="font-size:12px">High reactance (z=+1.02). More than 1/day triggers active resistance.</td></tr><tr><td style="color:#6b7280">Disillusioned</td>
+  <td>1</td><td>2</td>
+  <td style="font-size:12px">Near-zero conversion. Minimal spend only.</td></tr></table>
+  <div class="insight-callout"><strong>Cross-track:</strong> If a user matches multiple tracks, use the HIGHEST-converting track creative. Deduplicate across tracks — max 4/day total.</div>
+  <div class="insight-callout"><strong>Reactance recovery:</strong> If CTR drops below 0.05% after 5+ impressions for any user, suppress 72 hours.</div>
+</section>
+
+<section id="negative">
+  <h2>10. Negative Targeting</h2>
+  <div class="brief-section">
+    <h4>Keyword Exclusions</h4><p style="font-size:13px">stranded airport, rideshare horror, car accident, driver assault, taxi scam, hidden fees complaint, surge pricing, flight cancelled chaos</p>
+    <h4>Contextual Exclusions</h4><ul style="font-size:13px"><li>Breaking negative news (high arousal + negative valence)</li><li>Coupon/deal content</li><li>Competitor advertising adjacency</li><li>Crime/accident reporting</li></ul>
+    <h4>Audience Exclusions</h4><ul style="font-size:13px"><li>Recent LUXY Ride bookers (7-day window)</li><li>Users with 5+ impressions and 0 clicks (reactance recovery)</li><li>Users classified as skeptical_analyst or disillusioned (suppress or minimal)</li></ul>
+  </div>
+</section>
+
+<section id="retargeting">
+  <h2>11. Retargeting Strategy — Sequential Mechanism Deployment</h2>
+  <p class="section-sub">Each retargeting touch addresses the specific bilateral alignment threshold that FAILED on the previous touch. This is NOT standard retargeting — each impression deploys a DIFFERENT mechanism.</p>
+
+  <div class="insight-callout">
+    <strong>Principle:</strong> Standard retargeting shows the same ad again. This system identifies WHY the buyer didn't convert (which alignment dimension was sub-threshold) and deploys a DIFFERENT mechanism on the next touch specifically targeting that failure. The sequence is statistically derived from non-converter sub-cluster analysis.
+  </div>
+
+
+  <div class="brief-section" style="border-left:4px solid #f59e0b">
+    <h3 style="color:#f59e0b">Careful Truster Retargeting</h3>
+    <p style="font-size:14px"><strong>225 non-converters (35%)</strong> — High negativity_bias_match (fail=0.469 vs conv=0.169) means they weight negative information too heavily. Low brand_trust_fit (fail=0.319 vs conv=0.428) means the brand hasn&#x27;t earned their trust yet. Low emotional_resonance (fail=0.358 vs conv=0.501) means the messaging felt transactional, not human.</p>
+
+    <h4>Non-Converter Sub-Clusters</h4>
+    <div style="background:var(--surface2);border-radius:6px;padding:12px 16px;margin:6px 0">
+      <strong>The Almost-Convinced</strong> (n=89): Good processing and appeal scores but low anchor_susceptibility. They evaluated but couldn&#x27;t justify the price relative to alternatives.
+      <div style="margin-top:6px;font-size:13px;color:var(--accent)">Mechanism: price_anchor</div>
+      <div style="font-size:13px;color:var(--dim)">Compare LUXY Ride price to hotel car service or Uber Black surge. &#x27;JFK to Manhattan: Uber Black surge at 9 PM = $85-120. LUXY Ride = $65 guaranteed. Always.&#x27; Make the value comparison explicit.</div>
+    </div><div style="background:var(--surface2);border-radius:6px;padding:12px 16px;margin:6px 0">
+      <strong>The Fear-Frozen</strong> (n=25): Very high negativity_bias — they read the bad reviews and froze. Can&#x27;t get past the fear of no-show/bad experience.
+      <div style="margin-top:6px;font-size:13px;color:var(--accent)">Mechanism: resolved_anxiety_narrative</div>
+      <div style="font-size:13px;color:var(--dim)">Testimonial from someone who was ALSO skeptical: &#x27;After 2 no-shows with [competitor], I was done with car services. My colleague insisted I try LUXY Ride. Driver was early. Car was clean. I&#x27;ve used them 11 times since.&#x27; The key: the testimonial author SHARES their psychology.</div>
+    </div><div style="background:var(--surface2);border-radius:6px;padding:12px 16px;margin:6px 0">
+      <strong>The Uninspired</strong> (n=111): Low mental_simulation and appeal resonance. The messaging didn&#x27;t create a vivid picture of the experience. They couldn&#x27;t imagine themselves using the service.
+      <div style="margin-top:6px;font-size:13px;color:var(--accent)">Mechanism: vivid_scenario</div>
+      <div style="font-size:13px;color:var(--dim)">Specific, sensory-rich scene: &#x27;Tuesday morning. 5:47 AM. Your LUXY Ride driver David is already at your building. Black Mercedes, engine running. Your name on the screen. Coffee-temperature water in the door. You get in, review your deck on the way to JFK. You arrive at Terminal 4 at 6:23 — exactly when you planned.&#x27;</div>
+    </div>
+
+    <h4>Retargeting Sequence</h4>
+    <table><tr><th>Touch</th><th>Trigger</th><th>Mechanism</th><th>Creative Direction</th><th>Alignment Target</th></tr>
+    <tr>
+      <td><strong>Touch 1</strong><br><span style="font-size:11px;color:var(--dim)">prospecting</span></td>
+      <td style="font-size:12px"></td>
+      <td style="font-size:12px;font-weight:600">evidence_proof</td>
+      <td style="font-size:12px">Comparative rational — numbers, ratings, guarantee details</td>
+      <td style="font-size:11px;color:var(--dim)"></td>
+    </tr><tr>
+      <td><strong>Touch 2</strong><br><span style="font-size:11px;color:var(--dim)">retargeting</span></td>
+      <td style="font-size:12px">Visited site but did not book within 48h</td>
+      <td style="font-size:12px;font-weight:600">evidence_proof_deeper</td>
+      <td style="font-size:12px">Deeper evidence — specific review quotes with names, verified ride count, guarantee details</td>
+      <td style="font-size:11px;color:var(--dim)">brand_trust_fit (gap=+0.109, d=+1.622)</td>
+    </tr><tr>
+      <td><strong>Touch 3</strong><br><span style="font-size:11px;color:var(--dim)">retargeting</span></td>
+      <td style="font-size:12px">Returned to site OR 72h after touch 2</td>
+      <td style="font-size:12px;font-weight:600">testimonial_as_evidence</td>
+      <td style="font-size:12px">Specific customer testimonial — but framed as EVIDENCE, not emotional story. &#x27;Michael R., 47 rides, zero issues.&#x27;</td>
+      <td style="font-size:11px;color:var(--dim)">emotional_resonance (gap=+0.142, d=+1.439)</td>
+    </tr><tr>
+      <td><strong>Touch 4</strong><br><span style="font-size:11px;color:var(--dim)">retargeting</span></td>
+      <td style="font-size:12px">Started booking but abandoned</td>
+      <td style="font-size:12px;font-weight:600">price_anchor_guarantee</td>
+      <td style="font-size:12px">Direct price comparison + risk removal. &#x27;Your ride to JFK: $65 guaranteed. No surge. Cancel free 24h before. Book now.&#x27;</td>
+      <td style="font-size:11px;color:var(--dim)">anchor_susceptibility_match + spending_pain_match</td>
+    </tr><tr>
+      <td><strong>Touch 5</strong><br><span style="font-size:11px;color:var(--dim)">retargeting_final</span></td>
+      <td style="font-size:12px">14 days after first visit, no conversion</td>
+      <td style="font-size:12px;font-weight:600">social_proof_volume</td>
+      <td style="font-size:12px">Pure numbers: &#x27;3,247 rides. 4.8 stars. Join them.&#x27; Minimal copy, maximum evidence.</td>
+      <td style="font-size:11px;color:var(--dim)">optimal_distinctiveness_fit</td>
+    </tr>
+    </table>
+
+    <h4>Suppression Rules</h4>
+    <ul style="font-size:13px"><li>After touch 5 with no conversion: suppress 30 days</li><li>If CTR drops below 0.03% after touch 3: suppress immediately</li><li>If user visits a competitor site (detected via 3rd party): restart sequence at touch 1 with urgency variant</li></ul>
+  </div>
+
+  <div class="brief-section" style="border-left:4px solid #3b82f6">
+    <h3 style="color:#3b82f6">Status Seeker Retargeting</h3>
+    <p style="font-size:14px"><strong>38 non-converters (6%)</strong> — Regulatory fit failure (fail=0.036 vs conv=0.091) — the ad wasn&#x27;t aspirational enough. Brand trust gap (fail=0.429 vs conv=0.471) — they need more status confirmation.</p>
+
+    <h4>Non-Converter Sub-Clusters</h4>
+    <div style="background:var(--surface2);border-radius:6px;padding:12px 16px;margin:6px 0">
+      <strong>The Negativity-Blocked</strong> (n=30): Low negativity_bias_match — they encountered negative information about luxury car services and it blocked their promotion-focused decision.
+      <div style="margin-top:6px;font-size:13px;color:var(--accent)">Mechanism: positive_reframe</div>
+      <div style="font-size:13px;color:var(--dim)">Override negative with status: &#x27;Fortune 500 executives don&#x27;t worry about rideshare reviews. They book LUXY Ride. luxyride.com&#x27;</div>
+    </div><div style="background:var(--surface2);border-radius:6px;padding:12px 16px;margin:6px 0">
+      <strong>The Trust-Gap</strong> (n=7): High negativity but low emotional resonance and low brand trust. They want to believe but haven&#x27;t seen enough proof.
+      <div style="margin-top:6px;font-size:13px;color:var(--accent)">Mechanism: authority_credentials</div>
+      <div style="font-size:13px;color:var(--dim)">Credential-heavy: &#x27;400+ companies. Mercedes S-Class fleet. Chauffeurs with 3+ years experience and background verification. luxyride.com&#x27;</div>
+    </div>
+
+    <h4>Retargeting Sequence</h4>
+    <table><tr><th>Touch</th><th>Trigger</th><th>Mechanism</th><th>Creative Direction</th><th>Alignment Target</th></tr>
+    <tr>
+      <td><strong>Touch 1</strong><br><span style="font-size:11px;color:var(--dim)">prospecting</span></td>
+      <td style="font-size:12px"></td>
+      <td style="font-size:12px;font-weight:600">status_confirmation</td>
+      <td style="font-size:12px">Self-expression + social visibility. &#x27;Your arrival is your introduction.&#x27;</td>
+      <td style="font-size:11px;color:var(--dim)"></td>
+    </tr><tr>
+      <td><strong>Touch 2</strong><br><span style="font-size:11px;color:var(--dim)">retargeting</span></td>
+      <td style="font-size:12px">Visited site but did not book within 24h</td>
+      <td style="font-size:12px;font-weight:600">promotion_framing</td>
+      <td style="font-size:12px">Stronger aspirational framing. &#x27;Not a ride. A statement. Book your chauffeur.&#x27;</td>
+      <td style="font-size:11px;color:var(--dim)">regulatory_fit_score</td>
+    </tr><tr>
+      <td><strong>Touch 3</strong><br><span style="font-size:11px;color:var(--dim)">retargeting</span></td>
+      <td style="font-size:12px">48h after touch 2</td>
+      <td style="font-size:12px;font-weight:600">trust_credentials</td>
+      <td style="font-size:12px">Authority proof: fleet specs, company stats, named client testimonial.</td>
+      <td style="font-size:11px;color:var(--dim)">brand_trust_fit</td>
+    </tr>
+    </table>
+
+    <h4>Suppression Rules</h4>
+    <ul style="font-size:13px"><li>After touch 3 with no conversion: suppress 14 days</li><li>Status seekers have LOW reactance — can re-engage after 14-day cooling</li></ul>
+  </div>
+
+  <div class="brief-section" style="border-left:4px solid #10b981">
+    <h3 style="color:#10b981">Easy Decider Retargeting</h3>
+    <p style="font-size:14px"><strong>47 non-converters (9%)</strong> — Processing_route_match failure (fail=0.480 vs conv=0.618, d=+1.364) — the messaging was too complex for their low-deliberation style. Composite alignment also low — overall fit was poor.</p>
+
+    <h4>Non-Converter Sub-Clusters</h4>
+    <div style="background:var(--surface2);border-radius:6px;padding:12px 16px;margin:6px 0">
+      <strong>The Motive-Mismatch</strong> (n=18): Very low evolutionary_motive_match — the ad spoke to the wrong need entirely.
+      <div style="margin-top:6px;font-size:13px;color:var(--accent)">Mechanism: direct_motive</div>
+      <div style="font-size:13px;color:var(--dim)">Simple motive-match: &#x27;Airport pickup? LUXY Ride. Done.&#x27; or &#x27;Client dinner? Your car is booked. luxyride.com&#x27;</div>
+    </div><div style="background:var(--surface2);border-radius:6px;padding:12px 16px;margin:6px 0">
+      <strong>The Over-Processed</strong> (n=23): Higher involvement and construal than typical easy deciders — they were asked to think too much.
+      <div style="margin-top:6px;font-size:13px;color:var(--accent)">Mechanism: simplify_radically</div>
+      <div style="font-size:13px;color:var(--dim)">Maximum simplicity: &#x27;LUXY Ride. Tap. Book. Arrive. luxyride.com&#x27; — under 10 words total.</div>
+    </div>
+
+    <h4>Retargeting Sequence</h4>
+    <table><tr><th>Touch</th><th>Trigger</th><th>Mechanism</th><th>Creative Direction</th><th>Alignment Target</th></tr>
+    <tr>
+      <td><strong>Touch 1</strong><br><span style="font-size:11px;color:var(--dim)">prospecting</span></td>
+      <td style="font-size:12px"></td>
+      <td style="font-size:12px;font-weight:600">frictionless</td>
+      <td style="font-size:12px">Ultra-simple. &#x27;Book in 30 seconds. Arrive in style.&#x27;</td>
+      <td style="font-size:11px;color:var(--dim)"></td>
+    </tr><tr>
+      <td><strong>Touch 2</strong><br><span style="font-size:11px;color:var(--dim)">retargeting</span></td>
+      <td style="font-size:12px">Visited site but did not book within 24h</td>
+      <td style="font-size:12px;font-weight:600">even_simpler</td>
+      <td style="font-size:12px">Reduce to absolute minimum: &#x27;Your ride is waiting. [Book Now button]&#x27;</td>
+      <td style="font-size:11px;color:var(--dim)">processing_route_match</td>
+    </tr><tr>
+      <td><strong>Touch 3</strong><br><span style="font-size:11px;color:var(--dim)">retargeting</span></td>
+      <td style="font-size:12px">Started booking but abandoned</td>
+      <td style="font-size:12px;font-weight:600">remove_last_friction</td>
+      <td style="font-size:12px">&#x27;Cancel free anytime. No commitment. Just book.&#x27; — address the commitment anxiety.</td>
+      <td style="font-size:11px;color:var(--dim)">composite_alignment</td>
+    </tr>
+    </table>
+
+    <h4>Suppression Rules</h4>
+    <ul style="font-size:13px"><li>After touch 3: suppress 7 days (they decide fast or not at all)</li><li>Easy deciders don&#x27;t deliberate — if 3 touches don&#x27;t work, more won&#x27;t help</li></ul>
+  </div>
+
+
+  <div class="brief-section">
+    <h3>Cross-Archetype Rules</h3>
+    <div class="stat-row" style="display:flex;gap:12px;padding:8px 0;border-bottom:1px solid rgba(42,53,72,0.3)"><strong style="min-width:200px">Archetype Reclassification</strong><span style="font-size:13px">If a user classified as status_seeker on touch 1 shows careful_truster behavior (returns to compare, reads reviews), reclassify and switch to careful_truster sequence.</span></div><div class="stat-row" style="display:flex;gap:12px;padding:8px 0;border-bottom:1px solid rgba(42,53,72,0.3)"><strong style="min-width:200px">Booking Abandonment</strong><span style="font-size:13px">Any archetype that starts booking and abandons gets a UNIVERSAL touch within 2 hours: &#x27;Your ride is saved. Complete your booking: [link]&#x27; — pure CTA, no persuasion.</span></div><div class="stat-row" style="display:flex;gap:12px;padding:8px 0;border-bottom:1px solid rgba(42,53,72,0.3)"><strong style="min-width:200px">Competitive Signal</strong><span style="font-size:13px">If a user visits LUXY Ride site AND a competitor site within 72h (detected via pixel/3rd party), escalate to comparison creative: &#x27;LUXY Ride vs [competitor]: [differentiator].&#x27;</span></div><div class="stat-row" style="display:flex;gap:12px;padding:8px 0;border-bottom:1px solid rgba(42,53,72,0.3)"><strong style="min-width:200px">Post Conversion</strong><span style="font-size:13px">After conversion, STOP all retargeting. Switch to retention track (easy_decider sequence with recognition language: &#x27;Welcome back&#x27;).</span></div><div class="stat-row" style="display:flex;gap:12px;padding:8px 0;border-bottom:1px solid rgba(42,53,72,0.3)"><strong style="min-width:200px">Frequency Across Sequence</strong><span style="font-size:13px">Maximum 1 retargeting impression per 24h. Maximum 5 total in sequence. Reactance recovery: if CTR &lt; 0.03% at any point, pause 72h.</span></div>
+  </div>
+
+  <div class="brief-section">
+    <h3>StackAdapt Implementation</h3>
+    <h4>Pixel Setup</h4>
+    <p style="font-size:13px">Install retargeting pixel on: (1) homepage, (2) pricing page, (3) booking start page, (4) booking confirmation page</p>
+    <h4>Audience Segments</h4>
+    <ul style="font-size:13px"><li>Visit but no booking start (Touch 2)</li><li>Booking started but abandoned (Touch 3-4)</li><li>Multiple visits, no action (Touch 3-5)</li><li>Converted — EXCLUDE from retargeting</li></ul>
+    <h4>Creative Rotation</h4>
+    <p style="font-size:13px">Do NOT use StackAdapt&#x27;s standard creative rotation. Each touch MUST use a DIFFERENT creative mapped to the sequence above. Set up as sequential campaigns with audience exclusion rules.</p>
+    <h4>Measurement</h4>
+    <p style="font-size:13px">Track per-touch conversion rate separately. The hypothesis: each subsequent touch should convert at a HIGHER rate than the previous (because it addresses a more specific failure). If touch N converts lower than touch N-1, the mechanism mapping is wrong for that archetype.</p>
+  </div>
+</section>
+
+<section id="measurement">
+  <h2>12. Measurement Framework</h2>
+  <table><tr>{''.join(f"<th>{esc(k)}</th>" for k in (measurement[0].keys() if measurement else []))}</tr>
+  {''.join("<tr>" + "".join(f"<td>{esc(v)}</td>" for v in row.values()) + "</tr>" for row in measurement)}</table>
+</section>
+
+<section id="timeline">
+  <h2>12. Campaign Timeline</h2>
+  <div class="brief-section">
+    <h4>Pre-Launch (Agency)</h4>
+    <ol style="font-size:14px;padding-left:20px">
+      <li>Create 3 audience segments in StackAdapt (Status Seeker, Careful Truster, Easy Decider)</li>
+      <li>Brief creative team with bilateral-evidence creative directions (Section 4)</li>
+      <li>Upload domain whitelist/blacklist</li>
+      <li>Configure dayparting and bid rules</li>
+      <li>Set frequency caps per Section 9</li>
+      <li>Install conversion pixel on luxyride.com booking confirmation</li>
+      <li>Set UTM: utm_source=stackadapt&amp;utm_campaign=informativ_[track]</li>
+      <li>Configure suppression for skeptical_analyst and disillusioned audiences</li>
+    </ol>
+    <h4>Week 1: Observation</h4><p style="font-size:14px">Run all 3 tracks. Daily monitoring. No optimization.</p>
+    <h4>Week 2: First Optimization</h4><p style="font-size:14px">Shift budget toward highest-converting track. Pause underperforming domains. Validate careful_truster evidence-based creative outperforms warmth-based.</p>
+    <h4>Ongoing</h4><p style="font-size:14px">Weekly optimization. Monthly creative refresh (same mechanisms, new executions).</p>
+  </div>
+</section>
+
+<section id="science">
+  <h2>13. Appendix: The Bilateral Science</h2>
+  <p style="font-size:14px">Each of the 3,103 edges represents a COMPUTED INTERACTION between a buyer's 65-dimension psychological profile and a seller's 65-dimension positioning profile. The 27 alignment dimensions on each edge are derived from research-backed formulas — regulatory fit (Higgins), construal matching (Trope & Liberman), personality-brand alignment (Aaker → Big Five mapping), and 24 more.</p>
+  <p style="font-size:14px;margin-top:12px">The 5 buyer archetypes were identified by k-means clustering on 31 identity-stable psychological dimensions (personality traits, motives, decision styles — NOT emotional states or outcomes). The classifier achieves 97.9% cross-validated accuracy.</p>
+  <p style="font-size:14px;margin-top:12px">For each archetype, we computed point-biserial correlations between every seller-side dimension and conversion outcome to determine the OPTIMAL SELLER POSITIONING per buyer type. This is what makes the creative briefs actionable — not intuition about "what works," but statistical evidence of which specific seller attributes predict conversion for each specific buyer psychology.</p>
+  <table>
+    <tr><td>Bilateral edges</td><td><strong>3,103</strong></td></tr>
+    <tr><td>Buyer dimensions per review</td><td><strong>65</strong></td></tr>
+    <tr><td>Seller dimensions per brand</td><td><strong>65</strong></td></tr>
+    <tr><td>Alignment dimensions per edge</td><td><strong>27</strong> (14 with discriminating variance)</td></tr>
+    <tr><td>Brands profiled</td><td><strong>14</strong> (from website crawls + ad copy)</td></tr>
+    <tr><td>Archetype classifier accuracy</td><td><strong>97.9%</strong> (5-fold CV)</td></tr>
+    <tr><td>Statistical method</td><td>Point-biserial correlation (p&lt;0.05)</td></tr>
+  </table>
+</section>
+
+<div class="footer">
+  <p>CONFIDENTIAL — INFORMATIV Bilateral Psycholinguistic Intelligence</p>
+  <p>Prepared for LUXY Ride (luxyride.com) · March 2026</p>
+</div>
+
+</div></body></html>

@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -E \"\\\\.py$\")",
+      "Bash(grep -n \"repeated\\\\|within.*subject\\\\|longitudinal\\\\|panel\" /Users/chrisnocera/Sites/adam-platform/adam/retargeting/engines/*.py)",
+      "Bash(find /Users/chrisnocera/Sites/adam-platform/adam/intelligence -type f -name *.py)",
+      "Bash(find /Users/chrisnocera/Sites/adam-platform/tests/retargeting -type f -name *.py)",
+      "Bash(find /Users/chrisnocera/Sites/adam-platform/tests -name test_*.py -type f)"
+    ]
+  }
+}

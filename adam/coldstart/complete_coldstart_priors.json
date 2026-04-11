@@ -1,0 +1,1252 @@
+{
+  "metadata": {
+    "version": "3.0",
+    "generated_at": "2026-02-07T21:58:08.366025",
+    "sources": [
+      "All Datasets Integration",
+      "Context Intelligence Module",
+      "Temporal Psychology Module",
+      "Attribution Intelligence Module",
+      "Persuadability Intelligence Module",
+      "Cross-Platform Validation Module",
+      "Existing Cold-Start Priors",
+      "Granular Type Enrichment Module"
+    ],
+    "total_data_points": 1724456
+  },
+  "granular_types": {
+    "dimensions": {
+      "motivations": 15,
+      "decision_styles": 3,
+      "regulatory_focuses": 2,
+      "emotional_intensities": 3,
+      "price_sensitivities": 5,
+      "archetypes": 8,
+      "time_slots": 4,
+      "age_ranges": 5
+    },
+    "total_combinations": 3750,
+    "temporal_stability_by_motivation": {
+      "functional_need": 0.85,
+      "quality_seeking": 0.8,
+      "value_seeking": 0.75,
+      "status_signaling": 0.6,
+      "self_reward": 0.55,
+      "gift_giving": 0.7,
+      "replacement": 0.85,
+      "upgrade": 0.65,
+      "impulse": 0.4,
+      "research_driven": 0.9,
+      "recommendation": 0.7,
+      "brand_loyalty": 0.9,
+      "social_proof": 0.5,
+      "curiosity": 0.55,
+      "problem_solving": 0.85
+    },
+    "persuadability_by_motivation": {
+      "impulse": {
+        "score": 0.85,
+        "optimal_intensity": "high",
+        "uplift": 0.18
+      },
+      "social_proof": {
+        "score": 0.8,
+        "optimal_intensity": "high",
+        "uplift": 0.15
+      },
+      "status_signaling": {
+        "score": 0.75,
+        "optimal_intensity": "moderate",
+        "uplift": 0.12
+      },
+      "self_reward": {
+        "score": 0.7,
+        "optimal_intensity": "moderate",
+        "uplift": 0.11
+      },
+      "gift_giving": {
+        "score": 0.65,
+        "optimal_intensity": "moderate",
+        "uplift": 0.1
+      },
+      "value_seeking": {
+        "score": 0.6,
+        "optimal_intensity": "moderate",
+        "uplift": 0.09
+      },
+      "curiosity": {
+        "score": 0.55,
+        "optimal_intensity": "low",
+        "uplift": 0.08
+      },
+      "upgrade": {
+        "score": 0.5,
+        "optimal_intensity": "low",
+        "uplift": 0.07
+      },
+      "recommendation": {
+        "score": 0.5,
+        "optimal_intensity": "moderate",
+        "uplift": 0.08
+      },
+      "replacement": {
+        "score": 0.4,
+        "optimal_intensity": "low",
+        "uplift": 0.05
+      },
+      "quality_seeking": {
+        "score": 0.35,
+        "optimal_intensity": "low",
+        "uplift": 0.04
+      },
+      "functional_need": {
+        "score": 0.3,
+        "optimal_intensity": "low",
+        "uplift": 0.03
+      },
+      "brand_loyalty": {
+        "score": 0.25,
+        "optimal_intensity": "low",
+        "uplift": 0.02
+      },
+      "research_driven": {
+        "score": 0.2,
+        "optimal_intensity": "low",
+        "uplift": 0.01
+      },
+      "problem_solving": {
+        "score": 0.35,
+        "optimal_intensity": "low",
+        "uplift": 0.04
+      }
+    },
+    "mechanism_by_archetype": {
+      "explorer": {
+        "scarcity": 0.85,
+        "social_proof": 0.7,
+        "authority": 0.55,
+        "reciprocity": 0.6,
+        "commitment": 0.45,
+        "liking": 0.65,
+        "unity": 0.5
+      },
+      "achiever": {
+        "authority": 0.85,
+        "social_proof": 0.8,
+        "commitment": 0.75,
+        "scarcity": 0.65,
+        "reciprocity": 0.5,
+        "liking": 0.55,
+        "unity": 0.6
+      },
+      "connector": {
+        "unity": 0.9,
+        "social_proof": 0.85,
+        "liking": 0.8,
+        "reciprocity": 0.7,
+        "commitment": 0.65,
+        "authority": 0.45,
+        "scarcity": 0.4
+      },
+      "guardian": {
+        "authority": 0.9,
+        "commitment": 0.85,
+        "social_proof": 0.75,
+        "unity": 0.7,
+        "reciprocity": 0.55,
+        "liking": 0.5,
+        "scarcity": 0.35
+      },
+      "analyst": {
+        "authority": 0.95,
+        "commitment": 0.7,
+        "social_proof": 0.6,
+        "reciprocity": 0.45,
+        "scarcity": 0.3,
+        "liking": 0.35,
+        "unity": 0.4
+      },
+      "creator": {
+        "scarcity": 0.8,
+        "authority": 0.65,
+        "social_proof": 0.55,
+        "liking": 0.75,
+        "reciprocity": 0.7,
+        "unity": 0.6,
+        "commitment": 0.5
+      },
+      "nurturer": {
+        "reciprocity": 0.9,
+        "liking": 0.85,
+        "unity": 0.8,
+        "social_proof": 0.65,
+        "commitment": 0.6,
+        "authority": 0.5,
+        "scarcity": 0.35
+      },
+      "pragmatist": {
+        "authority": 0.7,
+        "social_proof": 0.7,
+        "reciprocity": 0.65,
+        "commitment": 0.6,
+        "scarcity": 0.55,
+        "liking": 0.5,
+        "unity": 0.45
+      }
+    },
+    "optimal_sequences_by_decision": {
+      "fast": {
+        "sequence": [
+          "scarcity",
+          "social_proof",
+          "liking"
+        ],
+        "touchpoints": 2.1,
+        "first_touch": [
+          "scarcity",
+          "social_proof"
+        ],
+        "last_touch": [
+          "liking",
+          "reciprocity"
+        ]
+      },
+      "moderate": {
+        "sequence": [
+          "authority",
+          "social_proof",
+          "commitment",
+          "reciprocity"
+        ],
+        "touchpoints": 3.5,
+        "first_touch": [
+          "authority",
+          "social_proof"
+        ],
+        "last_touch": [
+          "commitment",
+          "reciprocity"
+        ]
+      },
+      "deliberate": {
+        "sequence": [
+          "authority",
+          "commitment",
+          "social_proof",
+          "reciprocity",
+          "unity"
+        ],
+        "touchpoints": 5.2,
+        "first_touch": [
+          "authority",
+          "commitment"
+        ],
+        "last_touch": [
+          "reciprocity",
+          "unity"
+        ]
+      }
+    },
+    "domain_effectiveness": {
+      "ecommerce": {
+        "scarcity": 1.2,
+        "social_proof": 1.15,
+        "reciprocity": 1.1
+      },
+      "finance": {
+        "authority": 1.3,
+        "commitment": 1.2,
+        "social_proof": 0.9
+      },
+      "health": {
+        "authority": 1.25,
+        "social_proof": 1.1,
+        "unity": 1.05
+      },
+      "technology": {
+        "authority": 1.2,
+        "scarcity": 1.15,
+        "social_proof": 1.1
+      },
+      "entertainment": {
+        "liking": 1.3,
+        "social_proof": 1.2,
+        "reciprocity": 1.1
+      },
+      "education": {
+        "authority": 1.35,
+        "commitment": 1.2,
+        "reciprocity": 1.1
+      },
+      "travel": {
+        "scarcity": 1.25,
+        "social_proof": 1.2,
+        "liking": 1.15
+      },
+      "food": {
+        "social_proof": 1.25,
+        "liking": 1.2,
+        "reciprocity": 1.1
+      }
+    }
+  },
+  "motivation_priors": {
+    "global_distribution": {
+      "functional_need": 0.839,
+      "value_seeking": 0.0099,
+      "social_proof": 0.0255,
+      "recommendation": 0.0717,
+      "brand_loyalty": 0.0013,
+      "quality_seeking": 0.0062,
+      "gift_giving": 0.0204,
+      "status_signaling": 0.0038,
+      "research_driven": 0.0179,
+      "impulse": 0.0013,
+      "self_reward": 0.0032
+    }
+  },
+  "decision_style_priors": {},
+  "mechanism_priors": {},
+  "temporal_priors": {
+    "module_priors": {
+      "temporal_baselines": {
+        "Electronics": {
+          "avg_review_length": 285.0,
+          "vocabulary_diversity": 0.72,
+          "emotional_intensity_mean": 0.45,
+          "emotional_intensity_std": 0.18,
+          "motivation_distribution": {
+            "functional_need": 0.28,
+            "quality_seeking": 0.22,
+            "upgrade": 0.18,
+            "replacement": 0.15,
+            "research_driven": 0.12,
+            "value_seeking": 0.05
+          },
+          "decision_style_distribution": {
+            "deliberate": 0.45,
+            "moderate": 0.4,
+            "fast": 0.15
+          },
+          "sentiment_distribution": {
+            "positive": 0.65,
+            "neutral": 0.2,
+            "negative": 0.15
+          },
+          "authenticity_markers": {
+            "specific_detail_frequency": 0.68,
+            "temporal_language_frequency": 0.42,
+            "comparison_frequency": 0.38,
+            "personal_context_frequency": 0.55
+          },
+          "rating_patterns": {
+            "avg_rating": 4.1,
+            "rating_std": 1.2,
+            "verified_purchase_ratio": 0.78,
+            "helpful_vote_ratio": 0.22
+          }
+        },
+        "Apparel": {
+          "avg_review_length": 145.0,
+          "vocabulary_diversity": 0.65,
+          "emotional_intensity_mean": 0.52,
+          "emotional_intensity_std": 0.22,
+          "motivation_distribution": {
+            "functional_need": 0.18,
+            "quality_seeking": 0.2,
+            "value_seeking": 0.25,
+            "self_reward": 0.15,
+            "gift_giving": 0.12,
+            "status_signaling": 0.1
+          },
+          "decision_style_distribution": {
+            "fast": 0.35,
+            "moderate": 0.45,
+            "deliberate": 0.2
+          },
+          "sentiment_distribution": {
+            "positive": 0.7,
+            "neutral": 0.15,
+            "negative": 0.15
+          },
+          "authenticity_markers": {
+            "specific_detail_frequency": 0.52,
+            "temporal_language_frequency": 0.28,
+            "comparison_frequency": 0.22,
+            "personal_context_frequency": 0.65
+          },
+          "rating_patterns": {
+            "avg_rating": 4.2,
+            "rating_std": 1.1,
+            "verified_purchase_ratio": 0.82,
+            "helpful_vote_ratio": 0.15
+          }
+        },
+        "Home_Kitchen": {
+          "avg_review_length": 210.0,
+          "vocabulary_diversity": 0.68,
+          "emotional_intensity_mean": 0.48,
+          "emotional_intensity_std": 0.2,
+          "motivation_distribution": {
+            "functional_need": 0.32,
+            "replacement": 0.22,
+            "quality_seeking": 0.18,
+            "upgrade": 0.12,
+            "value_seeking": 0.1,
+            "gift_giving": 0.06
+          },
+          "decision_style_distribution": {
+            "deliberate": 0.35,
+            "moderate": 0.5,
+            "fast": 0.15
+          },
+          "sentiment_distribution": {
+            "positive": 0.68,
+            "neutral": 0.18,
+            "negative": 0.14
+          },
+          "authenticity_markers": {
+            "specific_detail_frequency": 0.62,
+            "temporal_language_frequency": 0.48,
+            "comparison_frequency": 0.32,
+            "personal_context_frequency": 0.58
+          },
+          "rating_patterns": {
+            "avg_rating": 4.15,
+            "rating_std": 1.15,
+            "verified_purchase_ratio": 0.8,
+            "helpful_vote_ratio": 0.2
+          }
+        },
+        "Tools": {
+          "avg_review_length": 255.0,
+          "vocabulary_diversity": 0.7,
+          "emotional_intensity_mean": 0.42,
+          "emotional_intensity_std": 0.16,
+          "motivation_distribution": {
+            "functional_need": 0.35,
+            "quality_seeking": 0.25,
+            "replacement": 0.18,
+            "upgrade": 0.12,
+            "brand_loyalty": 0.1
+          },
+          "decision_style_distribution": {
+            "deliberate": 0.5,
+            "moderate": 0.38,
+            "fast": 0.12
+          },
+          "sentiment_distribution": {
+            "positive": 0.72,
+            "neutral": 0.15,
+            "negative": 0.13
+          },
+          "authenticity_markers": {
+            "specific_detail_frequency": 0.75,
+            "temporal_language_frequency": 0.52,
+            "comparison_frequency": 0.45,
+            "personal_context_frequency": 0.48
+          },
+          "rating_patterns": {
+            "avg_rating": 4.25,
+            "rating_std": 1.05,
+            "verified_purchase_ratio": 0.85,
+            "helpful_vote_ratio": 0.28
+          }
+        },
+        "Beauty": {
+          "avg_review_length": 165.0,
+          "vocabulary_diversity": 0.62,
+          "emotional_intensity_mean": 0.58,
+          "emotional_intensity_std": 0.24,
+          "motivation_distribution": {
+            "self_reward": 0.25,
+            "functional_need": 0.2,
+            "quality_seeking": 0.18,
+            "recommendation": 0.15,
+            "brand_loyalty": 0.12,
+            "value_seeking": 0.1
+          },
+          "decision_style_distribution": {
+            "fast": 0.3,
+            "moderate": 0.5,
+            "deliberate": 0.2
+          },
+          "sentiment_distribution": {
+            "positive": 0.72,
+            "neutral": 0.12,
+            "negative": 0.16
+          },
+          "authenticity_markers": {
+            "specific_detail_frequency": 0.55,
+            "temporal_language_frequency": 0.38,
+            "comparison_frequency": 0.35,
+            "personal_context_frequency": 0.72
+          },
+          "rating_patterns": {
+            "avg_rating": 4.0,
+            "rating_std": 1.3,
+            "verified_purchase_ratio": 0.75,
+            "helpful_vote_ratio": 0.18
+          }
+        }
+      },
+      "authenticity_patterns": {
+        "positive": [
+          "specific_details",
+          "personal_context",
+          "balanced_assessment",
+          "usage_experience"
+        ],
+        "suspicious": [
+          "hyperbolic",
+          "generic",
+          "incentivized",
+          "timing_anomalies"
+        ]
+      },
+      "version": "1.0",
+      "source": "Amazon Review 2015 TSV files",
+      "year": 2015
+    }
+  },
+  "persuadability_priors": {
+    "criteo_calibrations": {
+      "highly_persuadable": {
+        "uplift_multiplier": 2.0,
+        "base_conversion": 0.007311
+      },
+      "moderately_persuadable": {
+        "uplift_multiplier": 1.0,
+        "base_conversion": 0.004874
+      },
+      "low_persuadability": {
+        "uplift_multiplier": 0.5,
+        "base_conversion": 0.0034117999999999996
+      },
+      "resistant": {
+        "uplift_multiplier": 0.1,
+        "base_conversion": 0.0
+      }
+    },
+    "module_priors": {
+      "persuadability_intelligence": {
+        "by_motivation": {
+          "impulse": {
+            "base_score": 0.85,
+            "fast_decision": 0.748,
+            "deliberate_decision": 0.542
+          },
+          "social_proof": {
+            "base_score": 0.8,
+            "fast_decision": 0.625,
+            "deliberate_decision": 0.42
+          },
+          "status_signaling": {
+            "base_score": 0.75,
+            "fast_decision": 0.625,
+            "deliberate_decision": 0.42
+          },
+          "self_reward": {
+            "base_score": 0.7,
+            "fast_decision": 0.625,
+            "deliberate_decision": 0.42
+          },
+          "gift_giving": {
+            "base_score": 0.65,
+            "fast_decision": 0.625,
+            "deliberate_decision": 0.42
+          },
+          "upgrade": {
+            "base_score": 0.6,
+            "fast_decision": 0.66,
+            "deliberate_decision": 0.455
+          },
+          "recommendation": {
+            "base_score": 0.55,
+            "fast_decision": 0.643,
+            "deliberate_decision": 0.438
+          },
+          "replacement": {
+            "base_score": 0.45,
+            "fast_decision": 0.608,
+            "deliberate_decision": 0.403
+          },
+          "value_seeking": {
+            "base_score": 0.4,
+            "fast_decision": 0.625,
+            "deliberate_decision": 0.42
+          },
+          "quality_seeking": {
+            "base_score": 0.35,
+            "fast_decision": 0.625,
+            "deliberate_decision": 0.42
+          },
+          "brand_loyalty": {
+            "base_score": 0.3,
+            "fast_decision": 0.625,
+            "deliberate_decision": 0.42
+          },
+          "research_driven": {
+            "base_score": 0.25,
+            "fast_decision": 0.625,
+            "deliberate_decision": 0.42
+          },
+          "functional_need": {
+            "base_score": 0.2,
+            "fast_decision": 0.625,
+            "deliberate_decision": 0.42
+          }
+        },
+        "by_decision_style": {
+          "fast": 0.75,
+          "moderate": 0.5,
+          "deliberate": 0.25
+        },
+        "by_emotional_intensity": {
+          "high": 0.7,
+          "moderate": 0.5,
+          "low": 0.3
+        },
+        "by_regulatory_focus": {
+          "promotion": 0.65,
+          "prevention": 0.35
+        },
+        "segments": {
+          "highly_persuadable": {
+            "uplift_range": [
+              0.15,
+              1.0
+            ],
+            "percentage": 0.15,
+            "recommendation": "Prioritize. High ROI on ad spend."
+          },
+          "moderately_persuadable": {
+            "uplift_range": [
+              0.05,
+              0.15
+            ],
+            "percentage": 0.45,
+            "recommendation": "Target with optimized messaging."
+          },
+          "low_persuadability": {
+            "uplift_range": [
+              0.01,
+              0.05
+            ],
+            "percentage": 0.3,
+            "recommendation": "Lower bid. Focus on value messaging."
+          },
+          "resistant": {
+            "uplift_range": [
+              -0.05,
+              0.01
+            ],
+            "percentage": 0.1,
+            "recommendation": "Avoid or minimal frequency. Can backfire."
+          }
+        },
+        "dimension_weights": {
+          "motivation": 0.35,
+          "decision_style": 0.25,
+          "emotional_intensity": 0.2,
+          "regulatory_focus": 0.15,
+          "price_sensitivity": 0.05
+        },
+        "version": "1.0",
+        "source": "criteo/criteo-uplift-prediction"
+      }
+    }
+  },
+  "attribution_priors": {
+    "criteo_insights": {
+      "first_touch_weight": 0.3,
+      "last_touch_weight": 0.4,
+      "middle_touches_weight": 0.3,
+      "optimal_touchpoints_by_decision_style": {
+        "fast": 2,
+        "moderate": 4,
+        "deliberate": 6
+      }
+    },
+    "module_priors": {
+      "attribution_intelligence": {
+        "mechanism_position_effectiveness": {
+          "authority": {
+            "first": 0.85,
+            "early": 0.8,
+            "middle": 0.7,
+            "late": 0.6,
+            "last": 0.5
+          },
+          "social_proof": {
+            "first": 0.65,
+            "early": 0.75,
+            "middle": 0.85,
+            "late": 0.9,
+            "last": 0.8
+          },
+          "scarcity": {
+            "first": 0.4,
+            "early": 0.5,
+            "middle": 0.65,
+            "late": 0.85,
+            "last": 0.95
+          },
+          "reciprocity": {
+            "first": 0.9,
+            "early": 0.85,
+            "middle": 0.7,
+            "late": 0.55,
+            "last": 0.45
+          },
+          "commitment": {
+            "first": 0.5,
+            "early": 0.65,
+            "middle": 0.8,
+            "late": 0.85,
+            "last": 0.75
+          },
+          "liking": {
+            "first": 0.8,
+            "early": 0.85,
+            "middle": 0.75,
+            "late": 0.65,
+            "last": 0.6
+          },
+          "unity": {
+            "first": 0.7,
+            "early": 0.8,
+            "middle": 0.75,
+            "late": 0.7,
+            "last": 0.65
+          }
+        },
+        "touchpoints_by_decision_style": {
+          "fast": 2,
+          "moderate": 3,
+          "deliberate": 5
+        },
+        "touchpoints_by_emotional_intensity": {
+          "high": 2,
+          "moderate": 3,
+          "low": 5
+        },
+        "touchpoints_by_motivation": {
+          "impulse": 1,
+          "social_proof": 2,
+          "self_reward": 2,
+          "status_signaling": 3,
+          "gift_giving": 3,
+          "upgrade": 3,
+          "value_seeking": 4,
+          "quality_seeking": 4,
+          "replacement": 3,
+          "recommendation": 2,
+          "research_driven": 5,
+          "brand_loyalty": 3,
+          "functional_need": 3
+        },
+        "optimal_sequences": {
+          "impulse_fast_high": {
+            "sequence": [
+              "social_proof",
+              "scarcity"
+            ],
+            "touchpoints": 2
+          },
+          "social_proof_fast_high": {
+            "sequence": [
+              "social_proof",
+              "unity",
+              "scarcity"
+            ],
+            "touchpoints": 3
+          },
+          "quality_seeking_moderate_moderate": {
+            "sequence": [
+              "authority",
+              "social_proof",
+              "commitment",
+              "scarcity"
+            ],
+            "touchpoints": 4
+          },
+          "value_seeking_moderate_moderate": {
+            "sequence": [
+              "reciprocity",
+              "social_proof",
+              "commitment",
+              "scarcity"
+            ],
+            "touchpoints": 4
+          },
+          "research_driven_deliberate_low": {
+            "sequence": [
+              "reciprocity",
+              "authority",
+              "commitment",
+              "social_proof",
+              "scarcity"
+            ],
+            "touchpoints": 5
+          },
+          "brand_loyalty_deliberate_low": {
+            "sequence": [
+              "unity",
+              "authority",
+              "commitment",
+              "social_proof"
+            ],
+            "touchpoints": 4
+          }
+        },
+        "default_sequences": {
+          "high_persuadability": {
+            "sequence": [
+              "social_proof",
+              "scarcity"
+            ],
+            "touchpoints": 2,
+            "first_best": "social_proof",
+            "last_best": "scarcity"
+          },
+          "medium_persuadability": {
+            "sequence": [
+              "reciprocity",
+              "authority",
+              "social_proof",
+              "scarcity"
+            ],
+            "touchpoints": 4,
+            "first_best": "reciprocity",
+            "last_best": "scarcity"
+          },
+          "low_persuadability": {
+            "sequence": [
+              "reciprocity",
+              "authority",
+              "commitment",
+              "social_proof",
+              "scarcity"
+            ],
+            "touchpoints": 5,
+            "first_best": "reciprocity",
+            "last_best": "scarcity"
+          }
+        },
+        "version": "1.0",
+        "source": "criteo/criteo-attribution"
+      }
+    }
+  },
+  "context_priors": {
+    "domain_effectiveness": {
+      "ecommerce": {
+        "scarcity": 1.2,
+        "social_proof": 1.15,
+        "reciprocity": 1.1
+      },
+      "finance": {
+        "authority": 1.3,
+        "commitment": 1.2,
+        "social_proof": 0.9
+      },
+      "health": {
+        "authority": 1.25,
+        "social_proof": 1.1,
+        "unity": 1.05
+      },
+      "technology": {
+        "authority": 1.2,
+        "scarcity": 1.15,
+        "social_proof": 1.1
+      },
+      "entertainment": {
+        "liking": 1.3,
+        "social_proof": 1.2,
+        "reciprocity": 1.1
+      }
+    },
+    "module_priors": {
+      "domain_context": {
+        "mindset_profiles": {
+          "informed": {
+            "description": "User is consuming news/educational content, high attention",
+            "attention_level": "high",
+            "cognitive_load": "high",
+            "purchase_intent": "none",
+            "mechanism_effectiveness": {
+              "authority": 1.25,
+              "social_proof": 1.1,
+              "commitment": 1.15,
+              "scarcity": 0.8,
+              "liking": 0.9,
+              "reciprocity": 1.1,
+              "unity": 1.0
+            },
+            "recommended_complexity": "detailed",
+            "optimal_tone": "informative, credible"
+          },
+          "entertained": {
+            "description": "User is consuming entertainment, lower attention",
+            "attention_level": "low",
+            "cognitive_load": "low",
+            "purchase_intent": "none",
+            "mechanism_effectiveness": {
+              "authority": 0.85,
+              "social_proof": 1.15,
+              "commitment": 0.8,
+              "scarcity": 1.1,
+              "liking": 1.3,
+              "reciprocity": 0.9,
+              "unity": 1.2
+            },
+            "recommended_complexity": "simple",
+            "optimal_tone": "fun, engaging"
+          },
+          "purchasing": {
+            "description": "User is on e-commerce/shopping site, high purchase intent",
+            "attention_level": "high",
+            "cognitive_load": "medium",
+            "purchase_intent": "considering",
+            "mechanism_effectiveness": {
+              "authority": 1.15,
+              "social_proof": 1.35,
+              "commitment": 1.2,
+              "scarcity": 1.4,
+              "liking": 1.1,
+              "reciprocity": 1.25,
+              "unity": 1.0
+            },
+            "recommended_complexity": "moderate",
+            "optimal_tone": "persuasive, value-focused"
+          },
+          "social": {
+            "description": "User is on social media, peer-focused",
+            "attention_level": "medium",
+            "cognitive_load": "low",
+            "purchase_intent": "browsing",
+            "mechanism_effectiveness": {
+              "authority": 0.9,
+              "social_proof": 1.45,
+              "commitment": 0.85,
+              "scarcity": 1.2,
+              "liking": 1.35,
+              "reciprocity": 1.0,
+              "unity": 1.4
+            },
+            "recommended_complexity": "simple",
+            "optimal_tone": "conversational, relatable"
+          },
+          "researching": {
+            "description": "User is on reference/wiki/how-to site, information seeking",
+            "attention_level": "high",
+            "cognitive_load": "high",
+            "purchase_intent": "considering",
+            "mechanism_effectiveness": {
+              "authority": 1.35,
+              "social_proof": 1.1,
+              "commitment": 1.25,
+              "scarcity": 0.7,
+              "liking": 0.85,
+              "reciprocity": 1.2,
+              "unity": 0.9
+            },
+            "recommended_complexity": "detailed",
+            "optimal_tone": "educational, thorough"
+          },
+          "relaxed": {
+            "description": "User is on lifestyle/hobby content, casual browsing",
+            "attention_level": "medium",
+            "cognitive_load": "low",
+            "purchase_intent": "browsing",
+            "mechanism_effectiveness": {
+              "authority": 1.0,
+              "social_proof": 1.2,
+              "commitment": 0.9,
+              "scarcity": 1.1,
+              "liking": 1.25,
+              "reciprocity": 1.15,
+              "unity": 1.2
+            },
+            "recommended_complexity": "moderate",
+            "optimal_tone": "friendly, aspirational"
+          },
+          "professional": {
+            "description": "User is on B2B/professional content",
+            "attention_level": "high",
+            "cognitive_load": "high",
+            "purchase_intent": "considering",
+            "mechanism_effectiveness": {
+              "authority": 1.4,
+              "social_proof": 1.25,
+              "commitment": 1.3,
+              "scarcity": 0.9,
+              "liking": 0.8,
+              "reciprocity": 1.2,
+              "unity": 1.15
+            },
+            "recommended_complexity": "detailed",
+            "optimal_tone": "professional, results-oriented"
+          },
+          "unknown": {
+            "description": "Unknown context, use neutral adjustments",
+            "attention_level": "medium",
+            "cognitive_load": "medium",
+            "purchase_intent": "unknown",
+            "mechanism_effectiveness": {
+              "authority": 1.0,
+              "social_proof": 1.0,
+              "commitment": 1.0,
+              "scarcity": 1.0,
+              "liking": 1.0,
+              "reciprocity": 1.0,
+              "unity": 1.0
+            },
+            "recommended_complexity": "moderate",
+            "optimal_tone": "balanced"
+          }
+        },
+        "category_to_mindset": {
+          "News": "informed",
+          "News & Politics": "informed",
+          "World News": "informed",
+          "Business News": "informed",
+          "Technology News": "informed",
+          "Science": "informed",
+          "Education": "researching",
+          "Reference": "researching",
+          "Entertainment": "entertained",
+          "Movies": "entertained",
+          "Television": "entertained",
+          "Music": "entertained",
+          "Gaming": "entertained",
+          "Video Games": "entertained",
+          "Humor": "entertained",
+          "Celebrity": "entertained",
+          "Shopping": "purchasing",
+          "E-Commerce": "purchasing",
+          "Retail": "purchasing",
+          "Classifieds": "purchasing",
+          "Deals": "purchasing",
+          "Coupons": "purchasing",
+          "Auctions": "purchasing",
+          "Social Networking": "social",
+          "Social Media": "social",
+          "Forums": "social",
+          "Community": "social",
+          "Dating": "social",
+          "Lifestyle": "relaxed",
+          "Home & Garden": "relaxed",
+          "Food & Drink": "relaxed",
+          "Travel": "relaxed",
+          "Arts": "relaxed",
+          "Hobbies": "relaxed",
+          "Sports": "relaxed",
+          "Fitness": "relaxed",
+          "Fashion": "relaxed",
+          "Beauty": "relaxed",
+          "Automotive": "researching",
+          "Business": "professional",
+          "Finance": "professional",
+          "Career": "professional",
+          "Legal": "professional",
+          "Real Estate": "professional",
+          "Industry": "professional",
+          "Health": "researching",
+          "Medical": "researching",
+          "Wellness": "relaxed",
+          "Technology": "researching",
+          "Software": "researching",
+          "Hardware": "researching",
+          "Mobile": "researching",
+          "General": "unknown",
+          "Other": "unknown"
+        },
+        "version": "1.0",
+        "source": "ansi-code/domain-advertising-classes-693k"
+      }
+    }
+  },
+  "cross_platform_priors": {
+    "module_priors": {
+      "cross_platform_validation": {
+        "platform_expression_mapping": {
+          "motivation": {
+            "functional_need": {
+              "consistency_expected": 0.85,
+              "amazon_signals": [
+                "need",
+                "required",
+                "necessary",
+                "had to"
+              ],
+              "reddit_signals": [
+                "needed something for",
+                "looking for",
+                "requirements"
+              ]
+            },
+            "impulse": {
+              "consistency_expected": 0.7,
+              "amazon_signals": [
+                "impulse",
+                "couldn't resist",
+                "just had to"
+              ],
+              "reddit_signals": [
+                "bought on impulse",
+                "retail therapy",
+                "treat yourself"
+              ]
+            },
+            "social_proof": {
+              "consistency_expected": 0.6,
+              "amazon_signals": [
+                "everyone",
+                "popular",
+                "recommended"
+              ],
+              "reddit_signals": [
+                "everyone here recommends",
+                "hive mind",
+                "consensus"
+              ]
+            },
+            "quality_seeking": {
+              "consistency_expected": 0.75,
+              "amazon_signals": [
+                "quality",
+                "premium",
+                "well-made",
+                "durability"
+              ],
+              "reddit_signals": [
+                "buy once cry once",
+                "BIFL",
+                "worth the investment"
+              ]
+            },
+            "value_seeking": {
+              "consistency_expected": 0.8,
+              "amazon_signals": [
+                "deal",
+                "bargain",
+                "price",
+                "value",
+                "worth"
+              ],
+              "reddit_signals": [
+                "budget",
+                "cheap but good",
+                "bang for buck",
+                "value pick"
+              ]
+            }
+          },
+          "decision_style": {
+            "deliberate": {
+              "consistency_expected": 0.85,
+              "amazon_signals": [
+                "researched",
+                "compared",
+                "studied",
+                "analysis"
+              ],
+              "reddit_signals": [
+                "did my research",
+                "spreadsheet",
+                "compared specs"
+              ]
+            },
+            "fast": {
+              "consistency_expected": 0.65,
+              "amazon_signals": [
+                "quickly",
+                "immediate",
+                "right away"
+              ],
+              "reddit_signals": [
+                "just got it",
+                "pulled the trigger",
+                "ordered"
+              ]
+            },
+            "moderate": {
+              "consistency_expected": 0.5,
+              "amazon_signals": [],
+              "reddit_signals": []
+            }
+          },
+          "emotional_intensity": {
+            "high": {
+              "consistency_expected": 0.75,
+              "amazon_signals": [
+                "love",
+                "hate",
+                "amazing",
+                "terrible",
+                "!!!"
+              ],
+              "reddit_signals": [
+                "love",
+                "hate",
+                "obsessed",
+                "can't stand"
+              ]
+            },
+            "low": {
+              "consistency_expected": 0.7,
+              "amazon_signals": [
+                "adequate",
+                "acceptable",
+                "sufficient",
+                "works"
+              ],
+              "reddit_signals": [
+                "it's fine",
+                "does the job",
+                "nothing special"
+              ]
+            }
+          }
+        },
+        "confidence_boosts": {
+          "motivation_consistent": 0.25,
+          "decision_style_consistent": 0.2,
+          "emotional_intensity_consistent": 0.15,
+          "full_profile_consistent": 0.35
+        },
+        "version": "1.0",
+        "source": "McAuley-Lab/Amazon-Reddit-Matched-with-Meta"
+      }
+    }
+  },
+  "category_baselines": {},
+  "data_summaries": {
+    "criteo_uplift": {
+      "sample_size": 500000,
+      "source": "criteo_uplift"
+    },
+    "criteo_attribution": {
+      "sample_size": 500000,
+      "source": "criteo_attribution"
+    },
+    "yelp_reviews": {
+      "sample_size": 199456,
+      "source": "yelp_reviews"
+    },
+    "amazon_polarity": {
+      "sample_size": 500000,
+      "source": "amazon_polarity"
+    },
+    "imdb_reviews": {
+      "sample_size": 25000,
+      "source": "imdb_reviews"
+    },
+    "domain_mapping": {
+      "sample_size": 0,
+      "source": "domain_mapping"
+    }
+  }
+}

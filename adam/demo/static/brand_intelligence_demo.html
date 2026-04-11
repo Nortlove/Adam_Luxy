@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>INFORMATIV — See How Your Campaign Would Run</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#080c14;--surface:#0d1220;--surface2:#111827;--border:#1e293b;
+  --text:#e2e8f0;--muted:#94a3b8;--accent:#3b82f6;--accent2:#8b5cf6;
+  --green:#10b981;--red:#ef4444;--amber:#f59e0b;--cyan:#06b6d4;
+  --gradient:linear-gradient(135deg,#3b82f6,#8b5cf6);
+}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;line-height:1.6;min-height:100vh}
+a{color:var(--accent);text-decoration:none}
+
+.container{max-width:1200px;margin:0 auto;padding:2rem}
+header{text-align:center;padding:3rem 2rem 2rem}
+header h1{font-size:2.2rem;background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:.5rem}
+header p{color:var(--muted);font-size:1.1rem;max-width:700px;margin:0 auto}
+.badge{display:inline-block;background:rgba(16,185,129,.15);color:var(--green);padding:4px 12px;border-radius:20px;font-size:.75rem;font-weight:600;letter-spacing:.5px;margin-bottom:1rem}
+
+/* Input Section */
+.input-section{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:2rem;margin:2rem 0}
+.input-section h2{font-size:1.3rem;margin-bottom:1.5rem;color:var(--text)}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem}
+.form-group{display:flex;flex-direction:column;gap:.5rem}
+.form-group label{font-size:.85rem;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:.5px}
+.form-group input,.form-group select,.form-group textarea{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;color:var(--text);font-size:.95rem;outline:none;transition:border-color .2s}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent)}
+.form-group textarea{resize:vertical;min-height:80px}
+.full-width{grid-column:1/-1}
+
+.run-btn{background:var(--gradient);color:#fff;border:none;padding:1rem 3rem;border-radius:12px;font-size:1.1rem;font-weight:600;cursor:pointer;margin-top:1.5rem;width:100%;transition:opacity .2s,transform .1s}
+.run-btn:hover{opacity:.9}
+.run-btn:active{transform:scale(.98)}
+.run-btn:disabled{opacity:.5;cursor:not-allowed}
+.run-btn .spinner{display:inline-block;width:18px;height:18px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;margin-right:8px;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Results */
+.results{display:none;margin-top:2rem}
+.results.visible{display:block}
+
+.phase{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:2rem;margin-bottom:1.5rem;opacity:0;transform:translateY(20px);transition:opacity .5s,transform .5s}
+.phase.show{opacity:1;transform:translateY(0)}
+.phase-header{display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem}
+.phase-number{width:40px;height:40px;background:var(--gradient);border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.1rem;flex-shrink:0}
+.phase-title{font-size:1.2rem;font-weight:600}
+.phase-subtitle{font-size:.85rem;color:var(--muted)}
+
+/* Cards inside phases */
+.card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem}
+.card{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:1.25rem}
+.card-label{font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:.5rem}
+.card-value{font-size:1.4rem;font-weight:700}
+.card-detail{font-size:.85rem;color:var(--muted);margin-top:.25rem}
+.card-bar{height:6px;background:var(--surface);border-radius:3px;margin-top:.75rem;overflow:hidden}
+.card-bar-fill{height:100%;border-radius:3px;transition:width 1s ease}
+
+/* Sequence Timeline */
+.timeline{display:flex;flex-direction:column;gap:.75rem}
+.touch{display:grid;grid-template-columns:50px 1fr auto;gap:1rem;align-items:center;padding:1rem 1.25rem;background:var(--surface2);border:1px solid var(--border);border-radius:12px}
+.touch-num{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem}
+.touch-num.engage{background:rgba(16,185,129,.2);color:var(--green)}
+.touch-num.ignore{background:rgba(239,68,68,.2);color:var(--red)}
+.touch-num.convert{background:rgba(59,130,246,.2);color:var(--accent)}
+.touch-info h4{font-size:.95rem;margin-bottom:.25rem}
+.touch-info p{font-size:.8rem;color:var(--muted)}
+.touch-outcome{text-align:right}
+.touch-outcome .outcome-label{font-size:.7rem;text-transform:uppercase;letter-spacing:.5px}
+.touch-outcome .outcome-value{font-size:1rem;font-weight:600}
+
+/* Hypothesis bars */
+.hyp-bar{display:flex;align-items:center;gap:.75rem;margin-bottom:.5rem}
+.hyp-label{font-size:.8rem;color:var(--muted);width:140px;flex-shrink:0}
+.hyp-track{flex:1;height:8px;background:var(--surface);border-radius:4px;overflow:hidden}
+.hyp-fill{height:100%;border-radius:4px;transition:width 1.5s ease}
+.hyp-pct{font-size:.8rem;color:var(--text);width:40px;text-align:right}
+
+/* Metric row */
+.metric-row{display:flex;gap:1.5rem;flex-wrap:wrap}
+.metric{flex:1;min-width:150px}
+.metric .label{font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.metric .value{font-size:1.8rem;font-weight:700;margin:.25rem 0}
+.metric .unit{font-size:.85rem;color:var(--muted)}
+
+/* Footer */
+footer{text-align:center;padding:3rem 2rem;color:var(--muted);font-size:.85rem;border-top:1px solid var(--border);margin-top:3rem}
+
+@media(max-width:768px){
+  .form-grid{grid-template-columns:1fr}
+  .card-grid{grid-template-columns:1fr}
+  .touch{grid-template-columns:40px 1fr}
+  .touch-outcome{grid-column:1/-1;text-align:left}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="badge">LIVE SYSTEM DEMO</div>
+  <h1>See How INFORMATIV Runs Your Campaign</h1>
+  <p>Enter your brand details below. The system will show you exactly how it identifies your audience's psychology, selects persuasion strategies, targets page environments, and learns from every impression.</p>
+</header>
+
+<div class="container">
+
+<!-- INPUT -->
+<div class="input-section">
+  <h2>Tell Us About Your Brand</h2>
+  <div class="form-grid">
+    <div class="form-group">
+      <label>Brand Name</label>
+      <input type="text" id="brand" placeholder="e.g., LUXY Ride" value="LUXY Ride">
+    </div>
+    <div class="form-group">
+      <label>Product / Service</label>
+      <input type="text" id="product" placeholder="e.g., Premium ride service" value="Premium ride service">
+    </div>
+    <div class="form-group">
+      <label>Category</label>
+      <select id="category">
+        <option value="luxury_transportation" selected>Luxury Transportation</option>
+        <option value="beauty">Beauty & Personal Care</option>
+        <option value="finance">Financial Services</option>
+        <option value="technology">Technology</option>
+        <option value="health">Health & Wellness</option>
+        <option value="hospitality">Hospitality & Travel</option>
+        <option value="automotive">Automotive</option>
+        <option value="retail">Premium Retail</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Target Price Point</label>
+      <select id="price">
+        <option value="premium" selected>Premium ($100+)</option>
+        <option value="mid">Mid-Range ($30-100)</option>
+        <option value="mass">Mass Market (<$30)</option>
+      </select>
+    </div>
+    <div class="form-group full-width">
+      <label>What Makes Your Brand Different?</label>
+      <textarea id="description" placeholder="e.g., Mercedes S-Class fleet, professional chauffeurs, guaranteed pricing with no surge, 4.8-star rating across 3,247 rides">Mercedes S-Class fleet, professional chauffeurs, guaranteed pricing with no surge, 4.8-star rating across 3,247 rides</textarea>
+    </div>
+  </div>
+  <button class="run-btn" id="runBtn" onclick="runDemo()">Run Intelligence Pipeline</button>
+</div>
+
+<!-- RESULTS -->
+<div class="results" id="results">
+
+  <!-- Phase 1: Audience Psychology -->
+  <div class="phase" id="phase1">
+    <div class="phase-header">
+      <div class="phase-number">1</div>
+      <div>
+        <div class="phase-title">Audience Psychology Identified</div>
+        <div class="phase-subtitle">Bilateral edge analysis across 47M+ psychological alignment edges</div>
+      </div>
+    </div>
+    <div class="card-grid" id="archetypeCards"></div>
+  </div>
+
+  <!-- Phase 2: Barrier Diagnosis -->
+  <div class="phase" id="phase2">
+    <div class="phase-header">
+      <div class="phase-number">2</div>
+      <div>
+        <div class="phase-title">Conversion Barriers Diagnosed</div>
+        <div class="phase-subtitle">20-dimension alignment analysis identifies what's blocking each segment</div>
+      </div>
+    </div>
+    <div id="barrierContent"></div>
+  </div>
+
+  <!-- Phase 3: Mechanism Selection -->
+  <div class="phase" id="phase3">
+    <div class="phase-header">
+      <div class="phase-number">3</div>
+      <div>
+        <div class="phase-title">Persuasion Strategy Selected</div>
+        <div class="phase-subtitle">Thompson Sampling with personality modulation, stage filtering, reactance constraints</div>
+      </div>
+    </div>
+    <div id="mechanismContent"></div>
+  </div>
+
+  <!-- Phase 4: Page Targeting -->
+  <div class="phase" id="phase4">
+    <div class="phase-header">
+      <div class="phase-number">4</div>
+      <div>
+        <div class="phase-title">Page Environment Prescribed</div>
+        <div class="phase-subtitle">Trilateral resonance: R(buyer, seller, page) with per-touch placement optimization</div>
+      </div>
+    </div>
+    <div id="pageContent"></div>
+  </div>
+
+  <!-- Phase 5: Retargeting Sequence Simulation -->
+  <div class="phase" id="phase5">
+    <div class="phase-header">
+      <div class="phase-number">5</div>
+      <div>
+        <div class="phase-title">7-Touch Retargeting Sequence</div>
+        <div class="phase-subtitle">Adaptive sequence with diagnostic reasoning — each touch learns from the last</div>
+      </div>
+    </div>
+    <div class="timeline" id="sequenceTimeline"></div>
+  </div>
+
+  <!-- Phase 6: Diagnostic Reasoning -->
+  <div class="phase" id="phase6">
+    <div class="phase-header">
+      <div class="phase-number">6</div>
+      <div>
+        <div class="phase-title">Diagnostic Reasoning (Touch 2: Why Was It Ignored?)</div>
+        <div class="phase-subtitle">5-hypothesis deduction — the system reasons about WHY, not just WHAT happened</div>
+      </div>
+    </div>
+    <div id="diagnosticContent"></div>
+  </div>
+
+  <!-- Phase 7: Learning Metrics -->
+  <div class="phase" id="phase7">
+    <div class="phase-header">
+      <div class="phase-number">7</div>
+      <div>
+        <div class="phase-title">System Learning After 7 Touches</div>
+        <div class="phase-subtitle">Every impression teaches about ALL candidate mechanisms via counterfactual learning</div>
+      </div>
+    </div>
+    <div class="metric-row" id="learningMetrics"></div>
+  </div>
+
+</div>
+</div>
+
+<footer>
+  INFORMATIV — Psycholinguistic Advertising Intelligence<br>
+  Dr Christopher C Nocera | Chris@InformativGroup.com
+</footer>
+
+<script>
+const ARCHETYPES = [
+  {name:'Careful Truster',pct:26,conv:65,barrier:'Trust Deficit',mechanism:'Evidence Proof',page:'Analytical',color:'#3b82f6',
+   desc:'Needs verified evidence before committing. High conscientiousness, analytical processing.'},
+  {name:'Status Seeker',pct:22,conv:94,barrier:'Identity Misalignment',mechanism:'Narrative Transportation',page:'Aspirational',color:'#8b5cf6',
+   desc:'Responds to prestige and exclusivity. Identity-driven purchase decisions.'},
+  {name:'Easy Decider',pct:20,conv:91,barrier:'Processing Overload',mechanism:'Micro Commitment',page:'Transactional',color:'#10b981',
+   desc:'Low-friction path preferred. Simplify the offer, minimize cognitive load.'},
+  {name:'Skeptical Analyst',pct:18,conv:45,barrier:'Reactance Triggered',mechanism:'Autonomy Restoration',page:'Analytical',color:'#f59e0b',
+   desc:'Compares extensively. Resistant to overt persuasion. Needs transparency.'},
+  {name:'Disillusioned',pct:14,conv:38,barrier:'Negativity Block',mechanism:'Anxiety Resolution',page:'Social',color:'#ef4444',
+   desc:'Negative prior experiences. High negativity bias. Address objections directly.'},
+];
+
+const SEQUENCE = [
+  {mech:'Social Proof',page:'Social',outcome:'Click',type:'engage',diag:'Direction confirmed — social proof captured attention',hyp:''},
+  {mech:'Social Proof',page:'Emotional',outcome:'Ignored',type:'ignore',diag:'Wrong page for social proof',hyp:'H1: Wrong Page (63%)'},
+  {mech:'Social Proof',page:'Social',outcome:'Site Visit',type:'engage',diag:'Same mechanism, correct page — stage advanced',hyp:''},
+  {mech:'Evidence Proof',page:'Analytical',outcome:'Click',type:'engage',diag:'Stage advanced to EVALUATING — evidence now appropriate',hyp:''},
+  {mech:'Evidence Proof',page:'Analytical',outcome:'Site Visit',type:'engage',diag:'Trust building working — stage advancing toward INTENDING',hyp:''},
+  {mech:'Implementation Intention',page:'Transactional',outcome:'Click',type:'engage',diag:'Stage = INTENDING — action mechanism deployed',hyp:''},
+  {mech:'Evidence Proof',page:'Analytical',outcome:'Conversion',type:'convert',diag:'CONVERTED — triple proven. Crawl expansion signal emitted.',hyp:''},
+];
+
+const HYPOTHESES = [
+  {label:'H1: Wrong Page',pct:63,color:'#ef4444'},
+  {label:'H2: Wrong Mechanism',pct:18,color:'#f59e0b'},
+  {label:'H3: Stage Mismatch',pct:8,color:'#8b5cf6'},
+  {label:'H4: PKM/Reactance',pct:7,color:'#3b82f6'},
+  {label:'H5: Ad Fatigue',pct:4,color:'#64748b'},
+];
+
+function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
+
+async function runDemo(){
+  const btn=document.getElementById('runBtn');
+  btn.disabled=true;
+  btn.innerHTML='<span class="spinner"></span>Running Intelligence Pipeline...';
+
+  const brand=document.getElementById('brand').value||'Your Brand';
+  const product=document.getElementById('product').value||'Your Product';
+  const results=document.getElementById('results');
+  results.classList.add('visible');
+
+  // Phase 1: Archetypes
+  const cards=document.getElementById('archetypeCards');
+  cards.innerHTML=ARCHETYPES.map(a=>`
+    <div class="card">
+      <div class="card-label">${a.pct}% of audience</div>
+      <div class="card-value" style="color:${a.color}">${a.name}</div>
+      <div class="card-detail">${a.desc}</div>
+      <div class="card-bar"><div class="card-bar-fill" style="width:0;background:${a.color}" data-width="${a.conv}%"></div></div>
+      <div class="card-detail" style="margin-top:.25rem">${a.conv}% conversion rate in segment</div>
+    </div>
+  `).join('');
+  await sleep(300);
+  document.getElementById('phase1').classList.add('show');
+  await sleep(200);
+  cards.querySelectorAll('.card-bar-fill').forEach(el=>{el.style.width=el.dataset.width});
+
+  // Phase 2: Barriers
+  await sleep(600);
+  const bc=document.getElementById('barrierContent');
+  bc.innerHTML=`<div class="card-grid">${ARCHETYPES.map(a=>`
+    <div class="card">
+      <div class="card-label">${a.name}</div>
+      <div class="card-value" style="font-size:1.1rem;color:${a.color}">${a.barrier}</div>
+      <div class="card-detail" style="margin-top:.5rem">Primary alignment gap identified from bilateral edge analysis. This is what's preventing conversion for this segment.</div>
+    </div>
+  `).join('')}</div>`;
+  document.getElementById('phase2').classList.add('show');
+
+  // Phase 3: Mechanisms
+  await sleep(600);
+  const mc=document.getElementById('mechanismContent');
+  mc.innerHTML=`<div class="card-grid">${ARCHETYPES.map(a=>`
+    <div class="card">
+      <div class="card-label">${a.name} → ${a.barrier}</div>
+      <div class="card-value" style="font-size:1.1rem;color:${a.color}">${a.mechanism}</div>
+      <div class="card-detail" style="margin-top:.5rem">Selected via Thompson Sampling from ${a.barrier==='Trust Deficit'?4:a.barrier==='Reactance Triggered'?2:3} candidates. Personality-modulated, stage-filtered.</div>
+    </div>
+  `).join('')}</div>`;
+  document.getElementById('phase3').classList.add('show');
+
+  // Phase 4: Pages
+  await sleep(600);
+  const pc=document.getElementById('pageContent');
+  pc.innerHTML=`<div class="card-grid">${ARCHETYPES.map(a=>{
+    const res=a.page==='Analytical'?0.95:a.page==='Aspirational'?0.88:a.page==='Social'?0.91:a.page==='Transactional'?0.85:0.80;
+    return `<div class="card">
+      <div class="card-label">${a.name} — ${a.mechanism}</div>
+      <div class="card-value" style="font-size:1.1rem;color:${a.color}">${a.page} Pages</div>
+      <div class="card-detail" style="margin-top:.5rem">Resonance: ${res.toFixed(2)} — ${a.mechanism} is ${Math.round(res*100)}% amplified on ${a.page.toLowerCase()} page environments</div>
+      <div class="card-bar"><div class="card-bar-fill" style="width:0;background:${a.color}" data-width="${Math.round(res*100)}%"></div></div>
+    </div>`;
+  }).join('')}</div>`;
+  document.getElementById('phase4').classList.add('show');
+  await sleep(200);
+  pc.querySelectorAll('.card-bar-fill').forEach(el=>{el.style.width=el.dataset.width});
+
+  // Phase 5: Sequence
+  await sleep(600);
+  const tl=document.getElementById('sequenceTimeline');
+  tl.innerHTML='';
+  document.getElementById('phase5').classList.add('show');
+
+  for(let i=0;i<SEQUENCE.length;i++){
+    const t=SEQUENCE[i];
+    await sleep(400);
+    const div=document.createElement('div');
+    div.className='touch';
+    div.style.opacity='0';
+    div.style.transform='translateX(-20px)';
+    div.innerHTML=`
+      <div class="touch-num ${t.type}">${i+1}</div>
+      <div class="touch-info">
+        <h4>${t.mech} on ${t.page}</h4>
+        <p>${t.diag}${t.hyp?' — <strong>'+t.hyp+'</strong>':''}</p>
+      </div>
+      <div class="touch-outcome">
+        <div class="outcome-label">${t.type==='convert'?'RESULT':'outcome'}</div>
+        <div class="outcome-value" style="color:${t.type==='convert'?'var(--green)':t.type==='engage'?'var(--accent)':'var(--red)'}">${t.outcome}</div>
+      </div>
+    `;
+    tl.appendChild(div);
+    requestAnimationFrame(()=>{div.style.transition='opacity .4s,transform .4s';div.style.opacity='1';div.style.transform='translateX(0)'});
+  }
+
+  // Phase 6: Diagnostic
+  await sleep(600);
+  const dc=document.getElementById('diagnosticContent');
+  dc.innerHTML=`
+    <p style="color:var(--muted);margin-bottom:1.5rem">Touch 2 was <strong style="color:var(--red)">ignored</strong>. The DiagnosticReasoner evaluates 5 competing hypotheses to determine WHY — then selects the corrective action that maximizes diagnostic information.</p>
+    ${HYPOTHESES.map(h=>`
+      <div class="hyp-bar">
+        <div class="hyp-label">${h.label}</div>
+        <div class="hyp-track"><div class="hyp-fill" style="width:0;background:${h.color}" data-width="${h.pct}%"></div></div>
+        <div class="hyp-pct">${h.pct}%</div>
+      </div>
+    `).join('')}
+    <div style="margin-top:1.5rem;padding:1.25rem;background:var(--surface2);border:1px solid var(--border);border-radius:12px">
+      <div style="font-size:.85rem;color:var(--muted);margin-bottom:.5rem">DIAGNOSTIC CONCLUSION</div>
+      <div style="font-size:1rem"><strong style="color:var(--red)">H1: Wrong Page Mindstate</strong> — Social proof mechanism had low resonance (0.40) on emotional page environment. The mechanism was correct but the page context dampened it.</div>
+      <div style="margin-top:.75rem;font-size:.9rem;color:var(--green)"><strong>Corrective Action:</strong> Same mechanism (social proof), switch to <strong>social page cluster</strong> (polar opposite, resonance 0.91). Do NOT switch mechanism — the click on Touch 1 confirmed it works.</div>
+    </div>
+  `;
+  document.getElementById('phase6').classList.add('show');
+  await sleep(200);
+  dc.querySelectorAll('.hyp-fill').forEach(el=>{el.style.width=el.dataset.width});
+
+  // Phase 7: Learning
+  await sleep(600);
+  const lm=document.getElementById('learningMetrics');
+  lm.innerHTML=`
+    <div class="metric">
+      <div class="label">Learning Multiplier</div>
+      <div class="value" style="color:var(--cyan)">3.2x</div>
+      <div class="unit">Each impression teaches about 3.2 mechanisms via counterfactual learning</div>
+    </div>
+    <div class="metric">
+      <div class="label">Buyer Profile Certainty</div>
+      <div class="value" style="color:var(--green)">78%</div>
+      <div class="unit">After 7 touches, correlated BONG posterior narrowed across 20 dimensions</div>
+    </div>
+    <div class="metric">
+      <div class="label">Touches to Conversion</div>
+      <div class="value" style="color:var(--accent)">7</div>
+      <div class="unit">Diagnostic reasoning identified wrong page on Touch 2, corrected on Touch 3</div>
+    </div>
+    <div class="metric">
+      <div class="label">Next Buyer Estimate</div>
+      <div class="value" style="color:var(--accent2)">4-5</div>
+      <div class="unit">Similar buyers will convert faster — the system learned this person's pattern</div>
+    </div>
+  `;
+  document.getElementById('phase7').classList.add('show');
+
+  btn.disabled=false;
+  btn.textContent='Run Intelligence Pipeline';
+}
+</script>
+</body>
+</html>

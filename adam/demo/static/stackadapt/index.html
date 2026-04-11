@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>INFORMATIV AI × StackAdapt — Psychological Intelligence Layer</title>
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Fallback: system fonts if offline -->
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <script src="/static/js/chart.umd.min.js"></script>
+</head>
+<body>
+
+<!-- ====== HEADER ====== -->
+<header class="header">
+    <div class="header-brand">
+        <div class="logo">I</div>
+        <h1>INFORMATIV AI <span>×</span> StackAdapt</h1>
+    </div>
+    <div class="header-stats" id="headerStats">
+        <div class="header-stat">
+            <div class="value" id="statReviews">1B+</div>
+            <div class="label">Reviews Analyzed</div>
+        </div>
+    </div>
+</header>
+
+
+<!-- ====== KEY METRICS ====== -->
+<div class="main-container">
+    <div class="key-points">
+        <div class="key-point">
+            <div class="kp-value value-cyan">40%</div>
+            <div class="kp-label">More clicks with psychologically-matched ads<br><span style="font-size:10px;color:var(--text-muted)">Matz et al., PNAS, 3.5M subjects</span></div>
+        </div>
+        <div class="key-point">
+            <div class="kp-value value-green">50%</div>
+            <div class="kp-label">More purchases with personality-aligned creative<br><span style="font-size:10px;color:var(--text-muted)">Peer-reviewed, not marketing claims</span></div>
+        </div>
+        <div class="key-point">
+            <div class="kp-value value-purple">1B+</div>
+            <div class="kp-label">Consumer reviews — population-level NDF distributions<br><span style="font-size:10px;color:var(--text-muted)">Across 32 product categories</span></div>
+        </div>
+    </div>
+
+    <!-- ====== TWO COLUMN LAYOUT ====== -->
+    <div class="two-column">
+
+        <!-- LEFT: Input Panel -->
+        <div class="input-panel">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Campaign Intelligence</div>
+                    <span class="card-badge badge-blue">Input</span>
+                </div>
+
+                <div class="section-divider">
+                    <span class="line"></span>
+                    <span class="label">Quick Scenarios</span>
+                    <span class="line"></span>
+                </div>
+                <div class="scenarios-grid" id="scenariosGrid"></div>
+
+                <div class="section-divider">
+                    <span class="line"></span>
+                    <span class="label">Campaign Details</span>
+                    <span class="line"></span>
+                </div>
+
+                <div class="form-group">
+                    <label for="segmentName">Audience Segment</label>
+                    <input type="text" id="segmentName" placeholder="e.g. Fitness Enthusiasts 25-44">
+                </div>
+                <div class="form-group">
+                    <label for="category">Product Category</label>
+                    <select id="category"><option value="">Loading categories…</option></select>
+                </div>
+                <div class="form-group">
+                    <label for="productName">Product Name</label>
+                    <input type="text" id="productName" placeholder="e.g. Nike Air Zoom Pegasus 40">
+                </div>
+                <div class="form-group">
+                    <label for="adCopy">Current Ad Copy</label>
+                    <textarea id="adCopy" rows="3" placeholder="Paste your current ad creative text…"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="sampleReview">Representative Customer Review</label>
+                    <textarea id="sampleReview" rows="3" placeholder="Paste a customer review that represents the target audience…"></textarea>
+                </div>
+
+                <button class="analyze-btn" id="analyzeBtn" onclick="runAnalysis()">
+                    Run INFORMATIV AI Analysis
+                </button>
+            </div>
+        </div>
+
+        <!-- RIGHT: Results Panel -->
+        <div>
+            <!-- Placeholder -->
+            <div id="resultsPlaceholder" class="card placeholder">
+                <div class="icon">🧠</div>
+                <h3>Select a Scenario or Enter Campaign Details</h3>
+                <p>INFORMATIV AI will analyze the audience psychology, determine optimal persuasion mechanisms, and return enriched intelligence directly to the StackAdapt system — all from real consumer data.</p>
+            </div>
+
+            <!-- Results (hidden initially) -->
+            <div class="results-panel" id="resultsPanel">
+
+                <div class="processing-bar" id="processingBar"><div class="fill" id="processingFill"></div></div>
+
+                <!-- ======================================================
+                     RETURNED TO STACKADAPT SYSTEM — The headline section
+                     ====================================================== -->
+                <div class="card fade-in stackadapt-return-card" id="returnCard">
+                    <div class="card-header">
+                        <div class="card-title" style="color:var(--accent-cyan)">↩ Returned to StackAdapt System</div>
+                        <span class="card-badge badge-green">API Response</span>
+                    </div>
+
+                    <!-- Lift stats — the most important numbers -->
+                    <div class="lift-stats" id="liftStats"></div>
+
+                    <!-- Return payload summary -->
+                    <div class="return-payload-grid" id="returnPayloadGrid"></div>
+
+                    <!-- JSON preview -->
+                    <div style="margin-top:16px">
+                        <div class="section-divider">
+                            <span class="line"></span>
+                            <span class="label">Full API Payload (JSON)</span>
+                            <span class="line"></span>
+                        </div>
+                        <pre class="json-preview" id="jsonPreview"></pre>
+                    </div>
+                </div>
+
+                <!-- Summary Stats -->
+                <div class="card fade-in" id="summaryCard">
+                    <div class="card-header">
+                        <div class="card-title" id="summaryTitle">Segment Intelligence</div>
+                        <span class="proc-time" id="procTime"></span>
+                    </div>
+                    <div class="segment-summary" id="segmentSummary"></div>
+                </div>
+
+                <!-- NDF Radar + Mechanism Bar -->
+                <div class="chart-row">
+                    <div class="card fade-in">
+                        <div class="card-header">
+                            <div class="card-title">NDF Profile</div>
+                            <span class="card-badge badge-purple">Nonconscious Decision Fingerprint</span>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="ndfRadar"></canvas>
+                        </div>
+                        <div class="radar-legend">
+                            <div class="radar-legend-item"><div class="radar-legend-dot" style="background:rgba(79,143,247,0.7)"></div> This Segment</div>
+                            <div class="radar-legend-item"><div class="radar-legend-dot" style="background:rgba(139,92,246,0.5)"></div> Population Baseline</div>
+                            <div class="radar-legend-item"><div class="radar-legend-dot" style="background:rgba(6,214,160,0.5)"></div> Archetype Avg</div>
+                        </div>
+                    </div>
+                    <div class="card fade-in">
+                        <div class="card-header">
+                            <div class="card-title">Mechanism Susceptibility</div>
+                            <span class="card-badge badge-green">Persuasion Channels</span>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="mechBar"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mechanism Ranking -->
+                <div class="card fade-in">
+                    <div class="card-header">
+                        <div class="card-title">Recommended Persuasion Strategy</div>
+                        <span class="card-badge badge-amber">Ranked by Combined Score</span>
+                    </div>
+                    <div class="mechanism-list" id="mechList"></div>
+                </div>
+
+                <!-- Copy Optimization -->
+                <div class="card fade-in">
+                    <div class="card-header">
+                        <div class="card-title">Creative Optimization</div>
+                        <span class="card-badge badge-green">INFORMATIV AI Recommendations</span>
+                    </div>
+                    <div class="alignment-meter" id="alignmentMeter"></div>
+                    <div class="copy-comparison" id="copyComparison"></div>
+                </div>
+
+                <!-- NDF Dimension Detail -->
+                <div class="card fade-in">
+                    <div class="card-header">
+                        <div class="card-title">NDF Dimension Analysis</div>
+                        <span class="card-badge badge-purple">8 Psychological Dimensions</span>
+                    </div>
+                    <div class="ndf-detail-grid" id="ndfDetailGrid"></div>
+                </div>
+
+                <!-- Learning Trajectory -->
+                <div class="card fade-in">
+                    <div class="card-header">
+                        <div class="card-title">Learning Trajectory</div>
+                        <span class="card-badge badge-blue">Thompson Sampling Simulation</span>
+                    </div>
+                    <div class="insight-callout" style="margin-bottom:16px">
+                        <div class="callout-title">How INFORMATIV AI Learns</div>
+                        <p>Unlike cookies that degrade over time, INFORMATIV AI's signal <strong>strengthens</strong> with every interaction. This chart shows how Thompson Sampling converges on the optimal persuasion mechanism for this segment — learning from real outcomes to continuously improve performance.</p>
+                    </div>
+                    <div class="learning-chart-container">
+                        <canvas id="learningChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Archetype Distribution -->
+                <div class="card fade-in">
+                    <div class="card-header">
+                        <div class="card-title">Population Archetype Distribution</div>
+                        <span class="card-badge badge-purple">From <span id="archReviewCount">414M+</span> reviews</span>
+                    </div>
+                    <div class="archetype-bars" id="archetypeBars"></div>
+                </div>
+
+                <!-- Privacy callout -->
+                <div class="insight-callout fade-in">
+                    <div class="callout-title">The Privacy-Native Advantage</div>
+                    <p>With third-party cookies dying, behavioral targeting is degrading. INFORMATIV AI provides a <strong>privacy-native psychological signal</strong> derived from the language patterns in 414M+ consumer reviews. This signal doesn't depend on tracking — it's grounded in population-level nonconscious decision distributions that <strong>strengthen over time</strong> instead of degrading. Integration can start in weeks via API enrichment, not months.</p>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- ====== FOOTER ====== -->
+<footer class="footer">
+    INFORMATIV AI — Nonconscious Decision Fingerprint™ &nbsp;|&nbsp; Grounded in Higgins, Kruglanski, Petty & Cacioppo, Markus & Kitayama, Gray, Trope & Liberman, Zuckerman<br>
+    <span style="margin-top:4px;display:inline-block">Research foundation: Matz et al. (2017), PNAS — 3.5M subjects, peer-reviewed</span>
+</footer>
+
+<script src="/static/js/app.js"></script>
+</body>
+</html>

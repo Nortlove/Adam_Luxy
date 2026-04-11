@@ -1,0 +1,854 @@
+{
+  "brand_stats": [
+    {
+      "name": "Blacklane",
+      "edges": 1691,
+      "align": 0.6230083973979893,
+      "emo": 0.36472767593140115,
+      "positive": 725
+    },
+    {
+      "name": "LUXY Ride",
+      "edges": 512,
+      "align": 0.5901722656250006,
+      "emo": 0.4067064453124997,
+      "positive": 385
+    },
+    {
+      "name": "Alto",
+      "edges": 307,
+      "align": 0.6369045602605862,
+      "emo": 0.35006286644951123,
+      "positive": 109
+    },
+    {
+      "name": "Wheely",
+      "edges": 181,
+      "align": 0.612988950276243,
+      "emo": 0.3946690607734807,
+      "positive": 89
+    },
+    {
+      "name": "Dav El BostonCoach",
+      "edges": 160,
+      "align": 0.5038331249999999,
+      "emo": 0.2993318750000001,
+      "positive": 81
+    },
+    {
+      "name": "Dial 7",
+      "edges": 73,
+      "align": 0.5715479452054796,
+      "emo": 0.41949315068493154,
+      "positive": 65
+    },
+    {
+      "name": "GroundLink",
+      "edges": 68,
+      "align": 0.5545617647058821,
+      "emo": 0.3708264705882354,
+      "positive": 40
+    },
+    {
+      "name": "Carey",
+      "edges": 53,
+      "align": 0.49606226415094345,
+      "emo": 0.42108867924528304,
+      "positive": 8
+    },
+    {
+      "name": "SIXT ride",
+      "edges": 34,
+      "align": 0.5665411764705882,
+      "emo": 0.4179588235294117,
+      "positive": 24
+    },
+    {
+      "name": "EmpireCLS",
+      "edges": 12,
+      "align": 0.6263833333333333,
+      "emo": 0.5225916666666666,
+      "positive": 8
+    },
+    {
+      "name": "ExecuCar",
+      "edges": 6,
+      "align": 0.5861833333333333,
+      "emo": 0.2923,
+      "positive": 2
+    },
+    {
+      "name": "Savoya",
+      "edges": 4,
+      "align": 0.667875,
+      "emo": 0.51475,
+      "positive": 4
+    },
+    {
+      "name": "Tristar Worldwide",
+      "edges": 2,
+      "align": 0.63165,
+      "emo": 0.2144,
+      "positive": 0
+    }
+  ],
+  "mech_stats": [
+    {
+      "mechanism": "liking",
+      "eff": 0.8113,
+      "n": 1201,
+      "alpha": 976,
+      "beta": 227
+    },
+    {
+      "mechanism": "authority",
+      "eff": 0.7056,
+      "n": 1078,
+      "alpha": 762,
+      "beta": 318
+    },
+    {
+      "mechanism": "social_proof",
+      "eff": 0.6982,
+      "n": 790,
+      "alpha": 553,
+      "beta": 239
+    },
+    {
+      "mechanism": "commitment",
+      "eff": 0.5265,
+      "n": 1282,
+      "alpha": 676,
+      "beta": 608
+    },
+    {
+      "mechanism": "scarcity",
+      "eff": 0.5,
+      "n": 14,
+      "alpha": 8,
+      "beta": 8
+    },
+    {
+      "mechanism": "reciprocity",
+      "eff": 0.4748,
+      "n": 415,
+      "alpha": 198,
+      "beta": 219
+    }
+  ],
+  "dim_stats": {
+    "composite": 0.6180149570490164,
+    "composite_std": 0.07553978299947212,
+    "emo": 0.36947594744820605,
+    "emo_std": 0.1620835606547716,
+    "reg": -0.036732592218292066,
+    "reg_std": 0.12405626102211703,
+    "pers": 0.4312963617988888,
+    "pers_std": 0.08373630794858315,
+    "val": 0.6281355229914093,
+    "val_std": 0.03086958471099629,
+    "evo": 0.5037437089439114,
+    "evo_std": 0.06749979114365452,
+    "spend": 0.4702797372410313,
+    "spend_std": 0.05985257840131725,
+    "trust": 0.3394160181910055,
+    "trust_std": 0.13919817608572746,
+    "react": 0.06355987872662953,
+    "react_std": 0.02951265854414374
+  },
+  "outcome_stats": [
+    {
+      "outcome": "warned",
+      "n": 858
+    },
+    {
+      "outcome": "satisfied",
+      "n": 526
+    },
+    {
+      "outcome": "evangelized",
+      "n": 475
+    },
+    {
+      "outcome": "neutral",
+      "n": 107
+    },
+    {
+      "outcome": "regret",
+      "n": 13
+    }
+  ],
+  "luxy_stats": {
+    "edges": 512,
+    "align": 0.5901722656250006,
+    "positive": 385
+  },
+  "campaign": {
+    "campaign_name": "LUXY Ride \u2014 Luxury Transportation Intelligence Campaign",
+    "brand": "LUXY Ride",
+    "website": "luxyride.com",
+    "neo4j_asin": "lux_luxy_ride",
+    "data_foundation": {
+      "bilateral_edges": 1979,
+      "reviews_annotated": 1979,
+      "brands_profiled": 12,
+      "annotation_system": "65-dim ad-side + 65-dim user-side + 27-dim bilateral alignment",
+      "edge_computation": "compute_brand_buyer_edge() \u2014 same as 47M Amazon edges"
+    },
+    "tracks": {
+      "corporate_executive": {
+        "archetype": "corporate_executive",
+        "display_name": "Corporate Executive",
+        "description": "High-LTV business travelers who value status, professionalism, and reliability. 91.4% conversion rate in bilateral data.",
+        "segment_id": "informativ_corporate_executive_luxury_transportation_t1",
+        "budget_allocation_pct": 30,
+        "sample_size": 428,
+        "conversion_rate": 0.914,
+        "avg_composite_alignment": 0.626,
+        "primary_mechanism": "liking",
+        "secondary_mechanism": "authority",
+        "mechanism_evidence": {
+          "liking": {
+            "pos_avg": 0.575,
+            "neg_avg": 0.397,
+            "lift": 0.177,
+            "pos_n": 391
+          },
+          "scarcity": {
+            "pos_avg": 0.163,
+            "neg_avg": 0,
+            "lift": 0.163,
+            "pos_n": 36
+          },
+          "authority": {
+            "pos_avg": 0.428,
+            "neg_avg": 0.319,
+            "lift": 0.109,
+            "pos_n": 391
+          },
+          "social_proof": {
+            "pos_avg": 0.358,
+            "neg_avg": 0.3,
+            "lift": 0.058,
+            "pos_n": 391
+          },
+          "reciprocity": {
+            "pos_avg": 0.286,
+            "neg_avg": 0.235,
+            "lift": 0.051,
+            "pos_n": 236
+          },
+          "commitment": {
+            "pos_avg": 0.411,
+            "neg_avg": 0.421,
+            "lift": -0.01,
+            "pos_n": 388
+          }
+        },
+        "bilateral_dimensions": {
+          "regulatory_fit_score": {
+            "converts": 0.035,
+            "fails": -0.043,
+            "gap": 0.078
+          },
+          "construal_fit_score": {
+            "converts": 0.886,
+            "fails": 0.941,
+            "gap": -0.054
+          },
+          "personality_brand_alignment": {
+            "converts": 0.485,
+            "fails": 0.498,
+            "gap": -0.012
+          },
+          "emotional_resonance": {
+            "converts": 0.491,
+            "fails": 0.4,
+            "gap": 0.092
+          },
+          "value_alignment": {
+            "converts": 0.615,
+            "fails": 0.624,
+            "gap": -0.009
+          },
+          "evolutionary_motive_match": {
+            "converts": 0.529,
+            "fails": 0.536,
+            "gap": -0.007
+          },
+          "appeal_resonance": {
+            "converts": 0.57,
+            "fails": 0.545,
+            "gap": 0.025
+          },
+          "processing_route_match": {
+            "converts": 0.802,
+            "fails": 0.885,
+            "gap": -0.083
+          },
+          "composite_alignment": {
+            "converts": 0.623,
+            "fails": 0.711,
+            "gap": -0.088
+          }
+        },
+        "buyer_psychological_patterns": {
+          "regulatory_focus_promotion": {
+            "converts": 0.66,
+            "fails": 0.476
+          },
+          "regulatory_focus_prevention": {
+            "converts": 0.538,
+            "fails": 0.693
+          },
+          "evolutionary_motives_self_protection": {
+            "converts": 0.532,
+            "fails": 0.655
+          },
+          "evolutionary_motives_status": {
+            "converts": 0.65,
+            "fails": 0.672
+          },
+          "evolutionary_motives_affiliation": {
+            "converts": 0.583,
+            "fails": 0.526
+          },
+          "spending_pain_sensitivity": {
+            "converts": 0.43,
+            "fails": 0.618
+          },
+          "anticipated_regret": {
+            "converts": 0.412,
+            "fails": 0.667
+          },
+          "brand_trust_known_brand_trust": {
+            "converts": 0.732,
+            "fails": 0.617
+          },
+          "decision_style_information_search_depth": {
+            "converts": 0.613,
+            "fails": 0.671
+          }
+        },
+        "frequency_cap": {
+          "max_per_day": 3,
+          "max_per_week": 12,
+          "reason": "High engagement tolerance, researched decisions"
+        },
+        "bid_strategy": {
+          "base_multiplier": 1.3,
+          "peak_hours_boost": 1.2,
+          "reason": "Highest LTV justifies premium bids"
+        }
+      },
+      "airport_anxiety": {
+        "archetype": "airport_anxiety",
+        "display_name": "Airport Anxiety",
+        "description": "Highest-volume segment \u2014 travelers with strong prevention focus and self-protection motives. Only 9.4% convert, but volume compensates. Key: emotional resonance is the #1 discriminator between success and failure (+0.290 gap).",
+        "segment_id": "informativ_airport_anxiety_luxury_transportation_t1",
+        "budget_allocation_pct": 40,
+        "sample_size": 744,
+        "conversion_rate": 0.094,
+        "avg_composite_alignment": 0.651,
+        "primary_mechanism": "liking",
+        "secondary_mechanism": "authority",
+        "mechanism_evidence": {
+          "liking": {
+            "pos_avg": 0.46,
+            "neg_avg": 0.241,
+            "lift": 0.22,
+            "pos_n": 70
+          },
+          "authority": {
+            "pos_avg": 0.33,
+            "neg_avg": 0.272,
+            "lift": 0.058,
+            "pos_n": 69
+          },
+          "scarcity": {
+            "pos_avg": 0.15,
+            "neg_avg": 0.12,
+            "lift": 0.03,
+            "pos_n": 4
+          },
+          "social_proof": {
+            "pos_avg": 0.258,
+            "neg_avg": 0.244,
+            "lift": 0.014,
+            "pos_n": 69
+          },
+          "reciprocity": {
+            "pos_avg": 0.258,
+            "neg_avg": 0.28,
+            "lift": -0.022,
+            "pos_n": 49
+          },
+          "commitment": {
+            "pos_avg": 0.354,
+            "neg_avg": 0.378,
+            "lift": -0.024,
+            "pos_n": 69
+          }
+        },
+        "bilateral_dimensions": {
+          "regulatory_fit_score": {
+            "converts": -0.051,
+            "fails": -0.118,
+            "gap": 0.067
+          },
+          "construal_fit_score": {
+            "converts": 0.879,
+            "fails": 0.872,
+            "gap": 0.007
+          },
+          "personality_brand_alignment": {
+            "converts": 0.477,
+            "fails": 0.375,
+            "gap": 0.102
+          },
+          "emotional_resonance": {
+            "converts": 0.498,
+            "fails": 0.208,
+            "gap": 0.29
+          },
+          "value_alignment": {
+            "converts": 0.624,
+            "fails": 0.621,
+            "gap": 0.003
+          },
+          "evolutionary_motive_match": {
+            "converts": 0.541,
+            "fails": 0.511,
+            "gap": 0.03
+          },
+          "appeal_resonance": {
+            "converts": 0.567,
+            "fails": 0.435,
+            "gap": 0.132
+          },
+          "processing_route_match": {
+            "converts": 0.806,
+            "fails": 0.838,
+            "gap": -0.032
+          },
+          "composite_alignment": {
+            "converts": 0.664,
+            "fails": 0.65,
+            "gap": 0.014
+          }
+        },
+        "buyer_psychological_patterns": {
+          "regulatory_focus_promotion": {
+            "converts": 0.501,
+            "fails": 0.296
+          },
+          "regulatory_focus_prevention": {
+            "converts": 0.699,
+            "fails": 0.829
+          },
+          "evolutionary_motives_self_protection": {
+            "converts": 0.727,
+            "fails": 0.81
+          },
+          "evolutionary_motives_status": {
+            "converts": 0.489,
+            "fails": 0.551
+          },
+          "evolutionary_motives_affiliation": {
+            "converts": 0.522,
+            "fails": 0.375
+          },
+          "spending_pain_sensitivity": {
+            "converts": 0.647,
+            "fails": 0.754
+          },
+          "anticipated_regret": {
+            "converts": 0.635,
+            "fails": 0.765
+          },
+          "brand_trust_known_brand_trust": {
+            "converts": 0.676,
+            "fails": 0.388
+          },
+          "decision_style_information_search_depth": {
+            "converts": 0.61,
+            "fails": 0.639
+          }
+        },
+        "frequency_cap": {
+          "max_per_day": 2,
+          "max_per_week": 8,
+          "reason": "High reactance risk, prevention-focused \u2014 avoid ad fatigue"
+        },
+        "bid_strategy": {
+          "base_multiplier": 1.0,
+          "peak_hours_boost": 1.5,
+          "reason": "Volume play \u2014 boost during travel-intent hours"
+        }
+      },
+      "special_occasion": {
+        "archetype": "special_occasion",
+        "display_name": "Special Occasion",
+        "description": "Weddings, proms, celebrations. Highest conversion rate (97.4%) but smallest segment (2.5%). Driven by affiliation and emotional expressiveness.",
+        "segment_id": "informativ_special_occasion_luxury_transportation_t1",
+        "budget_allocation_pct": 15,
+        "sample_size": 38,
+        "conversion_rate": 0.974,
+        "avg_composite_alignment": 0.6,
+        "primary_mechanism": "liking",
+        "secondary_mechanism": "commitment",
+        "mechanism_evidence": {
+          "liking": {
+            "pos_avg": 0.704,
+            "neg_avg": 0,
+            "lift": 0.704,
+            "pos_n": 37
+          },
+          "commitment": {
+            "pos_avg": 0.445,
+            "neg_avg": 0,
+            "lift": 0.445,
+            "pos_n": 37
+          },
+          "social_proof": {
+            "pos_avg": 0.415,
+            "neg_avg": 0,
+            "lift": 0.415,
+            "pos_n": 37
+          },
+          "reciprocity": {
+            "pos_avg": 0.372,
+            "neg_avg": 0,
+            "lift": 0.372,
+            "pos_n": 20
+          },
+          "authority": {
+            "pos_avg": 0.368,
+            "neg_avg": 0,
+            "lift": 0.368,
+            "pos_n": 37
+          },
+          "scarcity": {
+            "pos_avg": 0.12,
+            "neg_avg": 0,
+            "lift": 0.12,
+            "pos_n": 1
+          }
+        },
+        "bilateral_dimensions": {
+          "regulatory_fit_score": {
+            "converts": 0.093,
+            "fails": null,
+            "gap": 0.093
+          },
+          "construal_fit_score": {
+            "converts": 0.884,
+            "fails": null,
+            "gap": 0.884
+          },
+          "personality_brand_alignment": {
+            "converts": 0.495,
+            "fails": null,
+            "gap": 0.495
+          },
+          "emotional_resonance": {
+            "converts": 0.497,
+            "fails": null,
+            "gap": 0.497
+          },
+          "value_alignment": {
+            "converts": 0.626,
+            "fails": null,
+            "gap": 0.626
+          },
+          "evolutionary_motive_match": {
+            "converts": 0.531,
+            "fails": null,
+            "gap": 0.531
+          },
+          "appeal_resonance": {
+            "converts": 0.539,
+            "fails": null,
+            "gap": 0.539
+          },
+          "processing_route_match": {
+            "converts": 0.737,
+            "fails": null,
+            "gap": 0.737
+          },
+          "composite_alignment": {
+            "converts": 0.6,
+            "fails": null,
+            "gap": 0.6
+          }
+        },
+        "buyer_psychological_patterns": {
+          "regulatory_focus_promotion": {
+            "converts": 0.749,
+            "fails": null
+          },
+          "regulatory_focus_prevention": {
+            "converts": 0.409,
+            "fails": null
+          },
+          "evolutionary_motives_self_protection": {
+            "converts": 0.402,
+            "fails": null
+          },
+          "evolutionary_motives_status": {
+            "converts": 0.59,
+            "fails": null
+          },
+          "evolutionary_motives_affiliation": {
+            "converts": 0.733,
+            "fails": null
+          },
+          "spending_pain_sensitivity": {
+            "converts": 0.414,
+            "fails": null
+          },
+          "anticipated_regret": {
+            "converts": 0.391,
+            "fails": null
+          },
+          "brand_trust_known_brand_trust": {
+            "converts": 0.708,
+            "fails": null
+          },
+          "decision_style_information_search_depth": {
+            "converts": 0.544,
+            "fails": null
+          }
+        },
+        "frequency_cap": {
+          "max_per_day": 2,
+          "max_per_week": 10,
+          "reason": "Emotional decision, moderate frequency"
+        },
+        "bid_strategy": {
+          "base_multiplier": 1.1,
+          "peak_hours_boost": 1.0,
+          "reason": "Planning happens anytime, moderate bids"
+        }
+      },
+      "repeat_loyal": {
+        "archetype": "repeat_loyal",
+        "display_name": "Repeat Loyal",
+        "description": "Existing customers with high brand trust. 91.2% conversion. Low-effort retention \u2014 they already trust the service.",
+        "segment_id": "informativ_repeat_loyal_luxury_transportation_t1",
+        "budget_allocation_pct": 15,
+        "sample_size": 272,
+        "conversion_rate": 0.912,
+        "avg_composite_alignment": 0.539,
+        "primary_mechanism": "liking",
+        "secondary_mechanism": "authority",
+        "mechanism_evidence": {
+          "liking": {
+            "pos_avg": 0.601,
+            "neg_avg": 0,
+            "lift": 0.601,
+            "pos_n": 248
+          },
+          "authority": {
+            "pos_avg": 0.351,
+            "neg_avg": 0,
+            "lift": 0.351,
+            "pos_n": 242
+          },
+          "commitment": {
+            "pos_avg": 0.339,
+            "neg_avg": 0,
+            "lift": 0.339,
+            "pos_n": 243
+          },
+          "social_proof": {
+            "pos_avg": 0.303,
+            "neg_avg": 0,
+            "lift": 0.303,
+            "pos_n": 246
+          },
+          "reciprocity": {
+            "pos_avg": 0.281,
+            "neg_avg": 0,
+            "lift": 0.281,
+            "pos_n": 183
+          },
+          "scarcity": {
+            "pos_avg": 0.137,
+            "neg_avg": 0,
+            "lift": 0.137,
+            "pos_n": 11
+          }
+        },
+        "bilateral_dimensions": {
+          "regulatory_fit_score": {
+            "converts": 0.063,
+            "fails": null,
+            "gap": 0.063
+          },
+          "construal_fit_score": {
+            "converts": 0.868,
+            "fails": null,
+            "gap": 0.868
+          },
+          "personality_brand_alignment": {
+            "converts": 0.478,
+            "fails": null,
+            "gap": 0.478
+          },
+          "emotional_resonance": {
+            "converts": 0.513,
+            "fails": null,
+            "gap": 0.513
+          },
+          "value_alignment": {
+            "converts": 0.652,
+            "fails": null,
+            "gap": 0.652
+          },
+          "evolutionary_motive_match": {
+            "converts": 0.475,
+            "fails": null,
+            "gap": 0.475
+          },
+          "appeal_resonance": {
+            "converts": 0.523,
+            "fails": null,
+            "gap": 0.523
+          },
+          "processing_route_match": {
+            "converts": 0.666,
+            "fails": null,
+            "gap": 0.666
+          },
+          "composite_alignment": {
+            "converts": 0.548,
+            "fails": null,
+            "gap": 0.548
+          }
+        },
+        "buyer_psychological_patterns": {
+          "regulatory_focus_promotion": {
+            "converts": 0.684,
+            "fails": null
+          },
+          "regulatory_focus_prevention": {
+            "converts": 0.431,
+            "fails": null
+          },
+          "evolutionary_motives_self_protection": {
+            "converts": 0.429,
+            "fails": null
+          },
+          "evolutionary_motives_status": {
+            "converts": 0.587,
+            "fails": null
+          },
+          "evolutionary_motives_affiliation": {
+            "converts": 0.613,
+            "fails": null
+          },
+          "spending_pain_sensitivity": {
+            "converts": 0.415,
+            "fails": null
+          },
+          "anticipated_regret": {
+            "converts": 0.325,
+            "fails": null
+          },
+          "brand_trust_known_brand_trust": {
+            "converts": 0.725,
+            "fails": null
+          },
+          "decision_style_information_search_depth": {
+            "converts": 0.463,
+            "fails": null
+          }
+        },
+        "frequency_cap": {
+          "max_per_day": 1,
+          "max_per_week": 4,
+          "reason": "Already converted, light touch retention"
+        },
+        "bid_strategy": {
+          "base_multiplier": 0.8,
+          "peak_hours_boost": 1.0,
+          "reason": "Low acquisition cost, already converted"
+        }
+      }
+    }
+  },
+  "total_edges": 3103,
+  "total_brands": 13,
+  "seller_profile": {
+    "annotation_confidence": 0.85,
+    "ad_framing_gain": 0.75,
+    "ad_framing_loss": 0.35,
+    "ad_framing_hedonic": 0.65,
+    "ad_framing_utilitarian": 0.8,
+    "ad_appeals_rational": 0.85,
+    "ad_appeals_emotional": 0.55,
+    "ad_appeals_fear": 0.25,
+    "ad_appeals_narrative": 0.2,
+    "ad_appeals_comparative": 0.4,
+    "ad_processing_targets_construal_level": 0.55,
+    "ad_processing_targets_processing_route": 0.75,
+    "ad_persuasion_techniques_social_proof": 0.7,
+    "ad_persuasion_techniques_scarcity": 0.1,
+    "ad_persuasion_techniques_authority": 0.4,
+    "ad_persuasion_techniques_reciprocity": 0.15,
+    "ad_persuasion_techniques_commitment": 0.35,
+    "ad_persuasion_techniques_liking": 0.5,
+    "ad_persuasion_techniques_anchoring": 0.2,
+    "ad_persuasion_techniques_storytelling": 0.15,
+    "ad_value_propositions_performance": 0.75,
+    "ad_value_propositions_convenience": 0.85,
+    "ad_value_propositions_reliability": 0.85,
+    "ad_value_propositions_cost": 0.7,
+    "ad_value_propositions_pleasure": 0.6,
+    "ad_value_propositions_peace_of_mind": 0.75,
+    "ad_value_propositions_self_expression": 0.55,
+    "ad_value_propositions_transformation": 0.25,
+    "ad_value_propositions_status": 0.65,
+    "ad_value_propositions_belonging": 0.35,
+    "ad_value_propositions_social_responsibility": 0.5,
+    "ad_value_propositions_novelty": 0.35,
+    "ad_value_propositions_knowledge": 0.3,
+    "ad_brand_personality_sincerity": 0.7,
+    "ad_brand_personality_excitement": 0.4,
+    "ad_brand_personality_competence": 0.85,
+    "ad_brand_personality_sophistication": 0.75,
+    "ad_brand_personality_ruggedness": 0.2,
+    "ad_brand_personality_authenticity": 0.65,
+    "ad_brand_personality_warmth": 0.6,
+    "ad_linguistic_style_formality": 0.7,
+    "ad_linguistic_style_complexity": 0.45,
+    "ad_linguistic_style_emotional_tone": 0.45,
+    "ad_linguistic_style_directness": 0.8,
+    "ad_evolutionary_targets_self_protection": 0.6,
+    "ad_evolutionary_targets_affiliation": 0.4,
+    "ad_evolutionary_targets_status": 0.7,
+    "ad_evolutionary_targets_mate_acquisition": 0.2,
+    "ad_evolutionary_targets_kin_care": 0.15,
+    "ad_evolutionary_targets_disease_avoidance": 0.25,
+    "ad_implicit_targets_fluency": 0.7,
+    "ad_implicit_targets_embodied_cognition": 0.35,
+    "ad_implicit_targets_psychological_ownership": 0.45,
+    "ad_implicit_targets_nonconscious_goal": 0.5,
+    "ad_attachment_positioning_warmth": 0.6,
+    "ad_attachment_positioning_reassurance": 0.7,
+    "ad_agency_framing_locus": 0.65,
+    "ad_brand_trust_signals_credibility_cues": 0.7,
+    "ad_brand_trust_signals_transparency": 0.75,
+    "ad_brand_trust_signals_familiarity_leverage": 0.45,
+    "ad_emotional_specificity": 0.25,
+    "ad_mental_simulation_vividness": 0.3,
+    "ad_social_visibility": 0.85,
+    "ad_reactance_triggers": 0.2,
+    "ad_anchor_deployment": 0.25,
+    "ad_contamination_risk_framing": 0.4,
+    "asin": "lux_luxy_ride",
+    "brand_name": "LUXY Ride",
+    "annotation_tier": "claude"
+  }
+}

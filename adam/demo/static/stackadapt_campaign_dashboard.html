@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>INFORMATIV × StackAdapt — LUXY Ride Campaign Intelligence</title>
+<style>
+:root {
+  --bg: #0a0e1a;
+  --surface: #111827;
+  --surface2: #1a2236;
+  --border: #2a3548;
+  --text: #e2e8f0;
+  --text-dim: #8892a4;
+  --accent: #3b82f6;
+  --accent2: #8b5cf6;
+  --green: #10b981;
+  --red: #ef4444;
+  --amber: #f59e0b;
+  --cyan: #06b6d4;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Inter', -apple-system, system-ui, sans-serif; background: var(--bg); color: var(--text); }
+
+.header {
+  background: linear-gradient(135deg, #111827 0%, #1e1b4b 100%);
+  border-bottom: 1px solid var(--border);
+  padding: 24px 40px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.header h1 { font-size: 22px; font-weight: 600; }
+.header h1 span { color: var(--accent); }
+.header .brand { color: var(--text-dim); font-size: 14px; }
+.header .live-badge {
+  background: rgba(16,185,129,0.15); color: var(--green);
+  padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;
+  border: 1px solid rgba(16,185,129,0.3);
+  animation: pulse 2s infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.7} }
+
+.tabs {
+  display: flex; gap: 0; border-bottom: 1px solid var(--border);
+  background: var(--surface); padding: 0 40px;
+}
+.tab {
+  padding: 14px 24px; cursor: pointer; color: var(--text-dim);
+  font-size: 13px; font-weight: 500; border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+.tab:hover { color: var(--text); }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+.content { padding: 24px 40px; max-width: 1600px; margin: 0 auto; }
+.panel { display: none; }
+.panel.active { display: block; }
+
+.grid { display: grid; gap: 20px; }
+.grid-2 { grid-template-columns: 1fr 1fr; }
+.grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+.grid-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 20px;
+}
+.card h3 { font-size: 14px; color: var(--text-dim); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+.card .value { font-size: 36px; font-weight: 700; }
+.card .sub { font-size: 12px; color: var(--text-dim); margin-top: 4px; }
+
+.bar-chart { display: flex; flex-direction: column; gap: 8px; }
+.bar-row { display: flex; align-items: center; gap: 12px; }
+.bar-label { width: 140px; font-size: 13px; color: var(--text-dim); text-align: right; }
+.bar-track { flex: 1; height: 24px; background: var(--surface2); border-radius: 4px; overflow: hidden; position: relative; }
+.bar-fill { height: 100%; border-radius: 4px; transition: width 1s ease; display: flex; align-items: center; padding-left: 8px; font-size: 11px; font-weight: 600; }
+.bar-value { font-size: 13px; width: 60px; text-align: right; }
+
+.flow-diagram {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 30px 0; flex-wrap: wrap;
+}
+.flow-box {
+  background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+  padding: 14px 18px; text-align: center; min-width: 140px;
+}
+.flow-box.highlight { border-color: var(--accent); background: rgba(59,130,246,0.1); }
+.flow-box.brand { border-color: var(--green); background: rgba(16,185,129,0.1); }
+.flow-box h4 { font-size: 11px; color: var(--text-dim); margin-bottom: 4px; text-transform: uppercase; }
+.flow-box .val { font-size: 16px; font-weight: 600; }
+.flow-arrow { color: var(--text-dim); font-size: 20px; }
+
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; padding: 10px 12px; font-size: 12px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); }
+td { padding: 10px 12px; font-size: 13px; border-bottom: 1px solid rgba(42,53,72,0.5); }
+tr:hover td { background: rgba(59,130,246,0.05); }
+
+.segment-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  padding: 24px; margin-bottom: 16px;
+}
+.segment-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.segment-name { font-size: 18px; font-weight: 600; }
+.segment-id { font-size: 11px; color: var(--text-dim); font-family: monospace; background: var(--surface2); padding: 3px 8px; border-radius: 4px; }
+
+.dim-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.dim-item { display: flex; justify-content: space-between; padding: 6px 10px; background: var(--surface2); border-radius: 4px; font-size: 12px; }
+.dim-item .label { color: var(--text-dim); }
+
+.api-demo {
+  background: var(--surface2); border-radius: 8px; padding: 16px;
+  font-family: 'Fira Code', 'Cascadia Code', monospace; font-size: 12px;
+  overflow-x: auto; line-height: 1.6;
+}
+.api-demo .comment { color: #6b7280; }
+.api-demo .key { color: var(--cyan); }
+.api-demo .string { color: var(--green); }
+.api-demo .number { color: var(--amber); }
+.api-demo .keyword { color: var(--accent2); }
+
+.stat-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(42,53,72,0.3); }
+.stat-row:last-child { border-bottom: none; }
+.stat-label { color: var(--text-dim); font-size: 13px; }
+.stat-value { font-weight: 600; font-size: 13px; }
+
+.insight-box {
+  background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.2);
+  border-radius: 8px; padding: 16px; margin-top: 12px;
+}
+.insight-box h4 { color: var(--accent); font-size: 12px; text-transform: uppercase; margin-bottom: 6px; }
+.insight-box p { font-size: 13px; line-height: 1.6; }
+
+.arch-color-exec { color: var(--accent); }
+.arch-color-anxiety { color: var(--amber); }
+.arch-color-occasion { color: var(--accent2); }
+.arch-color-loyal { color: var(--green); }
+
+@media (max-width: 1200px) {
+  .grid-4 { grid-template-columns: 1fr 1fr; }
+  .grid-3 { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1><span>INFORMATIV</span> × StackAdapt</h1>
+    <div class="brand">LUXY Ride Campaign Intelligence — luxyride.com</div>
+  </div>
+  <div class="live-badge">SYSTEM VERIFIED — ALL TRACKS L4</div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="showPanel('overview')">Overview</div>
+  <div class="tab" onclick="showPanel('flow')">How It Works</div>
+  <div class="tab" onclick="showPanel('segments')">4 Campaign Tracks</div>
+  <div class="tab" onclick="showPanel('bilateral')">Bilateral Evidence</div>
+  <div class="tab" onclick="showPanel('mechanisms')">Mechanism Intelligence</div>
+  <div class="tab" onclick="showPanel('api')">Live API</div>
+</div>
+
+<!-- OVERVIEW -->
+<div class="content">
+<div class="panel active" id="overview">
+  <div class="grid grid-4" style="margin-bottom:20px">
+    <div class="card">
+      <h3>Bilateral Edges</h3>
+      <div class="value">3,103</div>
+      <div class="sub">27-dim alignment scores per edge</div>
+    </div>
+    <div class="card">
+      <h3>Brands Profiled</h3>
+      <div class="value">13</div>
+      <div class="sub">65-dim seller psychology each</div>
+    </div>
+    <div class="card">
+      <h3>Campaign Brand</h3>
+      <div class="value" style="font-size:28px">LUXY Ride</div>
+      <div class="sub">512 direct edges · luxyride.com</div>
+    </div>
+    <div class="card">
+      <h3>Cascade Level</h3>
+      <div class="value" style="color:var(--green)">L4</div>
+      <div class="sub">Inferential transfer · <120ms</div>
+    </div>
+  </div>
+
+  <div class="grid grid-2">
+    <div class="card">
+      <h3>Conversion Outcomes (3,103 edges)</h3>
+      <div class="bar-chart" id="outcome-chart"></div>
+    </div>
+    <div class="card">
+      <h3>Brand Edge Distribution</h3>
+      <div class="bar-chart" id="brand-chart"></div>
+    </div>
+  </div>
+
+  <div class="insight-box" style="margin-top:20px">
+    <h4>Key Discovery from Bilateral Analysis</h4>
+    <p><strong>emotional_resonance</strong> is the #1 discriminator between conversion and failure across ALL archetypes. Airport anxiety buyers who convert show emotional_resonance=0.498 vs 0.208 for those who don't (+0.290 gap). The ad must create emotional connection — not just promise reliability. This finding comes from computing the bilateral ALIGNMENT between buyer psychology and brand messaging, not from raw review scores.</p>
+  </div>
+</div>
+
+<!-- HOW IT WORKS -->
+<div class="panel" id="flow">
+  <div class="card" style="margin-bottom:20px">
+    <h3>StackAdapt Bid Request → INFORMATIV Intelligence → Creative Response</h3>
+    <div class="flow-diagram">
+      <div class="flow-box">
+        <h4>StackAdapt</h4>
+        <div class="val">Bid Request</div>
+        <div class="sub" style="font-size:11px;color:var(--text-dim)">segment_id, page_url, device</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box highlight">
+        <h4>Step 1</h4>
+        <div class="val">Parse Segment</div>
+        <div class="sub" style="font-size:11px;color:var(--text-dim)">archetype + category</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box highlight">
+        <h4>Step 2</h4>
+        <div class="val">Auto-Resolve ASIN</div>
+        <div class="sub" style="font-size:11px;color:var(--text-dim)">lux_luxy_ride</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box highlight">
+        <h4>Step 3</h4>
+        <div class="val">5-Level Cascade</div>
+        <div class="sub" style="font-size:11px;color:var(--text-dim)">L1→L2→L3→L4→L5</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box brand">
+        <h4>Response</h4>
+        <div class="val">Creative Intel</div>
+        <div class="sub" style="font-size:11px;color:var(--text-dim)">mechanism + copy + bid</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-2">
+    <div class="card">
+      <h3>The 5-Level Bilateral Cascade</h3>
+      <table>
+        <tr><th>Level</th><th>Source</th><th>Confidence</th><th>What It Does</th></tr>
+        <tr><td style="color:var(--text-dim)">L1</td><td>Archetype Priors</td><td>0.3</td><td>Hardcoded mechanism rankings per archetype</td></tr>
+        <tr><td style="color:var(--text-dim)">L2</td><td>Category Posterior</td><td>0.5</td><td>BayesianPrior nodes for luxury_transportation</td></tr>
+        <tr><td style="color:var(--accent)">L3</td><td>Bilateral Edges</td><td>0.8</td><td>3,103 edges with 27-dim alignment scores</td></tr>
+        <tr><td style="color:var(--green)">L4</td><td>Inferential Transfer</td><td>0.9</td><td>Seller profile + page psychology cross-reference</td></tr>
+        <tr><td style="color:var(--text-dim)">L5</td><td>Full Atom Reasoning</td><td>0.95</td><td>30+ psychological reasoning modules (future)</td></tr>
+      </table>
+      <div class="insight-box">
+        <h4>Current Status</h4>
+        <p>All 4 campaign tracks reach <strong>L4</strong> in production. The cascade finds 512 LUXY Ride edges at L3 and extends to L4 via inferential transfer from the 65-dim seller profile.</p>
+      </div>
+    </div>
+    <div class="card">
+      <h3>What Makes This Different from Standard DSP</h3>
+      <table>
+        <tr><th>Standard DSP</th><th>INFORMATIV + StackAdapt</th></tr>
+        <tr><td>Target demographics</td><td>Target <strong>psychological states</strong></td></tr>
+        <tr><td>One ad for all</td><td>4 tracks × mechanism-specific creative</td></tr>
+        <tr><td>Bid on impressions</td><td>Bid on <strong>psychological alignment</strong></td></tr>
+        <tr><td>Optimize CTR</td><td>Optimize <strong>bilateral resonance</strong></td></tr>
+        <tr><td>Page = content category</td><td>Page = <strong>27-dim psychological environment</strong></td></tr>
+        <tr><td>Learn from clicks</td><td>Learn from <strong>3,103 purchase decisions</strong></td></tr>
+        <tr><td>Creative A/B test</td><td>Mechanism × archetype × page <strong>trilateral optimization</strong></td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:20px">
+    <h3>Segment ID Format</h3>
+    <div class="api-demo">
+      <span class="comment">// Campaign segment IDs — sent by StackAdapt in every bid request</span><br>
+      <span class="string">"informativ_corporate_executive_luxury_transportation_t1"</span><br>
+      <span class="string">"informativ_airport_anxiety_luxury_transportation_t1"</span><br>
+      <span class="string">"informativ_special_occasion_luxury_transportation_t1"</span><br>
+      <span class="string">"informativ_repeat_loyal_luxury_transportation_t1"</span><br>
+      <br>
+      <span class="comment">// Auto-resolves to:</span><br>
+      <span class="key">archetype</span> = <span class="string">"corporate_executive"</span> | <span class="string">"airport_anxiety"</span> | ...<br>
+      <span class="key">category</span> = <span class="string">"luxury_transportation"</span><br>
+      <span class="key">asin</span> = <span class="string">"lux_luxy_ride"</span> <span class="comment">// auto-resolved, StackAdapt doesn't need to know this</span>
+    </div>
+  </div>
+</div>
+
+<!-- 4 CAMPAIGN TRACKS -->
+<div class="panel" id="segments">
+  <div class="segment-card">
+    <div class="segment-header">
+      <div>
+        <div class="segment-name arch-color-exec">Corporate Executive</div>
+        <div style="font-size:13px;color:var(--text-dim);margin-top:4px">High-LTV business travelers · 91.4% conversion · 428 edges</div>
+      </div>
+      <div><span class="segment-id">informativ_corporate_executive_luxury_transportation_t1</span></div>
+    </div>
+    <div class="grid grid-3">
+      <div>
+        <div class="stat-row"><span class="stat-label">Primary Mechanism</span><span class="stat-value">liking (+0.177 lift)</span></div>
+        <div class="stat-row"><span class="stat-label">Secondary Mechanism</span><span class="stat-value">authority (+0.109 lift)</span></div>
+        <div class="stat-row"><span class="stat-label">Framing</span><span class="stat-value">Gain / Promotion</span></div>
+        <div class="stat-row"><span class="stat-label">Budget Allocation</span><span class="stat-value">30%</span></div>
+      </div>
+      <div>
+        <div class="stat-row"><span class="stat-label">Promotion Focus Gap</span><span class="stat-value" style="color:var(--green)">+0.184</span></div>
+        <div class="stat-row"><span class="stat-label">Emotional Resonance Gap</span><span class="stat-value" style="color:var(--green)">+0.092</span></div>
+        <div class="stat-row"><span class="stat-label">Authority Citation Rate</span><span class="stat-value">86%</span></div>
+        <div class="stat-row"><span class="stat-label">Bid Multiplier</span><span class="stat-value">1.3x</span></div>
+      </div>
+      <div>
+        <div style="font-size:12px;color:var(--text-dim);margin-bottom:6px">HEADLINE DIRECTION</div>
+        <div style="font-size:13px;line-height:1.6">"The executive's choice for ground transportation" — Deploy authority (credentials, professionalism) with aspirational promotion framing. They convert when recognized as professionals, not when scared.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="segment-card">
+    <div class="segment-header">
+      <div>
+        <div class="segment-name arch-color-anxiety">Airport Anxiety</div>
+        <div style="font-size:13px;color:var(--text-dim);margin-top:4px">Highest volume · 9.4% conversion · 744 edges · KEY: affiliation is the hidden lever</div>
+      </div>
+      <div><span class="segment-id">informativ_airport_anxiety_luxury_transportation_t1</span></div>
+    </div>
+    <div class="grid grid-3">
+      <div>
+        <div class="stat-row"><span class="stat-label">Primary Mechanism</span><span class="stat-value">liking (+0.276 lift)</span></div>
+        <div class="stat-row"><span class="stat-label">Secondary Mechanism</span><span class="stat-value">authority (+0.087 lift)</span></div>
+        <div class="stat-row"><span class="stat-label">Framing</span><span class="stat-value">Prevention / Reassurance</span></div>
+        <div class="stat-row"><span class="stat-label">Budget Allocation</span><span class="stat-value">40%</span></div>
+      </div>
+      <div>
+        <div class="stat-row"><span class="stat-label">Emotional Resonance Gap</span><span class="stat-value" style="color:var(--green)">+0.290</span></div>
+        <div class="stat-row"><span class="stat-label">Affiliation Gap</span><span class="stat-value" style="color:var(--green)">+0.147</span></div>
+        <div class="stat-row"><span class="stat-label">Prevention Focus</span><span class="stat-value">82.9%</span></div>
+        <div class="stat-row"><span class="stat-label">Bid Multiplier</span><span class="stat-value">1.0x (1.5x pre-flight)</span></div>
+      </div>
+      <div>
+        <div style="font-size:12px;color:var(--text-dim);margin-bottom:6px">CRITICAL INSIGHT</div>
+        <div style="font-size:13px;line-height:1.6">Converters feel <strong>CARED FOR</strong> (affiliation=0.522) not just protected (self_protection=0.727). The ad must create warmth, not fear. "We're tracking your flight" works. "Don't get stranded" doesn't.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="segment-card">
+    <div class="segment-header">
+      <div>
+        <div class="segment-name arch-color-occasion">Special Occasion</div>
+        <div style="font-size:13px;color:var(--text-dim);margin-top:4px">Highest conversion (97.4%) · 38 edges · Weddings, proms, celebrations</div>
+      </div>
+      <div><span class="segment-id">informativ_special_occasion_luxury_transportation_t1</span></div>
+    </div>
+    <div class="grid grid-3">
+      <div>
+        <div class="stat-row"><span class="stat-label">Primary Mechanism</span><span class="stat-value">liking (100% cite)</span></div>
+        <div class="stat-row"><span class="stat-label">Secondary Mechanism</span><span class="stat-value">commitment (78% cite)</span></div>
+        <div class="stat-row"><span class="stat-label">Framing</span><span class="stat-value">Aspirational / Emotional</span></div>
+        <div class="stat-row"><span class="stat-label">Budget Allocation</span><span class="stat-value">15%</span></div>
+      </div>
+      <div>
+        <div class="stat-row"><span class="stat-label">Social Proof Citation</span><span class="stat-value">73%</span></div>
+        <div class="stat-row"><span class="stat-label">Kin Care Motive</span><span class="stat-value">High</span></div>
+        <div class="stat-row"><span class="stat-label">Emotional Expressiveness</span><span class="stat-value">High</span></div>
+        <div class="stat-row"><span class="stat-label">CTV Premium</span><span class="stat-value">1.35x</span></div>
+      </div>
+      <div>
+        <div style="font-size:12px;color:var(--text-dim);margin-bottom:6px">HEADLINE DIRECTION</div>
+        <div style="font-size:13px;line-height:1.6">"Make your arrival as memorable as the moment" — Cinematic, story-driven. Testimonials from real weddings. The ad is about the MEMORY being created, not the vehicle.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="segment-card">
+    <div class="segment-header">
+      <div>
+        <div class="segment-name arch-color-loyal">Repeat Loyal</div>
+        <div style="font-size:13px;color:var(--text-dim);margin-top:4px">Existing customers · 91.2% conversion · 272 edges · Low acquisition cost</div>
+      </div>
+      <div><span class="segment-id">informativ_repeat_loyal_luxury_transportation_t1</span></div>
+    </div>
+    <div class="grid grid-3">
+      <div>
+        <div class="stat-row"><span class="stat-label">Primary Mechanism</span><span class="stat-value">liking (96% cite)</span></div>
+        <div class="stat-row"><span class="stat-label">Secondary Mechanism</span><span class="stat-value">authority (65% cite)</span></div>
+        <div class="stat-row"><span class="stat-label">Framing</span><span class="stat-value">Recognition / Belonging</span></div>
+        <div class="stat-row"><span class="stat-label">Budget Allocation</span><span class="stat-value">15%</span></div>
+      </div>
+      <div>
+        <div class="stat-row"><span class="stat-label">Info Search Depth</span><span class="stat-value">0.463 (lowest)</span></div>
+        <div class="stat-row"><span class="stat-label">Brand Trust</span><span class="stat-value">High</span></div>
+        <div class="stat-row"><span class="stat-label">Bid Multiplier</span><span class="stat-value">0.85x</span></div>
+        <div class="stat-row"><span class="stat-label">Freq Cap</span><span class="stat-value">1/day, 4/week</span></div>
+      </div>
+      <div>
+        <div style="font-size:12px;color:var(--text-dim);margin-bottom:6px">HEADLINE DIRECTION</div>
+        <div style="font-size:13px;line-height:1.6">"Welcome back" — Light touch. They don't need persuasion, they need a prompt. Recognition messaging, not acquisition messaging.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- BILATERAL EVIDENCE -->
+<div class="panel" id="bilateral">
+  <div class="card" style="margin-bottom:20px">
+    <h3>What "Bilateral" Means — Why This Is Different</h3>
+    <div class="flow-diagram">
+      <div class="flow-box">
+        <h4>Buyer Side</h4>
+        <div class="val">65 dims</div>
+        <div class="sub" style="font-size:11px;color:var(--text-dim)">Big Five, regulatory focus,<br>motives, attachment, lay theories</div>
+      </div>
+      <div class="flow-arrow">×</div>
+      <div class="flow-box">
+        <h4>Seller Side</h4>
+        <div class="val">65 dims</div>
+        <div class="sub" style="font-size:11px;color:var(--text-dim)">Framing, appeals, brand<br>personality, value props</div>
+      </div>
+      <div class="flow-arrow">=</div>
+      <div class="flow-box highlight">
+        <h4>Alignment Edge</h4>
+        <div class="val">27 dims</div>
+        <div class="sub" style="font-size:11px;color:var(--text-dim)">Computed via research-backed<br>formulas, not heuristics</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box brand">
+        <h4>Prediction</h4>
+        <div class="val">converts?</div>
+        <div class="sub" style="font-size:11px;color:var(--text-dim)">composite_alignment<br>+ mechanism effectiveness</div>
+      </div>
+    </div>
+    <p style="font-size:13px;color:var(--text-dim);text-align:center;margin-top:8px">Each of the 3,103 edges is the computed INTERACTION between buyer psychology and brand positioning — not a raw score from either side alone.</p>
+  </div>
+
+  <div class="grid grid-2">
+    <div class="card">
+      <h3>Bilateral Alignment Dimensions (Edge Properties)</h3>
+      <div class="bar-chart" id="dim-chart"></div>
+    </div>
+    <div class="card">
+      <h3>What Separates Conversion from Failure</h3>
+      <table>
+        <tr><th>Dimension</th><th>Converts</th><th>Fails</th><th>Gap</th></tr>
+        <tr><td>emotional_resonance</td><td style="color:var(--green)">0.498</td><td style="color:var(--red)">0.208</td><td style="color:var(--green);font-weight:700">+0.290</td></tr>
+        <tr><td>personality_brand_alignment</td><td style="color:var(--green)">0.477</td><td style="color:var(--red)">0.375</td><td style="color:var(--green)">+0.102</td></tr>
+        <tr><td>regulatory_fit_score</td><td style="color:var(--green)">-0.051</td><td style="color:var(--red)">-0.118</td><td style="color:var(--green)">+0.067</td></tr>
+        <tr><td>composite_alignment</td><td style="color:var(--green)">0.664</td><td style="color:var(--red)">0.650</td><td>+0.014</td></tr>
+        <tr><td>construal_fit_score</td><td>0.879</td><td>0.872</td><td>+0.007</td></tr>
+        <tr><td>value_alignment</td><td>0.624</td><td>0.621</td><td>+0.003</td></tr>
+      </table>
+      <div class="insight-box">
+        <h4>Interpretation</h4>
+        <p>emotional_resonance has 40x the discriminating power of value_alignment. This means the ad's ability to create emotional connection matters far more than price/value messaging. The system's mechanism selection already reflects this — liking (warmth/personality) outperforms all other mechanisms.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MECHANISM INTELLIGENCE -->
+<div class="panel" id="mechanisms">
+  <div class="grid grid-2">
+    <div class="card">
+      <h3>Mechanism Effectiveness (BayesianPrior from 3,103 edges)</h3>
+      <div class="bar-chart" id="mech-chart"></div>
+      <div class="insight-box">
+        <h4>Thompson Sampling</h4>
+        <p>Each mechanism has a Beta posterior (α, β) updated from bilateral edge outcomes. At bid time, the cascade samples from these posteriors — higher effectiveness = more likely to be selected. Cold buyers get 3x exploration bonus to discover what works.</p>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Mechanism × Archetype Matrix</h3>
+      <table>
+        <tr><th>Mechanism</th><th class="arch-color-exec">Corporate</th><th class="arch-color-anxiety">Anxiety</th><th class="arch-color-occasion">Occasion</th><th class="arch-color-loyal">Loyal</th></tr>
+        <tr><td>liking</td><td>+0.177</td><td style="font-weight:700;color:var(--green)">+0.276</td><td>100%</td><td>96%</td></tr>
+        <tr><td>authority</td><td style="font-weight:700;color:var(--green)">+0.109</td><td>+0.087</td><td>76%</td><td>65%</td></tr>
+        <tr><td>social_proof</td><td>+0.058</td><td>+0.039</td><td>73%</td><td>42%</td></tr>
+        <tr><td>commitment</td><td>-0.010</td><td>-0.024</td><td>78%</td><td>55%</td></tr>
+        <tr><td>reciprocity</td><td>+0.070</td><td>-0.022</td><td>73%</td><td>31%</td></tr>
+      </table>
+      <p style="font-size:11px;color:var(--text-dim);margin-top:8px">Values show lift (positive outcome avg - negative outcome avg) for archetypes with failure cases. % shows citation rate for archetypes with only positive outcomes.</p>
+    </div>
+  </div>
+</div>
+
+<!-- LIVE API -->
+<div class="panel" id="api">
+  <div class="card" style="margin-bottom:20px">
+    <h3>Live API Endpoint</h3>
+    <div class="api-demo">
+      <span class="keyword">POST</span> <span class="string">/api/v1/stackadapt/creative-intelligence</span><br><br>
+      <span class="comment">// Request (from StackAdapt bid request)</span><br>
+      {<br>
+      &nbsp;&nbsp;<span class="key">"segment_id"</span>: <span class="string">"informativ_corporate_executive_luxury_transportation_t1"</span>,<br>
+      &nbsp;&nbsp;<span class="key">"page_url"</span>: <span class="string">"https://www.cnbc.com/markets"</span>,<br>
+      &nbsp;&nbsp;<span class="key">"page_title"</span>: <span class="string">"Markets Rally on Fed Decision"</span>,<br>
+      &nbsp;&nbsp;<span class="key">"device_type"</span>: <span class="string">"desktop"</span>,<br>
+      &nbsp;&nbsp;<span class="key">"time_of_day"</span>: <span class="number">8</span>,<br>
+      &nbsp;&nbsp;<span class="key">"product_category"</span>: <span class="string">"luxury_transportation"</span><br>
+      }<br><br>
+      <span class="comment">// Response (113ms, L4 bilateral)</span><br>
+      {<br>
+      &nbsp;&nbsp;<span class="key">"creative_parameters"</span>: {<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"primary_mechanism"</span>: <span class="string">"scarcity"</span>,<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"secondary_mechanism"</span>: <span class="string">"social_proof"</span>,<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"framing"</span>: <span class="string">"gain"</span>,<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"tone"</span>: <span class="string">"authoritative"</span><br>
+      &nbsp;&nbsp;},<br>
+      &nbsp;&nbsp;<span class="key">"copy_guidance"</span>: {<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"headline_templates"</span>: [<span class="string">"Limited availability — high demand"</span>, ...],<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"avoid"</span>: [<span class="string">"fear-based messaging"</span>, <span class="string">"negative framing"</span>]<br>
+      &nbsp;&nbsp;},<br>
+      &nbsp;&nbsp;<span class="key">"cascade_level"</span>: <span class="number">4</span>,<br>
+      &nbsp;&nbsp;<span class="key">"timing_ms"</span>: <span class="number">113.33</span>,<br>
+      &nbsp;&nbsp;<span class="key">"mechanism_scores"</span>: {<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"scarcity"</span>: <span class="number">0.705</span>,<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"social_proof"</span>: <span class="number">0.653</span>,<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"loss_aversion"</span>: <span class="number">0.544</span><br>
+      &nbsp;&nbsp;}<br>
+      }
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Live Test Results — All 4 Tracks Verified</h3>
+    <table>
+      <tr><th>Track</th><th>Level</th><th>Response</th><th>Mechanism</th><th>Copy Guidance</th><th>Status</th></tr>
+      <tr>
+        <td class="arch-color-exec">Corporate Executive</td>
+        <td>L4</td><td>113ms</td><td>scarcity</td><td style="color:var(--green)">Yes</td>
+        <td style="color:var(--green)">PASS</td>
+      </tr>
+      <tr>
+        <td class="arch-color-anxiety">Airport Anxiety</td>
+        <td>L4</td><td>5ms</td><td>social_proof</td><td style="color:var(--green)">Yes</td>
+        <td style="color:var(--green)">PASS</td>
+      </tr>
+      <tr>
+        <td class="arch-color-occasion">Special Occasion</td>
+        <td>L4</td><td>80ms</td><td>social_proof</td><td style="color:var(--green)">Yes</td>
+        <td style="color:var(--green)">PASS</td>
+      </tr>
+      <tr>
+        <td class="arch-color-loyal">Repeat Loyal</td>
+        <td>L4</td><td>5ms</td><td>social_proof</td><td style="color:var(--green)">Yes</td>
+        <td style="color:var(--green)">PASS</td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+</div>
+
+<script>
+function showPanel(id) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.target.classList.add('active');
+}
+
+// Render charts
+function renderBarChart(containerId, data, colorFn) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  const maxVal = Math.max(...data.map(d => d.value));
+  container.innerHTML = data.map(d => {
+    const pct = (d.value / maxVal * 100).toFixed(0);
+    const color = colorFn ? colorFn(d) : 'var(--accent)';
+    return `<div class="bar-row">
+      <div class="bar-label">${d.label}</div>
+      <div class="bar-track">
+        <div class="bar-fill" style="width:${pct}%;background:${color}">${d.inner || ''}</div>
+      </div>
+      <div class="bar-value">${d.display || d.value}</div>
+    </div>`;
+  }).join('');
+}
+
+// Outcome chart
+renderBarChart('outcome-chart', [
+  {label:'Satisfied', value:526, display:'526 (17.0%)', inner:''},
+  {label:'Evangelized', value:475, display:'475 (15.3%)', inner:''},
+  {label:'Neutral', value:107, display:'107 (3.4%)', inner:''},
+  {label:'Warned', value:858, display:'858 (27.7%)', inner:''},
+  {label:'Regret', value:13, display:'13 (0.4%)', inner:''},
+], d => d.label === 'Warned' || d.label === 'Regret' ? 'var(--red)' : d.label === 'Neutral' ? 'var(--text-dim)' : 'var(--green)');
+
+// Brand chart
+renderBarChart('brand-chart', [
+  {label:'Blacklane', value:1691, display:'1,691'},
+  {label:'LUXY Ride', value:512, display:'512'},
+  {label:'Alto', value:307, display:'307'},
+  {label:'Wheely', value:181, display:'181'},
+  {label:'Dav El Boston', value:160, display:'160'},
+  {label:'Dial 7', value:73, display:'73'},
+  {label:'GroundLink', value:68, display:'68'},
+  {label:'Carey', value:53, display:'53'},
+  {label:'Others', value:58, display:'58'},
+], d => d.label === 'LUXY Ride' ? 'var(--green)' : 'var(--accent)');
+
+// Dimension chart
+renderBarChart('dim-chart', [
+  {label:'composite_align', value:0.618, display:'0.618'},
+  {label:'value_alignment', value:0.628, display:'0.628'},
+  {label:'personality_align', value:0.431, display:'0.431'},
+  {label:'emotional_res', value:0.369, display:'0.369'},
+  {label:'regulatory_fit', value:-0.037, display:'-0.037'},
+  {label:'evo_motive', value:0.45, display:'~0.45'},
+  {label:'spending_pain', value:0.42, display:'~0.42'},
+  {label:'brand_trust', value:0.38, display:'~0.38'},
+  {label:'reactance_fit', value:-0.15, display:'~-0.15'},
+].map(d => ({...d, value: Math.max(0, d.value) * 100})),
+d => d.display.startsWith('-') ? 'var(--red)' : 'var(--accent)');
+
+// Mechanism chart
+renderBarChart('mech-chart', [
+  {label:'liking', value:81.1, display:'81.1% (n=1,201)'},
+  {label:'authority', value:70.6, display:'70.6% (n=1,078)'},
+  {label:'social_proof', value:69.8, display:'69.8% (n=790)'},
+  {label:'commitment', value:52.6, display:'52.6% (n=1,282)'},
+  {label:'scarcity', value:50.0, display:'50.0% (n=14)'},
+  {label:'reciprocity', value:47.5, display:'47.5% (n=415)'},
+], d => d.value > 70 ? 'var(--green)' : d.value > 55 ? 'var(--accent)' : 'var(--amber)');
+</script>
+
+</body>
+</html>

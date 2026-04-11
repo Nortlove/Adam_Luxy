@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>INFORMATIV — How It Works</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  background: #0a0a1a;
+  color: #e0e6f0;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  line-height: 1.7;
+}
+
+/* ── Header ─────────────────────────────────────────────────── */
+.header {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  background: rgba(10, 10, 26, 0.94);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid #1e1e3a;
+}
+.header-inner {
+  max-width: 1200px; margin: 0 auto;
+  padding: 12px 40px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.brand-name { font-size: 20px; letter-spacing: 8px; font-weight: 200; }
+.brand-name b { font-weight: 700; color: #4a9eff; }
+.brand-tagline { font-size: 10px; color: #6a7090; letter-spacing: 2px; text-transform: uppercase; }
+.header-right { display: flex; gap: 24px; }
+.header-stat { text-align: center; }
+.header-stat-val { font-size: 15px; font-weight: 700; color: #4a9eff; }
+.header-stat-label { font-size: 9px; color: #6a7090; text-transform: uppercase; letter-spacing: 1px; }
+
+/* ── Tab nav ────────────────────────────────────────────────── */
+.tab-nav {
+  position: fixed; top: 54px; left: 0; right: 0; z-index: 99;
+  background: rgba(10, 10, 26, 0.96);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid #1e1e3a;
+}
+.tab-nav-inner {
+  max-width: 1200px; margin: 0 auto; display: flex; padding: 0 40px;
+}
+.tab {
+  padding: 13px 24px; cursor: pointer; font-size: 14px; font-weight: 500;
+  color: #6a7090; border-bottom: 2px solid transparent; transition: all 0.25s;
+  display: flex; align-items: center; gap: 8px; white-space: nowrap;
+}
+.tab:hover { color: #d0d8e8; }
+.tab.active { color: var(--tc); border-color: var(--tc); }
+.tab[data-t="product"] { --tc: #22c55e; }
+.tab[data-t="dsp"] { --tc: #a855f7; }
+.tab[data-t="ssp"] { --tc: #f59e0b; }
+.tab[data-t="publishers"] { --tc: #4a9eff; }
+.tab[data-t="pageintel"] { --tc: #06b6d4; }
+.tab-icon {
+  width: 22px; height: 22px; border-radius: 5px; display: flex;
+  align-items: center; justify-content: center; font-size: 11px;
+}
+.tab.active .tab-icon { background: var(--tc); color: #0a0a1a; font-weight: 700; }
+.tab:not(.active) .tab-icon { border: 1px solid #2a3555; }
+
+/* ── Main ───────────────────────────────────────────────────── */
+.main { max-width: 1200px; margin: 0 auto; padding: 110px 40px 40px; }
+.tc { display: none; animation: fadeIn 0.3s ease; }
+.tc.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; } }
+
+/* ── Tab intro banner ───────────────────────────────────────── */
+.tab-hero {
+  background: linear-gradient(135deg, #12122a 0%, #0d1020 100%);
+  border: 1px solid #1e1e3a; border-radius: 14px;
+  padding: 32px 36px; margin-bottom: 28px;
+}
+.tab-hero-label { font-size: 12px; letter-spacing: 3px; text-transform: uppercase; font-weight: 600; margin-bottom: 8px; }
+.tab-hero-title { font-size: 26px; font-weight: 300; color: #e0e6f0; margin-bottom: 12px; line-height: 1.4; }
+.tab-hero-title em { color: var(--accent); font-style: normal; font-weight: 600; }
+.tab-hero-desc { font-size: 15px; color: #8a92b0; line-height: 1.85; }
+.tab-hero-desc strong { color: #c0c8d8; }
+
+/* ── Product card ───────────────────────────────────────────── */
+.product-card {
+  background: #141b2d; border: 1px solid #2a3555; border-radius: 14px;
+  padding: 28px 32px; margin-bottom: 24px;
+  display: flex; align-items: center; gap: 20px;
+}
+.product-emoji { font-size: 44px; }
+.product-name { font-size: 18px; font-weight: 600; color: #e0e6f0; }
+.product-meta { font-size: 13px; color: #8892a8; margin-top: 2px; }
+.product-badge {
+  display: inline-block; margin-top: 8px;
+  background: #22c55e15; border: 1px solid #22c55e30; border-radius: 20px;
+  padding: 4px 14px; font-size: 12px; color: #22c55e; font-weight: 600;
+}
+
+/* ── Step cards ─────────────────────────────────────────────── */
+.step {
+  background: #0f1525; border: 1px solid #1a2240; border-radius: 12px;
+  margin-bottom: 20px; overflow: hidden;
+}
+.step-header { display: flex; align-items: flex-start; gap: 14px; padding: 20px 24px 0; }
+.step-num {
+  width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700;
+}
+.sn-green { background: #22c55e20; color: #22c55e; }
+.sn-purple { background: #a855f720; color: #a855f7; }
+.sn-amber { background: #f59e0b20; color: #f59e0b; }
+.sn-blue { background: #4a9eff20; color: #4a9eff; }
+.sn-cyan { background: #06b6d420; color: #06b6d4; }
+.step-title { font-size: 16px; font-weight: 600; color: #e0e6f0; }
+.step-plain { font-size: 14px; color: #8a92b0; margin-top: 4px; line-height: 1.7; }
+.step-body { padding: 16px 24px 20px; }
+
+/* ── Insight cards ──────────────────────────────────────────── */
+.ig { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+.ic {
+  background: #141b2d; border: 1px solid #1e2a45; border-radius: 10px;
+  padding: 18px; transition: border-color 0.2s;
+}
+.ic:hover { border-color: #3a4a6a; }
+.ic-emoji { font-size: 26px; margin-bottom: 6px; }
+.ic-head { font-size: 14px; font-weight: 600; color: #e0e6f0; margin-bottom: 4px; }
+.ic-body { font-size: 13px; color: #8892a8; line-height: 1.7; }
+.ic-data { font-size: 11px; color: #4a5570; margin-top: 8px; font-family: 'SF Mono', monospace; }
+
+/* ── Do / Don't ─────────────────────────────────────────────── */
+.adv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.adv { border-radius: 10px; padding: 20px; }
+.adv-do { background: #22c55e08; border: 1px solid #22c55e25; }
+.adv-dont { background: #ef444408; border: 1px solid #ef444425; }
+.adv-label { font-size: 12px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px; }
+.adv-do .adv-label { color: #22c55e; }
+.adv-dont .adv-label { color: #ef4444; }
+.adv-text { font-size: 14px; color: #c0c8d8; line-height: 1.7; }
+
+/* ── Value/signal cards ─────────────────────────────────────── */
+.vg { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+.vc { border-radius: 10px; padding: 18px; border: 1px solid #1e2a45; background: #141b2d; }
+.vc-label { font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; }
+.vc-title { font-size: 15px; font-weight: 600; color: #e0e6f0; margin-bottom: 6px; }
+.vc-body { font-size: 13px; color: #8892a8; line-height: 1.7; }
+.vc-green { border-left: 3px solid #22c55e; } .vc-green .vc-label { color: #22c55e; }
+.vc-purple { border-left: 3px solid #a855f7; } .vc-purple .vc-label { color: #a855f7; }
+.vc-amber { border-left: 3px solid #f59e0b; } .vc-amber .vc-label { color: #f59e0b; }
+.vc-blue { border-left: 3px solid #4a9eff; } .vc-blue .vc-label { color: #4a9eff; }
+.vc-red { border-left: 3px solid #ef4444; } .vc-red .vc-label { color: #ef4444; }
+.vc-cyan { border-left: 3px solid #06b6d4; } .vc-cyan .vc-label { color: #06b6d4; }
+
+/* ── Signal row ─────────────────────────────────────────────── */
+.sl { display: flex; flex-direction: column; gap: 8px; }
+.si {
+  display: flex; align-items: center; gap: 12px; padding: 10px 14px;
+  background: #141b2d; border-radius: 8px; border: 1px solid #1a2240;
+}
+.sd { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.sd-g { background: #22c55e; } .sd-r { background: #ef4444; } .sd-a { background: #f59e0b; } .sd-p { background: #a855f7; }
+.si-name { font-size: 13px; color: #c0c8d8; font-weight: 500; min-width: 170px; }
+.si-text { font-size: 12px; color: #8892a8; flex: 1; }
+.si-val { font-size: 12px; color: #6a7090; font-family: 'SF Mono', monospace; min-width: 36px; text-align: right; }
+
+/* ── Callout ────────────────────────────────────────────────── */
+.callout {
+  background: #12182a; border: 1px solid #2a3555; border-left: 3px solid #4a9eff;
+  border-radius: 10px; padding: 18px 22px; margin-top: 18px;
+  font-size: 14px; color: #a0a8b8; line-height: 1.8;
+}
+.callout strong { color: #e0e6f0; }
+
+/* ── Comparison ─────────────────────────────────────────────── */
+.cmp { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.cmp-card { border-radius: 12px; padding: 22px; }
+.cmp-old { background: #1a1215; border: 1px solid #3a2028; }
+.cmp-new { background: #0d1a15; border: 1px solid #1a3a28; }
+.cmp-label { font-size: 12px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 12px; }
+.cmp-old .cmp-label { color: #ef4444; }
+.cmp-new .cmp-label { color: #22c55e; }
+.cmp-list { list-style: none; font-size: 14px; color: #a0a8b8; }
+.cmp-list li { padding: 5px 0; border-bottom: 1px solid #1e2235; }
+.cmp-analogy { font-size: 13px; color: #5a6080; font-style: italic; margin-top: 14px; padding-top: 10px; border-top: 1px solid #1e2235; }
+
+/* ── Stats row ──────────────────────────────────────────────── */
+.stats { display: flex; justify-content: space-around; flex-wrap: wrap; gap: 16px; margin-top: 16px; }
+.st { text-align: center; min-width: 90px; }
+.st-big { font-size: 26px; font-weight: 700; }
+.st-label { font-size: 10px; color: #6a7090; text-transform: uppercase; letter-spacing: 1px; }
+
+/* ── Publisher card ─────────────────────────────────────────── */
+.pub-card {
+  background: #141b2d; border: 1px solid #1e2a45; border-radius: 12px;
+  padding: 22px; margin-bottom: 14px; display: flex; gap: 16px; align-items: flex-start;
+}
+.pub-icon { font-size: 32px; flex-shrink: 0; }
+.pub-name { font-size: 15px; font-weight: 600; color: #e0e6f0; }
+.pub-type { font-size: 12px; color: #6a7090; margin-top: 1px; }
+.pub-why { font-size: 13px; color: #8892a8; margin-top: 6px; line-height: 1.7; }
+.pub-match {
+  display: inline-block; margin-top: 8px; padding: 3px 12px;
+  border-radius: 12px; font-size: 11px; font-weight: 600;
+}
+.pub-match-high { background: #22c55e15; border: 1px solid #22c55e30; color: #22c55e; }
+.pub-match-med { background: #4a9eff15; border: 1px solid #4a9eff30; color: #4a9eff; }
+.pub-match-low { background: #f59e0b15; border: 1px solid #f59e0b30; color: #f59e0b; }
+
+/* ── Footer ─────────────────────────────────────────────────── */
+.footer { text-align: center; padding: 40px; border-top: 1px solid #1e1e3a; margin-top: 40px; }
+.footer-brand { font-size: 16px; letter-spacing: 8px; font-weight: 200; color: #4a9eff; margin-bottom: 6px; }
+.footer-text { font-size: 13px; color: #5a6080; max-width: 600px; margin: 0 auto; }
+
+@media (max-width: 768px) {
+  .main { padding: 100px 16px 24px; }
+  .header-inner { padding: 10px 16px; }
+  .header-right { display: none; }
+  .tab-nav-inner { overflow-x: auto; padding: 0 16px; }
+  .tab { padding: 10px 14px; font-size: 12px; }
+  .ig, .adv-grid, .cmp, .vg { grid-template-columns: 1fr; }
+  .product-card { flex-direction: column; text-align: center; }
+  .si { flex-wrap: wrap; } .si-name { min-width: auto; }
+  .pub-card { flex-direction: column; }
+}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header"><div class="header-inner">
+  <div>
+    <div class="brand-name">INFORM<b>ATIV</b></div>
+    <div class="brand-tagline">Psychological Intelligence for Advertising</div>
+  </div>
+  <div class="header-right">
+    <div class="header-stat"><div class="header-stat-val">47M</div><div class="header-stat-label">Edges</div></div>
+    <div class="header-stat"><div class="header-stat-val">27</div><div class="header-stat-label">Dimensions</div></div>
+    <div class="header-stat"><div class="header-stat-val">&lt;12ms</div><div class="header-stat-label">Latency</div></div>
+  </div>
+</div></div>
+
+<!-- Tab nav -->
+<div class="tab-nav"><div class="tab-nav-inner">
+  <div class="tab active" data-t="product" onclick="go('product')"><div class="tab-icon">1</div> Product</div>
+  <div class="tab" data-t="dsp" onclick="go('dsp')"><div class="tab-icon">2</div> DSP</div>
+  <div class="tab" data-t="ssp" onclick="go('ssp')"><div class="tab-icon">3</div> SSP + SDA</div>
+  <div class="tab" data-t="publishers" onclick="go('publishers')"><div class="tab-icon">4</div> Recommended Publishers</div>
+  <div class="tab" data-t="pageintel" onclick="go('pageintel')"><div class="tab-icon">5</div> Page Intelligence</div>
+</div></div>
+
+<div class="main">
+
+
+<!-- ═══════════════════════════════════════════════════════════════
+     TAB 1: PRODUCT
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="tc active" id="tc-product">
+
+  <div class="tab-hero" style="--accent:#22c55e;">
+    <div class="tab-hero-label" style="color:#22c55e;">Product Intelligence</div>
+    <div class="tab-hero-title">Every product tells a <em>psychological story</em></div>
+    <div class="tab-hero-desc">
+      When someone buys a product, they leave behind invisible clues about <strong>how they think</strong>.
+      Not their age or zip code &mdash; their motivations, their decision-making style, their emotional triggers.
+      INFORMATIV reads those clues across millions of purchases and builds a complete psychological profile
+      of who buys this product and why. Here's what we found for a real product.
+    </div>
+  </div>
+
+  <div class="product-card">
+    <div class="product-emoji">🚘</div>
+    <div>
+      <div class="product-name">RideLux &mdash; Luxury Chauffeur Service</div>
+      <div class="product-meta">Premium ground transportation &middot; NYC, LA, Miami, DC &middot; Fleet: Mercedes S-Class, Escalade, Tesla</div>
+      <div class="product-badge">9,000+ rides analyzed</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-header">
+      <div class="step-num sn-green">1</div>
+      <div>
+        <div class="step-title">The buyer's mind</div>
+        <div class="step-plain">We analyzed 9,000+ rides and 400+ satisfied customers to find six clear psychological patterns. These aren't guesses &mdash; they're measured from real booking behavior.</div>
+      </div>
+    </div>
+    <div class="step-body">
+      <div class="ig">
+        <div class="ic"><div class="ic-emoji">🛡️</div><div class="ic-head">Anxiety eliminators</div><div class="ic-body">They book to <strong>remove uncertainty</strong>, not for thrills. "I need to know everything is handled."</div><div class="ic-data">Prevention focus: 0.78</div></div>
+        <div class="ic"><div class="ic-emoji">⏰</div><div class="ic-head">Reliability obsessives</div><div class="ic-body">Punctuality is non-negotiable. They'll <strong>pay premium to guarantee</strong> they're never late.</div><div class="ic-data">Conscientiousness: 0.85</div></div>
+        <div class="ic"><div class="ic-emoji">🔍</div><div class="ic-head">Research-driven deciders</div><div class="ic-body">Read every review, compare services. <strong>Won't book impulsively</strong> &mdash; they need evidence of professionalism.</div><div class="ic-data">Deliberate processing: 0.72</div></div>
+        <div class="ic"><div class="ic-emoji">💎</div><div class="ic-head">Quiet luxury seekers</div><div class="ic-body">Want <strong>premium experience without flashiness</strong>. Mercedes S-Class, not gold-plated Hummer.</div><div class="ic-data">Status sensitivity: moderate (0.55)</div></div>
+        <div class="ic"><div class="ic-emoji">⭐</div><div class="ic-head">Loyal once earned</div><div class="ic-body">"Can't imagine calling any other company." Once <strong>trust is established, they don't switch</strong>. 5-star reviews, all named.</div><div class="ic-data">Brand loyalty: 0.85</div></div>
+        <div class="ic"><div class="ic-emoji">💼</div><div class="ic-head">Time over money</div><div class="ic-body">Skip airport lines, skip the crowds. They'll <strong>spend to reclaim time</strong> and reduce cognitive load.</div><div class="ic-data">Value: time savings</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-header">
+      <div class="step-num sn-green">2</div>
+      <div>
+        <div class="step-title">What the brand communicates</div>
+        <div class="step-plain">We also read the brand's listing psychologically. Here's what the seller's copy actually says to a buyer's subconscious.</div>
+      </div>
+    </div>
+    <div class="step-body">
+      <div class="ig">
+        <div class="ic"><div class="ic-emoji">✨</div><div class="ic-head">Trust through transparency</div><div class="ic-body">Fixed pricing, no surprises, 24-hour cancellation. Every anxiety trigger is pre-addressed.</div><div class="ic-data">Trust signals: 0.92 &middot; Anxiety reduction: 0.88</div></div>
+        <div class="ic"><div class="ic-emoji">📖</div><div class="ic-head">Professional competence</div><div class="ic-body">"100% professional, reliable and punctual." Not hype &mdash; flat statements of competence that read as more authoritative.</div><div class="ic-data">Authority: 0.85 &middot; Competence: 0.82</div></div>
+        <div class="ic"><div class="ic-emoji">🏆</div><div class="ic-head">Personal ownership</div><div class="ic-body">"Your personal chauffeur." Not a ride service &mdash; YOUR service. Identity elevation without arrogance.</div><div class="ic-data">Personalization: 0.80 &middot; Exclusivity: 0.70</div></div>
+      </div>
+      <div class="callout">
+        <strong>Notice the fit?</strong> Buyers want anxiety elimination and reliability. The brand communicates transparency and professional competence.
+        This psychological alignment is why 9,000+ riders converted &mdash; and it's measurable across 27 dimensions.
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-header">
+      <div class="step-num sn-green">3</div>
+      <div>
+        <div class="step-title">What this means for advertising</div>
+        <div class="step-plain">Specific, actionable guidance for anyone creating ads for this product.</div>
+      </div>
+    </div>
+    <div class="step-body">
+      <div class="adv-grid">
+        <div class="adv adv-do">
+          <div class="adv-label">&#10003; Do this</div>
+          <div class="adv-text"><strong>"Trusted by 400+ travelers. On-time, every time."</strong><br><br>Lead with authority and reliability. Use testimonials with full names. Frame around <strong>protecting their schedule</strong> and eliminating travel stress. Show the Mercedes, not a price tag.</div>
+        </div>
+        <div class="adv adv-dont">
+          <div class="adv-label">&#10007; Not this</div>
+          <div class="adv-text"><strong>"Book now! Limited spots! 50% off your first ride!"</strong><br><br>No urgency or scarcity &mdash; these deliberate planners feel manipulated. No price-leading &mdash; they want reassurance, not deals. No flashy party messaging &mdash; they want professional calm.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════
+     TAB 2: DSP (The Ad Buyer)
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="tc" id="tc-dsp">
+
+  <div class="tab-hero" style="--accent:#a855f7;">
+    <div class="tab-hero-label" style="color:#a855f7;">DSP &mdash; The Ad Buyer</div>
+    <div class="tab-hero-title">Know <em>exactly</em> who you're bidding on</div>
+    <div class="tab-hero-desc">
+      A DSP (Demand-Side Platform) is the technology that decides which ads to show and how much to pay.
+      Today, it bids on "travel page" and hopes for the best. With INFORMATIV, it receives <strong>27 psychological
+      measurements</strong> about the reader and can match the right ad to the right mind &mdash; not just the right page.
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-header">
+      <div class="step-num sn-purple">1</div>
+      <div>
+        <div class="step-title">The signals you receive</div>
+        <div class="step-plain">Instead of just "beauty page," you get a precise psychological profile of the reader. Each signal has a clear bidding implication.</div>
+      </div>
+    </div>
+    <div class="step-body">
+      <div class="sl">
+        <div class="si"><div class="sd sd-r"></div><div class="si-name">Prevention focus</div><div class="si-text"><strong>Bid UP</strong> for insurance, financial planning, luxury real estate. <strong>Bid DOWN</strong> for impulse products.</div><div class="si-val">0.78</div></div>
+        <div class="si"><div class="sd sd-g"></div><div class="si-name">Conscientiousness</div><div class="si-text"><strong>Show ads</strong> about precision, reliability, and quality. <strong>Skip</strong> "fun" and "trendy" products.</div><div class="si-val">0.85</div></div>
+        <div class="si"><div class="sd sd-g"></div><div class="si-name">Authority receptive</div><div class="si-text">Reader trusts <strong>expert endorsements</strong> and professional credentials. Use authority-based creative.</div><div class="si-val">0.85</div></div>
+        <div class="si"><div class="sd sd-g"></div><div class="si-name">Deliberate processing</div><div class="si-text">Reader is in <strong>evaluation mode</strong>. Substantive ads with evidence beat animations.</div><div class="si-val">0.72</div></div>
+        <div class="si"><div class="sd sd-g"></div><div class="si-name">Time valuation</div><div class="si-text">Reader <strong>values time over money</strong>. Position products as time-saving investments.</div><div class="si-val">0.80</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-header">
+      <div class="step-num sn-purple">2</div>
+      <div>
+        <div class="step-title">What different advertisers should do</div>
+        <div class="step-plain">The same impression is worth different amounts to different advertisers. The psychology tells you who should bid high and who should save their budget.</div>
+      </div>
+    </div>
+    <div class="step-body">
+      <div class="vg">
+        <div class="vc vc-green"><div class="vc-label">Financial Services</div><div class="vc-title">Bid UP +38%</div><div class="vc-body">Prevention-focused, deliberate planners who value security &mdash; ideal for wealth management, premium credit cards, insurance.</div></div>
+        <div class="vc vc-green"><div class="vc-label">Luxury Travel</div><div class="vc-title">Bid UP +32%</div><div class="vc-body">Reliability-obsessed travelers who pay for premium. Perfect for first-class upgrades, premium hotels, concierge services.</div></div>
+        <div class="vc vc-amber"><div class="vc-label">Premium Automotive</div><div class="vc-title">Bid neutral</div><div class="vc-body">Quality-over-price buyers who appreciate engineering and reliability. Consider for Mercedes, BMW, Lexus campaigns.</div></div>
+        <div class="vc vc-red"><div class="vc-label">Flash Sales / Discounters</div><div class="vc-title">Bid DOWN</div><div class="vc-body">These are NOT deal-seekers. "70% off!" signals low quality to this audience. <strong>Save your budget.</strong></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-header">
+      <div class="step-num sn-purple">3</div>
+      <div>
+        <div class="step-title">The old way vs. the new way</div>
+        <div class="step-plain">Here's what changed.</div>
+      </div>
+    </div>
+    <div class="step-body">
+      <div class="cmp">
+        <div class="cmp-card cmp-old">
+          <div class="cmp-label">Before</div>
+          <ul class="cmp-list">
+            <li>"Category: Travel" &larr; that's all you get</li>
+            <li>"Age: 30&ndash;65" &larr; guessed</li>
+            <li>"Show any travel ad" &larr; hope for the best</li>
+            <li>No psychology, no mechanism guidance</li>
+          </ul>
+          <div class="cmp-analogy">"Find my friend in Manhattan. They're... somewhere there."</div>
+        </div>
+        <div class="cmp-card cmp-new">
+          <div class="cmp-label">With INFORMATIV</div>
+          <ul class="cmp-list">
+            <li>27 psychological dimensions from real bookings</li>
+            <li>"Prevention-focused, conscientious, authority-receptive"</li>
+            <li>"Show the wealth management ad, not the flash sale"</li>
+            <li>Specific creative direction per impression</li>
+          </ul>
+          <div class="cmp-analogy">"They're at the corner coffee shop, prefer oat milk, and they're reading the paper."</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════
+     TAB 3: SSP + SDA (StackAdapt)
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="tc" id="tc-ssp">
+
+  <div class="tab-hero" style="--accent:#f59e0b;">
+    <div class="tab-hero-label" style="color:#f59e0b;">SSP + StackAdapt (SDA)</div>
+    <div class="tab-hero-title">Price and enrich every impression with <em>psychological intelligence</em></div>
+    <div class="tab-hero-desc">
+      An SSP (Supply-Side Platform) manages a publisher's ad inventory. When someone loads a page, the SSP has
+      <strong>milliseconds</strong> to decide what this impression is worth and send it to ad buyers.
+      Today it sends "travel page, mobile." With INFORMATIV, it sends 27 psychological measurements &mdash;
+      in under 12ms, with zero cookies. StackAdapt (SDA) integrates this intelligence directly into its bidding decisions.
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-header">
+      <div class="step-num sn-amber">1</div>
+      <div>
+        <div class="step-title">What arrives: a basic impression</div>
+        <div class="step-plain">The ad system gets a simple request: "someone is loading a travel page on their phone." That's all. Not very useful for pricing.</div>
+      </div>
+    </div>
+    <div class="step-body">
+      <div style="background:#141b2d; border:1px solid #1e2a45; border-radius:10px; padding:16px; font-size:14px; color:#8892a8;">
+        <strong style="color:#f59e0b;">Impression:</strong> Travel &amp; Transportation page &middot; Mobile &middot; 2:30 PM<br>
+        <span style="color:#4a5570;">This is everything a traditional ad system knows. Category + device. That's it.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-header">
+      <div class="step-num sn-amber">2</div>
+      <div>
+        <div class="step-title">What INFORMATIV adds: three layers of intelligence</div>
+        <div class="step-plain">In under 12 milliseconds, we enrich this impression with psychological intelligence at three levels of detail. No database lookups at bid time &mdash; everything is pre-computed.</div>
+      </div>
+    </div>
+    <div class="step-body">
+      <div class="vg">
+        <div class="vc vc-amber">
+          <div class="vc-label">Layer 1 &mdash; Raw Measurements</div>
+          <div class="vc-title">27 continuous numbers</div>
+          <div class="vc-body">The full psychological fingerprint as precise values. "Prevention focus = 0.82" tells a buyer exactly how protection-oriented this reader is. For sophisticated platforms like <strong>StackAdapt</strong> that can use continuous signals directly in their bidding models.</div>
+        </div>
+        <div class="vc vc-amber">
+          <div class="vc-label">Layer 2 &mdash; Named Psychology</div>
+          <div class="vc-title">10+ psychological constructs</div>
+          <div class="vc-body">The numbers translated into named states: "prevention_focus is active," "need_for_closure is high." For platforms that understand psychology-based targeting and want to match creative messaging to the reader's mindset.</div>
+        </div>
+        <div class="vc vc-amber">
+          <div class="vc-label">Layer 3 &mdash; Simple Segments</div>
+          <div class="vc-title">8 audience segments</div>
+          <div class="vc-body">Psychology-first audience segments like "Trust Seeker" or "Analytical Evaluator" with match scores. For traditional ad platforms that work with segment-based targeting. Everyone can use this layer.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-header">
+      <div class="step-num sn-amber">3</div>
+      <div>
+        <div class="step-title">Smart floor pricing + channel quality</div>
+        <div class="step-plain">INFORMATIV also tells the SSP what minimum price to set and whether the reader is receptive to ads right now.</div>
+      </div>
+    </div>
+    <div class="step-body">
+      <div class="callout">
+        <strong>Floor price: 1.23x the base rate.</strong> The psychological quality of this audience justifies a 23% premium over the standard travel-page rate. Pages with stronger alignment can justify 1.5&ndash;2x.<br><br>
+        <strong>Channel openness: 0.61 (open).</strong> The reader is engaged and receptive &mdash; not fatigued or hostile. Safe to serve ads. Below 0.30 = "closed" channel, don't waste budget.
+      </div>
+      <div class="stats" style="margin-top:20px;">
+        <div class="st"><div class="st-big" style="color:#f59e0b;">1.23x</div><div class="st-label">Floor Price</div></div>
+        <div class="st"><div class="st-big" style="color:#22c55e;">0.61</div><div class="st-label">Channel Open</div></div>
+        <div class="st"><div class="st-big" style="color:#4a9eff;">&lt;12ms</div><div class="st-label">Processing</div></div>
+        <div class="st"><div class="st-big" style="color:#a855f7;">Zero</div><div class="st-label">Cookies Needed</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════
+     TAB 4: RECOMMENDED PUBLISHERS
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="tc" id="tc-publishers">
+
+  <div class="tab-hero" style="--accent:#4a9eff;">
+    <div class="tab-hero-label" style="color:#4a9eff;">Recommended Publishers</div>
+    <div class="tab-hero-title">Where should this product's ads <em>actually appear</em>?</div>
+    <div class="tab-hero-desc">
+      Traditional ad placement says "car service &rarr; travel websites." But psychology-based placement is smarter.
+      Because we know this product's buyers are <strong>prevention-focused, deliberate, and authority-receptive</strong>,
+      we can find pages that create that exact psychological environment &mdash; even in surprising categories.
+      A financial planning site might be a better placement than a travel magazine.
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-header">
+      <div class="step-num sn-blue">1</div>
+      <div>
+        <div class="step-title">Top publisher matches for this product</div>
+        <div class="step-plain">These publishers create the psychological environment where this product's buyers are most receptive. Match score is based on alignment between the page's reader psychology and the product's buyer psychology.</div>
+      </div>
+    </div>
+    <div class="step-body">
+      <div class="pub-card">
+        <div class="pub-icon">💼</div>
+        <div>
+          <div class="pub-name">Investopedia &mdash; Personal Finance</div>
+          <div class="pub-type">Financial education &middot; Planning vertical</div>
+          <div class="pub-why"><strong>Why it works:</strong> Prevention-focused, deliberate, authority-receptive. Readers planning finances share the exact psychology of luxury travel planners. They evaluate thoroughly, trust expert recommendations, and pay for certainty.</div>
+          <div class="pub-match pub-match-high">95% psychological match</div>
+        </div>
+      </div>
+
+      <div class="pub-card">
+        <div class="pub-icon">✈️</div>
+        <div>
+          <div class="pub-name">Cond&eacute; Nast Traveler &mdash; Luxury Travel</div>
+          <div class="pub-type">Premium travel &middot; Luxury vertical</div>
+          <div class="pub-why"><strong>Why it works:</strong> Premium travel audience already in "book the best" mindset. Authority and quality messaging resonates perfectly. Readers here are comparing first-class options, not looking for deals.</div>
+          <div class="pub-match pub-match-high">91% psychological match</div>
+        </div>
+      </div>
+
+      <div class="pub-card">
+        <div class="pub-icon">📰</div>
+        <div>
+          <div class="pub-name">The Economist &mdash; Business Section</div>
+          <div class="pub-type">News &amp; analysis &middot; Premium audience</div>
+          <div class="pub-why"><strong>Why it works:</strong> Abstract thinkers, time-over-money valuers, authority-receptive. Premium audience that pays for quality. Readers process information deliberately and appreciate professional competence.</div>
+          <div class="pub-match pub-match-high">87% psychological match</div>
+        </div>
+      </div>
+
+      <div class="pub-card">
+        <div class="pub-icon">🏥</div>
+        <div>
+          <div class="pub-name">Healthline &mdash; Stress Management</div>
+          <div class="pub-type">Health &amp; wellness &middot; Anxiety reduction</div>
+          <div class="pub-why"><strong>Why it works:</strong> Prevention-focused readers seeking anxiety reduction. Same psychology &mdash; different domain. Surprising but data-backed. Readers are calm, rational, and open to solutions that eliminate stress.</div>
+          <div class="pub-match pub-match-med">76% psychological match</div>
+        </div>
+      </div>
+
+      <div class="pub-card">
+        <div class="pub-icon">🧪</div>
+        <div>
+          <div class="pub-name">Wirecutter &mdash; Best Of Reviews</div>
+          <div class="pub-type">Product reviews &middot; Consumer research</div>
+          <div class="pub-why"><strong>Why it works:</strong> Deliberate evaluators comparing options. High self-monitoring. They want the "researched best" &mdash; which is how RideLux positions. These readers <em>want</em> to be convinced with evidence, and they convert when they are.</div>
+          <div class="pub-match pub-match-med">73% psychological match</div>
+        </div>
+      </div>
+
+      <div class="pub-card">
+        <div class="pub-icon">🎮</div>
+        <div>
+          <div class="pub-name">TikTok &mdash; Trending Reels</div>
+          <div class="pub-type">Social media &middot; Viral content</div>
+          <div class="pub-why"><strong>Why it doesn't work:</strong> Impulse-driven, novelty-seeking, price-sensitive. Every psychological dimension misaligns with RideLux buyers. These users want quick dopamine hits, not professional reliability. Low authority receptivity, high arousal.</div>
+          <div class="pub-match pub-match-low">19% psychological match &mdash; avoid</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-header">
+      <div class="step-num sn-blue">2</div>
+      <div>
+        <div class="step-title">Why psychology beats category</div>
+        <div class="step-plain">Traditional placement puts luxury car service ads only on travel sites. But the second-best match is a <em>financial planning</em> site. Here's why that makes sense.</div>
+      </div>
+    </div>
+    <div class="step-body">
+      <div class="callout" style="border-left-color:#4a9eff;">
+        <strong>The insight:</strong> RideLux buyers are "anxiety eliminators" who pay premium for certainty &mdash;
+        and that same psychology drives people to read about retirement planning and insurance.
+        A luxury car service ad on Investopedia reaches the <em>same psychological profile</em> in a different context &mdash;
+        and because no other car service brand is there, the competitive landscape is empty.<br><br>
+        <strong>This is what no other advertising system can do.</strong> Category targeting says "travel ads on travel pages."
+        Psychological targeting says "anxiety-eliminator ads wherever anxiety eliminators are reading" &mdash; and that's a much larger, less competitive, higher-converting universe.
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════
+     TAB 5: PAGE INTELLIGENCE
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="tc" id="tc-pageintel">
+  <div class="tab-hero" style="--accent:#06b6d4;">
+    <div class="tab-hero-label" style="color:#06b6d4;">Page Intelligence</div>
+    <div class="tab-hero-title">Know the reader's mind <em>before the ad loads</em></div>
+    <div class="tab-hero-desc">
+      Every page puts the reader in a specific psychological state before they see any ad.
+      An article about inflation creates <strong>financial anxiety</strong>. A product review activates
+      <strong>analytical evaluation</strong>. A holiday gift guide triggers <strong>social gifting urgency</strong>.
+      INFORMATIV pre-scores these pages offline so at bid time, the system already knows the
+      reader's psychological state &mdash; and can match the right ad to the right mind on the right page.
+      <br><br>
+      This is the <strong>trilateral resonance</strong> layer: buyer psychology &times; ad psychology &times; <strong>page psychology</strong>.
+    </div>
+  </div>
+
+  <!-- Step 1: The 3 problems solved -->
+  <div class="step">
+    <div class="step-header">
+      <div class="step-num sn-cyan">1</div>
+      <div>
+        <div class="step-title">The problem: pages aren't neutral backgrounds</div>
+        <div class="step-plain">Today's ad systems treat every page the same &mdash; "it's a news page, show a news-appropriate ad." But the page is an active psychological agent. An article about a financial crisis puts readers in a completely different mental state than an article about vacation planning &mdash; even if both are on the same website, in the same category.</div>
+      </div>
+    </div>
+    <div class="step-body">
+      <div class="ig">
+        <div class="ic"><div class="ic-emoji">😰</div><div class="ic-head">Inflation fears article</div><div class="ic-body">Reader is in <strong>prevention mode</strong>: anxious, risk-averse, seeking security. Authority and loss aversion channels OPEN. Scarcity tactics feel manipulative.</div><div class="ic-data">approach_avoidance: -0.4 · uncertainty: 0.8</div></div>
+        <div class="ic"><div class="ic-emoji">🏖️</div><div class="ic-head">Vacation planning article</div><div class="ic-body">Reader is in <strong>approach mode</strong>: aspirational, future-oriented, open to novelty. Social proof and liking channels OPEN. Authority feels stuffy.</div><div class="ic-data">approach_avoidance: +0.6 · arousal: 0.7</div></div>
+        <div class="ic"><div class="ic-emoji">🔬</div><div class="ic-head">Product review article</div><div class="ic-body">Reader is in <strong>analytical mode</strong>: deliberate, evidence-seeking, comparison-ready. Authority and commitment channels OPEN. Emotional appeals fall flat.</div><div class="ic-data">cognitive_engagement: 0.8 · elm_route: central</div></div>
+      </div>
+      <div class="callout" style="border-left-color:#06b6d4;">
+        <strong>Same website, same category, completely different psychology.</strong> The ad that works on the inflation article would fail on the vacation article &mdash; and vice versa. INFORMATIV knows the difference because it has pre-scored both pages.
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 2: How it works — 14 layers -->
+  <div class="step">
+    <div class="step-header">
+      <div class="step-num sn-cyan">2</div>
+      <div>
+        <div class="step-title">14 psychological layers, scored offline</div>
+        <div class="step-plain">Every page is analyzed across 14 intelligence layers &mdash; from activated needs to narrative arc to attention competition. All scored offline and cached in Redis for &lt;2ms lookup at bid time.</div>
+      </div>
+    </div>
+    <div class="step-body">
+      <div class="vg">
+        <div class="vc vc-cyan"><div class="vc-label">Layers 1&ndash;4</div><div class="vc-title">What the reader needs &amp; feels</div><div class="vc-body"><strong>Activated needs</strong> (security, belonging, status), <strong>emotional field</strong> (valence, arousal, trajectory), <strong>cognitive state</strong> (bandwidth, processing mode), <strong>credibility context</strong> (publisher authority, trust transfer).</div></div>
+        <div class="vc vc-cyan"><div class="vc-label">Layers 5&ndash;8</div><div class="vc-title">How they'll respond to your ad</div><div class="vc-body"><strong>Primed categories</strong> (what products they're thinking about), <strong>persuasion channels</strong> (which mechanisms are OPEN vs CLOSED), <strong>competitive environment</strong> (ad density), <strong>decision-making style</strong> (ELM route, risk orientation, temporal frame).</div></div>
+        <div class="vc vc-cyan"><div class="vc-label">Layers 9&ndash;11</div><div class="vc-title">Content structure intelligence</div><div class="vc-body"><strong>Narrative arc</strong> (tension&rarr;release, crescendo, steady), <strong>rhetorical structure</strong> (deductive, inductive, narrative &mdash; determines ELM route precisely), <strong>semantic embedding</strong> (vector similarity for brand&times;page matching).</div></div>
+        <div class="vc vc-cyan"><div class="vc-label">Layers 12&ndash;14</div><div class="vc-title">Environmental context</div><div class="vc-body"><strong>Social proof signals</strong> (comments, shares, ratings), <strong>temporal context</strong> (breaking news vs evergreen, seasonal), <strong>attention competition</strong> (ad slots, CTAs, autoplay video, estimated viewability).</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 3: Domain Taxonomy -->
+  <div class="step">
+    <div class="step-header">
+      <div class="step-num sn-cyan">3</div>
+      <div>
+        <div class="step-title">Domain taxonomy: prediction without scoring</div>
+        <div class="step-plain">We can't score every article on the internet. But we don't have to. By building a hierarchical taxonomy per publisher &mdash; domain &rarr; category &rarr; subcategory &rarr; author &mdash; the system learns patterns that enable prediction for unscored articles.</div>
+      </div>
+    </div>
+    <div class="step-body">
+      <div class="sl">
+        <div class="si"><div class="sd sd-g"></div><div class="si-name">CNN / Politics</div><div class="si-text">9 articles scored &rarr; centroid: informed mindset, high cognitive engagement, prevention-oriented. <strong>Conf 0.55</strong></div><div class="si-val">🟢</div></div>
+        <div class="si"><div class="sd sd-g"></div><div class="si-name">Fox News / Opinion</div><div class="si-text">7 articles scored &rarr; centroid: social mindset, high arousal, approach-oriented. <strong>Conf 0.50</strong></div><div class="si-val">🟢</div></div>
+        <div class="si"><div class="sd sd-g"></div><div class="si-name">Wired / Gear</div><div class="si-text">22 articles scored &rarr; centroid: purchasing mindset, analytical processing. <strong>Conf 0.60</strong></div><div class="si-val">🟢</div></div>
+        <div class="si"><div class="sd sd-a"></div><div class="si-name">Author: Scott Gilbertson</div><div class="si-text">4 articles scored &rarr; consistent analytical voice, high evidence density. <strong>Blended with category.</strong></div><div class="si-val">🔵</div></div>
+      </div>
+      <div class="callout" style="border-left-color:#06b6d4;">
+        <strong>Hierarchical inference:</strong> When an unscored CNN/Politics article arrives, the system uses the Politics category centroid (conf 0.55). If we also know the author, we blend author voice (60%) + category context (40%) for conf 0.75. Every scored article makes all future predictions for that category and author more accurate.
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 4: Daily Intelligence Strengthening -->
+  <div class="step">
+    <div class="step-header">
+      <div class="step-num sn-cyan">4</div>
+      <div>
+        <div class="step-title">12 daily tasks that make the system smarter</div>
+        <div class="step-plain">Every day, 12 automated tasks harvest intelligence from the open web, process it through the NDF framework, and store structured priors in Redis. Nothing stays as raw text &mdash; everything becomes actionable intelligence consumed at bid time.</div>
+      </div>
+    </div>
+    <div class="step-body">
+      <div class="ig">
+        <div class="ic"><div class="ic-emoji">📡</div><div class="ic-head">Inventory Discovery</div><div class="ic-body">Parses <strong>ads.txt</strong> across 118+ publishers to confirm which domains are in StackAdapt's supply path. Crawls sitemaps for article-level URLs. Monitors 24 RSS feeds for new content.</div></div>
+        <div class="ic"><div class="ic-emoji">🏗️</div><div class="ic-head">Taxonomy Builder</div><div class="ic-body">Scores articles and builds <strong>domain &rarr; category &rarr; author hierarchies</strong>. Each scored article strengthens predictions for all future articles in that taxonomy branch.</div></div>
+        <div class="ic"><div class="ic-emoji">📰</div><div class="ic-head">News Cycle Monitor</div><div class="ic-body">Every 4 hours: what is the <strong>ambient psychological state</strong> of readers today? Financial crisis headlines shift the entire web toward anxiety and prevention mode.</div></div>
+        <div class="ic"><div class="ic-emoji">📅</div><div class="ic-head">Cultural Calendar</div><div class="ic-body">13 cultural events with NDF impact models. Tax season (active now) &rarr; authority 1.4&times;, loss aversion 1.3&times;, scarcity 0.7&times;. Valentine's &rarr; social proof 1.3&times;, liking 1.3&times;.</div></div>
+        <div class="ic"><div class="ic-emoji">💬</div><div class="ic-head">Social Sentiment</div><div class="ic-body">Analyzes 700+ Reddit posts per run across 10 categories. What mechanisms are <strong>peers using to persuade each other</strong>? That's a leading indicator of ad mechanism effectiveness.</div></div>
+        <div class="ic"><div class="ic-emoji">🏷️</div><div class="ic-head">Brand Positioning</div><div class="ic-body">Profiles 15+ brands' psychological positioning. If Nike's page hammers <strong>liking</strong>, the ad should use <strong>social proof</strong> instead &mdash; complement, don't repeat.</div></div>
+        <div class="ic"><div class="ic-emoji">📊</div><div class="ic-head">Competitive Intel</div><div class="ic-body">What mechanisms are competitors deploying? If 80% of Beauty ads use social proof, INFORMATIV automatically diversifies to <strong>fresher mechanisms</strong>.</div></div>
+        <div class="ic"><div class="ic-emoji">🌡️</div><div class="ic-head">Category Temperature</div><div class="ic-body">Is this category <strong>heating or cooling</strong>? Finance is heating (0.85) during tax season. Hot categories get higher bid premiums and more exploration.</div></div>
+        <div class="ic"><div class="ic-emoji">😴</div><div class="ic-head">Fatigue Detection</div><div class="ic-body">Which mechanisms are <strong>wearing out</strong> on which domains? Fatigued mechanisms get discounted; fresh substitutes get boosted automatically.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 5: Bid-time consumption -->
+  <div class="step">
+    <div class="step-header">
+      <div class="step-num sn-cyan">5</div>
+      <div>
+        <div class="step-title">What happens at bid time (&lt;2ms)</div>
+        <div class="step-plain">When a StackAdapt bid request arrives for a page, all this pre-computed intelligence is consumed instantly. Zero computation at bid time &mdash; pure Redis lookups.</div>
+      </div>
+    </div>
+    <div class="step-body">
+      <div class="sl">
+        <div class="si"><div class="sd sd-g"></div><div class="si-name">Page profile lookup</div><div class="si-text">14-layer psychological profile from cache, OR taxonomy inference if unscored</div><div class="si-val">&lt;1ms</div></div>
+        <div class="si"><div class="sd sd-g"></div><div class="si-name">Environmental context</div><div class="si-text">Ambient state + cultural calendar + active events composited</div><div class="si-val">&lt;0.5ms</div></div>
+        <div class="si"><div class="sd sd-g"></div><div class="si-name">Mechanism modifiers</div><div class="si-text">Fatigue + competitive saturation + social pulse + brand complement</div><div class="si-val">&lt;0.5ms</div></div>
+        <div class="si"><div class="sd sd-g"></div><div class="si-name">Category temperature</div><div class="si-text">Hot/cold indicator adjusts bid premium and exploration bonus</div><div class="si-val">&lt;0.1ms</div></div>
+        <div class="si"><div class="sd sd-p"></div><div class="si-name">Trilateral resonance</div><div class="si-text"><strong>buyer &times; ad &times; page</strong> &mdash; three-way psychological alignment</div><div class="si-val">TOTAL<br>&lt;2ms</div></div>
+      </div>
+      <div class="stats" style="margin-top:20px;">
+        <div class="st"><div class="st-big" style="color:#06b6d4;">523</div><div class="st-label">Redis Keys</div></div>
+        <div class="st"><div class="st-big" style="color:#22c55e;">118</div><div class="st-label">Verified Domains</div></div>
+        <div class="st"><div class="st-big" style="color:#f59e0b;">201</div><div class="st-label">Page Profiles</div></div>
+        <div class="st"><div class="st-big" style="color:#a855f7;">12</div><div class="st-label">Daily Tasks</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- Footer -->
+<div class="footer">
+  <div class="footer-brand">INFORMATIV</div>
+  <p class="footer-text">
+    We don't guess what people want. We read what 47 million purchase decisions already told us.
+  </p>
+</div>
+
+</div><!-- /main -->
+
+<script>
+function go(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.t === name));
+  document.querySelectorAll('.tc').forEach(c => c.classList.toggle('active', c.id === 'tc-' + name));
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+</script>
+</body>
+</html>

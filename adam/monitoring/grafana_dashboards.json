@@ -1,0 +1,477 @@
+{
+  "dashboards": [
+    {
+      "id": "adam-learning-overview",
+      "title": "ADAM Learning System Overview",
+      "description": "High-level view of the ADAM learning system health and performance",
+      "rows": [
+        {
+          "title": "System Health",
+          "panels": [
+            {
+              "title": "Overall Quality Score",
+              "type": "gauge",
+              "gridPos": {"h": 8, "w": 6, "x": 0, "y": 0},
+              "targets": [
+                {
+                  "expr": "adam_learning_quality_overall",
+                  "legendFormat": "Quality Score"
+                }
+              ],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"color": "red", "value": 0},
+                  {"color": "orange", "value": 50},
+                  {"color": "yellow", "value": 70},
+                  {"color": "green", "value": 85}
+                ]
+              }
+            },
+            {
+              "title": "Component Health",
+              "type": "stat",
+              "gridPos": {"h": 8, "w": 6, "x": 6, "y": 0},
+              "targets": [
+                {
+                  "expr": "sum(adam_learning_component_health)",
+                  "legendFormat": "Healthy Components"
+                },
+                {
+                  "expr": "count(adam_learning_component_health)",
+                  "legendFormat": "Total Components"
+                }
+              ]
+            },
+            {
+              "title": "Outcomes Processed (24h)",
+              "type": "stat",
+              "gridPos": {"h": 8, "w": 6, "x": 12, "y": 0},
+              "targets": [
+                {
+                  "expr": "sum(increase(adam_learning_outcomes_total[24h]))",
+                  "legendFormat": "Outcomes"
+                }
+              ]
+            },
+            {
+              "title": "Signals Routed (24h)",
+              "type": "stat",
+              "gridPos": {"h": 8, "w": 6, "x": 18, "y": 0},
+              "targets": [
+                {
+                  "expr": "sum(increase(adam_learning_signals_emitted_total[24h]))",
+                  "legendFormat": "Signals"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Prediction Accuracy",
+          "panels": [
+            {
+              "title": "Accuracy by Component",
+              "type": "timeseries",
+              "gridPos": {"h": 10, "w": 12, "x": 0, "y": 8},
+              "targets": [
+                {
+                  "expr": "adam_learning_prediction_accuracy",
+                  "legendFormat": "{{component}}"
+                }
+              ],
+              "yAxis": {"min": 0, "max": 1}
+            },
+            {
+              "title": "Accuracy Trend",
+              "type": "timeseries",
+              "gridPos": {"h": 10, "w": 12, "x": 12, "y": 8},
+              "targets": [
+                {
+                  "expr": "avg(adam_learning_prediction_accuracy)",
+                  "legendFormat": "System Average"
+                }
+              ],
+              "yAxis": {"min": 0, "max": 1}
+            }
+          ]
+        },
+        {
+          "title": "Quality Dimensions",
+          "panels": [
+            {
+              "title": "Quality Radar",
+              "type": "radar",
+              "gridPos": {"h": 12, "w": 12, "x": 0, "y": 18},
+              "targets": [
+                {"expr": "avg(adam_learning_quality_effectiveness)", "legendFormat": "Effectiveness"},
+                {"expr": "avg(adam_learning_quality_efficiency)", "legendFormat": "Efficiency"},
+                {"expr": "avg(adam_learning_quality_coherence)", "legendFormat": "Coherence"},
+                {"expr": "avg(adam_learning_quality_freshness)", "legendFormat": "Freshness"},
+                {"expr": "avg(adam_learning_quality_completeness)", "legendFormat": "Completeness"},
+                {"expr": "avg(adam_learning_quality_synergy)", "legendFormat": "Synergy"}
+              ]
+            },
+            {
+              "title": "Quality by Component",
+              "type": "heatmap",
+              "gridPos": {"h": 12, "w": 12, "x": 12, "y": 18},
+              "targets": [
+                {
+                  "expr": "adam_learning_quality_effectiveness",
+                  "legendFormat": "{{component}} Effectiveness"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "adam-learning-components",
+      "title": "ADAM Learning Components Deep Dive",
+      "description": "Detailed metrics for each learning component",
+      "rows": [
+        {
+          "title": "Cold Start",
+          "panels": [
+            {
+              "title": "Archetype Effectiveness",
+              "type": "bargauge",
+              "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+              "targets": [
+                {
+                  "expr": "adam_learning_archetype_effectiveness",
+                  "legendFormat": "{{archetype}}"
+                }
+              ]
+            },
+            {
+              "title": "User Tier Distribution",
+              "type": "piechart",
+              "gridPos": {"h": 8, "w": 6, "x": 12, "y": 0},
+              "targets": [
+                {
+                  "expr": "adam_learning_user_tier_count",
+                  "legendFormat": "{{tier}}"
+                }
+              ]
+            },
+            {
+              "title": "Tier Transitions Rate",
+              "type": "timeseries",
+              "gridPos": {"h": 8, "w": 6, "x": 18, "y": 0},
+              "targets": [
+                {
+                  "expr": "rate(adam_learning_tier_transitions_total[1h])",
+                  "legendFormat": "{{from_tier}} → {{to_tier}}"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Multimodal Fusion",
+          "panels": [
+            {
+              "title": "Modality Weights",
+              "type": "piechart",
+              "gridPos": {"h": 8, "w": 8, "x": 0, "y": 8},
+              "targets": [
+                {
+                  "expr": "adam_learning_modality_weight",
+                  "legendFormat": "{{modality}}"
+                }
+              ]
+            },
+            {
+              "title": "Modality Accuracy",
+              "type": "bargauge",
+              "gridPos": {"h": 8, "w": 8, "x": 8, "y": 8},
+              "targets": [
+                {
+                  "expr": "adam_learning_modality_accuracy",
+                  "legendFormat": "{{modality}}"
+                }
+              ]
+            },
+            {
+              "title": "Weight Evolution",
+              "type": "timeseries",
+              "gridPos": {"h": 8, "w": 8, "x": 16, "y": 8},
+              "targets": [
+                {
+                  "expr": "adam_learning_modality_weight",
+                  "legendFormat": "{{modality}}"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Feature Store",
+          "panels": [
+            {
+              "title": "Features Tracked",
+              "type": "stat",
+              "gridPos": {"h": 6, "w": 4, "x": 0, "y": 16},
+              "targets": [
+                {
+                  "expr": "adam_learning_features_tracked",
+                  "legendFormat": "Tracked"
+                }
+              ]
+            },
+            {
+              "title": "Features Pruned (24h)",
+              "type": "stat",
+              "gridPos": {"h": 6, "w": 4, "x": 4, "y": 16},
+              "targets": [
+                {
+                  "expr": "increase(adam_learning_features_pruned_total[24h])",
+                  "legendFormat": "Pruned"
+                }
+              ]
+            },
+            {
+              "title": "Top Feature Importance",
+              "type": "bargauge",
+              "gridPos": {"h": 6, "w": 16, "x": 8, "y": 16},
+              "targets": [
+                {
+                  "expr": "topk(10, adam_learning_feature_importance)",
+                  "legendFormat": "{{feature_name}}"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Temporal Patterns",
+          "panels": [
+            {
+              "title": "Conversion by Hour",
+              "type": "timeseries",
+              "gridPos": {"h": 8, "w": 12, "x": 0, "y": 22},
+              "targets": [
+                {
+                  "expr": "sum by (hour) (adam_learning_timing_conversions_total) / sum by (hour) (adam_learning_timing_impressions_total)",
+                  "legendFormat": "Hour {{hour}}"
+                }
+              ]
+            },
+            {
+              "title": "Conversion by Day",
+              "type": "bargauge",
+              "gridPos": {"h": 8, "w": 12, "x": 12, "y": 22},
+              "targets": [
+                {
+                  "expr": "sum by (day) (adam_learning_timing_conversions_total) / sum by (day) (adam_learning_timing_impressions_total)",
+                  "legendFormat": "Day {{day}}"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "adam-learning-emergence",
+      "title": "ADAM Emergence Detection",
+      "description": "Tracking novel discoveries and patterns",
+      "rows": [
+        {
+          "title": "Discovery Overview",
+          "panels": [
+            {
+              "title": "Total Discoveries (24h)",
+              "type": "stat",
+              "gridPos": {"h": 6, "w": 6, "x": 0, "y": 0},
+              "targets": [
+                {
+                  "expr": "sum(increase(adam_learning_discoveries_total[24h]))",
+                  "legendFormat": "Discoveries"
+                }
+              ]
+            },
+            {
+              "title": "Active Validated Discoveries",
+              "type": "stat",
+              "gridPos": {"h": 6, "w": 6, "x": 6, "y": 0},
+              "targets": [
+                {
+                  "expr": "sum(adam_learning_active_discoveries)",
+                  "legendFormat": "Active"
+                }
+              ]
+            },
+            {
+              "title": "Discoveries by Type",
+              "type": "piechart",
+              "gridPos": {"h": 6, "w": 12, "x": 12, "y": 0},
+              "targets": [
+                {
+                  "expr": "adam_learning_active_discoveries",
+                  "legendFormat": "{{emergence_type}}"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Discovery Timeline",
+          "panels": [
+            {
+              "title": "Discoveries Over Time",
+              "type": "timeseries",
+              "gridPos": {"h": 10, "w": 24, "x": 0, "y": 6},
+              "targets": [
+                {
+                  "expr": "rate(adam_learning_discoveries_total[1h])",
+                  "legendFormat": "{{emergence_type}} ({{confidence}})"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Verification & Prompts",
+          "panels": [
+            {
+              "title": "Verification Pass Rate",
+              "type": "stat",
+              "gridPos": {"h": 8, "w": 8, "x": 0, "y": 16},
+              "targets": [
+                {
+                  "expr": "sum(adam_learning_verifications_total{passed='true'}) / sum(adam_learning_verifications_total)",
+                  "legendFormat": "Pass Rate"
+                }
+              ]
+            },
+            {
+              "title": "Prompt Adjustments",
+              "type": "timeseries",
+              "gridPos": {"h": 8, "w": 8, "x": 8, "y": 16},
+              "targets": [
+                {
+                  "expr": "rate(adam_learning_prompt_adjustments_total[1h])",
+                  "legendFormat": "{{atom_name}}"
+                }
+              ]
+            },
+            {
+              "title": "Prompt Adjustment Effectiveness",
+              "type": "bargauge",
+              "gridPos": {"h": 8, "w": 8, "x": 16, "y": 16},
+              "targets": [
+                {
+                  "expr": "adam_learning_prompt_adjustment_effectiveness",
+                  "legendFormat": "{{atom_name}}"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "adam-learning-signals",
+      "title": "ADAM Signal Flow",
+      "description": "Learning signal routing and latency",
+      "rows": [
+        {
+          "title": "Signal Volume",
+          "panels": [
+            {
+              "title": "Signals Emitted/sec",
+              "type": "timeseries",
+              "gridPos": {"h": 10, "w": 12, "x": 0, "y": 0},
+              "targets": [
+                {
+                  "expr": "rate(adam_learning_signals_emitted_total[5m])",
+                  "legendFormat": "{{component}}"
+                }
+              ]
+            },
+            {
+              "title": "Signals by Type",
+              "type": "piechart",
+              "gridPos": {"h": 10, "w": 12, "x": 12, "y": 0},
+              "targets": [
+                {
+                  "expr": "sum by (signal_type) (increase(adam_learning_signals_emitted_total[1h]))",
+                  "legendFormat": "{{signal_type}}"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Signal Latency",
+          "panels": [
+            {
+              "title": "Signal Latency Distribution",
+              "type": "histogram",
+              "gridPos": {"h": 10, "w": 24, "x": 0, "y": 10},
+              "targets": [
+                {
+                  "expr": "histogram_quantile(0.95, sum(rate(adam_learning_signal_latency_seconds_bucket[5m])) by (le, signal_type))",
+                  "legendFormat": "p95 {{signal_type}}"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Signal Flow",
+          "panels": [
+            {
+              "title": "Component Signal Flow",
+              "type": "nodeGraph",
+              "gridPos": {"h": 12, "w": 24, "x": 0, "y": 20},
+              "description": "Visualizes signal flow between components",
+              "targets": [
+                {
+                  "expr": "adam_learning_signals_emitted_total",
+                  "legendFormat": "{{component}} → {{signal_type}}"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "alerts": [
+    {
+      "name": "Low Learning Quality",
+      "condition": "adam_learning_quality_overall < 50",
+      "severity": "critical",
+      "message": "Overall learning quality has dropped below 50%"
+    },
+    {
+      "name": "Component Unhealthy",
+      "condition": "adam_learning_component_health == 0",
+      "severity": "warning",
+      "message": "Learning component {{component}} is unhealthy"
+    },
+    {
+      "name": "No Outcomes Processed",
+      "condition": "rate(adam_learning_outcomes_total[1h]) == 0",
+      "severity": "critical",
+      "message": "No outcomes have been processed in the last hour"
+    },
+    {
+      "name": "Low Prediction Accuracy",
+      "condition": "adam_learning_prediction_accuracy < 0.4",
+      "severity": "warning",
+      "message": "Prediction accuracy for {{component}} has dropped below 40%"
+    },
+    {
+      "name": "High Signal Latency",
+      "condition": "histogram_quantile(0.95, adam_learning_signal_latency_seconds_bucket) > 0.5",
+      "severity": "warning",
+      "message": "Signal routing latency p95 exceeds 500ms"
+    }
+  ]
+}

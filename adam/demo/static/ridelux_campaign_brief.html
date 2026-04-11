@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RideLux × INFORMATIV — StackAdapt Campaign Intelligence Brief</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0a0a1a; color: #e0e6f0; font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.7; }
+
+.container { max-width: 1100px; margin: 0 auto; padding: 40px; }
+
+/* Header */
+.header { border-bottom: 1px solid #1e1e3a; padding-bottom: 30px; margin-bottom: 40px; display: flex; justify-content: space-between; align-items: flex-start; }
+.brand-block h1 { font-size: 28px; font-weight: 200; letter-spacing: 6px; }
+.brand-block h1 b { font-weight: 700; color: #4a9eff; }
+.brand-block .sub { font-size: 12px; color: #6a7090; letter-spacing: 2px; text-transform: uppercase; margin-top: 4px; }
+.partner-block { text-align: right; }
+.partner-block .for { font-size: 11px; color: #6a7090; text-transform: uppercase; letter-spacing: 2px; }
+.partner-block .name { font-size: 22px; font-weight: 600; color: #e0e6f0; margin-top: 4px; }
+.partner-block .via { font-size: 12px; color: #4a5570; margin-top: 2px; }
+.date { font-size: 12px; color: #4a5570; margin-top: 20px; text-align: center; }
+
+/* Section */
+.section { margin-bottom: 48px; }
+.section-label { font-size: 11px; letter-spacing: 4px; text-transform: uppercase; font-weight: 600; color: #4a9eff; margin-bottom: 8px; }
+.section-title { font-size: 24px; font-weight: 300; margin-bottom: 16px; }
+.section-title em { font-style: normal; font-weight: 600; color: #e0e6f0; }
+.section-body { font-size: 15px; color: #8a92b0; }
+.section-body strong { color: #c0c8d8; }
+
+/* Campaign cards */
+.campaign-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; }
+.campaign-card { background: #0f1525; border: 1px solid #1a2240; border-radius: 12px; padding: 24px; border-left: 3px solid var(--accent, #4a9eff); }
+.cc-label { font-size: 11px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: var(--accent, #4a9eff); margin-bottom: 6px; }
+.cc-title { font-size: 17px; font-weight: 600; color: #e0e6f0; margin-bottom: 10px; }
+.cc-body { font-size: 13px; color: #8a92b0; line-height: 1.8; }
+.cc-body li { margin-bottom: 4px; list-style: none; }
+.cc-body li::before { content: '→ '; color: var(--accent, #4a9eff); }
+
+/* Placement table */
+table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 13px; }
+th { text-align: left; padding: 10px 12px; background: #12182a; color: #8a92b0; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #1e2a45; }
+td { padding: 10px 12px; border-bottom: 1px solid #141b2d; color: #c0c8d8; }
+tr:hover td { background: rgba(74,158,255,0.03); }
+.tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+.tag-high { background: #22c55e15; color: #22c55e; border: 1px solid #22c55e30; }
+.tag-med { background: #f59e0b15; color: #f59e0b; border: 1px solid #f59e0b30; }
+.tag-low { background: #ef444415; color: #ef4444; border: 1px solid #ef444430; }
+
+/* Creative brief */
+.creative-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+.creative-card { background: #141b2d; border: 1px solid #1e2a45; border-radius: 10px; padding: 20px; }
+.do-card { border-left: 3px solid #22c55e; }
+.dont-card { border-left: 3px solid #ef4444; }
+.do-label { font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #22c55e; margin-bottom: 8px; }
+.dont-label { font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #ef4444; margin-bottom: 8px; }
+.creative-text { font-size: 14px; color: #a0a8b8; line-height: 1.8; }
+
+/* Stat row */
+.stats { display: flex; gap: 40px; flex-wrap: wrap; margin: 24px 0; }
+.stat { text-align: center; }
+.stat-val { font-size: 28px; font-weight: 700; }
+.stat-label { font-size: 10px; color: #6a7090; text-transform: uppercase; letter-spacing: 1px; margin-top: 2px; }
+
+/* Archetype strip */
+.arch-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin: 20px 0; }
+.arch-card { background: #12182a; border: 1px solid #1e2a45; border-radius: 10px; padding: 18px; text-align: center; }
+.arch-icon { font-size: 32px; margin-bottom: 8px; }
+.arch-name { font-size: 14px; font-weight: 600; color: #e0e6f0; }
+.arch-mech { font-size: 12px; color: var(--accent); margin-top: 4px; }
+.arch-pct { font-size: 11px; color: #6a7090; margin-top: 6px; }
+
+/* Callout */
+.callout { background: #12182a; border: 1px solid #2a3555; border-left: 3px solid #4a9eff; border-radius: 10px; padding: 18px 22px; margin: 20px 0; font-size: 14px; color: #a0a8b8; line-height: 1.8; }
+.callout strong { color: #e0e6f0; }
+
+/* Timeline */
+.timeline { margin: 20px 0; }
+.tl-row { display: flex; gap: 16px; padding: 12px 0; border-bottom: 1px solid #141b2d; }
+.tl-time { min-width: 120px; font-size: 13px; font-weight: 600; color: #4a9eff; }
+.tl-content { font-size: 13px; color: #a0a8b8; }
+
+/* Print */
+@media print { body { background: #fff; color: #222; } .container { max-width: 100%; } }
+@media (max-width: 768px) { .campaign-grid, .creative-grid, .arch-strip { grid-template-columns: 1fr; } .header { flex-direction: column; } }
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- Header -->
+<div class="header">
+  <div class="brand-block">
+    <h1>INFORM<b>ATIV</b></h1>
+    <div class="sub">Psychological Intelligence for Advertising</div>
+  </div>
+  <div class="partner-block">
+    <div class="for">Campaign Intelligence Brief</div>
+    <div class="name">RideLux</div>
+    <div class="via">via StackAdapt DSP</div>
+  </div>
+</div>
+
+<div class="date">Prepared March 2026 &middot; Confidential</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SECTION 1: EXECUTIVE SUMMARY
+     ═══════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-label">Executive Summary</div>
+  <div class="section-title">RideLux has four distinct buyer types.<br>Each needs a <em>different ad, on a different platform, at a different time.</em></div>
+  <div class="section-body">
+    INFORMATIV analyzed RideLux's brand psychology, customer review language, competitor positioning, and 47 million purchase decision recordings to identify <strong>which persuasion mechanism converts each buyer type</strong>, which online environments create the psychological state where that mechanism is most effective, and exactly how the ad creative should be framed.
+    <br><br>
+    This brief provides <strong>everything StackAdapt needs</strong> to execute four psychologically-optimized campaign tracks — specific domains, CTV placements, creative parameters, bid adjustments, and time-of-day targeting for each buyer archetype.
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="stat-val" style="color:#4a9eff;">4</div><div class="stat-label">Buyer Archetypes</div></div>
+    <div class="stat"><div class="stat-val" style="color:#22c55e;">47M</div><div class="stat-label">Edge Evidence</div></div>
+    <div class="stat"><div class="stat-val" style="color:#f59e0b;">187</div><div class="stat-label">Domains Profiled</div></div>
+    <div class="stat"><div class="stat-val" style="color:#a855f7;">186</div><div class="stat-label">CTV Shows Profiled</div></div>
+  </div>
+
+  <div class="arch-strip">
+    <div class="arch-card" style="--accent:#4a9eff;">
+      <div class="arch-icon">💼</div>
+      <div class="arch-name">Corporate Executive</div>
+      <div class="arch-mech">Commitment + Authority</div>
+      <div class="arch-pct">Highest LTV &middot; Bid +25%</div>
+    </div>
+    <div class="arch-card" style="--accent:#ef4444;">
+      <div class="arch-icon">✈️</div>
+      <div class="arch-name">Airport Traveler</div>
+      <div class="arch-mech">Loss Aversion + Ease</div>
+      <div class="arch-pct">Highest Volume &middot; Bid +15%</div>
+    </div>
+    <div class="arch-card" style="--accent:#a855f7;">
+      <div class="arch-icon">💍</div>
+      <div class="arch-name">Special Occasion</div>
+      <div class="arch-mech">Liking + Social Proof</div>
+      <div class="arch-pct">High Emotion &middot; Bid +20%</div>
+    </div>
+    <div class="arch-card" style="--accent:#22c55e;">
+      <div class="arch-icon">🔍</div>
+      <div class="arch-name">First-Timer</div>
+      <div class="arch-mech">Social Proof + Reciprocity</div>
+      <div class="arch-pct">Acquisition &middot; Bid +10%</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SECTION 2: CAMPAIGN 1 — CORPORATE EXECUTIVE
+     ═══════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-label" style="color:#4a9eff;">Campaign Track 1</div>
+  <div class="section-title">Corporate Executive — <em>"The executive choice"</em></div>
+  <div class="section-body">
+    <strong>Who they are:</strong> C-suite and senior managers who need reliable, status-appropriate ground transportation. They value efficiency over price, and their biggest fear is being late or arriving in a substandard vehicle.
+    <br><br>
+    <strong>Why commitment + authority works:</strong> These buyers have high brand loyalty once trust is earned (brand_relationship_depth: 0.65). They value consistency and reliability. They have low autonomy reactance (0.25) — they're receptive to being told "this is the right choice" by a credible source.
+  </div>
+
+  <div class="campaign-grid">
+    <div class="campaign-card" style="--accent:#4a9eff;">
+      <div class="cc-label">StackAdapt Parameters</div>
+      <div class="cc-title">Campaign Configuration</div>
+      <div class="cc-body">
+        <li><strong>Segment ID:</strong> informativ_optimizer_authority_travel_t1</li>
+        <li><strong>Primary mechanism:</strong> Commitment (0.66)</li>
+        <li><strong>Secondary mechanism:</strong> Authority (0.63)</li>
+        <li><strong>Framing:</strong> Gain (approach-oriented)</li>
+        <li><strong>Construal level:</strong> Concrete (specific features)</li>
+        <li><strong>Urgency:</strong> Low (deliberative buyers)</li>
+        <li><strong>Bid adjustment:</strong> +25% above baseline</li>
+        <li><strong>Frequency cap:</strong> 3/day (don't overwhelm)</li>
+      </div>
+    </div>
+    <div class="campaign-card" style="--accent:#4a9eff;">
+      <div class="cc-label">Creative Direction</div>
+      <div class="cc-title">What the Ad Should Say</div>
+      <div class="cc-body">
+        <li><strong>Headline:</strong> "The executive choice for ground transportation"</li>
+        <li><strong>CTA:</strong> "Book your car" (direct, professional)</li>
+        <li><strong>Tone:</strong> Authoritative, professional, confident</li>
+        <li><strong>Copy length:</strong> Medium (they'll read if it's substantive)</li>
+        <li><strong>Lead with:</strong> Reliability track record, fleet quality</li>
+        <li><strong>Avoid:</strong> Discount language, urgency tactics, casual tone</li>
+        <li><strong>Image:</strong> Mercedes S-Class or Escalade, professional driver</li>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:20px;">
+    <div class="cc-label" style="color:#4a9eff;">Placement Strategy — Web</div>
+    <table>
+      <tr><th>Domain</th><th>Category</th><th>Why This Environment</th><th>Match</th></tr>
+      <tr><td>cnbc.com</td><td>Business News</td><td>Readers in analytical, future-oriented mode. High information seeking + low autonomy reactance = receptive to expert guidance.</td><td><span class="tag tag-high">95%</span></td></tr>
+      <tr><td>bloomberg.com</td><td>Markets</td><td>Professional context primes status consciousness + reliability valuation. Authority channel OPEN.</td><td><span class="tag tag-high">92%</span></td></tr>
+      <tr><td>forbes.com</td><td>Business</td><td>Aspirational professional content. Readers self-identify as achievers. Commitment mechanism resonates.</td><td><span class="tag tag-high">90%</span></td></tr>
+      <tr><td>wsj.com</td><td>Business</td><td>Premium publisher authority transfers to ads. Highest trust transfer potential in the inventory.</td><td><span class="tag tag-high">88%</span></td></tr>
+      <tr><td>businessinsider.com</td><td>Travel</td><td>Business travel content directly relevant. Reader already thinking about transportation.</td><td><span class="tag tag-med">82%</span></td></tr>
+      <tr><td>ft.com</td><td>World</td><td>Global executive audience. Formal linguistic style matches RideLux's professional voice.</td><td><span class="tag tag-med">80%</span></td></tr>
+    </table>
+  </div>
+
+  <div style="margin-top:20px;">
+    <div class="cc-label" style="color:#4a9eff;">Placement Strategy — CTV</div>
+    <table>
+      <tr><th>Show</th><th>Platform</th><th>Why This Show</th><th>Match</th></tr>
+      <tr><td>Industry</td><td>HBO/Max</td><td>Finance world drama. Viewer in status-conscious, professional achievement mindset. LOW remaining bandwidth → keep ad simple.</td><td><span class="tag tag-high">91%</span></td></tr>
+      <tr><td>Succession</td><td>HBO/Max</td><td>Power dynamics + luxury lifestyle. Viewer primed for premium positioning. High mimetic desire activated.</td><td><span class="tag tag-high">89%</span></td></tr>
+      <tr><td>The Morning Show</td><td>Apple TV+</td><td>Media industry drama. Professional context. Viewer is construal-abstract → use "the executive choice" framing.</td><td><span class="tag tag-med">85%</span></td></tr>
+      <tr><td>Slow Horses</td><td>Apple TV+</td><td>Intelligent thriller. Viewer in analytical mode with high cognitive engagement. Authority messaging resonates.</td><td><span class="tag tag-med">83%</span></td></tr>
+    </table>
+  </div>
+
+  <div style="margin-top:20px;">
+    <div class="cc-label" style="color:#4a9eff;">Timing Strategy</div>
+    <div class="timeline">
+      <div class="tl-row"><div class="tl-time">Mon-Fri 7-9 AM</div><div class="tl-content"><strong>Peak window.</strong> Morning commute — executives planning their day. Highest conversion probability for this archetype.</div></div>
+      <div class="tl-row"><div class="tl-time">Mon-Fri 12-2 PM</div><div class="tl-content"><strong>Secondary window.</strong> Lunch break browsing. Lower urgency but still professional mindset.</div></div>
+      <div class="tl-row"><div class="tl-time">Sun 8-10 PM</div><div class="tl-content"><strong>CTV window.</strong> Sunday evening prestige TV. High-quality attention, premium content context.</div></div>
+      <div class="tl-row"><div class="tl-time">Avoid: Fri-Sat evening</div><div class="tl-content">Weekend leisure mode. Wrong mindset — they're not thinking about business transportation.</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SECTION 3: CAMPAIGN 2 — AIRPORT ANXIETY
+     ═══════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-label" style="color:#ef4444;">Campaign Track 2</div>
+  <div class="section-title">Airport Anxiety Traveler — <em>"Your ride is guaranteed"</em></div>
+  <div class="section-body">
+    <strong>Who they are:</strong> Travelers within 24-72 hours of a flight who are actively worried about logistics. Their dominant emotion is anxiety — will the driver show up? Will there be hidden fees? Will I miss my flight?
+    <br><br>
+    <strong>Why loss aversion + cognitive ease works:</strong> These buyers have the highest loss_aversion_intensity (0.85) and highest temporal_discounting (0.75) of any archetype. They need to feel PROTECTED, not excited. The ad must remove anxiety, not create desire.
+  </div>
+
+  <div class="campaign-grid">
+    <div class="campaign-card" style="--accent:#ef4444;">
+      <div class="cc-label">StackAdapt Parameters</div>
+      <div class="cc-title">Campaign Configuration</div>
+      <div class="cc-body">
+        <li><strong>Segment ID:</strong> informativ_guardian_loss_aversion_travel_t2</li>
+        <li><strong>Primary mechanism:</strong> Loss Aversion (0.75)</li>
+        <li><strong>Secondary mechanism:</strong> Cognitive Ease (0.58)</li>
+        <li><strong>Framing:</strong> Loss (prevention-focused)</li>
+        <li><strong>Construal level:</strong> Concrete (specific guarantees)</li>
+        <li><strong>Urgency:</strong> High (time-sensitive decision)</li>
+        <li><strong>Bid adjustment:</strong> +15% above baseline</li>
+        <li><strong>Frequency cap:</strong> 5/day (repetition builds trust)</li>
+        <li><strong>Targeting signal:</strong> In-market travel intent + airport proximity</li>
+      </div>
+    </div>
+    <div class="campaign-card" style="--accent:#ef4444;">
+      <div class="cc-label">Creative Direction</div>
+      <div class="cc-title">What the Ad Should Say</div>
+      <div class="cc-body">
+        <li><strong>Headline:</strong> "Your flight is tracked. Your ride is guaranteed. No hidden fees."</li>
+        <li><strong>CTA:</strong> "Guarantee your ride" (protection language)</li>
+        <li><strong>Tone:</strong> Reassuring, protective, calm confidence</li>
+        <li><strong>Copy length:</strong> Short (low bandwidth — they're stressed)</li>
+        <li><strong>Lead with:</strong> Flight tracking, guaranteed pricing, 45-min free wait</li>
+        <li><strong>Avoid:</strong> Luxury language, aspiration, complexity</li>
+        <li><strong>Image:</strong> Clean vehicle at airport terminal, professional driver with name badge</li>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:20px;">
+    <div class="cc-label" style="color:#ef4444;">Placement Strategy — Web</div>
+    <table>
+      <tr><th>Domain</th><th>Category</th><th>Why This Environment</th><th>Match</th></tr>
+      <tr><td>weather.com</td><td>All</td><td>Travelers check weather before trips. HIGH anxiety state, LOW bandwidth. Perfect for simple reassurance messaging.</td><td><span class="tag tag-high">94%</span></td></tr>
+      <tr><td>cnn.com</td><td>Travel</td><td>Travel content readers are actively planning. Loss aversion channel OPEN from travel anxiety articles.</td><td><span class="tag tag-high">91%</span></td></tr>
+      <tr><td>usatoday.com</td><td>Travel</td><td>Airport tips, flight delay coverage. Reader already in "travel logistics" mindset.</td><td><span class="tag tag-high">89%</span></td></tr>
+      <tr><td>accuweather.com</td><td>All</td><td>Same as weather.com — pre-trip anxiety state. Simple, concrete messaging works best.</td><td><span class="tag tag-med">86%</span></td></tr>
+      <tr><td>nbcnews.com</td><td>Travel</td><td>Travel disruption coverage activates loss aversion. Reader worried about logistics.</td><td><span class="tag tag-med">84%</span></td></tr>
+    </table>
+  </div>
+
+  <div style="margin-top:20px;">
+    <div class="cc-label" style="color:#ef4444;">Placement Strategy — CTV</div>
+    <table>
+      <tr><th>Show</th><th>Platform</th><th>Why This Show</th><th>Match</th></tr>
+      <tr><td>Local News</td><td>Any</td><td>Evening news viewers are practical, present-focused, and in prevention mode. Loss aversion messaging fits naturally.</td><td><span class="tag tag-high">90%</span></td></tr>
+      <tr><td>True Detective / Crime</td><td>HBO/Max</td><td>Thriller viewers have LOW remaining bandwidth + HIGH arousal → simple, reassuring ad cuts through.</td><td><span class="tag tag-med">82%</span></td></tr>
+      <tr><td>Weather Channel</td><td>Linear/CTV</td><td>Pre-trip weather checking = peak anxiety moment. Highest intent signal for airport travelers.</td><td><span class="tag tag-high">93%</span></td></tr>
+    </table>
+  </div>
+
+  <div style="margin-top:20px;">
+    <div class="cc-label" style="color:#ef4444;">Timing Strategy</div>
+    <div class="timeline">
+      <div class="tl-row"><div class="tl-time">48-72 hours before flight</div><div class="tl-content"><strong>Initial planning window.</strong> Traveler is organizing logistics. Moderate anxiety. Start with informational messaging.</div></div>
+      <div class="tl-row"><div class="tl-time">24 hours before flight</div><div class="tl-content"><strong>Peak anxiety window.</strong> Everything must be confirmed. "Guarantee your ride" messaging hits hardest here.</div></div>
+      <div class="tl-row"><div class="tl-time">Evening before travel</div><div class="tl-content"><strong>CTV window.</strong> Traveler watching TV the night before. "One less thing to worry about" framing.</div></div>
+      <div class="tl-row"><div class="tl-time">Retarget: post-trip</div><div class="tl-content">Convert satisfied first-time users into repeat customers. Switch to commitment mechanism.</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SECTION 4: CAMPAIGN 3 — SPECIAL OCCASION
+     ═══════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-label" style="color:#a855f7;">Campaign Track 3</div>
+  <div class="section-title">Special Occasion Buyer — <em>"Make your arrival memorable"</em></div>
+  <div class="section-body">
+    <strong>Who they are:</strong> Wedding couples, prom parents, anniversary celebrants, anyone booking transportation for a milestone moment. Their purchase is emotional, not rational.
+    <br><br>
+    <strong>Why liking + social proof works:</strong> These buyers have the highest emotional_resonance (0.80) and personality_alignment (0.75). They want to feel a CONNECTION with the brand — that RideLux understands their moment. Social proof from other celebrations validates the emotional purchase.
+  </div>
+
+  <div class="campaign-grid">
+    <div class="campaign-card" style="--accent:#a855f7;">
+      <div class="cc-label">StackAdapt Parameters</div>
+      <div class="cc-title">Campaign Configuration</div>
+      <div class="cc-body">
+        <li><strong>Segment ID:</strong> informativ_connector_liking_travel_t2</li>
+        <li><strong>Primary mechanism:</strong> Liking (0.70)</li>
+        <li><strong>Secondary mechanism:</strong> Social Proof (0.70)</li>
+        <li><strong>Framing:</strong> Gain (aspirational)</li>
+        <li><strong>Construal level:</strong> Abstract (values, identity, experience)</li>
+        <li><strong>Urgency:</strong> Low (planning happens months ahead)</li>
+        <li><strong>Bid adjustment:</strong> +20% above baseline</li>
+        <li><strong>Targeting signal:</strong> Wedding/event planning behavior</li>
+      </div>
+    </div>
+    <div class="campaign-card" style="--accent:#a855f7;">
+      <div class="cc-label">Creative Direction</div>
+      <div class="cc-title">What the Ad Should Say</div>
+      <div class="cc-body">
+        <li><strong>Headline:</strong> "Make your arrival as memorable as the moment"</li>
+        <li><strong>CTA:</strong> "Plan your perfect ride"</li>
+        <li><strong>Tone:</strong> Warm, aspirational, emotionally resonant</li>
+        <li><strong>Copy length:</strong> Medium (they savored this content)</li>
+        <li><strong>Lead with:</strong> The EXPERIENCE, not the vehicle. Story of a perfect arrival.</li>
+        <li><strong>Avoid:</strong> Pricing, logistics, technical specs</li>
+        <li><strong>Image:</strong> Couple arriving at venue, stretch limo with red carpet feeling</li>
+        <li><strong>Video CTV:</strong> 15s cinematic arrival moment, soft music, emotional payoff</li>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:20px;">
+    <div class="cc-label" style="color:#a855f7;">Placement Strategy</div>
+    <table>
+      <tr><th>Domain / Show</th><th>Type</th><th>Why This Environment</th><th>Match</th></tr>
+      <tr><td>people.com</td><td>Web</td><td>Celebrity wedding/event coverage. Readers in aspirational emotional state. Mimetic desire activated.</td><td><span class="tag tag-high">93%</span></td></tr>
+      <tr><td>cosmopolitan.com</td><td>Web</td><td>Lifestyle/romance content. High emotional resonance + narrative transport.</td><td><span class="tag tag-high">90%</span></td></tr>
+      <tr><td>harpersbazaar.com</td><td>Web</td><td>Luxury lifestyle. Reader self-identifies with premium experiences.</td><td><span class="tag tag-med">85%</span></td></tr>
+      <tr><td>Bridgerton</td><td>CTV (Netflix)</td><td>Romance + grandeur. Viewer in peak emotional/aspirational state. Grand arrival scenes prime the purchase.</td><td><span class="tag tag-high">94%</span></td></tr>
+      <tr><td>The Bachelor</td><td>CTV (ABC)</td><td>Romance reality. Social proof + liking mechanisms both OPEN. Limo arrivals are literal show content.</td><td><span class="tag tag-high">92%</span></td></tr>
+      <tr><td>Love Is Blind</td><td>CTV (Netflix)</td><td>Relationship reality. High emotional resonance + social comparison active.</td><td><span class="tag tag-med">87%</span></td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SECTION 5: CAMPAIGN 4 — FIRST-TIMER
+     ═══════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-label" style="color:#22c55e;">Campaign Track 4</div>
+  <div class="section-title">First-Timer / Upgrader — <em>"400+ travelers trust RideLux"</em></div>
+  <div class="section-body">
+    <strong>Who they are:</strong> Someone who has never used a luxury car service and is considering trying one. They have the highest decision_entropy (0.75) — they're paralyzed by uncertainty. "Is this worth it? Will I feel out of place?"
+    <br><br>
+    <strong>Why social proof + reciprocity works:</strong> These buyers have the highest social_proof_sensitivity (0.80) and highest decision_entropy (0.75). They need to see OTHER PEOPLE like them who used the service and loved it. Then a small gesture of reciprocity (first ride value, guarantee) lowers the barrier.
+  </div>
+
+  <div class="campaign-grid">
+    <div class="campaign-card" style="--accent:#22c55e;">
+      <div class="cc-label">StackAdapt Parameters</div>
+      <div class="cc-title">Campaign Configuration</div>
+      <div class="cc-body">
+        <li><strong>Segment ID:</strong> informativ_explorer_social_proof_travel_t3</li>
+        <li><strong>Primary mechanism:</strong> Social Proof (0.55)</li>
+        <li><strong>Secondary mechanism:</strong> Reciprocity (implied first-ride value)</li>
+        <li><strong>Framing:</strong> Mixed (balanced gain + protection)</li>
+        <li><strong>Construal level:</strong> Concrete (specific reviews, real names)</li>
+        <li><strong>Urgency:</strong> None (research is asynchronous)</li>
+        <li><strong>Bid adjustment:</strong> +10% above baseline</li>
+        <li><strong>Targeting:</strong> Luxury travel research behavior, competitor searches</li>
+      </div>
+    </div>
+    <div class="campaign-card" style="--accent:#22c55e;">
+      <div class="cc-label">Creative Direction</div>
+      <div class="cc-title">What the Ad Should Say</div>
+      <div class="cc-body">
+        <li><strong>Headline:</strong> "400+ travelers trust RideLux. Your first ride, guaranteed."</li>
+        <li><strong>CTA:</strong> "See why travelers choose RideLux"</li>
+        <li><strong>Tone:</strong> Approachable, reassuring, peer-validated</li>
+        <li><strong>Copy length:</strong> Medium (they're researching, will read)</li>
+        <li><strong>Lead with:</strong> Named testimonials from "normal people," star ratings, specific praise</li>
+        <li><strong>Avoid:</strong> Exclusivity language, intimidating luxury, complexity</li>
+        <li><strong>Image:</strong> Diverse, relatable customers. NOT red carpet / celebrity vibes.</li>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:20px;">
+    <div class="cc-label" style="color:#22c55e;">Placement Strategy</div>
+    <table>
+      <tr><th>Domain / Show</th><th>Type</th><th>Why This Environment</th><th>Match</th></tr>
+      <tr><td>reddit.com (r/travel, r/NYC)</td><td>Web</td><td>Peer discussion platform. Reader actively seeking "people like me" validation. Social proof at maximum receptivity.</td><td><span class="tag tag-high">92%</span></td></tr>
+      <tr><td>nerdwallet.com</td><td>Web</td><td>Research/comparison mindset. Reader is evaluating options systematically. Provide evidence.</td><td><span class="tag tag-high">88%</span></td></tr>
+      <tr><td>wirecutter.com</td><td>Web</td><td>"Best of" review format. Reader trusts curated recommendations. Authority + social proof combo.</td><td><span class="tag tag-med">85%</span></td></tr>
+      <tr><td>The Traitors</td><td>CTV (Peacock)</td><td>Reality competition. Social comparison active. Viewer thinking about trust and judgment.</td><td><span class="tag tag-med">80%</span></td></tr>
+      <tr><td>Late Night Shows</td><td>CTV (NBC/ABC)</td><td>Casual discovery context. Low pressure, entertainment mindset. Good for brand awareness.</td><td><span class="tag tag-med">78%</span></td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SECTION 6: WHAT NOT TO DO
+     ═══════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-label" style="color:#ef4444;">Critical Avoidance</div>
+  <div class="section-title">What will <em>backfire</em> — environments and tactics to avoid</div>
+
+  <div class="creative-grid">
+    <div class="creative-card dont-card">
+      <div class="dont-label">Don't Place On</div>
+      <div class="creative-text">
+        <strong>BuzzFeed / viral entertainment:</strong> Impulse-driven, novelty-seeking audience. Every psychological dimension misaligns with RideLux's reliability positioning.<br><br>
+        <strong>TikTok / short-form social:</strong> Attention spans too short, audience too young, content too casual. RideLux's professional voice feels foreign here.<br><br>
+        <strong>Deal/coupon sites:</strong> Price-first mindset. Seeing RideLux next to "50% off" coupons destroys the premium perception.
+      </div>
+    </div>
+    <div class="creative-card dont-card">
+      <div class="dont-label">Don't Say</div>
+      <div class="creative-text">
+        <strong>"Book now! Limited spots!"</strong> — Scarcity tactics feel manipulative to RideLux's careful, research-driven buyers. Their autonomy reactance will reject urgency pressure.<br><br>
+        <strong>"Cheapest luxury ride"</strong> — Price-leading destroys the premium frame. RideLux buyers pay for certainty, not savings.<br><br>
+        <strong>"You deserve to be pampered"</strong> — Too soft/indulgent for the corporate archetype. They want COMPETENCE, not pampering.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SECTION 7: REAL-TIME OPTIMIZATION
+     ═══════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-label">Real-Time Intelligence</div>
+  <div class="section-title">What happens at <em>bid time</em></div>
+  <div class="section-body">
+    These campaign tracks define the STRATEGY. But within each track, every individual impression gets real-time optimization from INFORMATIV's decision engine:
+  </div>
+
+  <div class="callout">
+    <strong>For every bid request StackAdapt sends us</strong>, the system:<br><br>
+    1. Reads the page title, referrer, and keywords to determine the reader's exact psychological state<br>
+    2. Checks which archetype best matches the available buyer signals<br>
+    3. Adjusts the mechanism if the page state suggests a different approach (e.g., a CNN Business article about trade war shifts the Corporate Executive from commitment → loss_aversion)<br>
+    4. Modifies creative parameters: if the reader arrived from Google search, increase concrete detail; if from social media, increase social proof<br>
+    5. Factors in environmental context: tax season boosts authority 1.4x; cultural events shift emotional resonance<br>
+    6. Returns the optimized recommendation in under 12 milliseconds<br><br>
+    <strong>Result:</strong> The same campaign track produces different creative intelligence for every impression based on the reader's psychological state at that exact moment.
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SECTION 8: MEASUREMENT & LEARNING
+     ═══════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-label">Learning Loop</div>
+  <div class="section-title">How the campaign gets <em>smarter every day</em></div>
+  <div class="section-body">
+    Every impression is a micro-experiment. INFORMATIV's causal learning engine tracks which mechanism worked on which page state and runs statistical tests to discover new patterns:
+  </div>
+
+  <div class="timeline">
+    <div class="tl-row"><div class="tl-time">Day 1-3</div><div class="tl-content">Initial deployment across all 4 tracks. System collects CausalObservations (mechanism × page state × outcome).</div></div>
+    <div class="tl-row"><div class="tl-time">Day 4-7</div><div class="tl-content">First statistical tests run. System discovers which (page dimension, mechanism) pairs actually convert for RideLux specifically.</div></div>
+    <div class="tl-row"><div class="tl-time">Week 2</div><div class="tl-content">Validated causal effects written to graph. Decision engine adjusts mechanism scoring based on empirical evidence, not just theory.</div></div>
+    <div class="tl-row"><div class="tl-time">Week 3+</div><div class="tl-content">System discovers non-obvious patterns: maybe authority works better than expected on sports pages for RideLux (executive sports fans). Placements automatically expand to winning environments.</div></div>
+    <div class="tl-row"><div class="tl-time">Month 2+</div><div class="tl-content">Cross-category transfer: learnings from RideLux improve recommendations for ALL future travel/luxury brands. The system's value compounds.</div></div>
+  </div>
+
+  <div class="callout" style="border-left-color:#22c55e;">
+    <strong>Key metric to watch:</strong> The gap between the decision engine's predicted lift and the actual observed lift. As this gap narrows, the system's recommendations are becoming empirically validated — not just psychologically plausible, but proven to convert.
+  </div>
+</div>
+
+<!-- Footer -->
+<div style="text-align:center; padding:40px 0; border-top:1px solid #1e1e3a; margin-top:40px;">
+  <div style="font-size:16px; letter-spacing:8px; font-weight:200; color:#4a9eff; margin-bottom:6px;">INFORMATIV</div>
+  <p style="font-size:13px; color:#5a6080; max-width:600px; margin:0 auto;">
+    Psychological Intelligence for Advertising<br>
+    47 million purchase decisions. 20 psychological dimensions. One recommendation engine.<br><br>
+    This brief was generated from INFORMATIV's bilateral graph intelligence system,<br>
+    drawing on 937 million analyzed purchase decisions and 13,917 psychologically scored web pages.
+  </p>
+</div>
+
+</div><!-- /container -->
+</body>
+</html>

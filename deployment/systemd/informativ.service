@@ -1,0 +1,38 @@
+[Unit]
+Description=INFORMATIV Psychological Intelligence API
+After=network.target neo4j.service redis-server.service
+Wants=neo4j.service redis-server.service
+
+[Service]
+Type=exec
+User=informativ
+Group=informativ
+WorkingDirectory=/opt/informativ
+EnvironmentFile=/opt/informativ/.env
+ExecStart=/opt/informativ/venv/bin/uvicorn adam.main:create_app \
+    --host 0.0.0.0 \
+    --port 8000 \
+    --workers 4 \
+    --loop uvloop \
+    --http httptools \
+    --timeout-keep-alive 30 \
+    --access-log
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+RestartSec=5
+StartLimitBurst=5
+StartLimitIntervalSec=60
+
+# Resource limits
+LimitNOFILE=65535
+LimitNPROC=4096
+
+# Security
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/informativ/data /opt/informativ/logs
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
