@@ -31,8 +31,8 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 logger = logging.getLogger(__name__)
 
 NEO4J_URI = os.getenv("NEO4J_URI", "neo4j://127.0.0.1:7687")
-NEO4J_USER = os.getenv("NEO4J_USER", "neo4j")
-NEO4J_PASS = os.getenv("NEO4J_PASS", "atomofthought")
+NEO4J_USER = os.getenv("NEO4J_USERNAME", os.getenv("NEO4J_USERNAME", os.getenv("NEO4J_USER", "neo4j")))
+NEO4J_PASS = os.getenv("NEO4J_PASSWORD", os.getenv("NEO4J_PASSWORD", os.getenv("NEO4J_PASS", "atomofthought")))
 
 from adam.config.settings import get_settings
 

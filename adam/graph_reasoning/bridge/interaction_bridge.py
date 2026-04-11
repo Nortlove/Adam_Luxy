@@ -785,7 +785,7 @@ def get_interaction_bridge(
             from neo4j import AsyncGraphDatabase
             import os
             uri = os.getenv("NEO4J_URI", "bolt://127.0.0.1:7687")
-            user = os.getenv("NEO4J_USER", "neo4j")
+            user = os.getenv("NEO4J_USERNAME", os.getenv("NEO4J_USER", "neo4j"))
             password = os.getenv("NEO4J_PASSWORD", "atomofthought")
             neo4j_driver = AsyncGraphDatabase.driver(uri, auth=(user, password))
         

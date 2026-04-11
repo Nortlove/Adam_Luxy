@@ -55,7 +55,7 @@ async def get_brand_categories(brand_name: str) -> Dict[str, Any]:
         import os
         driver = GraphDatabase.driver(
             os.getenv("NEO4J_URI", "neo4j://127.0.0.1:7687"),
-            auth=(os.getenv("NEO4J_USER", "neo4j"), os.getenv("NEO4J_PASS", "atomofthought")),
+            auth=(os.getenv("NEO4J_USERNAME", os.getenv("NEO4J_USER", "neo4j")), os.getenv("NEO4J_PASSWORD", os.getenv("NEO4J_PASS", "atomofthought"))),
         )
         with driver.session() as s:
             data = s.run("""
