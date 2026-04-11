@@ -457,52 +457,53 @@ class LearningComponents:
         # =====================================================================
         # BEHAVIORAL ANALYTICS (Nonconscious Signal Intelligence)
         # =====================================================================
-        
-        from adam.behavioral_analytics import (
-            BehavioralAnalyticsEngine,
-            get_behavioral_analytics_engine,
-            BehavioralLearningBridge,
-            get_behavioral_learning_bridge,
-            HypothesisEngine,
-            get_hypothesis_engine,
-            KnowledgePromoter,
-            get_knowledge_promoter,
-        )
-        from adam.behavioral_analytics.knowledge.graph_integration import (
-            BehavioralKnowledgeGraph,
-            get_behavioral_knowledge_graph,
-        )
-        from adam.behavioral_analytics.knowledge.research_seeder import (
-            get_research_knowledge_seeder,
-        )
-        
-        # Knowledge graph for Neo4j storage
-        self._behavioral_knowledge_graph = get_behavioral_knowledge_graph(
-            neo4j_driver=self._infra.neo4j,
-        )
-        
-        # Hypothesis engine for testing signal-outcome relationships
-        self._behavioral_hypothesis_engine = get_hypothesis_engine()
-        
-        # Knowledge promoter for validated pattern promotion
-        self._behavioral_knowledge_promoter = get_knowledge_promoter(
-            hypothesis_engine=self._behavioral_hypothesis_engine,
-            graph=self._behavioral_knowledge_graph,
-        )
-        
-        # Main analytics engine
-        self._behavioral_analytics_engine = get_behavioral_analytics_engine()
-        
-        # Learning bridge for Gradient Bridge integration
-        self._behavioral_learning_bridge = get_behavioral_learning_bridge()
-        
-        # Seed research-validated knowledge
-        seeder = get_research_knowledge_seeder()
-        knowledge_items = seeder.seed_all_knowledge()
-        logger.info(
-            f"Behavioral analytics: seeded {len(knowledge_items)} "
-            "research-validated knowledge items"
-        )
+
+        try:
+            from adam.behavioral_analytics import (
+                BehavioralAnalyticsEngine,
+                get_behavioral_analytics_engine,
+                HypothesisEngine,
+                get_hypothesis_engine,
+                KnowledgePromoter,
+                get_knowledge_promoter,
+            )
+            from adam.behavioral_analytics.knowledge.graph_integration import (
+                BehavioralKnowledgeGraph,
+                get_behavioral_knowledge_graph,
+            )
+            from adam.behavioral_analytics.knowledge.research_seeder import (
+                get_research_knowledge_seeder,
+            )
+
+            self._behavioral_knowledge_graph = get_behavioral_knowledge_graph(
+                neo4j_driver=self._infra.neo4j,
+            )
+            self._behavioral_hypothesis_engine = get_hypothesis_engine()
+            self._behavioral_knowledge_promoter = get_knowledge_promoter(
+                hypothesis_engine=self._behavioral_hypothesis_engine,
+                graph=self._behavioral_knowledge_graph,
+            )
+            self._behavioral_analytics_engine = get_behavioral_analytics_engine()
+
+            # Learning bridge (may not exist yet)
+            try:
+                from adam.behavioral_analytics import (
+                    BehavioralLearningBridge,
+                    get_behavioral_learning_bridge,
+                )
+                self._behavioral_learning_bridge = get_behavioral_learning_bridge()
+            except ImportError:
+                logger.debug("BehavioralLearningBridge not available")
+
+            # Seed research knowledge
+            seeder = get_research_knowledge_seeder()
+            knowledge_items = seeder.seed_all_knowledge()
+            logger.info(
+                "Behavioral analytics: seeded %d research-validated knowledge items",
+                len(knowledge_items),
+            )
+        except Exception as e:
+            logger.warning("Behavioral analytics partially initialized: %s", e)
         
         # Register all consumers with signal router
         for component in [

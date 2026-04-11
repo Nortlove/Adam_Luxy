@@ -54,3 +54,4 @@ amazon_processed/
 # Sensitive files
 .env.local
 .env.production.local
+adam-platform/

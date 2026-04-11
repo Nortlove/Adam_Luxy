@@ -88,10 +88,44 @@ SECTION_BARRIER_MAP: Dict[str, Dict[str, Any]] = {
 }
 
 # Page-path-to-barrier mapping for Layer 2 (navigation path)
+# Updated for luxyride.com's actual URL structure (Next.js)
 PAGE_BARRIER_MAP: Dict[str, Dict[str, Any]] = {
     "/pricing": {
         "barrier": "price_friction",
         "dims": ["anchor_susceptibility_match", "spending_pain"],
+    },
+    "/rates": {
+        "barrier": "price_friction",
+        "dims": ["anchor_susceptibility_match", "spending_pain"],
+    },
+    # luxyride.com actual paths
+    "/programs/book-black-car-for-corporate": {
+        "barrier": "intention_action_gap",
+        "dims": [],
+    },
+    "/programs/join-the-luxy-travel-agent-program": {
+        "barrier": "trust_deficit",
+        "dims": ["brand_trust_fit"],
+    },
+    "/programs/black-car-affiliate-service": {
+        "barrier": "trust_deficit",
+        "dims": ["brand_trust_fit"],
+    },
+    "/programs/esg-compliance-black-car-industry": {
+        "barrier": "trust_deficit",
+        "dims": ["brand_trust_fit", "value_alignment"],
+    },
+    "/about-luxy": {
+        "barrier": "trust_deficit",
+        "dims": ["brand_trust_fit"],
+    },
+    "/contact-us": {
+        "barrier": "processing_overload",
+        "dims": ["processing_route"],
+    },
+    "/locations": {
+        "barrier": "quality_uncertainty",
+        "dims": ["quality_evidence_match"],
     },
     "/reviews": {
         "barrier": "trust_deficit",

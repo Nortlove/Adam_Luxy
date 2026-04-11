@@ -128,6 +128,18 @@ Each creative is specifically designed for its position in the retargeting seque
 
 **Publish both tags in GTM.**
 
+**IMPORTANT — Conversion Tracking**: The INFORMATIV telemetry script automatically detects booking conversions when the user reaches a confirmation page (URL containing `/confirmation`, `/thank-you`, `/booking-confirmed`, `/success`). If luxyride.com uses a different URL pattern for booking confirmation, please let us know so we can update. Alternatively, the LUXY Ride dev team can add this one line to the booking confirmation page:
+
+```javascript
+window.informativ.convert("booking_complete", { revenue: bookingTotal, order_id: bookingId });
+```
+
+**StackAdapt Webhook (Optional but Recommended)**: In StackAdapt, if you can configure a conversion webhook URL, point it to:
+```
+https://focused-encouragement-production.up.railway.app/api/v1/stackadapt/webhook/conversion
+```
+This gives us real-time conversion data for faster learning.
+
 ### 2. Create 4 Conversion Events in StackAdapt
 
 Go to **Pixels** → **Create Conversion Event** and create these exactly:
