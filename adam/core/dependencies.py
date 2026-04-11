@@ -251,19 +251,35 @@ class LearningComponents:
             Event,
         )
         
-        # Use InMemoryEventBus for local/dev, KafkaEventBus for production
+        # Use InMemoryEventBus unless Kafka is explicitly available
+        # Kafka requires a running broker — skip if not configured or unreachable
+        use_kafka = False
         if settings.is_production and hasattr(settings, 'kafka'):
-            logger.info("Using KafkaEventBus for production")
-            event_bus_impl = KafkaEventBus({
-                'bootstrap.servers': settings.kafka.bootstrap_servers,
-                'client.id': 'adam-learning-bus'
-            })
+            kafka_servers = settings.kafka.bootstrap_servers
+            if kafka_servers and kafka_servers != 'localhost:9092':
+                use_kafka = True
+
+        if use_kafka:
+            try:
+                logger.info("Using KafkaEventBus for production")
+                event_bus_impl = KafkaEventBus({
+                    'bootstrap.servers': settings.kafka.bootstrap_servers,
+                    'client.id': 'adam-learning-bus'
+                })
+                if hasattr(event_bus_impl, 'start'):
+                    await event_bus_impl.start()
+            except Exception as e:
+                logger.warning("Kafka unavailable (%s), falling back to InMemoryEventBus", e)
+                event_bus_impl = InMemoryEventBus()
         else:
-            logger.info("Using InMemoryEventBus for local development")
+            logger.info("Using InMemoryEventBus (no Kafka configured)")
             event_bus_impl = InMemoryEventBus()
-        
-        # Start the event bus
-        await event_bus_impl.start()
+
+        if hasattr(event_bus_impl, 'start') and not use_kafka:
+            try:
+                await event_bus_impl.start()
+            except Exception:
+                pass
         self._event_bus = event_bus_impl
         
         # Legacy-compatible wrapper for components expecting old interface
