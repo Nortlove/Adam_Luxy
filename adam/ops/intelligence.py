@@ -168,7 +168,7 @@ class OperationsIntelligenceEngine:
 
             while True:
                 cursor, keys = await self._redis.scan(
-                    cursor, match="adam:*nonconscious*profile*", count=100
+                    cursor, match="adam:*NONCONSCIOUS*profile*", count=100
                 )
                 for key in keys:
                     raw = await self._redis.get(key)
@@ -298,7 +298,7 @@ class OperationsIntelligenceEngine:
         cursor = 0
         while True:
             cursor, keys = await self._redis.scan(
-                cursor, match="adam:*nonconscious*profile*", count=100
+                cursor, match="adam:*NONCONSCIOUS*profile*", count=100
             )
             for key in keys:
                 raw = await self._redis.get(key)
