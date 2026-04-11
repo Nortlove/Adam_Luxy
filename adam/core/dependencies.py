@@ -357,7 +357,10 @@ class LearningComponents:
         # A previous bug here overwrote it with SimpleEventBus() which doesn't exist.
         
         # Signal router
-        self._signal_router = LearningSignalRouter()
+        try:
+            self._signal_router = LearningSignalRouter(event_bus=event_bus)
+        except TypeError:
+            self._signal_router = LearningSignalRouter()
         
         # Real cold start service
         cold_start_service = get_cold_start_service()
