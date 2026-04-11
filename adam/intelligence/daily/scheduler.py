@@ -172,6 +172,10 @@ async def _scheduler_loop() -> None:
 
     logger.info("Daily Intelligence Strengthening scheduler started")
 
+    # Defer first cycle by 5 minutes so the server can start handling
+    # requests immediately without background tasks blocking the event loop.
+    await asyncio.sleep(300)
+
     while not _shutdown:
         try:
             results = await run_all_due_tasks()
