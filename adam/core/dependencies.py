@@ -374,65 +374,84 @@ class LearningComponents:
         self._v3_narrative = get_narrative_session_engine()
         self._v3_mechanism = get_mechanism_interaction_engine()
         
-        # Cold Start Learning
-        self._cold_start_learning = UnifiedColdStartLearning(
-            cold_start_engine=cold_start_service,
-            archetype_library=ARCHETYPE_DEFINITIONS,
-            thompson_sampler=thompson_sampler,
-            neo4j_driver=self._infra.neo4j,
-            redis_client=self._infra.redis,
-            event_bus=event_bus,
-        )
-        
-        # Multimodal Fusion (using v3 temporal dynamics)
-        self._multimodal_learning = MultimodalFusionLearningBridge(
-            fusion_engine=self._v3_temporal,  # Use temporal dynamics for multimodal fusion
-            neo4j_driver=self._infra.neo4j,
-            redis_client=self._infra.redis,
-            event_bus=event_bus,
-        )
-        
-        # Feature Store (using v3 causal discovery for feature importance)
-        self._feature_store_learning = FeatureStoreLearningBridge(
-            feature_store=self._v3_causal,  # Use causal discovery for feature relationships
-            neo4j_driver=self._infra.neo4j,
-            redis_client=self._infra.redis,
-            event_bus=event_bus,
-        )
-        
-        # Temporal Patterns (using v3 temporal dynamics)
-        self._temporal_learning = TemporalLearningBridge(
-            temporal_engine=self._v3_temporal,
-            neo4j_driver=self._infra.neo4j,
-            redis_client=self._infra.redis,
-            event_bus=event_bus,
-        )
-        
-        # Verification (with real prompt manager and verification layer)
-        prompt_manager = RedisPromptManager(self._infra.redis)
-        verification_layer = VerificationLayerWrapper()
-        
-        self._verification_learning = VerificationLearningBridge(
-            verification_layer=verification_layer,
-            atom_prompt_manager=prompt_manager,
-            neo4j_driver=self._infra.neo4j,
-            redis_client=self._infra.redis,
-            event_bus=event_bus,
-        )
+        # Initialize each learning bridge in isolation — one failure
+        # should not prevent others from initializing.
+
+        try:
+            self._cold_start_learning = UnifiedColdStartLearning(
+                cold_start_engine=cold_start_service,
+                archetype_library=ARCHETYPE_DEFINITIONS,
+                thompson_sampler=thompson_sampler,
+                neo4j_driver=self._infra.neo4j,
+                redis_client=self._infra.redis,
+                event_bus=event_bus,
+            )
+        except Exception as e:
+            logger.warning("Cold start learning bridge failed: %s", e)
+
+        try:
+            self._multimodal_learning = MultimodalFusionLearningBridge(
+                fusion_engine=self._v3_temporal,
+                neo4j_driver=self._infra.neo4j,
+                redis_client=self._infra.redis,
+                event_bus=event_bus,
+            )
+        except Exception as e:
+            logger.warning("Multimodal learning bridge failed: %s", e)
+
+        try:
+            self._feature_store_learning = FeatureStoreLearningBridge(
+                feature_store=self._v3_causal,
+                redis_client=self._infra.redis,
+                event_bus=event_bus,
+            )
+        except Exception as e:
+            logger.warning("Feature store learning bridge failed: %s", e)
+
+        try:
+            self._temporal_learning = TemporalLearningBridge(
+                temporal_engine=self._v3_temporal,
+                neo4j_driver=self._infra.neo4j,
+                redis_client=self._infra.redis,
+                event_bus=event_bus,
+            )
+        except Exception as e:
+            logger.warning("Temporal learning bridge failed: %s", e)
+
+        try:
+            prompt_manager = RedisPromptManager(self._infra.redis)
+            verification_layer = VerificationLayerWrapper()
+            self._verification_learning = VerificationLearningBridge(
+                verification_layer=verification_layer,
+                atom_prompt_manager=prompt_manager,
+                neo4j_driver=self._infra.neo4j,
+                redis_client=self._infra.redis,
+                event_bus=event_bus,
+            )
+        except Exception as e:
+            logger.warning("Verification learning bridge failed: %s", e)
         
         # Emergence Detector (using v3 emergence engine)
         claude_client = SimplifiedClaudeClient()
         
-        self._emergence_detector = EmergenceDetector(
-            neo4j_driver=self._infra.neo4j,
-            redis_client=self._infra.redis,
-            event_bus=event_bus,
-            claude_client=claude_client,
-        )
-        
+        try:
+            # Emergence Detector
+            claude_client = SimplifiedClaudeClient()
+            self._emergence_detector = EmergenceDetector(
+                neo4j_driver=self._infra.neo4j,
+                redis_client=self._infra.redis,
+                event_bus=event_bus,
+                claude_client=claude_client,
+            )
+        except Exception as e:
+            logger.warning("Emergence detector failed: %s", e)
+
         # Metrics exporter
-        self._metrics_exporter = LearningMetricsExporter()
-        
+        try:
+            self._metrics_exporter = LearningMetricsExporter()
+        except Exception as e:
+            logger.warning("Metrics exporter failed: %s", e)
+
         logger.info("V3 cognitive layers integrated")
         
         # =====================================================================
