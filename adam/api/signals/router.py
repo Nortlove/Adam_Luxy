@@ -120,6 +120,150 @@ async def ingest_telemetry_session(
     )
 
 
+@router.post("/conversion")
+async def ingest_conversion(
+    payload: dict,
+    collector=Depends(_get_signal_collector),
+):
+    """Receive a conversion event from the INFORMATIV JS script.
+
+    Called when a user completes a booking on the advertiser's site.
+    Fires either automatically (URL pattern match) or manually via
+    window.informativ.convert(). Triggers the learning pipeline.
+    """
+    start = time.monotonic()
+
+    visitor_id = payload.get("visitor_id", "")
+    session_id = payload.get("session_id", "")
+    sapid = payload.get("sapid")
+    campaign_id = payload.get("campaign_id")
+    creative_id = payload.get("creative_id")
+    conversion_type = payload.get("conversion_type", "booking_complete")
+    metadata = payload.get("metadata", {})
+
+    if not visitor_id:
+        raise HTTPException(status_code=400, detail="visitor_id required")
+
+    # Store sapid → visitor_id mapping for attribution
+    if sapid:
+        try:
+            from adam.core.dependencies import Infrastructure
+            infra = Infrastructure.get_instance()
+            # Map sapid → visitor_id (90-day TTL)
+            await infra.redis.set(
+                f"adam:attribution:sapid:{sapid}",
+                visitor_id,
+                ex=3600 * 24 * 90,
+            )
+            # Map visitor_id → latest sapid
+            await infra.redis.set(
+                f"adam:attribution:visitor:{visitor_id}:sapid",
+                sapid,
+                ex=3600 * 24 * 90,
+            )
+        except Exception:
+            pass
+
+    # Update the signal profile with conversion
+    profile = await collector.get_profile(visitor_id)
+    if profile and profile.total_sessions > 0:
+        # Mark as converted in profile
+        try:
+            from adam.infrastructure.redis.cache import CacheKeyBuilder
+            from adam.core.dependencies import Infrastructure
+            infra = Infrastructure.get_instance()
+            # Store conversion event
+            conv_key = f"adam:conversion:{visitor_id}:{session_id}"
+            conv_data = {
+                "visitor_id": visitor_id,
+                "session_id": session_id,
+                "sapid": sapid,
+                "campaign_id": campaign_id,
+                "creative_id": creative_id,
+                "conversion_type": conversion_type,
+                "timestamp": payload.get("timestamp", time.time()),
+                "metadata": metadata,
+                "total_sessions_at_conversion": profile.total_sessions,
+                "organic_ratio_at_conversion": profile.organic_ratio,
+                "self_reported_barrier": profile.self_reported_barrier,
+                "click_latency_trajectory": profile.click_latency_trajectory,
+                "reactance_detected": profile.reactance_detected,
+            }
+            import json as _json
+            await infra.redis.set(
+                conv_key, _json.dumps(conv_data), ex=3600 * 24 * 90,
+            )
+        except Exception as e:
+            logger.warning("Conversion storage failed: %s", e)
+
+    # Trigger the outcome handler learning pipeline
+    try:
+        from adam.core.learning.outcome_handler import OutcomeHandler
+        from adam.core.dependencies import Infrastructure, LearningComponents
+        infra = Infrastructure.get_instance()
+        components = LearningComponents.get_instance(infra)
+
+        handler = OutcomeHandler(
+            learning_components=components,
+            infrastructure=infra,
+        )
+
+        # Parse campaign attribution
+        archetype = ""
+        mechanism = ""
+        touch_position = 0
+        if campaign_id:
+            parts = campaign_id.upper().replace("-", "_").split("_")
+            archetype_map = {"CT": "careful_truster", "SS": "status_seeker", "ED": "easy_decider"}
+            if len(parts) >= 2:
+                archetype = archetype_map.get(parts[0], "")
+            if len(parts) >= 2:
+                try:
+                    touch_position = int(parts[1].replace("T", ""))
+                except ValueError:
+                    pass
+
+        outcome_metadata = {
+            "visitor_id": visitor_id,
+            "sapid": sapid or "",
+            "campaign_id": campaign_id or "",
+            "creative_id": creative_id or "",
+            "archetype": archetype,
+            "touch_position": touch_position,
+            "mechanism_sent": creative_id or "",
+            "conversion_type": conversion_type,
+            **metadata,
+        }
+
+        result = await handler.process_outcome(
+            decision_id=sapid or f"conv_{visitor_id}_{session_id}",
+            outcome_type="conversion",
+            outcome_value=1.0,
+            metadata=outcome_metadata,
+        )
+
+        elapsed_ms = (time.monotonic() - start) * 1000
+        return {
+            "status": "conversion_recorded",
+            "visitor_id": visitor_id,
+            "conversion_type": conversion_type,
+            "learning_updates": len(result.get("updates", {})),
+            "latency_ms": round(elapsed_ms, 2),
+        }
+
+    except Exception as e:
+        logger.warning("Learning pipeline for conversion failed: %s", e)
+        elapsed_ms = (time.monotonic() - start) * 1000
+        return {
+            "status": "conversion_recorded_partial",
+            "visitor_id": visitor_id,
+            "conversion_type": conversion_type,
+            "learning_updates": 0,
+            "note": "Conversion stored but learning pipeline unavailable",
+            "latency_ms": round(elapsed_ms, 2),
+        }
+
+
 @router.get("/user/{user_id}", response_model=StoredSignalProfile)
 async def get_signal_profile(
     user_id: str,

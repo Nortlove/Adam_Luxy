@@ -337,6 +337,32 @@ class StoredSignalProfile(BaseModel):
         description="Mechanism recommendation from organic analysis",
     )
 
+    # Campaign attribution (from URL params)
+    attributed_archetype: str = Field(
+        "",
+        description="Archetype inferred from campaign_id (e.g., CT→careful_truster)",
+    )
+    attributed_touch_positions: List[int] = Field(
+        default_factory=list,
+        description="Touch positions seen (e.g., [1, 2, 3])",
+    )
+    mechanisms_exposed: List[str] = Field(
+        default_factory=list,
+        description="Creative/mechanism IDs the user has been exposed to",
+    )
+    sapid_history: List[str] = Field(
+        default_factory=list,
+        description="StackAdapt postback IDs for attribution chain",
+    )
+    converted: bool = Field(
+        False,
+        description="Whether this user has converted (booking complete)",
+    )
+    conversion_timestamp: Optional[float] = Field(
+        None,
+        description="When conversion occurred",
+    )
+
     # Device compatibility (Signal 5 — computed)
     device_mechanism_mismatch: bool = Field(
         False,

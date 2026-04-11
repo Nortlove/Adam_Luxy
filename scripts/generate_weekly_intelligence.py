@@ -76,6 +76,130 @@ def load_signal_profiles(redis_url: str = "redis://localhost:6379") -> Dict:
     return profiles
 
 
+def load_conversions(redis_url: str = "redis://localhost:6379") -> List[Dict]:
+    """Load conversion events from Redis."""
+    conversions = []
+    try:
+        import redis
+        r = redis.from_url(redis_url, decode_responses=True)
+        cursor = 0
+        while True:
+            cursor, keys = r.scan(cursor, match="adam:conversion:*", count=100)
+            for key in keys:
+                data = r.get(key)
+                if data:
+                    try:
+                        conversions.append(json.loads(data))
+                    except json.JSONDecodeError:
+                        pass
+            if cursor == 0:
+                break
+        logger.info("Loaded %d conversions from Redis", len(conversions))
+    except Exception as e:
+        logger.warning("Could not load conversions: %s", e)
+    return conversions
+
+
+def analyze_behavioral_conversion_patterns(
+    profiles: Dict,
+    conversions: List[Dict],
+) -> Dict:
+    """Join behavioral profiles with conversion outcomes.
+
+    This is the core attribution intelligence — connecting what users
+    DID on the site (behavioral signals) with what they BOUGHT (conversions).
+    """
+    if not profiles or not conversions:
+        return {"status": "insufficient_data"}
+
+    # Index conversions by visitor_id
+    conv_by_visitor = {}
+    for c in conversions:
+        vid = c.get("visitor_id", "")
+        if vid:
+            conv_by_visitor[vid] = c
+
+    converters = []
+    non_converters = []
+
+    for vid, profile in profiles.items():
+        if vid in conv_by_visitor:
+            converters.append(profile)
+        elif profile.get("total_sessions", 0) >= 2:
+            non_converters.append(profile)
+
+    if not converters:
+        return {"status": "no_conversions_yet", "profiles_tracked": len(profiles)}
+
+    # Analyze what's different about converters vs non-converters
+    insights = {
+        "total_profiles": len(profiles),
+        "converters": len(converters),
+        "non_converters": len(non_converters),
+        "conversion_rate": len(converters) / max(1, len(converters) + len(non_converters)),
+    }
+
+    # Section engagement comparison
+    def avg_section(users, section):
+        vals = [u.get("section_dwell_totals", {}).get(section, 0) for u in users]
+        return sum(vals) / max(1, len(vals))
+
+    sections = ["section-pricing", "section-safety", "section-reviews",
+                "section-testimonials", "section-fleet", "section-booking", "section-faq"]
+
+    section_comparison = {}
+    for sec in sections:
+        conv_avg = avg_section(converters, sec)
+        non_avg = avg_section(non_converters, sec)
+        if conv_avg > 0 or non_avg > 0:
+            ratio = conv_avg / max(0.1, non_avg)
+            section_comparison[sec] = {
+                "converter_avg_dwell": round(conv_avg, 1),
+                "non_converter_avg_dwell": round(non_avg, 1),
+                "ratio": round(ratio, 2),
+                "insight": f"Converters spend {ratio:.1f}x on {sec}" if ratio > 1.5 else "",
+            }
+    insights["section_comparison"] = section_comparison
+
+    # Archetype distribution
+    def archetype_dist(users):
+        dist = defaultdict(int)
+        for u in users:
+            arch = u.get("attributed_archetype", "unclassified")
+            dist[arch] += 1
+        return dict(dist)
+
+    insights["converter_archetypes"] = archetype_dist(converters)
+    insights["non_converter_archetypes"] = archetype_dist(non_converters)
+
+    # Organic return rate comparison
+    def avg_organic_ratio(users):
+        ratios = []
+        for u in users:
+            total = u.get("ad_attributed_sessions", 0) + u.get("organic_sessions", 0)
+            if total > 0:
+                ratios.append(u.get("organic_sessions", 0) / total)
+        return sum(ratios) / max(1, len(ratios))
+
+    insights["converter_organic_ratio"] = round(avg_organic_ratio(converters), 3)
+    insights["non_converter_organic_ratio"] = round(avg_organic_ratio(non_converters), 3)
+
+    # Average sessions to conversion
+    conv_sessions = [c.get("total_sessions_at_conversion", 0) for c in conversions if c.get("total_sessions_at_conversion")]
+    if conv_sessions:
+        insights["avg_sessions_to_convert"] = round(sum(conv_sessions) / len(conv_sessions), 1)
+
+    # Top barrier at conversion
+    barriers = defaultdict(int)
+    for c in conversions:
+        b = c.get("self_reported_barrier", "")
+        if b:
+            barriers[b] += 1
+    insights["barriers_at_conversion"] = dict(sorted(barriers.items(), key=lambda x: -x[1]))
+
+    return insights
+
+
 def analyze_archetype_performance(campaign_data: List[Dict]) -> Dict:
     """Analyze per-archetype campaign performance."""
     archetypes = defaultdict(lambda: {
@@ -323,11 +447,33 @@ def main():
     # Load behavioral signals
     profiles = load_signal_profiles(args.redis_url)
 
+    # Load conversions for attribution analysis
+    conversions = load_conversions(args.redis_url)
+
     # Analyze
     archetype_perf = analyze_archetype_performance(campaign_data)
     touch_perf = analyze_touch_progression(campaign_data)
     behavioral = analyze_behavioral_signals(profiles)
+    attribution = analyze_behavioral_conversion_patterns(profiles, conversions)
     recommendations = generate_recommendations(archetype_perf, touch_perf, behavioral)
+
+    # Add attribution-based recommendations
+    if isinstance(attribution, dict) and attribution.get("converters", 0) > 0:
+        sc = attribution.get("section_comparison", {})
+        for sec, data in sc.items():
+            if data.get("ratio", 1.0) > 2.0:
+                recommendations.append(
+                    f"**{sec}**: Converters spend {data['ratio']:.1f}x more time here "
+                    f"({data['converter_avg_dwell']}s vs {data['non_converter_avg_dwell']}s). "
+                    f"Consider creating ad creative that directly references this content."
+                )
+        if attribution.get("converter_organic_ratio", 0) > attribution.get("non_converter_organic_ratio", 0) * 1.5:
+            recommendations.append(
+                f"**Organic returns predict conversion**: Converters have "
+                f"{attribution['converter_organic_ratio']:.0%} organic ratio vs "
+                f"{attribution['non_converter_organic_ratio']:.0%} for non-converters. "
+                f"Users returning organically should get priority retargeting."
+            )
 
     # Generate report
     report = generate_report(archetype_perf, touch_perf, behavioral, recommendations, report_date)

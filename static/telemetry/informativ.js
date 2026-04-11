@@ -438,5 +438,82 @@
     });
   }
 
+  // ═══════════════════════════════════════════════════════════════════
+  // CONVERSION TRACKING
+  // ═══════════════════════════════════════════════════════════════════
+
+  var CONVERSION_ENDPOINT =
+    (SCRIPT_TAG && SCRIPT_TAG.getAttribute("data-conversion-endpoint")) ||
+    ENDPOINT.replace("/session", "/conversion");
+
+  // URL patterns that indicate a booking conversion
+  var CONVERSION_URL_PATTERNS = [
+    "/confirmation",
+    "/booking-confirmed",
+    "/thank-you",
+    "/booking/complete",
+    "/success",
+  ];
+
+  function checkAutoConversion() {
+    var path = location.pathname.toLowerCase();
+    for (var i = 0; i < CONVERSION_URL_PATTERNS.length; i++) {
+      if (path.indexOf(CONVERSION_URL_PATTERNS[i]) !== -1) {
+        sendConversion("booking_complete", { auto_detected: true, url: path });
+        return;
+      }
+    }
+  }
+
+  function sendConversion(conversionType, metadata) {
+    var payload = {
+      visitor_id: visitorId,
+      session_id: sessionId,
+      sapid: sapid || null,
+      campaign_id: campaignId || null,
+      creative_id: creativeId || null,
+      conversion_type: conversionType || "booking_complete",
+      timestamp: Date.now() / 1000,
+      device_type: classifyDevice(),
+      referral_type: referralType,
+      landing_page: location.pathname,
+      is_return_visit: isReturnVisit,
+      previous_visit_count: previousVisitCount,
+      metadata: metadata || {},
+    };
+
+    var json = JSON.stringify(payload);
+
+    if (navigator.sendBeacon) {
+      var blob = new Blob([json], { type: "application/json" });
+      if (navigator.sendBeacon(CONVERSION_ENDPOINT, blob)) return;
+    }
+
+    try {
+      var xhr = new XMLHttpRequest();
+      xhr.open("POST", CONVERSION_ENDPOINT, true);
+      xhr.setRequestHeader("Content-Type", "application/json");
+      xhr.send(json);
+    } catch (e) {
+      // Best effort
+    }
+  }
+
+  // Expose global conversion function for manual triggering
+  // Usage on booking confirmation page:
+  //   window.informativ.convert("booking_complete", { revenue: 125, order_id: "ABC123" });
+  window.informativ = {
+    convert: sendConversion,
+    getVisitorId: function () { return visitorId; },
+    getSessionId: function () { return sessionId; },
+  };
+
   init();
+
+  // Auto-detect conversion from URL on page load
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", checkAutoConversion);
+  } else {
+    checkAutoConversion();
+  }
 })();

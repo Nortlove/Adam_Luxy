@@ -86,6 +86,8 @@ class NonconsciousSignalCollector:
         self._accumulate_click_latency(profile, payload)
         self._accumulate_device(profile, payload)
         self._accumulate_engagement_hour(profile, payload)
+        self._accumulate_campaign_attribution(profile, payload)
+        await self._store_sapid_mapping(profile, payload)
 
         # 4. Compute derived signals from accumulated data
         self._compute_click_latency_trajectory(profile, payload)
@@ -93,6 +95,7 @@ class NonconsciousSignalCollector:
         pop_organic = await self.get_population_organic_ratio()
         self._compute_organic_return(profile, pop_organic)
         self._compute_frequency_decay(profile)
+        self._classify_archetype_from_behavior(profile)
 
         profile.last_updated = time.time()
 
@@ -245,6 +248,81 @@ class NonconsciousSignalCollector:
             profile.hour_engagement_counts.get(hour, 0) + 1
         )
 
+    def _accumulate_campaign_attribution(
+        self, profile: StoredSignalProfile, payload: TelemetrySessionPayload
+    ) -> None:
+        """Parse campaign_id to extract archetype and touch position.
+
+        Campaign IDs follow the format: CT-T1, SS-T3, ED-T2, etc.
+        where the prefix is the archetype and T{N} is the touch number.
+        """
+        campaign_id = payload.campaign_id
+        if not campaign_id:
+            return
+
+        # Parse archetype from campaign prefix
+        _ARCHETYPE_MAP = {
+            "CT": "careful_truster",
+            "SS": "status_seeker",
+            "ED": "easy_decider",
+        }
+        parts = campaign_id.upper().replace("-", "_").split("_")
+        if parts:
+            archetype = _ARCHETYPE_MAP.get(parts[0], "")
+            if archetype and not profile.attributed_archetype:
+                profile.attributed_archetype = archetype
+
+        # Parse touch position
+        for part in parts:
+            if part.startswith("T") and len(part) <= 3:
+                try:
+                    touch_pos = int(part[1:])
+                    if touch_pos not in profile.attributed_touch_positions:
+                        profile.attributed_touch_positions.append(touch_pos)
+                except ValueError:
+                    pass
+
+        # Track creative/mechanism exposure
+        creative_id = payload.creative_id
+        if creative_id and creative_id not in profile.mechanisms_exposed:
+            profile.mechanisms_exposed.append(creative_id)
+
+        # Track sapid for attribution chain
+        if payload.sapid and payload.sapid not in profile.sapid_history:
+            profile.sapid_history.append(payload.sapid)
+
+    async def _store_sapid_mapping(
+        self, profile: StoredSignalProfile, payload: TelemetrySessionPayload
+    ) -> None:
+        """Store sapid→visitor_id mapping in Redis for conversion attribution."""
+        if not payload.sapid:
+            return
+
+        try:
+            # sapid → visitor_id (for when conversion comes in with sapid)
+            await self._redis.set(
+                f"adam:attribution:sapid:{payload.sapid}",
+                payload.visitor_id,
+                ex=3600 * 24 * 90,  # 90-day TTL
+            )
+            # visitor_id → campaign info (for behavioral→outcome join)
+            mapping = json.dumps({
+                "sapid": payload.sapid,
+                "campaign_id": payload.campaign_id or "",
+                "creative_id": payload.creative_id or "",
+                "timestamp": payload.arrival_timestamp,
+            })
+            await self._redis.rpush(
+                f"adam:attribution:visitor:{payload.visitor_id}:campaigns",
+                mapping,
+            )
+            await self._redis.expire(
+                f"adam:attribution:visitor:{payload.visitor_id}:campaigns",
+                3600 * 24 * 90,
+            )
+        except Exception as e:
+            logger.debug("Sapid mapping storage failed: %s", e)
+
     # ─── Derived signal computation ────────────────────────────────────
 
     def _compute_click_latency_trajectory(
@@ -361,6 +439,65 @@ class NonconsciousSignalCollector:
             profile.reactance_detected = result["reactance_detected"]
             profile.reactance_onset_touch = result["reactance_onset_touch"]
             profile.reactance_h4_modifier = result["h4_modifier"]
+
+    def _classify_archetype_from_behavior(
+        self, profile: StoredSignalProfile,
+    ) -> None:
+        """Classify visitor into archetype from behavioral signals.
+
+        If campaign attribution already identified the archetype (from
+        campaign_id), defer to that. Otherwise, classify from section
+        engagement patterns:
+
+        - Careful Truster: safety + reviews + testimonials heavy
+          (research-oriented, trust-seeking)
+        - Status Seeker: fleet + booking (aspirational, status-driven,
+          less research, more visual browsing)
+        - Easy Decider: booking + pricing with low total dwell
+          (action-oriented, minimal deliberation)
+        """
+        # Campaign attribution takes priority
+        if profile.attributed_archetype:
+            return
+
+        if not profile.section_dwell_totals:
+            return
+
+        # Score each archetype based on section dwell patterns
+        trust_sections = (
+            profile.section_dwell_totals.get("section-safety", 0)
+            + profile.section_dwell_totals.get("section-reviews", 0)
+            + profile.section_dwell_totals.get("section-testimonials", 0)
+            + profile.section_dwell_totals.get("section-faq", 0)
+        )
+
+        status_sections = (
+            profile.section_dwell_totals.get("section-fleet", 0)
+            + profile.section_dwell_totals.get("section-how-it-works", 0)
+        )
+
+        action_sections = (
+            profile.section_dwell_totals.get("section-booking", 0)
+            + profile.section_dwell_totals.get("section-pricing", 0)
+        )
+
+        total_dwell = trust_sections + status_sections + action_sections
+        if total_dwell < 5.0:
+            return  # Not enough data to classify
+
+        # Classification logic
+        trust_ratio = trust_sections / total_dwell
+        action_ratio = action_sections / total_dwell
+
+        # High trust section engagement = Careful Truster
+        if trust_ratio > 0.5:
+            profile.attributed_archetype = "careful_truster"
+        # High action with low total dwell = Easy Decider (quick decision)
+        elif action_ratio > 0.5 and total_dwell < 30.0:
+            profile.attributed_archetype = "easy_decider"
+        # Otherwise = Status Seeker (browsing, aspirational)
+        elif total_dwell > 20.0:
+            profile.attributed_archetype = "status_seeker"
 
     # ─── Population baselines ────────────────────────────────────────
 
