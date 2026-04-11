@@ -105,9 +105,6 @@ class OutcomeHandler:
         except Exception:
             pass  # Default weight=1.0 if processing depth unavailable
 
-        results["processing_depth"] = processing_depth_str
-        results["processing_depth_weight"] = processing_depth_weight
-
         results = {
             "decision_id": decision_id,
             "outcome_type": outcome_type,
@@ -116,6 +113,9 @@ class OutcomeHandler:
             "cascade_level": cascade_level,
             "updates": {},
         }
+
+        results["processing_depth"] = processing_depth_str
+        results["processing_depth_weight"] = processing_depth_weight
 
         # =====================================================================
         # 0. RECORD CAUSAL OBSERVATION
