@@ -118,12 +118,12 @@ Each creative is specifically designed for its position in the retargeting seque
 
 **Tag B: INFORMATIV Behavioral Intelligence**
 ```html
-<script src="%%INFORMATIV_SERVER_URL%%/static/telemetry/informativ.js"
-        data-endpoint="%%INFORMATIV_SERVER_URL%%/api/v1/signals/session"
+<script src="https://focused-encouragement-production.up.railway.app/static/telemetry/informativ.js"
+        data-endpoint="https://focused-encouragement-production.up.railway.app/api/v1/signals/session"
         defer></script>
 ```
 - Trigger: **All Pages**
-- `%%INFORMATIV_SERVER_URL%%` will be provided by INFORMATIV team before launch
+- `https://focused-encouragement-production.up.railway.app` will be provided by INFORMATIV team before launch
 - This script is lightweight (<4KB gzipped), async, and does not affect page load speed
 
 **Publish both tags in GTM.**

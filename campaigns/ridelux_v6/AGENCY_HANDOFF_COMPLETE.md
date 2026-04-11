@@ -62,13 +62,13 @@ Install via **Google Tag Manager** (GTM is already on luxyride.com):
    - **Tag Name**: `INFORMATIV Telemetry`
    - **HTML**:
 ```html
-<script src="https://%%INFORMATIV_SERVER_URL%%/static/telemetry/informativ.js"
-        data-endpoint="https://%%INFORMATIV_SERVER_URL%%/api/v1/signals/session"
+<script src="https://focused-encouragement-production.up.railway.app/static/telemetry/informativ.js"
+        data-endpoint="https://focused-encouragement-production.up.railway.app/api/v1/signals/session"
         defer></script>
 ```
    - **Trigger**: All Pages
    - **Tag firing priority**: Set lower than StackAdapt pixel (fires after)
-2. Replace `%%INFORMATIV_SERVER_URL%%` with the INFORMATIV server URL (provided by INFORMATIV team)
+2. INFORMATIV server URL: https://focused-encouragement-production.up.railway.app
 3. Save and Publish
 
 ### 1C. Conversion Event Tags (4 tags)
