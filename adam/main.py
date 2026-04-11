@@ -63,14 +63,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
         else:
             logger.warning("Running in development mode with mock infrastructure")
     
-    # Initialize learning components
+    # Initialize learning components (non-fatal — API works without them)
     components = LearningComponents.get_instance(infra)
     try:
         await components.initialize()
     except Exception as e:
-        logger.error(f"Failed to initialize learning components: {e}")
-        if settings.is_production:
-            raise
+        logger.warning(f"Learning components partially initialized: {e}")
+        logger.warning("API endpoints will function. Learning loop may be limited.")
     
     # Load graph-backed priors (replaces hardcoded with empirical data)
     # Both loaders are async since they use the AsyncDriver.
