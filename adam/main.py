@@ -144,6 +144,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
     except Exception as e:
         logger.debug("Retargeting prior warmup skipped: %s", e)
 
+    # Start Operations Intelligence Engine (hourly analysis cycle)
+    try:
+        from adam.ops.intelligence import start_ops_intelligence
+        await start_ops_intelligence(infra.redis)
+        logger.info("Operations Intelligence Engine started")
+    except Exception as e:
+        logger.debug("Ops intelligence not started: %s", e)
+
     logger.info("ADAM Platform Ready")
     logger.info(f"API available at http://{settings.api.host}:{settings.api.port}")
     logger.info(f"Docs available at http://{settings.api.host}:{settings.api.port}/docs")
@@ -341,6 +349,14 @@ def register_routers(app: FastAPI) -> None:
         logger.info("Nonconscious Signal Intelligence routes registered")
     except ImportError as e:
         logger.debug("Signal intelligence routes not available: %s", e)
+
+    # Operations Intelligence (monitoring, recommendations, alerts)
+    try:
+        from adam.ops.router import router as ops_router
+        app.include_router(ops_router)
+        logger.info("Operations Intelligence routes registered")
+    except ImportError as e:
+        logger.debug("Ops intelligence routes not available: %s", e)
 
     # Monitoring API
     app.include_router(monitoring_router)
