@@ -92,6 +92,12 @@ class PersonState:
     clicks_ads: bool = True   # Do they ever click ads?
     responds_to_organic: bool = False  # Do they self-direct?
 
+    # ── Interaction-Effect Archetype ──
+    interaction_archetype: str = ""  # explorer, loyalist, reliable_cooperator, prevention_planner, anxious_economist, vocal_resistor
+    interaction_archetype_confidence: float = 0.0
+    suppress: bool = False           # True for anxious_economist, vocal_resistor
+    suppress_reason: str = ""
+
     # ── Optimal Action ──
     recommended_mechanism: str = ""
     mechanism_rationale: str = ""
@@ -210,6 +216,103 @@ def infer_person(profile: Dict, conversions: List[Dict] = None) -> PersonState:
     else:
         state.response_type = "unknown"
 
+    # ── Step 1b: Interaction-effect archetype detection ──
+    # These are COMBINATIONS of traits that predict conversion better
+    # than any single dimension. Discovered from cross-category analysis
+    # of 949 moderate airline reviewers.
+
+    # We need proxy estimates of Big Five + regulatory focus from behavioral signals
+    # High NFC + deep engagement + FAQ = conscientiousness proxy
+    conscientiousness_proxy = 0.5
+    if total_dwell > 40: conscientiousness_proxy += 0.15
+    if section_dwell.get("section-faq", 0) > 5: conscientiousness_proxy += 0.1
+    if len(touch_positions) > 2: conscientiousness_proxy += 0.1
+    conscientiousness_proxy = min(0.95, conscientiousness_proxy)
+
+    # Organic returns + broad browsing = openness proxy
+    openness_proxy = 0.5
+    if organic_sessions > 0: openness_proxy += 0.15
+    if len(section_dwell) > 3: openness_proxy += 0.1  # Explored many sections
+    openness_proxy = min(0.95, openness_proxy)
+
+    # Quick positive engagement + low friction = agreeableness proxy
+    agreeableness_proxy = 0.5
+    if n_clicks > 0 and not reactance: agreeableness_proxy += 0.2
+    if organic_sessions > 0: agreeableness_proxy += 0.1
+    agreeableness_proxy = min(0.95, agreeableness_proxy)
+
+    # Safety/review fixation = prevention focus proxy
+    prevention_proxy = 0.5
+    if safety_dwell > 15: prevention_proxy += 0.2
+    if trust_dwell > 20: prevention_proxy += 0.1
+    prevention_proxy = min(0.95, prevention_proxy)
+
+    # Aspiration/fleet browsing = promotion focus proxy
+    promotion_proxy = 0.5
+    if fleet_dwell > 10: promotion_proxy += 0.15
+    if action_dwell > 10 and total_dwell < 30: promotion_proxy += 0.15
+    promotion_proxy = min(0.95, promotion_proxy)
+
+    # Neuroticism proxy: reactance + repeated safety checking
+    neuroticism_proxy = 0.3
+    if reactance: neuroticism_proxy += 0.3
+    if safety_dwell > 25: neuroticism_proxy += 0.15
+    neuroticism_proxy = min(0.95, neuroticism_proxy)
+
+    # Spending pain proxy: heavy pricing engagement
+    spending_pain_proxy = 0.3
+    if price_dwell > 15: spending_pain_proxy += 0.3
+    if price_dwell > 25: spending_pain_proxy += 0.2
+    spending_pain_proxy = min(0.95, spending_pain_proxy)
+
+    # Now detect interaction-effect archetypes
+    # Priority order: suppress first (save money), then specific types, then general
+    # Each requires BOTH dimensions to be high
+
+    # SUPPRESS FIRST: Anxious Economist (neuroticism HIGH + spending_pain HIGH) — 0x
+    if neuroticism_proxy > 0.55 and spending_pain_proxy > 0.55:
+        state.interaction_archetype = "anxious_economist"
+        state.interaction_archetype_confidence = min(neuroticism_proxy, spending_pain_proxy)
+        state.suppress = True
+        state.suppress_reason = (
+            f"Anxious Economist: neuroticism={neuroticism_proxy:.2f}, "
+            f"spending_pain={spending_pain_proxy:.2f}. "
+            "0% conversion rate in cross-category analysis (n=173). "
+            "Ad spend on this profile generates anxiety, not conversion."
+        )
+
+    # SUPPRESS: Vocal Resistor (reactance + deep engagement = fighting back)
+    elif reactance and total_dwell > 15:
+        state.interaction_archetype = "vocal_resistor"
+        state.interaction_archetype_confidence = 0.7
+        state.suppress = True
+        state.suppress_reason = (
+            "Vocal Resistor: reactance detected with deep engagement. "
+            "1% conversion rate in cross-category analysis (n=153). "
+            "Advertising triggers resistance. Release immediately."
+        )
+
+    # The Prevention Planner (conscientiousness HIGH + prevention HIGH)
+    # Check BEFORE loyalist because safety-focused planners look agreeable
+    elif conscientiousness_proxy > 0.6 and prevention_proxy > 0.65:
+        state.interaction_archetype = "prevention_planner"
+        state.interaction_archetype_confidence = min(conscientiousness_proxy, prevention_proxy)
+
+    # The Explorer (openness HIGH + promotion HIGH) — 2x lift
+    elif openness_proxy > 0.6 and promotion_proxy > 0.6 and prevention_proxy < 0.55:
+        state.interaction_archetype = "explorer"
+        state.interaction_archetype_confidence = min(openness_proxy, promotion_proxy)
+
+    # The Reliable Cooperator (conscientiousness HIGH + agreeableness HIGH + NOT prevention)
+    elif conscientiousness_proxy > 0.6 and agreeableness_proxy > 0.6 and prevention_proxy < 0.6:
+        state.interaction_archetype = "reliable_cooperator"
+        state.interaction_archetype_confidence = min(conscientiousness_proxy, agreeableness_proxy)
+
+    # The Loyalist (agreeableness HIGH + trust dwell + LOW negativity evidence)
+    elif agreeableness_proxy > 0.7 and trust_dwell > 10 and not reactance and prevention_proxy < 0.55:
+        state.interaction_archetype = "loyalist"
+        state.interaction_archetype_confidence = agreeableness_proxy
+
     # ── Step 2: What's the trajectory? ──
     # All signals together paint the trajectory picture.
 
@@ -319,8 +422,69 @@ def infer_person(profile: Dict, conversions: List[Dict] = None) -> PersonState:
 
     # ── Step 4: Optimal action (considering everything together) ──
 
-    # Communication style follows from response type + barrier + trajectory
-    if state.response_type == "ad_averse":
+    # INTERACTION ARCHETYPE OVERRIDES — these take priority when detected
+    # because they predict conversion 2x better than single-dimension analysis
+
+    if state.suppress:
+        state.communication_style = "suppress"
+        state.recommended_mechanism = "none"
+        state.mechanism_rationale = state.suppress_reason
+        state.should_continue = False
+        state.continue_reason = state.suppress_reason
+        state.conversion_probability = 0.01
+        state.touches_remaining = 0
+
+    elif state.interaction_archetype == "explorer":
+        state.communication_style = "aspirational_discovery"
+        state.recommended_mechanism = "narrative_transportation"
+        state.mechanism_rationale = (
+            f"Explorer archetype (openness={openness_proxy:.2f}, promotion={promotion_proxy:.2f}). "
+            f"2x base conversion rate. Responds to NOVELTY, not trust or evidence. "
+            f"Creative: emphasize the experience they haven't tried. "
+            f"Short sequence: 2 touches max. Don't over-explain."
+        )
+        state.prediction_error_level = 0.3
+        state.touches_remaining = 2.0
+
+    elif state.interaction_archetype == "loyalist":
+        state.communication_style = "welcoming"
+        state.recommended_mechanism = "social_proof_matched"
+        state.mechanism_rationale = (
+            f"Loyalist archetype (agreeableness={agreeableness_proxy:.2f}). "
+            f"2x base conversion rate. Gives benefit of the doubt. "
+            f"Minimal persuasion needed — just social proof and easy booking. "
+            f"2 touches max. Don't over-explain — they already believe you."
+        )
+        state.prediction_error_level = 0.15
+        state.touches_remaining = 1.5
+
+    elif state.interaction_archetype == "reliable_cooperator":
+        state.communication_style = "structured_efficient"
+        state.recommended_mechanism = "implementation_intention"
+        state.mechanism_rationale = (
+            f"Reliable Cooperator (conscientiousness={conscientiousness_proxy:.2f}, "
+            f"agreeableness={agreeableness_proxy:.2f}). 1.68x base conversion rate. "
+            f"Not impulse — PLANNING. Calendar sync, advance booking, scheduling. "
+            f"'Book your Tuesday 6am pickup now' — specific, structured, planned."
+        )
+        state.prediction_error_level = 0.4
+        state.touches_remaining = 2.0
+
+    elif state.interaction_archetype == "prevention_planner":
+        state.communication_style = "reassuring_preventive"
+        state.recommended_mechanism = "anxiety_resolution"
+        state.mechanism_rationale = (
+            f"Prevention Planner (conscientiousness={conscientiousness_proxy:.2f}, "
+            f"prevention={prevention_proxy:.2f}). Largest moderate segment. "
+            f"PREVENTION framing: what they AVOID, not what they gain. "
+            f"'Never worry about airport pickup again' — not 'experience luxury.' "
+            f"This is regulatory fit — match their prevention focus."
+        )
+        state.prediction_error_level = 0.2
+        state.touches_remaining = 3.0
+
+    # STANDARD CLASSIFICATION — when no interaction archetype detected
+    elif state.response_type == "ad_averse":
         state.communication_style = "awareness_only"
         state.recommended_mechanism = "none"
         state.mechanism_rationale = (
