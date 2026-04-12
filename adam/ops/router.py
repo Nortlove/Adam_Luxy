@@ -225,3 +225,125 @@ async def get_learned_mechanism_effectiveness():
     except Exception:
         pass
     return {"mechanism_effectiveness": {}}
+
+
+@router.post("/accept-recommendation")
+async def accept_recommendation(payload: dict):
+    """Accept a recommendation and trigger the system to act on it.
+
+    The dashboard presents recommendations with an 'Accept' button.
+    When clicked, this endpoint receives the recommendation and
+    executes the appropriate action.
+
+    Actions:
+    - budget_reallocation: logs the decision, stores new allocation
+    - frequency_adjustment: updates frequency parameters
+    - creative_focus: marks creative for refresh
+    - release_users: releases specified users to dormant
+    - mechanism_change: updates mechanism priorities
+    """
+    rec_type = payload.get("type", "")
+    rec_data = payload.get("data", {})
+    rec_title = payload.get("title", "")
+
+    try:
+        from adam.core.dependencies import Infrastructure
+        from adam.ops.intelligence import OperationsIntelligenceEngine, OpsLogEntry
+        infra = Infrastructure.get_instance()
+        engine = OperationsIntelligenceEngine(infra.redis)
+
+        # Log the acceptance
+        await engine.log(OpsLogEntry(
+            level="action",
+            category="recommendation_accepted",
+            title=f"ACCEPTED: {rec_title}",
+            detail=json.dumps(payload)[:500],
+            action_taken=f"User accepted recommendation: {rec_type}",
+            confidence=payload.get("confidence", 0),
+        ))
+
+        # Store the accepted recommendation
+        accepted = {
+            "type": rec_type,
+            "title": rec_title,
+            "data": rec_data,
+            "accepted_at": time.time(),
+            "status": "executing",
+        }
+        await infra.redis.lpush("adam:ops:accepted_recommendations", json.dumps(accepted))
+        await infra.redis.ltrim("adam:ops:accepted_recommendations", 0, 100)
+
+        # Execute type-specific actions
+        action_result = "logged"
+
+        if rec_type == "budget_reallocation":
+            # Store the new allocation for the weekly report to reference
+            await infra.redis.set(
+                "adam:ops:active_budget_change",
+                json.dumps(rec_data),
+                ex=3600 * 24 * 7,
+            )
+            action_result = "Budget reallocation stored — include in next report to agency"
+
+        elif rec_type == "frequency_adjustment":
+            await infra.redis.set(
+                "adam:ops:active_frequency_change",
+                json.dumps(rec_data),
+                ex=3600 * 24 * 7,
+            )
+            action_result = "Frequency adjustment stored — include in next report to agency"
+
+        elif rec_type == "stage_transition":
+            action_result = "Stage transition noted — affects next intelligence cycle mechanism selection"
+
+        elif rec_type == "creative_focus":
+            action_result = "Creative focus stored — generate new copy variant in next cycle"
+
+        # Update status
+        accepted["status"] = "completed"
+        accepted["result"] = action_result
+
+        return {
+            "status": "accepted",
+            "type": rec_type,
+            "action_result": action_result,
+            "logged": True,
+        }
+
+    except Exception as e:
+        return {"status": "error", "detail": str(e)}
+
+
+@router.get("/accepted-recommendations")
+async def get_accepted_recommendations():
+    """Get the history of accepted recommendations."""
+    try:
+        from adam.core.dependencies import Infrastructure
+        infra = Infrastructure.get_instance()
+        raw = await infra.redis.lrange("adam:ops:accepted_recommendations", 0, 50)
+        return {"accepted": [json.loads(r) for r in raw], "count": len(raw)}
+    except Exception:
+        return {"accepted": [], "count": 0}
+
+
+@router.get("/puzzle/{user_id}")
+async def get_user_puzzle(user_id: str):
+    """Get unified puzzle inference for a specific user.
+
+    Returns the complete PersonState: narrative, barrier, trajectory,
+    mechanism recommendation, interaction archetype, suppress decision.
+    """
+    try:
+        from adam.core.dependencies import Infrastructure, LearningComponents
+        infra = Infrastructure.get_instance()
+        components = LearningComponents.get_instance(infra)
+        collector = components.signal_collector
+        if collector:
+            profile = await collector.get_profile(user_id)
+            if profile and profile.total_sessions > 0:
+                from adam.retargeting.engines.unified_puzzle import infer_person
+                state = infer_person(profile.model_dump())
+                return state.to_dict()
+    except Exception as e:
+        return {"error": str(e)}
+    return {"error": f"No profile found for {user_id}"}

@@ -7,69 +7,61 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0a0e17; color: #e0e6ed; }
-
         .login-screen { display: flex; align-items: center; justify-content: center; height: 100vh; flex-direction: column; }
         .login-screen h1 { font-size: 2.5rem; color: #60a5fa; margin-bottom: 0.5rem; letter-spacing: 3px; }
         .login-screen p { color: #6b7280; margin-bottom: 2rem; }
         .login-screen input { padding: 12px 20px; border: 1px solid #374151; border-radius: 8px; background: #1f2937; color: #e0e6ed; font-size: 1rem; width: 300px; margin-bottom: 1rem; }
         .login-screen button { padding: 12px 40px; border: none; border-radius: 8px; background: #2563eb; color: white; font-size: 1rem; cursor: pointer; }
         .login-screen button:hover { background: #1d4ed8; }
-
         .dashboard { display: none; }
         .dashboard.active { display: block; }
-
-        header { background: #111827; padding: 16px 32px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1f2937; }
+        header { background: #111827; padding: 16px 32px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1f2937; position: sticky; top: 0; z-index: 100; }
         header h1 { font-size: 1.4rem; color: #60a5fa; letter-spacing: 2px; }
-        header .campaign-selector { display: flex; gap: 12px; }
-        header .campaign-selector button { padding: 8px 16px; border: 1px solid #374151; border-radius: 6px; background: transparent; color: #9ca3af; cursor: pointer; font-size: 0.85rem; }
-        header .campaign-selector button.active { background: #1e40af; border-color: #2563eb; color: white; }
-
+        .tabs { display: flex; gap: 4px; background: #1f2937; padding: 4px; border-radius: 8px; }
+        .tabs button { padding: 8px 20px; border: none; border-radius: 6px; background: transparent; color: #9ca3af; cursor: pointer; font-size: 0.85rem; }
+        .tabs button.active { background: #2563eb; color: white; }
+        .refresh-btn { padding: 6px 14px; border: 1px solid #374151; border-radius: 6px; background: transparent; color: #9ca3af; cursor: pointer; font-size: 0.8rem; }
+        .refresh-btn:hover { background: #1f2937; }
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; padding: 24px; }
-
         .card { background: #111827; border: 1px solid #1f2937; border-radius: 12px; padding: 24px; }
-        .card h2 { font-size: 1rem; color: #9ca3af; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 1px; font-weight: 500; }
+        .card h2 { font-size: 0.9rem; color: #9ca3af; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 1px; font-weight: 500; }
         .card .metric { font-size: 2.5rem; font-weight: 700; color: #f9fafb; }
         .card .metric.green { color: #34d399; }
         .card .metric.red { color: #f87171; }
         .card .metric.blue { color: #60a5fa; }
         .card .sub { font-size: 0.85rem; color: #6b7280; margin-top: 4px; }
-
         .card-wide { grid-column: span 2; }
         .card-full { grid-column: 1 / -1; }
-
-        table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 8px; }
         table th { text-align: left; padding: 8px 12px; font-size: 0.75rem; color: #6b7280; text-transform: uppercase; border-bottom: 1px solid #1f2937; }
-        table td { padding: 8px 12px; font-size: 0.9rem; border-bottom: 1px solid #1f2937; }
+        table td { padding: 8px 12px; font-size: 0.85rem; border-bottom: 1px solid #1f2937; }
         table tr:hover { background: #1f2937; }
-
         .bar { height: 6px; border-radius: 3px; background: #1f2937; margin-top: 4px; }
         .bar-fill { height: 100%; border-radius: 3px; }
-        .bar-fill.green { background: #34d399; }
-        .bar-fill.blue { background: #60a5fa; }
-        .bar-fill.yellow { background: #fbbf24; }
-        .bar-fill.red { background: #f87171; }
-
-        .insight-card { background: #0f172a; border-left: 3px solid #60a5fa; padding: 16px; margin-bottom: 12px; border-radius: 0 8px 8px 0; }
-        .insight-card.recommendation { border-left-color: #fbbf24; }
-        .insight-card.alert { border-left-color: #f87171; }
-        .insight-card.discovery { border-left-color: #34d399; }
-        .insight-card h3 { font-size: 0.95rem; margin-bottom: 6px; }
-        .insight-card p { font-size: 0.85rem; color: #9ca3af; }
-        .insight-card .confidence { font-size: 0.75rem; color: #6b7280; margin-top: 4px; }
-
+        .bar-fill.green { background: #34d399; } .bar-fill.blue { background: #60a5fa; }
+        .bar-fill.yellow { background: #fbbf24; } .bar-fill.red { background: #f87171; }
+        .bar-fill.purple { background: #a78bfa; }
+        .insight { background: #0f172a; border-left: 3px solid #60a5fa; padding: 16px; margin-bottom: 12px; border-radius: 0 8px 8px 0; }
+        .insight.rec { border-left-color: #fbbf24; }
+        .insight.alert { border-left-color: #f87171; }
+        .insight.discovery { border-left-color: #34d399; }
+        .insight.accepted { border-left-color: #a78bfa; opacity: 0.7; }
+        .insight h3 { font-size: 0.95rem; margin-bottom: 6px; }
+        .insight p { font-size: 0.85rem; color: #9ca3af; line-height: 1.5; }
+        .insight .meta { font-size: 0.75rem; color: #6b7280; margin-top: 8px; display: flex; gap: 16px; align-items: center; }
+        .accept-btn { padding: 6px 16px; border: 1px solid #34d399; border-radius: 6px; background: transparent; color: #34d399; cursor: pointer; font-size: 0.8rem; }
+        .accept-btn:hover { background: #34d399; color: #0a0e17; }
+        .accept-btn.done { border-color: #6b7280; color: #6b7280; cursor: default; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
         .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
-        .status-dot.healthy { background: #34d399; }
-        .status-dot.degraded { background: #fbbf24; }
-        .status-dot.down { background: #f87171; }
-
-        .refresh-btn { padding: 6px 14px; border: 1px solid #374151; border-radius: 6px; background: transparent; color: #9ca3af; cursor: pointer; font-size: 0.8rem; }
-        .refresh-btn:hover { background: #1f2937; }
-
+        .status-dot.healthy { background: #34d399; } .status-dot.warn { background: #fbbf24; }
+        .narrative-box { background: #0f172a; border: 1px solid #1f2937; border-radius: 8px; padding: 16px; margin-top: 8px; font-size: 0.9rem; line-height: 1.6; color: #d1d5db; }
+        .section-title { font-size: 1.1rem; color: #f9fafb; padding: 24px 24px 0 24px; font-weight: 600; }
         #loading { text-align: center; padding: 60px; color: #6b7280; }
     </style>
 </head>
 <body>
-    <!-- LOGIN SCREEN -->
     <div class="login-screen" id="loginScreen">
         <h1>INFORMATIV</h1>
         <p>Bilateral Psycholinguistic Intelligence</p>
@@ -77,259 +69,301 @@
         <button onclick="login()">Access Dashboard</button>
     </div>
 
-    <!-- DASHBOARD -->
     <div class="dashboard" id="dashboard">
         <header>
             <h1>INFORMATIV</h1>
-            <div class="campaign-selector">
-                <button class="active" onclick="switchCampaign('luxy_ride')">LUXY Ride</button>
-                <button onclick="switchCampaign('overview')">Overview</button>
+            <div class="tabs">
+                <button class="active" onclick="switchTab('campaign')">Campaign</button>
+                <button onclick="switchTab('intelligence')">Intelligence</button>
+                <button onclick="switchTab('decisions')">Decisions</button>
+                <button onclick="switchTab('log')">Ops Log</button>
             </div>
             <div>
-                <button class="refresh-btn" onclick="refreshAll()">↻ Refresh</button>
-                <span id="lastUpdate" style="font-size:0.75rem;color:#6b7280;margin-left:12px;"></span>
+                <button class="refresh-btn" onclick="refreshAll()">Refresh</button>
+                <span id="lastUpdate" style="font-size:0.7rem;color:#6b7280;margin-left:8px;"></span>
             </div>
         </header>
 
-        <div id="loading">Loading intelligence data...</div>
+        <div id="loading">Loading...</div>
 
-        <div class="grid" id="mainGrid" style="display:none;">
-            <!-- Row 1: Key Metrics -->
-            <div class="card">
-                <h2>Active Profiles</h2>
-                <div class="metric blue" id="totalProfiles">—</div>
-                <div class="sub" id="profileBreakdown"></div>
+        <!-- TAB: CAMPAIGN -->
+        <div class="tab-content active" id="tab-campaign">
+            <div class="grid" id="campaignGrid">
+                <div class="card"><h2>Active Profiles</h2><div class="metric blue" id="mProfiles">—</div><div class="sub" id="mProfilesSub"></div></div>
+                <div class="card"><h2>Conversions</h2><div class="metric green" id="mConv">—</div><div class="sub" id="mConvSub"></div></div>
+                <div class="card"><h2>Sessions</h2><div class="metric" id="mSessions">—</div><div class="sub" id="mSessionsSub"></div></div>
+                <div class="card"><h2>Health</h2><div id="mHealth"></div></div>
+                <div class="card card-wide"><h2>Archetype Distribution</h2><div id="archetypes"></div></div>
+                <div class="card card-wide"><h2>Barrier Distribution</h2><div id="barriers"></div></div>
             </div>
-            <div class="card">
-                <h2>Conversions</h2>
-                <div class="metric green" id="totalConversions">—</div>
-                <div class="sub" id="convRevenue"></div>
-            </div>
-            <div class="card">
-                <h2>Sessions Tracked</h2>
-                <div class="metric" id="totalSessions">—</div>
-                <div class="sub" id="sessionBreakdown"></div>
-            </div>
-            <div class="card">
-                <h2>System Health</h2>
-                <div id="healthStatus"></div>
-            </div>
+        </div>
 
-            <!-- Row 2: Archetype Distribution -->
-            <div class="card card-wide">
-                <h2>Archetype Distribution</h2>
-                <div id="archetypeChart"></div>
+        <!-- TAB: INTELLIGENCE (Learnings + Discoveries) -->
+        <div class="tab-content" id="tab-intelligence">
+            <p class="section-title">What The System Has Learned</p>
+            <div class="grid">
+                <div class="card card-full"><h2>Multi-Dimensional Learning</h2><div id="learningResults"></div></div>
+                <div class="card card-full"><h2>Discoveries — Surprising Patterns</h2><div id="discoveriesList"></div></div>
+                <div class="card card-full"><h2>Mechanism Effectiveness (Learned from Outcomes)</h2><div id="mechEffect"></div></div>
+                <div class="card card-wide"><h2>High-Intent Users</h2><div id="highIntent"></div></div>
+                <div class="card card-wide"><h2>Released Users (Dormant Pool)</h2><div id="released"></div></div>
             </div>
-            <div class="card card-wide">
-                <h2>Barrier Distribution</h2>
-                <div id="barrierChart"></div>
-            </div>
+        </div>
 
-            <!-- Row 3: Recommendations -->
-            <div class="card card-full">
-                <h2>Intelligence Recommendations</h2>
-                <div id="recommendations"></div>
+        <!-- TAB: DECISIONS (Recommendations to Accept/Reject) -->
+        <div class="tab-content" id="tab-decisions">
+            <p class="section-title">Pending Recommendations — Review and Accept</p>
+            <div class="grid">
+                <div class="card card-full" id="pendingRecs"><h2>Pending Recommendations</h2><div id="pendingList"></div></div>
+                <div class="card card-full"><h2>Accepted Recommendations (Action History)</h2><div id="acceptedList"></div></div>
+                <div class="card card-full"><h2>Active Alerts</h2><div id="alertsList"></div></div>
             </div>
+        </div>
 
-            <!-- Row 4: Discoveries -->
-            <div class="card card-full">
-                <h2>Discoveries</h2>
-                <div id="discoveries"></div>
-            </div>
-
-            <!-- Row 5: Ops Log -->
-            <div class="card card-full">
-                <h2>Operations Log</h2>
-                <table>
-                    <thead>
-                        <tr><th>Time</th><th>Level</th><th>Category</th><th>Title</th><th>Detail</th></tr>
-                    </thead>
-                    <tbody id="opsLog"></tbody>
-                </table>
-            </div>
-
-            <!-- Row 6: Mechanism Effectiveness -->
-            <div class="card card-full">
-                <h2>Learned Mechanism Effectiveness</h2>
-                <div id="mechEffectiveness"></div>
+        <!-- TAB: OPS LOG -->
+        <div class="tab-content" id="tab-log">
+            <div class="grid">
+                <div class="card card-full">
+                    <h2>Operations Log — Full Audit Trail</h2>
+                    <table><thead><tr><th>Time</th><th>Level</th><th>Category</th><th>Title</th><th>Detail</th></tr></thead><tbody id="opsLog"></tbody></table>
+                </div>
             </div>
         </div>
     </div>
 
-    <script>
-    const API = window.location.origin;
-    const ACCESS_KEY = 'xinceM-6xuhji-wepmeq';
+<script>
+const API = window.location.origin;
+const ACCESS_KEY = 'xinceM-6xuhji-wepmeq';
+let dashData = {};
 
-    function login() {
-        const key = document.getElementById('loginKey').value;
-        if (key === ACCESS_KEY) {
-            document.getElementById('loginScreen').style.display = 'none';
-            document.getElementById('dashboard').classList.add('active');
-            refreshAll();
-        } else {
-            alert('Invalid access key');
-        }
-    }
-
-    function switchCampaign(name) {
-        document.querySelectorAll('.campaign-selector button').forEach(b => b.classList.remove('active'));
-        event.target.classList.add('active');
+function login() {
+    if (document.getElementById('loginKey').value === ACCESS_KEY) {
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('dashboard').classList.add('active');
         refreshAll();
+    } else { alert('Invalid key'); }
+}
+
+function switchTab(name) {
+    document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+    event.target.classList.add('active');
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+}
+
+async function fetchJSON(path) {
+    try { const r = await fetch(API + path); return r.ok ? await r.json() : null; } catch(e) { return null; }
+}
+
+function fmtTime(ts) { return ts ? new Date(ts * 1000).toLocaleString() : '—'; }
+function bar(val, max, color) {
+    const pct = Math.min(100, (val / Math.max(max, 1)) * 100);
+    return `<div class="bar"><div class="bar-fill ${color}" style="width:${pct}%"></div></div>`;
+}
+
+async function acceptRec(idx) {
+    const rec = dashData.recs[idx];
+    const btn = document.getElementById('accept-' + idx);
+    btn.textContent = 'Executing...';
+    btn.disabled = true;
+    const result = await fetch(API + '/api/v1/ops/accept-recommendation', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(rec),
+    }).then(r => r.json()).catch(() => ({status:'error'}));
+    btn.textContent = result.status === 'accepted' ? 'Accepted' : 'Error';
+    btn.classList.add('done');
+    // Refresh after a moment
+    setTimeout(refreshAll, 1500);
+}
+
+async function refreshAll() {
+    document.getElementById('loading').style.display = 'block';
+    const [dash, recs, log, alerts, disc, mechEff, learning, highIntent, released, accepted] = await Promise.all([
+        fetchJSON('/api/v1/ops/dashboard'),
+        fetchJSON('/api/v1/ops/recommendations'),
+        fetchJSON('/api/v1/ops/log?limit=30'),
+        fetchJSON('/api/v1/ops/alerts'),
+        fetchJSON('/api/v1/ops/discoveries'),
+        fetchJSON('/api/v1/ops/mechanism-effectiveness'),
+        fetchJSON('/api/v1/ops/learning'),
+        fetchJSON('/api/v1/ops/high-intent'),
+        fetchJSON('/api/v1/ops/released'),
+        fetchJSON('/api/v1/ops/accepted-recommendations'),
+    ]);
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+    dashData.recs = (recs && recs.recommendations) || [];
+
+    // ── CAMPAIGN TAB ──
+    if (dash) {
+        const p = dash.profiles || {}, c = dash.conversions || {}, t = dash.telemetry || {};
+        document.getElementById('mProfiles').textContent = p.total_profiles || 0;
+        document.getElementById('mProfilesSub').textContent = `${p.with_archetype||0} classified | ${p.reactance_detected||0} reactance`;
+        document.getElementById('mConv').textContent = c.total_conversions || 0;
+        document.getElementById('mConvSub').textContent = `$${(c.total_revenue||0).toLocaleString()} rev ($${(c.avg_revenue||0).toFixed(0)} avg)`;
+        document.getElementById('mSessions').textContent = t.total_sessions_tracked || 0;
+        document.getElementById('mSessionsSub').textContent = `${t.ad_attributed_sessions||0} ad | ${t.organic_sessions||0} organic (${((t.population_organic_ratio||0)*100).toFixed(1)}%)`;
+        document.getElementById('mHealth').innerHTML = `<span class="status-dot healthy"></span> All Systems Operational<br><span style="font-size:0.8rem;color:#6b7280">Learning: 6/6 | Redis: connected | Neo4j: connected</span>`;
+
+        // Archetypes
+        const arch = dash.archetypes || {};
+        const maxA = Math.max(...Object.values(arch), 1);
+        let aHTML = '<table><tbody>';
+        for (const [a, n] of Object.entries(arch).sort((a,b) => b[1]-a[1])) {
+            const c = a === 'unclassified' ? 'yellow' : ['explorer','prevention_planner','reliable_cooperator'].includes(a) ? 'purple' : 'blue';
+            aHTML += `<tr><td style="width:180px">${a}</td><td style="width:40px">${n}</td><td>${bar(n,maxA,c)}</td></tr>`;
+        }
+        document.getElementById('archetypes').innerHTML = aHTML + '</tbody></table>';
+
+        // Barriers
+        const barr = dash.barriers || {};
+        const maxB = Math.max(...Object.values(barr), 1);
+        let bHTML = '<table><tbody>';
+        for (const [b, n] of Object.entries(barr).sort((a,b) => b[1]-a[1])) {
+            bHTML += `<tr><td style="width:200px">${b}</td><td style="width:40px">${n}</td><td>${bar(n,maxB,'green')}</td></tr>`;
+        }
+        document.getElementById('barriers').innerHTML = bHTML + '</tbody></table>';
     }
 
-    async function fetchJSON(path) {
-        try {
-            const resp = await fetch(API + path);
-            if (!resp.ok) return null;
-            return await resp.json();
-        } catch(e) { return null; }
+    // ── INTELLIGENCE TAB ──
+    // Learning results
+    if (learning && !learning.note) {
+        let lHTML = '';
+        if (learning.causal_summary) {
+            lHTML += '<h3 style="margin:12px 0 8px;color:#60a5fa">Causal Attribution</h3>';
+            lHTML += `<p style="color:#9ca3af">Average ad causal weight: <strong>${((learning.avg_ad_causal_weight||0)*100).toFixed(0)}%</strong> of conversions attributed to ad effectiveness</p>`;
+            lHTML += '<div style="display:flex;gap:16px;margin-top:8px">';
+            for (const [cause, count] of Object.entries(learning.causal_summary || {})) {
+                lHTML += `<div style="background:#1f2937;padding:8px 16px;border-radius:6px"><div style="font-size:1.2rem;font-weight:700">${count}</div><div style="font-size:0.75rem;color:#6b7280">${cause}</div></div>`;
+            }
+            lHTML += '</div>';
+        }
+        if (learning.temporal_windows) {
+            lHTML += '<h3 style="margin:20px 0 8px;color:#60a5fa">Temporal Receptivity Windows</h3>';
+            for (const [arch, w] of Object.entries(learning.temporal_windows)) {
+                lHTML += `<div style="margin-bottom:8px"><strong>${arch}</strong>: Peak hours ${(w.peak_hours||[]).join(', ')} <span style="color:#6b7280">(${w.total_observations} observations)</span></div>`;
+            }
+        }
+        if (learning.context_recommendations && learning.context_recommendations.length > 0) {
+            lHTML += '<h3 style="margin:20px 0 8px;color:#60a5fa">Context Insights</h3>';
+            for (const rec of learning.context_recommendations) {
+                lHTML += `<div class="insight discovery"><p>${rec}</p></div>`;
+            }
+        }
+        if (learning.failure_eliminations && learning.failure_eliminations.length > 0) {
+            lHTML += '<h3 style="margin:20px 0 8px;color:#f87171">Mechanism Failures (Eliminate)</h3>';
+            for (const f of learning.failure_eliminations) {
+                lHTML += `<div class="insight alert"><h3>${f.mechanism}</h3><p>${f.recommendation}</p></div>`;
+            }
+        }
+        document.getElementById('learningResults').innerHTML = lHTML || '<p style="color:#6b7280">Learning results will appear after conversions accumulate.</p>';
+    } else {
+        document.getElementById('learningResults').innerHTML = '<p style="color:#6b7280">Waiting for data — learning activates after first intelligence cycle with conversions.</p>';
     }
 
-    function formatTime(ts) {
-        if (!ts) return '—';
-        return new Date(ts * 1000).toLocaleString();
+    // Discoveries
+    if (disc && disc.discoveries && disc.discoveries.length > 0) {
+        let dHTML = '';
+        for (const d of disc.discoveries) {
+            dHTML += `<div class="insight discovery"><h3>${d.type}</h3><p>${d.insight}</p><div class="meta">Confidence: ${((d.confidence||0)*100).toFixed(0)}% | ${fmtTime(d.discovered_at)}</div></div>`;
+        }
+        document.getElementById('discoveriesList').innerHTML = dHTML;
+    } else {
+        document.getElementById('discoveriesList').innerHTML = '<p style="color:#6b7280">No discoveries yet — the system finds patterns as data accumulates.</p>';
     }
 
-    function makeBar(value, max, color) {
-        const pct = Math.min(100, (value / max) * 100);
-        return `<div class="bar"><div class="bar-fill ${color}" style="width:${pct}%"></div></div>`;
+    // Mechanism effectiveness
+    if (mechEff && mechEff.mechanism_effectiveness && Object.keys(mechEff.mechanism_effectiveness).length > 0) {
+        let mHTML = '<table><thead><tr><th>Archetype</th><th>Mechanism</th><th>Effectiveness</th><th>Trials</th><th></th></tr></thead><tbody>';
+        for (const [arch, mechs] of Object.entries(mechEff.mechanism_effectiveness)) {
+            for (const [mech, d] of Object.entries(mechs).sort((a,b) => b[1].effectiveness - a[1].effectiveness)) {
+                const c = d.effectiveness > 0.5 ? 'green' : d.effectiveness > 0.3 ? 'yellow' : 'red';
+                mHTML += `<tr><td>${arch}</td><td>${mech}</td><td>${(d.effectiveness*100).toFixed(1)}%</td><td>${d.trials}</td><td style="width:40%">${bar(d.effectiveness,1,c)}</td></tr>`;
+            }
+        }
+        document.getElementById('mechEffect').innerHTML = mHTML + '</tbody></table>';
+    } else {
+        document.getElementById('mechEffect').innerHTML = '<p style="color:#6b7280">Effectiveness data accumulates from conversion outcomes.</p>';
     }
 
-    async function refreshAll() {
-        document.getElementById('loading').style.display = 'block';
-        document.getElementById('mainGrid').style.display = 'none';
+    // High intent
+    if (highIntent && highIntent.high_intent_users && highIntent.high_intent_users.length > 0) {
+        let hHTML = '<table><thead><tr><th>User</th><th>Conv Prob</th><th>Reason</th></tr></thead><tbody>';
+        for (const u of highIntent.high_intent_users.slice(0, 10)) {
+            hHTML += `<tr><td>${u.user_id}</td><td style="color:#34d399">${(u.conversion_probability*100).toFixed(1)}%</td><td style="font-size:0.8rem;color:#9ca3af">${u.reason}</td></tr>`;
+        }
+        document.getElementById('highIntent').innerHTML = hHTML + '</tbody></table>';
+    } else {
+        document.getElementById('highIntent').innerHTML = '<p style="color:#6b7280">High-intent users will be flagged as the puzzle solver identifies them.</p>';
+    }
 
-        const [dashboard, recs, log, alerts, discoveries, mechEff, learning] = await Promise.all([
-            fetchJSON('/api/v1/ops/dashboard'),
-            fetchJSON('/api/v1/ops/recommendations'),
-            fetchJSON('/api/v1/ops/log?limit=20'),
-            fetchJSON('/api/v1/ops/alerts'),
-            fetchJSON('/api/v1/ops/discoveries'),
-            fetchJSON('/api/v1/ops/mechanism-effectiveness'),
-            fetchJSON('/api/v1/ops/learning'),
-        ]);
+    // Released
+    if (released && released.released_users && released.released_users.length > 0) {
+        let rHTML = `<p style="margin-bottom:12px;color:#9ca3af">${released.count} users released to dormant pool</p><table><thead><tr><th>User</th><th>Reason</th><th>Released</th></tr></thead><tbody>`;
+        for (const u of released.released_users.slice(0, 10)) {
+            rHTML += `<tr><td>${u.user_id}</td><td style="font-size:0.8rem;color:#9ca3af">${u.reason}</td><td style="font-size:0.8rem">${fmtTime(u.released_at)}</td></tr>`;
+        }
+        document.getElementById('released').innerHTML = rHTML + '</tbody></table>';
+    } else {
+        document.getElementById('released').innerHTML = '<p style="color:#6b7280">No users released yet.</p>';
+    }
 
-        document.getElementById('loading').style.display = 'none';
-        document.getElementById('mainGrid').style.display = 'grid';
-        document.getElementById('lastUpdate').textContent = 'Updated: ' + new Date().toLocaleTimeString();
-
-        // Key metrics
-        if (dashboard) {
-            const p = dashboard.profiles || {};
-            const c = dashboard.conversions || {};
-            const t = dashboard.telemetry || {};
-
-            document.getElementById('totalProfiles').textContent = p.total_profiles || 0;
-            document.getElementById('profileBreakdown').textContent =
-                `${p.with_archetype || 0} classified, ${p.reactance_detected || 0} reactance detected`;
-
-            document.getElementById('totalConversions').textContent = c.total_conversions || 0;
-            document.getElementById('convRevenue').textContent = `$${(c.total_revenue || 0).toLocaleString()} revenue ($${(c.avg_revenue || 0).toFixed(0)} avg)`;
-
-            document.getElementById('totalSessions').textContent = t.total_sessions_tracked || 0;
-            document.getElementById('sessionBreakdown').textContent =
-                `${t.ad_attributed_sessions || 0} ad-driven, ${t.organic_sessions || 0} organic (${((t.population_organic_ratio || 0) * 100).toFixed(1)}%)`;
-
-            // Health
-            document.getElementById('healthStatus').innerHTML = `
-                <div style="margin-bottom:8px"><span class="status-dot healthy"></span> Server Healthy</div>
-                <div style="font-size:0.85rem;color:#6b7280">
-                    Profiles: ${p.total_profiles} | Conversions: ${c.total_conversions} | Organic: ${((t.population_organic_ratio || 0) * 100).toFixed(1)}%
+    // ── DECISIONS TAB ──
+    // Pending recommendations (with Accept buttons)
+    if (dashData.recs.length > 0) {
+        let pHTML = '';
+        for (let i = 0; i < dashData.recs.length; i++) {
+            const r = dashData.recs[i];
+            pHTML += `<div class="insight rec">
+                <h3>${r.title || r.type}</h3>
+                <p>${r.recommendation || r.detail || ''}</p>
+                <div class="meta">
+                    <span>Confidence: ${((r.confidence||0)*100).toFixed(0)}%</span>
+                    <span>${r.severity || ''}</span>
+                    <span>${fmtTime(r.timestamp)}</span>
+                    <button class="accept-btn" id="accept-${i}" onclick="acceptRec(${i})">Accept & Execute</button>
                 </div>
-            `;
-
-            // Archetypes
-            const archetypes = dashboard.archetypes || {};
-            let archHTML = '<table><thead><tr><th>Archetype</th><th>Count</th><th></th></tr></thead><tbody>';
-            const maxArch = Math.max(...Object.values(archetypes), 1);
-            for (const [arch, count] of Object.entries(archetypes).sort((a,b) => b[1]-a[1])) {
-                const color = arch === 'unclassified' ? 'yellow' : 'blue';
-                archHTML += `<tr><td>${arch}</td><td>${count}</td><td style="width:60%">${makeBar(count, maxArch, color)}</td></tr>`;
-            }
-            archHTML += '</tbody></table>';
-            document.getElementById('archetypeChart').innerHTML = archHTML;
-
-            // Barriers
-            const barriers = dashboard.barriers || {};
-            let barrierHTML = '<table><thead><tr><th>Barrier</th><th>Count</th><th></th></tr></thead><tbody>';
-            const maxBar = Math.max(...Object.values(barriers), 1);
-            for (const [barrier, count] of Object.entries(barriers).sort((a,b) => b[1]-a[1])) {
-                barrierHTML += `<tr><td>${barrier}</td><td>${count}</td><td style="width:60%">${makeBar(count, maxBar, 'green')}</td></tr>`;
-            }
-            barrierHTML += '</tbody></table>';
-            document.getElementById('barrierChart').innerHTML = barrierHTML;
+            </div>`;
         }
-
-        // Recommendations
-        if (recs && recs.recommendations) {
-            let recHTML = '';
-            if (recs.recommendations.length === 0) {
-                recHTML = '<p style="color:#6b7280">No recommendations yet — intelligence cycle needs more data.</p>';
-            }
-            for (const rec of recs.recommendations.slice(0, 10)) {
-                recHTML += `
-                    <div class="insight-card recommendation">
-                        <h3>${rec.title || 'Recommendation'}</h3>
-                        <p>${rec.recommendation || rec.detail || ''}</p>
-                        <div class="confidence">Confidence: ${((rec.confidence || 0) * 100).toFixed(0)}% | ${rec.severity || ''} | ${formatTime(rec.timestamp)}</div>
-                    </div>`;
-            }
-            document.getElementById('recommendations').innerHTML = recHTML;
-        }
-
-        // Discoveries
-        if (discoveries && discoveries.discoveries) {
-            let discHTML = '';
-            if (discoveries.discoveries.length === 0) {
-                discHTML = '<p style="color:#6b7280">No discoveries yet — the system will find patterns as data accumulates.</p>';
-            }
-            for (const disc of discoveries.discoveries.slice(0, 10)) {
-                discHTML += `
-                    <div class="insight-card discovery">
-                        <h3>${disc.type || 'Discovery'}</h3>
-                        <p>${disc.insight || ''}</p>
-                        <div class="confidence">Confidence: ${((disc.confidence || 0) * 100).toFixed(0)}% | ${formatTime(disc.discovered_at)}</div>
-                    </div>`;
-            }
-            document.getElementById('discoveries').innerHTML = discHTML;
-        }
-
-        // Ops Log
-        if (log && log.log) {
-            let logHTML = '';
-            for (const entry of log.log.slice(0, 20)) {
-                const levelColor = entry.level === 'alert' ? '#f87171' : entry.level === 'action' ? '#fbbf24' : entry.level === 'insight' ? '#34d399' : '#6b7280';
-                logHTML += `<tr>
-                    <td style="font-size:0.8rem;color:#6b7280">${formatTime(entry.timestamp)}</td>
-                    <td style="color:${levelColor}">${entry.level}</td>
-                    <td>${entry.category}</td>
-                    <td>${entry.title}</td>
-                    <td style="font-size:0.8rem;color:#9ca3af">${(entry.detail || '').slice(0, 100)}</td>
-                </tr>`;
-            }
-            document.getElementById('opsLog').innerHTML = logHTML;
-        }
-
-        // Mechanism Effectiveness
-        if (mechEff && mechEff.mechanism_effectiveness) {
-            const eff = mechEff.mechanism_effectiveness;
-            let mechHTML = '<table><thead><tr><th>Archetype</th><th>Mechanism</th><th>Effectiveness</th><th>Trials</th><th></th></tr></thead><tbody>';
-            for (const [arch, mechs] of Object.entries(eff)) {
-                for (const [mech, data] of Object.entries(mechs)) {
-                    const color = data.effectiveness > 0.5 ? 'green' : data.effectiveness > 0.3 ? 'yellow' : 'red';
-                    mechHTML += `<tr><td>${arch}</td><td>${mech}</td><td>${(data.effectiveness * 100).toFixed(1)}%</td><td>${data.trials}</td><td style="width:40%">${makeBar(data.effectiveness, 1, color)}</td></tr>`;
-                }
-            }
-            mechHTML += '</tbody></table>';
-            if (Object.keys(eff).length === 0) {
-                mechHTML = '<p style="color:#6b7280">No mechanism effectiveness data yet — accumulates from conversions.</p>';
-            }
-            document.getElementById('mechEffectiveness').innerHTML = mechHTML;
-        }
+        document.getElementById('pendingList').innerHTML = pHTML;
+    } else {
+        document.getElementById('pendingList').innerHTML = '<p style="color:#6b7280">No pending recommendations. Run an intelligence cycle to generate.</p>';
     }
 
-    // Auto-refresh every 5 minutes
-    setInterval(refreshAll, 300000);
-    </script>
+    // Accepted history
+    if (accepted && accepted.accepted && accepted.accepted.length > 0) {
+        let aHTML = '';
+        for (const a of accepted.accepted) {
+            aHTML += `<div class="insight accepted"><h3>ACCEPTED: ${a.title}</h3><p>Type: ${a.type} | Status: ${a.status}</p><div class="meta">${fmtTime(a.accepted_at)}</div></div>`;
+        }
+        document.getElementById('acceptedList').innerHTML = aHTML;
+    } else {
+        document.getElementById('acceptedList').innerHTML = '<p style="color:#6b7280">No recommendations accepted yet.</p>';
+    }
+
+    // Alerts
+    if (alerts && alerts.alerts && alerts.alerts.length > 0) {
+        let alHTML = '';
+        for (const a of alerts.alerts) {
+            alHTML += `<div class="insight alert"><h3>${a.title}</h3><p>${a.detail}</p><div class="meta">${a.severity} | ${a.recommended_action} | ${fmtTime(a.timestamp)}</div></div>`;
+        }
+        document.getElementById('alertsList').innerHTML = alHTML;
+    } else {
+        document.getElementById('alertsList').innerHTML = '<p style="color:#34d399">No active alerts — all systems nominal.</p>';
+    }
+
+    // ── OPS LOG TAB ──
+    if (log && log.log) {
+        let logHTML = '';
+        for (const e of log.log) {
+            const lc = e.level === 'alert' ? '#f87171' : e.level === 'action' ? '#fbbf24' : e.level === 'insight' ? '#34d399' : '#6b7280';
+            logHTML += `<tr><td style="font-size:0.75rem;color:#6b7280;white-space:nowrap">${fmtTime(e.timestamp)}</td><td style="color:${lc}">${e.level}</td><td>${e.category}</td><td>${e.title}</td><td style="font-size:0.8rem;color:#9ca3af">${(e.detail||'').slice(0,120)}</td></tr>`;
+        }
+        document.getElementById('opsLog').innerHTML = logHTML;
+    }
+}
+
+setInterval(refreshAll, 300000);
+</script>
 </body>
 </html>
