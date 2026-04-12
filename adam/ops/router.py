@@ -185,6 +185,28 @@ async def get_discoveries():
         return {"discoveries": [], "count": 0}
 
 
+@router.get("/learning")
+async def get_multi_dimensional_learning():
+    """Multi-dimensional learning results from the last cycle.
+
+    Shows what the system learned across all 8 dimensions:
+    - Causal: WHY conversions happened (ad-caused vs organic)
+    - Temporal: WHEN users are most receptive
+    - Negative: What to STOP doing (mechanism failures)
+    - Transfer: Patterns from converters that apply to non-converters
+    - Context: Device × time interactions that drive conversion
+    """
+    try:
+        from adam.core.dependencies import Infrastructure
+        infra = Infrastructure.get_instance()
+        raw = await infra.redis.get("adam:learning:multi_dimensional")
+        if raw:
+            return json.loads(raw)
+    except Exception:
+        pass
+    return {"note": "No learning data yet — will populate after first intelligence cycle with conversions"}
+
+
 @router.get("/mechanism-effectiveness")
 async def get_learned_mechanism_effectiveness():
     """Mechanism effectiveness learned from real conversion data.

@@ -442,6 +442,29 @@ class AutonomousDecisionEngine:
         mech_eff = await self.get_mechanism_effectiveness()
         results["mechanism_effectiveness"] = mech_eff
 
+        # 6. Run multi-dimensional learning
+        try:
+            from adam.retargeting.engines.learning_dimensions import get_multi_dimensional_learner
+            learner = get_multi_dimensional_learner()
+            learning = learner.run_full_learning_cycle(profiles, conversions)
+            results["multi_dimensional_learning"] = {
+                "causal_summary": learning.get("causal_summary", {}),
+                "avg_ad_causal_weight": learning.get("avg_ad_causal_weight", 0),
+                "temporal_windows": learning.get("temporal_windows", {}),
+                "failure_eliminations": learning.get("failure_analysis", {}).get("eliminations", []),
+                "transfer_insights": learning.get("transfer_insights", {}),
+                "context_recommendations": learning.get("context_effectiveness", {}).get("recommendations", []),
+            }
+
+            # Store learning results for the weekly report
+            await self._redis.set(
+                "adam:learning:multi_dimensional",
+                json.dumps(results["multi_dimensional_learning"]),
+                ex=3600 * 24 * 7,
+            )
+        except Exception as e:
+            logger.warning("Multi-dimensional learning failed: %s", e)
+
         return results
 
 
