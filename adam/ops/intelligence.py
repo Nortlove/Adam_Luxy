@@ -535,6 +535,34 @@ class OperationsIntelligenceEngine:
         except Exception as e:
             logger.warning("Autonomous cycle failed: %s", e)
 
+        # ── Smart campaign optimization ──
+
+        try:
+            from adam.ops.smart_optimizer import get_smart_optimizer
+            optimizer = get_smart_optimizer(self._redis)
+            smart_recs = await optimizer.analyze_and_recommend(profiles, conversions)
+
+            for rec in smart_recs:
+                await self.store_recommendation(rec)
+
+            results["smart_optimizer"] = {
+                "recommendations_generated": len(smart_recs),
+                "types": [r.get("type") for r in smart_recs],
+            }
+
+            # Log significant recommendations
+            for rec in smart_recs:
+                if rec.get("expected_impact_score", 0) >= 0.7:
+                    await self.log(OpsLogEntry(
+                        level="recommendation",
+                        category=rec.get("type", "optimization"),
+                        title=rec.get("title", ""),
+                        detail=rec.get("recommendation", "")[:300],
+                        confidence=rec.get("confidence", 0),
+                    ))
+        except Exception as e:
+            logger.warning("Smart optimizer failed: %s", e)
+
         # ── Log cycle completion ──
 
         cycle_duration = time.time() - cycle_start
