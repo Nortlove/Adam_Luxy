@@ -278,6 +278,56 @@ async def get_signal_profile(
     return profile
 
 
+@router.get("/user/{user_id}/puzzle")
+async def get_puzzle_state(
+    user_id: str,
+    collector=Depends(_get_signal_collector),
+):
+    """Get the per-person puzzle solver state.
+
+    Returns the Bayesian belief state (attachment, motive, somatic,
+    NFC, construal, PE, reactance) and the optimal next touch
+    recommendation with full reasoning.
+    """
+    profile = await collector.get_profile(user_id)
+    if profile is None or profile.total_sessions == 0:
+        raise HTTPException(404, f"No profile for {user_id}")
+
+    from adam.retargeting.engines.puzzle_solver import PuzzleSolver
+    solver = PuzzleSolver()
+
+    # Create belief from archetype if known, then update from profile data
+    belief = solver.create_initial_belief(profile.attributed_archetype or "")
+    belief = solver.update_belief(belief, profile.model_dump())
+
+    # Get recommendation
+    rec = solver.recommend_next_touch(belief)
+
+    # Check release
+    should_release, release_reason = solver.should_release(belief)
+
+    return {
+        "user_id": user_id,
+        "sessions_observed": profile.total_sessions,
+        "archetype": profile.attributed_archetype,
+        "belief_state": belief.to_dict(),
+        "recommendation": {
+            "mechanism": rec.mechanism,
+            "net_value": rec.net_value,
+            "conversion_probability": rec.conversion_probability,
+            "information_gain": rec.information_gain,
+            "reactance_cost": rec.reactance_cost,
+            "pe_gradient": rec.pe_gradient,
+            "rationale": rec.rationale,
+            "if_click": rec.if_click_prediction,
+            "if_no_click": rec.if_no_click_prediction,
+        },
+        "should_release": should_release,
+        "release_reason": release_reason,
+        "belief_entropy": round(belief.entropy(), 4),
+    }
+
+
 @router.get("/user/{user_id}/nonconscious-profile")
 async def get_nonconscious_profile(
     user_id: str,
