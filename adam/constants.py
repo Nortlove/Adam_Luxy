@@ -41,14 +41,39 @@ ARCHETYPE_ALIASES = {
     "Analyst": "analyst",
     "Creator": "creator",
     # LUXY Ride campaign-specific personas → graph archetypes
-    # StackAdapt segment names map to the psychological archetypes
-    # used in bilateral edge classification on AnnotatedReview nodes
     "corporate_executive": "careful_truster",
     "airport_anxiety": "careful_truster",
     "special_occasion": "status_seeker",
     "first_timer": "easy_decider",
     "repeat_loyal": "easy_decider",
+    # Interaction-effect archetypes (from cross-category analysis)
+    "explorer": "explorer",
+    "prevention_planner": "prevention_planner",
+    "reliable_cooperator": "reliable_cooperator",
+    "anxious_economist": "anxious_economist",
+    "vocal_resistor": "vocal_resistor",
+    "loyalist": "loyalist",
 }
+
+# Campaign ID prefix → archetype mapping
+# Used by signal_collector, conversion endpoint, ops intelligence
+CAMPAIGN_ARCHETYPE_MAP = {
+    "CT": "careful_truster",
+    "SS": "status_seeker",
+    "ED": "easy_decider",
+    "EX": "explorer",
+    "PP": "prevention_planner",
+    "RC": "reliable_cooperator",
+}
+
+# All active archetypes for iteration
+ALL_ARCHETYPES = [
+    "careful_truster", "status_seeker", "easy_decider",
+    "explorer", "prevention_planner", "reliable_cooperator",
+]
+
+# Archetypes to auto-suppress (0% conversion in cross-category analysis)
+SUPPRESS_ARCHETYPES = ["anxious_economist", "vocal_resistor"]
 
 
 def resolve_archetype(raw: str) -> str:

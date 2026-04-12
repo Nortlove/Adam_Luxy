@@ -263,11 +263,8 @@ class NonconsciousSignalCollector:
             return
 
         # Parse archetype from campaign prefix
-        _ARCHETYPE_MAP = {
-            "CT": "careful_truster",
-            "SS": "status_seeker",
-            "ED": "easy_decider",
-        }
+        from adam.constants import CAMPAIGN_ARCHETYPE_MAP
+        _ARCHETYPE_MAP = CAMPAIGN_ARCHETYPE_MAP
         parts = campaign_id.upper().replace("-", "_").split("_")
         if parts:
             archetype = _ARCHETYPE_MAP.get(parts[0], "")

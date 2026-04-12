@@ -212,12 +212,12 @@ def analyze_archetype_performance(campaign_data: List[Dict]) -> Dict:
 
         # Detect archetype from campaign name
         archetype = "unknown"
-        if "CT-" in name or "Careful Truster" in name or "careful_truster" in name:
-            archetype = "careful_truster"
-        elif "SS-" in name or "Status Seeker" in name or "status_seeker" in name:
-            archetype = "status_seeker"
-        elif "ED-" in name or "Easy Decider" in name or "easy_decider" in name:
-            archetype = "easy_decider"
+        from adam.constants import CAMPAIGN_ARCHETYPE_MAP
+        # Parse archetype from campaign name prefix
+        for prefix, arch_name in CAMPAIGN_ARCHETYPE_MAP.items():
+            if f"{prefix}-" in name.upper() or arch_name in name.lower():
+                archetype = arch_name
+                break
 
         a = archetypes[archetype]
         a["impressions"] += int(row.get("Impressions", row.get("impressions", 0)))
@@ -418,7 +418,8 @@ def generate_report(
         "|-----------|------------|--------|-----|------------|-----|-------|-----|",
     ]
 
-    for arch in ["careful_truster", "status_seeker", "easy_decider"]:
+    from adam.constants import ALL_ARCHETYPES
+    for arch in ALL_ARCHETYPES:
         d = archetype_perf.get(arch, {})
         if d:
             lines.append(

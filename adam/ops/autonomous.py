@@ -465,14 +465,10 @@ class AutonomousDecisionEngine:
         # 2. Record mechanism outcomes from conversions
         for c in conversions:
             mech = c.get("creative_id", c.get("mechanism_sent", ""))
-            arch = ""
+            from adam.constants import CAMPAIGN_ARCHETYPE_MAP
             cid = c.get("campaign_id", "")
-            if "CT" in cid.upper():
-                arch = "careful_truster"
-            elif "SS" in cid.upper():
-                arch = "status_seeker"
-            elif "ED" in cid.upper():
-                arch = "easy_decider"
+            prefix = cid.upper().replace("-", "_").split("_")[0] if cid else ""
+            arch = CAMPAIGN_ARCHETYPE_MAP.get(prefix, "")
 
             if mech and arch:
                 await self.record_mechanism_outcome(mech, arch, True)

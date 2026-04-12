@@ -434,15 +434,11 @@ class OperationsIntelligenceEngine:
             conv_mechanisms = defaultdict(int)
             conv_barriers = defaultdict(int)
 
+            from adam.constants import CAMPAIGN_ARCHETYPE_MAP
             for c in conversions:
-                arch = ""
                 cid = c.get("campaign_id", "")
-                if "CT" in cid.upper():
-                    arch = "careful_truster"
-                elif "SS" in cid.upper():
-                    arch = "status_seeker"
-                elif "ED" in cid.upper():
-                    arch = "easy_decider"
+                prefix = cid.upper().replace("-", "_").split("_")[0] if cid else ""
+                arch = CAMPAIGN_ARCHETYPE_MAP.get(prefix, "")
                 if arch:
                     conv_archetypes[arch] += 1
 

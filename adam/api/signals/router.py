@@ -208,7 +208,8 @@ async def ingest_conversion(
         touch_position = 0
         if campaign_id:
             parts = campaign_id.upper().replace("-", "_").split("_")
-            archetype_map = {"CT": "careful_truster", "SS": "status_seeker", "ED": "easy_decider"}
+            from adam.constants import CAMPAIGN_ARCHETYPE_MAP
+            archetype_map = CAMPAIGN_ARCHETYPE_MAP
             if len(parts) >= 2:
                 archetype = archetype_map.get(parts[0], "")
             if len(parts) >= 2:
