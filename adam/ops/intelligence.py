@@ -503,6 +503,42 @@ class OperationsIntelligenceEngine:
                 {"hours_since_last_session": round(hours_since_last, 1)},
             )
 
+        # ── Autonomous decisions ──
+
+        try:
+            from adam.ops.autonomous import get_autonomous_engine
+            auto = get_autonomous_engine(self._redis)
+            if auto:
+                auto_results = await auto.run_autonomous_cycle(profiles, conversions)
+                results["autonomous"] = {
+                    "actions_taken": len(auto_results.get("actions_taken", [])),
+                    "discoveries": len(auto_results.get("discoveries", [])),
+                    "high_intent_flagged": auto_results.get("high_intent_flagged", 0),
+                    "released": auto_results.get("released", 0),
+                    "mechanism_effectiveness": auto_results.get("mechanism_effectiveness", {}),
+                }
+
+                # Log each autonomous action
+                for action in auto_results.get("actions_taken", []):
+                    await self.log(OpsLogEntry(
+                        level="action", category=action.get("action", "unknown"),
+                        title=f"Autonomous: {action.get('action', '')}",
+                        detail=json.dumps(action)[:500],
+                        action_taken=action.get("action", ""),
+                    ))
+
+                # Log discoveries
+                for disc in auto_results.get("discoveries", []):
+                    await self.log(OpsLogEntry(
+                        level="insight", category=disc.get("type", "unknown"),
+                        title=f"Discovery: {disc.get('type', '')}",
+                        detail=disc.get("insight", ""),
+                        data=disc,
+                        confidence=disc.get("confidence", 0),
+                    ))
+        except Exception as e:
+            logger.warning("Autonomous cycle failed: %s", e)
+
         # ── Log cycle completion ──
 
         cycle_duration = time.time() - cycle_start
@@ -510,12 +546,17 @@ class OperationsIntelligenceEngine:
             level="info", category="system",
             title="Intelligence cycle complete",
             detail=f"Analyzed {len(profiles)} profiles, {len(conversions)} conversions. "
-                   f"Generated {len(results['recommendations'])} recommendations in {cycle_duration:.1f}s.",
+                   f"Generated {len(results['recommendations'])} recommendations. "
+                   f"Autonomous: {results.get('autonomous', {}).get('actions_taken', 0)} actions, "
+                   f"{results.get('autonomous', {}).get('discoveries', 0)} discoveries. "
+                   f"Duration: {time.time() - cycle_start:.1f}s.",
             data={
                 "profiles_analyzed": len(profiles),
                 "conversions_analyzed": len(conversions),
                 "recommendations_generated": len(results["recommendations"]),
-                "duration_seconds": round(cycle_duration, 1),
+                "autonomous_actions": results.get("autonomous", {}).get("actions_taken", 0),
+                "discoveries": results.get("autonomous", {}).get("discoveries", 0),
+                "duration_seconds": round(time.time() - cycle_start, 1),
             },
         ))
 
@@ -524,6 +565,7 @@ class OperationsIntelligenceEngine:
             "profiles": len(profiles),
             "conversions": len(conversions),
             "recommendations": len(results["recommendations"]),
+            "autonomous_actions": results.get("autonomous", {}).get("actions_taken", 0),
         }))
 
         return results

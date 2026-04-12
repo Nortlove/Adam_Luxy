@@ -120,7 +120,86 @@ async def trigger_intelligence_cycle():
         "recommendations_generated": len(results.get("recommendations", [])),
         "alerts_fired": len(results.get("alerts", [])),
         "insights_discovered": len(results.get("insights", [])),
+        "autonomous": results.get("autonomous", {}),
         "duration_ms": round(elapsed, 1),
         "recommendations": results.get("recommendations", []),
         "insights": results.get("insights", []),
     }
+
+
+@router.get("/high-intent")
+async def get_high_intent_users():
+    """Users flagged as high-intent by the puzzle solver.
+
+    These users have conversion probability above threshold.
+    They should receive priority in the next retargeting touch.
+    """
+    try:
+        from adam.ops.autonomous import get_autonomous_engine
+        from adam.core.dependencies import Infrastructure
+        infra = Infrastructure.get_instance()
+        engine = get_autonomous_engine(infra.redis)
+        if engine:
+            users = await engine.get_high_intent_users()
+            return {"high_intent_users": users, "count": len(users)}
+    except Exception:
+        pass
+    return {"high_intent_users": [], "count": 0}
+
+
+@router.get("/released")
+async def get_released_users():
+    """Users released to dormant pool by the puzzle solver.
+
+    These users have exhausted their reactance budget or have
+    conversion distance too far to justify continued spend.
+    """
+    try:
+        from adam.ops.autonomous import get_autonomous_engine
+        from adam.core.dependencies import Infrastructure
+        infra = Infrastructure.get_instance()
+        engine = get_autonomous_engine(infra.redis)
+        if engine:
+            users = await engine.get_released_users()
+            return {"released_users": users, "count": len(users)}
+    except Exception:
+        pass
+    return {"released_users": [], "count": 0}
+
+
+@router.get("/discoveries")
+async def get_discoveries():
+    """Surprising patterns detected by the autonomous engine.
+
+    Discoveries are statistically meaningful AND surprising findings
+    that imply specific actions. These are the insights that prove
+    INFORMATIV sees what nobody else can.
+    """
+    try:
+        from adam.core.dependencies import Infrastructure
+        infra = Infrastructure.get_instance()
+        raw = await infra.redis.lrange("adam:discoveries", 0, 50)
+        discoveries = [json.loads(d) for d in raw]
+        return {"discoveries": discoveries, "count": len(discoveries)}
+    except Exception:
+        return {"discoveries": [], "count": 0}
+
+
+@router.get("/mechanism-effectiveness")
+async def get_learned_mechanism_effectiveness():
+    """Mechanism effectiveness learned from real conversion data.
+
+    Shows which mechanisms actually work for each archetype,
+    calibrated from observed outcomes — not theoretical priors.
+    """
+    try:
+        from adam.ops.autonomous import get_autonomous_engine
+        from adam.core.dependencies import Infrastructure
+        infra = Infrastructure.get_instance()
+        engine = get_autonomous_engine(infra.redis)
+        if engine:
+            eff = await engine.get_mechanism_effectiveness()
+            return {"mechanism_effectiveness": eff}
+    except Exception:
+        pass
+    return {"mechanism_effectiveness": {}}
