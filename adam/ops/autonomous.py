@@ -404,6 +404,64 @@ class AutonomousDecisionEngine:
                     "reason": reason,
                 })
 
+        # 1b. Classify impression outcomes for all profiles
+        try:
+            from adam.retargeting.engines.impression_classifier import ImpressionClassifier
+            classifier = ImpressionClassifier()
+
+            outcome_dist = defaultdict(int)
+            ad_averse_users = []
+            accelerate_users = []
+
+            for p in profiles:
+                user_id = p.get("user_id", "")
+                if not user_id:
+                    continue
+
+                outcome, conf, reasoning = classifier.classify_user_response(p)
+                outcome_dist[outcome.value] += 1
+
+                persistence, action_text = classifier.compute_persistence_score(p)
+
+                # Ad-averse: stop retargeting
+                if outcome.value == "ad_averse":
+                    ad_averse_users.append(user_id)
+                    await self.mark_for_release(user_id, f"Ad-averse: {reasoning}")
+                    results["released"] += 1
+
+                # Accelerate: high persistence = close to converting
+                if persistence > 0.3:
+                    accelerate_users.append({"user_id": user_id, "score": persistence})
+
+                # Store classification
+                await self._redis.set(
+                    f"adam:impression_class:{user_id}",
+                    json.dumps({
+                        "outcome": outcome.value,
+                        "confidence": conf,
+                        "persistence": persistence,
+                        "reasoning": reasoning,
+                        "classified_at": time.time(),
+                    }),
+                    ex=3600 * 24 * 7,
+                )
+
+            results["impression_classification"] = {
+                "distribution": dict(outcome_dist),
+                "ad_averse_detected": len(ad_averse_users),
+                "accelerate_candidates": len(accelerate_users),
+            }
+
+            if ad_averse_users:
+                results["actions_taken"].append({
+                    "action": "ad_averse_release",
+                    "count": len(ad_averse_users),
+                    "reason": "Users with zero clicks, zero organic, high exposure — ad-averse personality",
+                })
+
+        except Exception as e:
+            logger.warning("Impression classification failed: %s", e)
+
         # 2. Record mechanism outcomes from conversions
         for c in conversions:
             mech = c.get("creative_id", c.get("mechanism_sent", ""))
