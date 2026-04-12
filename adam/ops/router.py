@@ -262,51 +262,38 @@ async def accept_recommendation(payload: dict):
             confidence=payload.get("confidence", 0),
         ))
 
-        # Store the accepted recommendation
+        # Generate specific StackAdapt campaign instructions
+        from adam.ops.campaign_actions import generate_campaign_action
+        campaign_action = generate_campaign_action(payload)
+
+        # Store the accepted recommendation with campaign action details
         accepted = {
             "type": rec_type,
             "title": rec_title,
             "data": rec_data,
             "accepted_at": time.time(),
-            "status": "executing",
+            "status": "accepted",
+            "campaign_action": campaign_action,
         }
         await infra.redis.lpush("adam:ops:accepted_recommendations", json.dumps(accepted))
         await infra.redis.ltrim("adam:ops:accepted_recommendations", 0, 100)
 
-        # Execute type-specific actions
-        action_result = "logged"
-
-        if rec_type == "budget_reallocation":
-            # Store the new allocation for the weekly report to reference
-            await infra.redis.set(
-                "adam:ops:active_budget_change",
-                json.dumps(rec_data),
-                ex=3600 * 24 * 7,
-            )
-            action_result = "Budget reallocation stored — include in next report to agency"
-
-        elif rec_type == "frequency_adjustment":
-            await infra.redis.set(
-                "adam:ops:active_frequency_change",
-                json.dumps(rec_data),
-                ex=3600 * 24 * 7,
-            )
-            action_result = "Frequency adjustment stored — include in next report to agency"
-
-        elif rec_type == "stage_transition":
-            action_result = "Stage transition noted — affects next intelligence cycle mechanism selection"
-
-        elif rec_type == "creative_focus":
-            action_result = "Creative focus stored — generate new copy variant in next cycle"
-
-        # Update status
-        accepted["status"] = "completed"
-        accepted["result"] = action_result
+        # Store active changes for the system to track impact
+        change_key = f"adam:ops:active_change:{rec_type}:{int(time.time())}"
+        await infra.redis.set(change_key, json.dumps({
+            "type": rec_type,
+            "action": campaign_action,
+            "accepted_at": time.time(),
+            "measuring_until": time.time() + 7 * 86400,  # 7-day measurement window
+        }), ex=3600 * 24 * 14)
 
         return {
             "status": "accepted",
             "type": rec_type,
-            "action_result": action_result,
+            "agency_instructions": campaign_action.get("agency_instructions", ""),
+            "stackadapt_changes": campaign_action.get("stackadapt_changes", []),
+            "expected_impact": campaign_action.get("expected_impact", ""),
+            "measurement_plan": campaign_action.get("measurement_plan", ""),
             "logged": True,
         }
 
@@ -324,6 +311,33 @@ async def get_accepted_recommendations():
         return {"accepted": [json.loads(r) for r in raw], "count": len(raw)}
     except Exception:
         return {"accepted": [], "count": 0}
+
+
+@router.get("/daily-report")
+async def get_daily_report():
+    """Generate the daily action report.
+
+    Summarizes all pending recommendations with specific StackAdapt
+    instructions, plus the history of accepted actions and their
+    measurement status.
+    """
+    try:
+        from adam.ops.campaign_actions import generate_daily_action_report
+        from adam.core.dependencies import Infrastructure
+        infra = Infrastructure.get_instance()
+
+        # Get recommendations
+        recs_raw = await infra.redis.lrange("adam:ops:recommendations", 0, 20)
+        recs = [json.loads(r) for r in recs_raw]
+
+        # Get accepted
+        acc_raw = await infra.redis.lrange("adam:ops:accepted_recommendations", 0, 20)
+        accepted = [json.loads(a) for a in acc_raw]
+
+        report = generate_daily_action_report(recs, accepted)
+        return {"report": report, "recommendations": len(recs), "accepted": len(accepted)}
+    except Exception as e:
+        return {"error": str(e)}
 
 
 @router.get("/puzzle/{user_id}")

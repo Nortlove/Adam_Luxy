@@ -164,16 +164,43 @@ function bar(val, max, color) {
 async function acceptRec(idx) {
     const rec = dashData.recs[idx];
     const btn = document.getElementById('accept-' + idx);
+    const container = btn.closest('.insight');
     btn.textContent = 'Executing...';
     btn.disabled = true;
+
     const result = await fetch(API + '/api/v1/ops/accept-recommendation', {
         method: 'POST', headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(rec),
     }).then(r => r.json()).catch(() => ({status:'error'}));
-    btn.textContent = result.status === 'accepted' ? 'Accepted' : 'Error';
-    btn.classList.add('done');
-    // Refresh after a moment
-    setTimeout(refreshAll, 1500);
+
+    if (result.status === 'accepted') {
+        btn.textContent = 'Accepted';
+        btn.classList.add('done');
+        // Show the agency instructions inline
+        const instrDiv = document.createElement('div');
+        instrDiv.style.cssText = 'margin-top:16px;background:#0f172a;border:1px solid #1f2937;border-radius:8px;padding:16px;';
+        instrDiv.innerHTML = `
+            <h4 style="color:#34d399;margin-bottom:8px;">Agency Instructions (send to Becca):</h4>
+            <pre style="white-space:pre-wrap;font-size:0.85rem;color:#d1d5db;line-height:1.6;">${result.agency_instructions || 'No specific instructions generated.'}</pre>
+            <div style="margin-top:12px;font-size:0.85rem;">
+                <div style="color:#60a5fa;margin-bottom:4px;"><strong>Expected Impact:</strong> ${result.expected_impact || '—'}</div>
+                <div style="color:#fbbf24;"><strong>Measurement Plan:</strong> ${result.measurement_plan || '—'}</div>
+            </div>
+            <button onclick="copyInstructions(this)" style="margin-top:12px;padding:6px 16px;border:1px solid #374151;border-radius:6px;background:transparent;color:#9ca3af;cursor:pointer;font-size:0.8rem;">Copy Instructions</button>
+        `;
+        container.appendChild(instrDiv);
+    } else {
+        btn.textContent = 'Error';
+    }
+    setTimeout(refreshAll, 3000);
+}
+
+function copyInstructions(btn) {
+    const pre = btn.parentElement.querySelector('pre');
+    navigator.clipboard.writeText(pre.textContent).then(() => {
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = 'Copy Instructions'; }, 2000);
+    });
 }
 
 async function refreshAll() {
