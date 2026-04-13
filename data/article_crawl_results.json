@@ -1,0 +1,1685 @@
+{
+  "total": 57,
+  "articles": [
+    {
+      "domain": "cnbc.com",
+      "url": "https://www.cnbc.com/2026/04/13/ineos-automotive-grenadier-suv-james-ratcliffe.html",
+      "title": "Ineos Automotive: A billionaire's rugged SUV startup eyes U.S. growth",
+      "text_length": 9220,
+      "affect": 0.4,
+      "dominant_goal": "status_signaling",
+      "dominant_strength": 0.35,
+      "goal_scores": {
+        "social_alignment": 0.0525,
+        "threat_reduction": 0.2,
+        "novelty_exploration": 0.21,
+        "planning_completion": 0.2,
+        "indulgence_permission": 0.07,
+        "status_signaling": 0.35
+      },
+      "archetype_scores": {
+        "trusting_loyalist": 0.0951,
+        "dependable_loyalist": 0.0927,
+        "consensus_seeker": 0.0649,
+        "explorer": 0.0325,
+        "prevention_planner": 0.0838,
+        "reliable_cooperator": 0.0641,
+        "careful_truster": 0.0698,
+        "status_seeker": 0.1887,
+        "easy_decider": 0.0485
+      },
+      "best_archetype": "status_seeker",
+      "best_crossover": 0.1887
+    },
+    {
+      "domain": "cnbc.com",
+      "url": "https://www.cnbc.com/2026/04/13/trump-epstein-murdoch-wsj-lawsuit-dismissed.html",
+      "title": "Judge dismisses Trump $10B defamation lawsuit against Murdoch, WSJ",
+      "text_length": 9119,
+      "affect": 0.0,
+      "dominant_goal": "threat_reduction",
+      "dominant_strength": 0.2,
+      "goal_scores": {
+        "threat_reduction": 0.2,
+        "novelty_exploration": 0.15,
+        "planning_completion": 0.1,
+        "status_signaling": 0.05
+      },
+      "archetype_scores": {
+        "trusting_loyalist": 0.0994,
+        "dependable_loyalist": 0.1012,
+        "consensus_seeker": 0.0763,
+        "explorer": 0.0714,
+        "prevention_planner": 0.0752,
+        "reliable_cooperator": 0.0828,
+        "careful_truster": 0.1024,
+        "status_seeker": 0.05,
+        "easy_decider": 0.025
+      },
+      "best_archetype": "careful_truster",
+      "best_crossover": 0.1024
+    },
+    {
+      "domain": "cnbc.com",
+      "url": "https://www.cnbc.com/2026/04/12/stock-market-today-live-updates.html",
+      "title": "Stock market news for April 13, 2026Stock Chart IconStock Chart IconStock Chart IconStock Chart IconStock Chart IconStock Chart IconStock Chart IconSt",
+      "text_length": 30066,
+      "affect": -0.4,
+      "dominant_goal": "threat_reduction",
+      "dominant_strength": 0.4,
+      "goal_scores": {
+        "social_alignment": 0.1,
+        "threat_reduction": 0.4,
+        "novelty_exploration": 0.15,
+        "competence_verification": 0.1,
+        "planning_completion": 0.4,
+        "status_signaling": 0.1125
+      },
+      "archetype_scores": {
+        "trusting_loyalist": 0.1256,
+        "dependable_loyalist": 0.1302,
+        "consensus_seeker": 0.1153,
+        "explorer": 0.1529,
+        "prevention_planner": 0.1165,
+        "reliable_cooperator": 0.1209,
+        "careful_truster": 0.166,
+        "status_seeker": 0.0457,
+        "easy_decider": 0.12
+      },
+      "best_archetype": "careful_truster",
+      "best_crossover": 0.166
+    },
+    {
+      "domain": "businessinsider.com",
+      "url": "https://www.businessinsider.com/show/boot-camp",
+      "title": "Boot Camp - Business InsiderBusiness InsiderPlay iconPlay iconPlay iconPlay iconPlay iconPlay iconPlay iconPlay iconPlay iconPlay iconPlay iconPlay ic",
+      "text_length": 7849,
+      "affect": -0.6,
+      "dominant_goal": "threat_reduction",
+      "dominant_strength": 0.2,
+      "goal_scores": {
+        "threat_reduction": 0.2,
+        "novelty_exploration": 0.1,
+        "competence_verification": 0.1,
+        "planning_completion": 0.1,
+        "status_signaling": 0.05
+      },
+      "archetype_scores": {
+        "trusting_loyalist": 0.0851,
+        "dependable_loyalist": 0.0868,
+        "consensus_seeker": 0.0684,
+        "explorer": 0.0714,
+        "prevention_planner": 0.0691,
+        "reliable_cooperator": 0.0745,
+        "careful_truster": 0.094,
+        "status_seeker": 0.0391,
+        "easy_decider": 0.025
+      },
+      "best_archetype": "careful_truster",
+      "best_crossover": 0.094
+    },
+    {
+      "domain": "businessinsider.com",
+      "url": "https://www.businessinsider.com/sc/introducing-the-better-work-project-hub",
+      "title": "Introducing the better work project",
+      "text_length": 7177,
+      "affect": 0.6,
+      "dominant_goal": "novelty_exploration",
+      "dominant_strength": 0.6,
+      "goal_scores": {
+        "affiliation_safety": 0.16,
+        "social_alignment": 0.32,
+        "threat_reduction": 0.2,
+        "novelty_exploration": 0.6,
+        "competence_verification": 0.1,
+        "planning_completion": 0.2,
+        "indulgence_permission": 0.16,
+        "status_signaling": 0.6
+      },
+      "archetype_scores": {
+        "trusting_loyalist": 0.2481,
+        "dependable_loyalist": 0.2459,
+        "consensus_seeker": 0.1726,
+        "explorer": 0.0874,
+        "prevention_planner": 0.2306,
+        "reliable_cooperator": 0.1608,
+        "careful_truster": 0.1776,
+        "status_seeker": 0.392,
+        "easy_decider": 0.1828
+      },
+      "best_archetype": "status_seeker",
+      "best_crossover": 0.392
+    },
+    {
+      "domain": "businessinsider.com",
+      "url": "https://feeds.businessinsider.com/custom/all",
+      "title": "All Content from Business InsiderUS Navy aircraft carrier set to break record for longest deployment in modern historyMy boyfriend and I founded a com",
+      "text_length": 164662,
+      "affect": -0.6,
+      "dominant_goal": "threat_reduction",
+      "dominant_strength": 0.5,
+      "goal_scores": {
+        "affiliation_safety": 0.05,
+        "social_alignment": 0.1,
+        "threat_reduction": 0.5,
+        "novelty_exploration": 0.1,
+        "planning_completion": 0.2,
+        "indulgence_permission": 0.0375,
+        "status_signaling": 0.15
+      },
+      "archetype_scores": {
+        "trusting_loyalist": 0.1574,
+        "dependable_loyalist": 0.1639,
+        "consensus_seeker": 0.1551,
+        "explorer": 0.2078,
+        "prevention_planner": 0.1375,
+        "reliable_cooperator": 0.1646,
+        "careful_truster": 0.2124,
+        "status_seeker": 0.0653,
+        "easy_decider": 0.0805
+      },
+      "best_archetype": "careful_truster",
+      "best_crossover": 0.2124
+    },
+    {
+      "domain": "cntraveler.com",
+      "url": "https://www.cntraveler.com/feed/rss",
+      "title": "Cond\u00e9 Nast TravelerOn the Northern Belle, Agrestic Views of Wales and Scotland Pair With ChampagneHow to Decide Where to Stay in Crete, the Largest Gr",
+      "text_length": 11920,
+      "affect": 0.8,
+      "dominant_goal": "status_signaling",
+      "dominant_strength": 0.495,
+      "goal_scores": {
+        "affiliation_safety": 0.09,
+        "social_alignment": 0.0675,
+        "threat_reduction": 0.1,
+        "novelty_exploration": 0.45,
+        "competence_verification": 0.45,
+        "planning_completion": 0.3,
+        "indulgence_permission": 0.09,
+        "status_signaling": 0.495
+      },
+      "archetype_scores": {
+        "trusting_loyalist": 0.1724,
+        "dependable_loyalist": 0.1718,
+        "consensus_seeker": 0.1272,
+        "explorer": 0.0628,
+        "prevention_planner": 0.1757,
+        "reliable_cooperator": 0.1292,
+        "careful_truster": 0.1218,
+        "status_seeker": 0.3091,
+        "easy_decider": 0.078
+      },
+      "best_archetype": "status_seeker",
+      "best_crossover": 0.3091
+    },
+    {
+      "domain": "cntraveler.com",
+      "url": "https://www.cntraveler.com/story/in-blackfoot-country-indigenous-nations-offer-a-different-view-of-the-us-canada-border#intcid=_conde-nast-traveler-verso-hp-trending_a6a5235a-212d-459a-87c1-faefc3cfac",
+      "title": "In Blackfoot Country, Indigenous Nations Offer a Different View of the US-Canada Border | Cond\u00e9 Nast TravelerSearchAccountMenuAccountSearchMenuChevron",
+      "text_length": 13559,
+      "affect": 0.2,
+      "dominant_goal": "social_alignment",
+      "dominant_strength": 0.12,
+      "goal_scores": {
+        "affiliation_safety": 0.06,
+        "social_alignment": 0.12,
+        "novelty_exploration": 0.06,
+        "planning_completion": 0.1,
+        "status_signaling": 0.06
+      },
+      "archetype_scores": {
+        "trusting_loyalist": 0.0271,
+        "dependable_loyalist": 0.0304,
+        "consensus_seeker": 0.0316,
+        "explorer": 0.0334,
+        "prevention_planner": 0.0412,
+        "reliable_cooperator": 0.0273,
+        "careful_truster": 0.027,
+        "status_seeker": 0.0417,
+        "easy_decider": 0.058
+      },
+      "best_archetype": "easy_decider",
+      "best_crossover": 0.058
+    },
+    {
+      "domain": "cntraveler.com",
+      "url": "https://www.cntraveler.com/verso/static/condenasttraveler-global/assets/favicon.ico",
+      "title": "",
+      "text_length": 5552,
+      "affect": 0.0,
+      "dominant_goal": "affiliation_safety",
+      "dominant_strength": 0.0,
+      "goal_scores": {},
+      "archetype_scores": {
+        "trusting_loyalist": 0.0,
+        "dependable_loyalist": 0.0,
+        "consensus_seeker": 0.0,
+        "explorer": 0.0,
+        "prevention_planner": 0.0,
+        "reliable_cooperator": 0.0,
+        "careful_truster": 0.0,
+        "status_seeker": 0.0,
+        "easy_decider": 0.0
+      },
+      "best_archetype": "trusting_loyalist",
+      "best_crossover": 0.0
+    },
+    {
+      "domain": "robbreport.com",
+      "url": "https://robbreport.com/style/menswear/sid-mashburn-the-answers-1237573417/",
+      "title": "Designer Sid Mashburn on His Rolex Explorer and Love of MusicRobb ReportSearchCloseFacebookInstagramPinterestYouTubePMCRR OneRobb ReportMenuCloseRobb ",
+      "text_length": 11030,
+      "affect": 0.6,
+      "dominant_goal": "indulgence_permission",
+      "dominant_strength": 0.24,
+      "goal_scores": {
+        "social_alignment": 0.08,
+        "threat_reduction": 0.2,
+        "novelty_exploration": 0.16,
+        "competence_verification": 0.1,
+        "planning_completion": 0.2,
+        "indulgence_permission": 0.24,
+        "status_signaling": 0.24
+      },
+      "archetype_scores": {
+        "trusting_loyalist": 0.1793,
+        "dependable_loyalist": 0.17,
+        "consensus_seeker": 0.1453,
+        "explorer": 0.124,
+        "prevention_planner": 0.1453,
+        "reliable_cooperator": 0.1456,
+        "careful_truster": 0.1637,
+        "status_seeker": 0.1913,
+        "easy_decider": 0.162
+      },
+      "best_archetype": "status_seeker",
+      "best_crossover": 0.1913
+    },
+    {
+      "domain": "robbreport.com",
+      "url": "https://robbreport.com/shelter/vacation-homes/",
+      "title": "Robb Report Vacation Homes | Luxury Homes and DestinationsRobb ReportSearchCloseFacebookInstagramPinterestYouTubePMCRR OneRobb ReportMenuCloseRobb Rep",
+      "text_length": 5999,
+      "affect": 1.0,
+      "dominant_goal": "status_signaling",
+      "dominant_strength": 0.75,
+      "goal_scores": {
+        "affiliation_safety": 0.1,
+        "social_alignment": 0.2625,
+        "threat_reduction": 0.2,
+        "novelty_exploration": 0.2,
+        "competence_verification": 0.1,
+        "planning_completion": 0.2,
+        "indulgence_permission": 0.3,
+        "status_signaling": 0.75
+      },
+      "archetype_scores": {
+        "trusting_loyalist": 0.1799,
+        "dependable_loyalist": 0.1714,
+        "consensus_seeker": 0.1612,
+        "explorer": 0.132,
+        "prevention_planner": 0.1863,
+        "reliable_cooperator": 0.1501,
+        "careful_truster": 0.1493,
+        "status_seeker": 0.4087,
+        "easy_decider": 0.1975
+      },
+      "best_archetype": "status_seeker",
+      "best_crossover": 0.4087
+    },
+    {
+      "domain": "robbreport.com",
+      "url": "https://robbreport.com/shelter/spaces/",
+      "title": "Robb Report Spaces | Luxury Architecture and PropertiesRobb ReportSearchCloseFacebookInstagramPinterestYouTubePMCRR OneRobb ReportMenuCloseRobb Report",
+      "text_length": 5959,
+      "affect": 1.0,
+      "dominant_goal": "status_signaling",
+      "dominant_strength": 0.55,
+      "goal_scores": {
+        "social_alignment": 0.2625,
+        "threat_reduction": 0.2,
+        "novelty_exploration": 0.2,
+        "competence_verification": 0.1,
+        "planning_completion": 0.3,
+        "indulgence_permission": 0.3,
+        "status_signaling": 0.55
+      },
+      "archetype_scores": {
+        "trusting_loyalist": 0.1716,
+        "dependable_loyalist": 0.1603,
+        "consensus_seeker": 0.1349,
+        "explorer": 0.0963,
+        "prevention_planner": 0.1588,
+        "reliable_cooperator": 0.1212,
+        "careful_truster": 0.1338,
+        "status_seeker": 0.3261,
+        "easy_decider": 0.1875
+      },
+      "best_archetype": "status_seeker",
+      "best_crossover": 0.3261
+    },
+    {
+      "domain": "townandcountrymag.com",
+      "url": "https://www.townandcountrymag.com/email/townandcountrymag-newsletter/",
+      "title": "Town & Country Newsletter: Sign Up for Free",
+      "text_length": 1188,
+      "affect": 0.0,
+      "dominant_goal": "planning_completion",
+      "dominant_strength": 0.2,
+      "goal_scores": {
+        "affiliation_safety": 0.05,
+        "threat_reduction": 0.1,
+        "novelty_exploration": 0.05,
+        "competence_verification": 0.1,
+        "planning_completion": 0.2
+      },
+      "archetype_scores": {
+        "trusting_loyalist": 0.0467,
+        "dependable_loyalist": 0.049,
+        "consensus_seeker": 0.0474,
+        "explorer": 0.0536,
+        "prevention_planner": 0.0501,
+        "reliable_cooperator": 0.0517,
+        "careful_truster": 0.0548,
+        "status_seeker": 0.0174,
+        "easy_decider": 0.0575
+      },
+      "best_archetype": "easy_decider",
+      "best_crossover": 0.0575
+    },
+    {
+      "domain": "townandcountrymag.com",
+      "url": "https://www.townandcountrymag.com/email/townandcountrymag-newsletter",
+      "title": "Town & Country Newsletter: Sign Up for Free",
+      "text_length": 1188,
+      "affect": 0.0,
+      "dominant_goal": "planning_completion",
+      "dominant_strength": 0.2,
+      "goal_scores": {
+        "affiliation_safety": 0.05,
+        "threat_reduction": 0.1,
+        "novelty_exploration": 0.05,
+        "competence_verification": 0.1,
+        "planning_completion": 0.2
+      },
+      "archetype_scores": {
+        "trusting_loyalist": 0.0467,
+        "dependable_loyalist": 0.049,
+        "consensus_seeker": 0.0474,
+        "explorer": 0.0536,
+        "prevention_planner": 0.0501,
+        "reliable_cooperator": 0.0517,
+        "careful_truster": 0.0548,
+        "status_seeker": 0.0174,
+        "easy_decider": 0.0575
+      },
+      "best_archetype": "easy_decider",
+      "best_crossover": 0.0575
+    },
+    {
+      "domain": "townandcountrymag.com",
+      "url": "https://www.townandcountrymag.com/leisure/travel-guide/a60538347/snobs-travel-guides/",
+      "title": "Snob's Travel Guides to the Best Luxury Vacation Destinations in 2024",
+      "text_length": 5962,
+      "affect": 1.0,
+      "dominant_goal": "status_signaling",
+      "dominant_strength": 0.4875,
+      "goal_scores": {
+        "affiliation_safety": 0.2,
+        "social_alignment": 0.15,
+        "threat_reduction": 0.2,
+        "novelty_exploration": 0.225,
+        "planning_completion": 0.1,
+        "indulgence_permission": 0.2,
+        "status_signaling": 0.4875
+      },
+      "archetype_scores": {
+        "trusting_loyalist": 0.1599,
+        "dependable_loyalist": 0.158,
+        "consensus_seeker": 0.1592,
+        "explorer": 0.1379,
+        "prevention_planner": 0.1661,
+        "reliable_cooperator": 0.1578,
+        "careful_truster": 0.1392,
+        "status_seeker": 0.3054,
+        "easy_decider": 0.145
+      },
+      "best_archetype": "status_seeker",
+      "best_crossover": 0.3054
+    },
+    {
+      "domain": "npr.org",
+      "url": "https://www.npr.org/2019/12/30/792439555/making-art-is-good-for-your-health-heres-how-to-start-a-habit",
+      "title": "6 Ways To Make Creativity Part Of Your Everyday Life : Life Kit : NPR",
+      "text_length": 10755,
+      "affect": 0.0,
+      "dominant_goal": "threat_reduction",
+      "dominant_strength": 0.2,
+      "goal_scores": {
+        "affiliation_safety": 0.1,
+        "social_alignment": 0.1,
+        "threat_reduction": 0.2,
+        "novelty_exploration": 0.05,
+        "planning_completion": 0.2,
+        "status_signaling": 0.1
+      },
+      "archetype_scores": {
+        "trusting_loyalist": 0.0832,
+        "dependable_loyalist": 0.089,
+        "consensus_seeker": 0.0921,
+        "explorer": 0.1171,
+        "prevention_planner": 0.09,
+        "reliable_cooperator": 0.0952,
+        "careful_truster": 0.1076,
+        "status_seeker": 0.0587,
+        "easy_decider": 0.085
+      },
+      "best_archetype": "explorer",
+      "best_crossover": 0.1171
+    },
+    {
+      "domain": "npr.org",
+      "url": "https://www.npr.org/transcripts/nx-s1-5780996",
+      "title": "Pope Leo dismisses Trump criticism on Iran war : NPR",
+      "text_length": 5959,
+      "affect": -0.2,
+      "dominant_goal": "planning_completion",
+      "dominant_strength": 0.2,
+      "goal_scores": {
+        "social_alignment": 0.05,
+        "threat_reduction": 0.1,
+        "novelty_exploration": 0.1,
+        "planning_completion": 0.2,
+        "status_signaling": 0.05
+      },
+      "archetype_scores": {
+        "trusting_loyalist": 0.0589,
+        "dependable_loyalist": 0.0605,
+        "consensus_seeker": 0.0447,
+        "explorer": 0.0407,
+        "prevention_planner": 0.053,
+        "reliable_cooperator": 0.0455,
+        "careful_truster": 0.0586,
+        "status_seeker": 0.0391,
+        "easy_decider": 0.06
+      },
+      "best_archetype": "dependable_loyalist",
+      "best_crossover": 0.0605
+    },
+    {
+      "domain": "npr.org",
+      "url": "https://www.npr.org/2026/04/13/g-s1-117248/judge-dismisses-trump-lawsuit-epstein-letter-wsj-story-murdoch",
+      "title": "Judge dismisses Trump's $10B lawsuit over the Wall Street Journal's Epstein reporting : NPR",
+      "text_length": 4359,
+      "affect": 0.0,
+      "dominant_goal": "planning_completion",
+      "dominant_strength": 0.2,
+      "goal_scores": {
+        "threat_reduction": 0.1,
+        "novelty_exploration": 0.05,
+        "planning_completion": 0.2,
+        "status_signaling": 0.05
+      },
+      "archetype_scores": {
+        "trusting_loyalist": 0.0425,
+        "dependable_loyalist": 0.0434,
+        "consensus_seeker": 0.0342,
+        "explorer": 0.0357,
+        "prevention_planner": 0.0381,
+        "reliable_cooperator": 0.0372,
+        "careful_truster": 0.047,
+        "status_seeker": 0.0283,
+        "easy_decider": 0.05
+      },
+      "best_archetype": "easy_decider",
+      "best_crossover": 0.05
+    },
+    {
+      "domain": "theatlantic.com",
+      "url": "https://www.theatlantic.com/ideas/2026/04/college-enrollment-demographic-cliff/686750/",
+      "title": "The Looming College-Enrollment Death Spiral - The AtlanticThe Atlanticfacebookinstagramyoutubetwitterlinkedinflipboardfacebookinstagramyoutubetwitterl",
+      "text_length": 9832,
+      "affect": 0.2,
+      "dominant_goal": "threat_reduction",
+      "dominant_strength": 0.4,
+      "goal_scores": {
+        "social_alignment": 0.12,
+        "threat_reduction": 0.4,
+        "novelty_exploration": 0.27,
+        "planning_completion": 0.3,
+        "indulgence_permission": 0.03,
+        "status_signaling": 0.135
+      },
+      "archetype_scores": {
+        "trusting_loyalist": 0.1351,
+        "dependable_loyalist": 0.1398,
+        "consensus_seeker": 0.1217,
+        "explorer": 0.156,
+        "prevention_planner": 0.1183,
+        "reliable_cooperator": 0.1264,
+        "careful_truster": 0.1726,
+        "status_seeker": 0.0605,
+        "easy_decider": 0.1014
+      },
+      "best_archetype": "careful_truster",
+      "best_crossover": 0.1726
+    },
+    {
+      "domain": "theatlantic.com",
+      "url": "https://www.theatlantic.com/author/peter-s-canellos/",
+      "title": "Peter S. Canellos, The AtlanticThe Atlanticfacebookinstagramyoutubetwitterlinkedinflipboardfacebookinstagramyoutubetwitterlinkedinflipboardprivacy-opt",
+      "text_length": 2332,
+      "affect": 0.0,
+      "dominant_goal": "threat_reduction",
+      "dominant_strength": 0.3,
+      "goal_scores": {
+        "social_alignment": 0.15,
+        "threat_reduction": 0.3,
+        "novelty_exploration": 0.225,
+        "planning_completion": 0.3
+      },
+      "archetype_scores": {
+        "trusting_loyalist": 0.1553,
+        "dependable_loyalist": 0.1599,
+        "consensus_seeker": 0.1224,
+        "explorer": 0.1221,
+        "prevention_planner": 0.129,
+        "reliable_cooperator": 0.1241,
+        "careful_truster": 0.1631,
+        "status_seeker": 0.0489,
+        "easy_decider": 0.105
+      },
+      "best_archetype": "careful_truster",
+      "best_crossover": 0.1631
+    },
+    {
+      "domain": "theatlantic.com",
+      "url": "https://www.theatlantic.com/author/patricia-lockwood/",
+      "title": "Patricia Lockwood, The AtlanticThe Atlanticfacebookinstagramyoutubetwitterlinkedinflipboardfacebookinstagramyoutubetwitterlinkedinflipboardprivacy-opt",
+      "text_length": 2353,
+      "affect": 0.0,
+      "dominant_goal": "threat_reduction",
+      "dominant_strength": 0.3,
+      "goal_scores": {
+        "social_alignment": 0.1,
+        "threat_reduction": 0.3,
+        "novelty_exploration": 0.225,
+        "planning_completion": 0.3
+      },
+      "archetype_scores": {
+        "trusting_loyalist": 0.1532,
+        "dependable_loyalist": 0.1572,
+        "consensus_seeker": 0.1197,
+        "explorer": 0.1171,
+        "prevention_planner": 0.124,
+        "reliable_cooperator": 0.1241,
+        "careful_truster": 0.16,
+        "status_seeker": 0.0489,
+        "easy_decider": 0.095
+      },
+      "best_archetype": "careful_truster",
+      "best_crossover": 0.16
+    },
+    {
+      "domain": "time.com",
+      "url": "https://time.com/collection/earth-awards/2026/",
+      "title": "The TIME Earth Awards | 2026",
+      "text_length": 2407,
+      "affect": 0.0,
+      "dominant_goal": "planning_completion",
+      "dominant_strength": 0.2,
+      "goal_scores": {
+        "affiliation_safety": 0.05,
+        "threat_reduction": 0.1,
+        "novelty_exploration": 0.15,
+        "planning_completion": 0.2,
+        "indulgence_permission": 0.05,
+        "status_signaling": 0.05
+      },
+      "archetype_scores": {
+        "trusting_loyalist": 0.0907,
+        "dependable_loyalist": 0.0905,
+        "consensus_seeker": 0.0763,
+        "explorer": 0.0629,
+        "prevention_planner": 0.0777,
+        "reliable_cooperator": 0.081,
+        "careful_truster": 0.0829,
+        "status_seeker": 0.0717,
+        "easy_decider": 0.0775
+      },
+      "best_archetype": "trusting_loyalist",
+      "best_crossover": 0.0907
+    },
+    {
+      "domain": "time.com",
+      "url": "https://time.com/collections/must-read-books-2023/",
+      "title": "The 100 Must-Read Books of 2023",
+      "text_length": 3292,
+      "affect": 0.4,
+      "dominant_goal": "planning_completion",
+      "dominant_strength": 0.2,
+      "goal_scores": {
+        "threat_reduction": 0.1,
+        "novelty_exploration": 0.14,
+        "planning_completion": 0.2,
+        "status_signaling": 0.07
+      },
+      "archetype_scores": {
+        "trusting_loyalist": 0.0683,
+        "dependable_loyalist": 0.0693,
+        "consensus_seeker": 0.0484,
+        "explorer": 0.0357,
+        "prevention_planner": 0.0569,
+        "reliable_cooperator": 0.0521,
+        "careful_truster": 0.0621,
+        "status_seeker": 0.0548,
+        "easy_decider": 0.05
+      },
+      "best_archetype": "dependable_loyalist",
+      "best_crossover": 0.0693
+    },
+    {
+      "domain": "time.com",
+      "url": "https://time.com/collections/the-100-must-read-books-of-2025/",
+      "title": "100 Must-Read Books of 2025",
+      "text_length": 3825,
+      "affect": 0.2,
+      "dominant_goal": "planning_completion",
+      "dominant_strength": 0.3,
+      "goal_scores": {
+        "threat_reduction": 0.1,
+        "novelty_exploration": 0.21,
+        "competence_verification": 0.1,
+        "planning_completion": 0.3
+      },
+      "archetype_scores": {
+        "trusting_loyalist": 0.0883,
+        "dependable_loyalist": 0.0894,
+        "consensus_seeker": 0.0595,
+        "explorer": 0.0357,
+        "prevention_planner": 0.0752,
+        "reliable_cooperator": 0.0637,
+        "careful_truster": 0.0738,
+        "status_seeker": 0.0457,
+        "easy_decider": 0.075
+      },
+      "best_archetype": "dependable_loyalist",
+      "best_crossover": 0.0894
+    },
+    {
+      "domain": "cnn.com",
+      "url": "https://www.cnn.com/sport/college-sports",
+      "title": "College Sports | CNNClose icon",
+      "text_length": 7992,
+      "affect": 0.2,
+      "dominant_goal": "threat_reduction",
+      "dominant_strength": 0.2,
+      "goal_scores": {
+        "affiliation_safety": 0.06,
+        "threat_reduction": 0.2,
+        "novelty_exploration": 0.06,
+        "competence_verification": 0.2,
+        "planning_completion": 0.2,
+        "indulgence_permission": 0.12,
+        "status_signaling": 0.18
+      },
+      "archetype_scores": {
+        "trusting_loyalist": 0.1154,
+        "dependable_loyalist": 0.1128,
+        "consensus_seeker": 0.1095,
+        "explorer": 0.1151,
+        "prevention_planner": 0.1082,
+        "reliable_cooperator": 0.1159,
+        "careful_truster": 0.1239,
+        "status_seeker": 0.12,
+        "easy_decider": 0.107
+      },
+      "best_archetype": "careful_truster",
+      "best_crossover": 0.1239
+    },
+    {
+      "domain": "cnn.com",
+      "url": "https://www.cnn.com/2026/04/13/us/chongly-thao-minnesota-investigation-kidnapping",
+      "title": "Minnesota probes possible ICE kidnapping of US citizen ChongLy Thao | CNNClose icon",
+      "text_length": 10964,
+      "affect": 0.2,
+      "dominant_goal": "threat_reduction",
+      "dominant_strength": 0.2,
+      "goal_scores": {
+        "affiliation_safety": 0.06,
+        "threat_reduction": 0.2,
+        "novelty_exploration": 0.06,
+        "competence_verification": 0.2,
+        "planning_completion": 0.2,
+        "indulgence_permission": 0.12,
+        "status_signaling": 0.18
+      },
+      "archetype_scores": {
+        "trusting_loyalist": 0.1154,
+        "dependable_loyalist": 0.1128,
+        "consensus_seeker": 0.1095,
+        "explorer": 0.1151,
+        "prevention_planner": 0.1082,
+        "reliable_cooperator": 0.1159,
+        "careful_truster": 0.1239,
+        "status_seeker": 0.12,
+        "easy_decider": 0.107
+      },
+      "best_archetype": "careful_truster",
+      "best_crossover": 0.1239
+    },
+    {
+      "domain": "cnn.com",
+      "url": "https://www.cnn.com/tv/schedule/cnn",
+      "title": "CNN TV Schedule | CNNClose icon",
+      "text_length": 144723,
+      "affect": 0.2,
+      "dominant_goal": "threat_reduction",
+      "dominant_strength": 0.2,
+      "goal_scores": {
+        "affiliation_safety": 0.06,
+        "threat_reduction": 0.2,
+        "novelty_exploration": 0.06,
+        "competence_verification": 0.2,
+        "planning_completion": 0.2,
+        "indulgence_permission": 0.12,
+        "status_signaling": 0.18
+      },
+      "archetype_scores": {
+        "trusting_loyalist": 0.1154,
+        "dependable_loyalist": 0.1128,
+        "consensus_seeker": 0.1095,
+        "explorer": 0.1151,
+        "prevention_planner": 0.1082,
+        "reliable_cooperator": 0.1159,
+        "careful_truster": 0.1239,
+        "status_seeker": 0.12,
+        "easy_decider": 0.107
+      },
+      "best_archetype": "careful_truster",
+      "best_crossover": 0.1239
+    },
+    {
+      "domain": "bbc.com",
+      "url": "https://www.bbc.com/zhongwen/simp",
+      "title": "\u4e3b\u9875 - BBC News \u4e2d\u6587",
+      "text_length": 3834,
+      "affect": 0.0,
+      "dominant_goal": "novelty_exploration",
+      "dominant_strength": 0.05,
+      "goal_scores": {
+        "novelty_exploration": 0.05
+      },
+      "archetype_scores": {
+        "trusting_loyalist": 0.0143,
+        "dependable_loyalist": 0.0144,
+        "consensus_seeker": 0.0079,
+        "explorer": 0.0,
+        "prevention_planner": 0.01,
+        "reliable_cooperator": 0.0083,
+        "careful_truster": 0.0084,
+        "status_seeker": 0.0109,
+        "easy_decider": 0.0
+      },
+      "best_archetype": "dependable_loyalist",
+      "best_crossover": 0.0144
+    },
+    {
+      "domain": "bbc.com",
+      "url": "https://www.bbc.com/sport/football/live/c2lwv150jwwt",
+      "title": "Premier League LIVE: Manchester United vs Leeds United - score, text commentary, preview, team news, stats & head-to-head - BBC SportDiagram of half a",
+      "text_length": 31998,
+      "affect": 0.2,
+      "dominant_goal": "competence_verification",
+      "dominant_strength": 0.3,
+      "goal_scores": {
+        "social_alignment": 0.21,
+        "novelty_exploration": 0.045,
+        "competence_verification": 0.3,
+        "status_signaling": 0.06
+      },
+      "archetype_scores": {
+        "trusting_loyalist": 0.0216,
+        "dependable_loyalist": 0.0243,
+        "consensus_seeker": 0.0182,
+        "explorer": 0.021,
+        "prevention_planner": 0.0441,
+        "reliable_cooperator": 0.0074,
+        "careful_truster": 0.0209,
+        "status_seeker": 0.0307,
+        "easy_decider": 0.042
+      },
+      "best_archetype": "prevention_planner",
+      "best_crossover": 0.0441
+    },
+    {
+      "domain": "bbc.com",
+      "url": "https://www.bbc.com/pages/download-the-bbc-app",
+      "title": "BBCBritish Broadcasting CorporationBritish Broadcasting Corporation",
+      "text_length": 4444,
+      "affect": 0.4,
+      "dominant_goal": "novelty_exploration",
+      "dominant_strength": 0.21,
+      "goal_scores": {
+        "affiliation_safety": 0.07,
+        "novelty_exploration": 0.21,
+        "planning_completion": 0.1,
+        "status_signaling": 0.07
+      },
+      "archetype_scores": {
+        "trusting_loyalist": 0.0659,
+        "dependable_loyalist": 0.0681,
+        "consensus_seeker": 0.0516,
+        "explorer": 0.025,
+        "prevention_planner": 0.0619,
+        "reliable_cooperator": 0.055,
+        "careful_truster": 0.046,
+        "status_seeker": 0.0791,
+        "easy_decider": 0.0355
+      },
+      "best_archetype": "status_seeker",
+      "best_crossover": 0.0791
+    },
+    {
+      "domain": "wired.com",
+      "url": "https://www.wired.com/category/science/",
+      "title": "Science News: Health, Robotics, Climate Change, Space News | WIREDMenuMenuAccountAccountChevronExpandSearchLargeChevronFacebookXPinterestYouTubeInstag",
+      "text_length": 10336,
+      "affect": 0.4,
+      "dominant_goal": "threat_reduction",
+      "dominant_strength": 0.4,
+      "goal_scores": {
+        "social_alignment": 0.07,
+        "threat_reduction": 0.4,
+        "novelty_exploration": 0.35,
+        "competence_verification": 0.1,
+        "planning_completion": 0.2,
+        "indulgence_permission": 0.28,
+        "status_signaling": 0.21
+      },
+      "archetype_scores": {
+        "trusting_loyalist": 0.153,
+        "dependable_loyalist": 0.1545,
+        "consensus_seeker": 0.1347,
+        "explorer": 0.1603,
+        "prevention_planner": 0.1302,
+        "reliable_cooperator": 0.1418,
+        "careful_truster": 0.1835,
+        "status_seeker": 0.1053,
+        "easy_decider": 0.0864
+      },
+      "best_archetype": "careful_truster",
+      "best_crossover": 0.1835
+    },
+    {
+      "domain": "wired.com",
+      "url": "https://www.wired.com/feed/rss",
+      "title": "WIREDWhat\u2019s in Hasan Piker\u2019s Starter Pack? Creatine, Zyns, SignalMarine Animals in the Strait of Hormuz Don\u2019t Get a CeasefireStaunch Trump Supporters ",
+      "text_length": 23715,
+      "affect": 0.2,
+      "dominant_goal": "threat_reduction",
+      "dominant_strength": 0.5,
+      "goal_scores": {
+        "affiliation_safety": 0.06,
+        "social_alignment": 0.06,
+        "threat_reduction": 0.5,
+        "novelty_exploration": 0.18,
+        "competence_verification": 0.2,
+        "planning_completion": 0.1,
+        "indulgence_permission": 0.015,
+        "status_signaling": 0.15
+      },
+      "archetype_scores": {
+        "trusting_loyalist": 0.1598,
+        "dependable_loyalist": 0.1663,
+        "consensus_seeker": 0.157,
+        "explorer": 0.2066,
+        "prevention_planner": 0.1429,
+        "reliable_cooperator": 0.169,
+        "careful_truster": 0.2131,
+        "status_seeker": 0.0687,
+        "easy_decider": 0.0472
+      },
+      "best_archetype": "careful_truster",
+      "best_crossover": 0.2131
+    },
+    {
+      "domain": "wired.com",
+      "url": "https://www.wired.com/tag/iran/",
+      "title": "Iran | Latest News, Photos & Videos | WIREDMenuMenuAccountAccountChevronExpandSearchLargeChevronFacebookXPinterestYouTubeInstagramTiktok",
+      "text_length": 3938,
+      "affect": -0.6,
+      "dominant_goal": "threat_reduction",
+      "dominant_strength": 0.5,
+      "goal_scores": {
+        "social_alignment": 0.05,
+        "threat_reduction": 0.5,
+        "novelty_exploration": 0.05,
+        "competence_verification": 0.1,
+        "planning_completion": 0.2
+      },
+      "archetype_scores": {
+        "trusting_loyalist": 0.146,
+        "dependable_loyalist": 0.1508,
+        "consensus_seeker": 0.1358,
+        "explorer": 0.1836,
+        "prevention_planner": 0.1171,
+        "reliable_cooperator": 0.1466,
+        "careful_truster": 0.1981,
+        "status_seeker": 0.0022,
+        "easy_decider": 0.06
+      },
+      "best_archetype": "careful_truster",
+      "best_crossover": 0.1981
+    },
+    {
+      "domain": "arstechnica.com",
+      "url": "https://arstechnica.com/science/2026/04/shock-from-iran-war-has-trumps-vision-for-us-energy-dominance-flailing/",
+      "title": "Shock from Iran war has Trump's vision for US energy dominance flailing",
+      "text_length": 17625,
+      "affect": -0.2,
+      "dominant_goal": "competence_verification",
+      "dominant_strength": 0.45,
+      "goal_scores": {
+        "threat_reduction": 0.3,
+        "novelty_exploration": 0.075,
+        "competence_verification": 0.45
+      },
+      "archetype_scores": {
+        "trusting_loyalist": 0.0889,
+        "dependable_loyalist": 0.0915,
+        "consensus_seeker": 0.0813,
+        "explorer": 0.1071,
+        "prevention_planner": 0.0812,
+        "reliable_cooperator": 0.0894,
+        "careful_truster": 0.1184,
+        "status_seeker": 0.0033,
+        "easy_decider": 0.0
+      },
+      "best_archetype": "careful_truster",
+      "best_crossover": 0.1184
+    },
+    {
+      "domain": "arstechnica.com",
+      "url": "https://arstechnica.com/tech-policy/2026/04/trump-appointed-judges-refuse-to-block-trump-blacklisting-of-anthropic-ai-tech/",
+      "title": "Trump-appointed judges refuse to block Trump blacklisting of Anthropic AI tech - Ars Technica",
+      "text_length": 9297,
+      "affect": 0.2,
+      "dominant_goal": "threat_reduction",
+      "dominant_strength": 0.5,
+      "goal_scores": {
+        "affiliation_safety": 0.06,
+        "threat_reduction": 0.5,
+        "novelty_exploration": 0.045,
+        "competence_verification": 0.2,
+        "indulgence_permission": 0.09,
+        "status_signaling": 0.09
+      },
+      "archetype_scores": {
+        "trusting_loyalist": 0.1542,
+        "dependable_loyalist": 0.1592,
+        "consensus_seeker": 0.1535,
+        "explorer": 0.2033,
+        "prevention_planner": 0.1291,
+        "reliable_cooperator": 0.1684,
+        "careful_truster": 0.2081,
+        "status_seeker": 0.0466,
+        "easy_decider": 0.0162
+      },
+      "best_archetype": "careful_truster",
+      "best_crossover": 0.2081
+    },
+    {
+      "domain": "arstechnica.com",
+      "url": "https://arstechnica.com/gadgets/2026/04/youtube-increases-premium-price-again-says-90-second-unskippable-ads-are-a-bug/",
+      "title": "YouTube increases Premium price again, says 90-second unskippable ads are a bug - Ars Technica",
+      "text_length": 7651,
+      "affect": 0.2,
+      "dominant_goal": "social_alignment",
+      "dominant_strength": 0.27,
+      "goal_scores": {
+        "social_alignment": 0.27,
+        "threat_reduction": 0.2,
+        "novelty_exploration": 0.09,
+        "competence_verification": 0.2,
+        "planning_completion": 0.1,
+        "indulgence_permission": 0.06,
+        "status_signaling": 0.06
+      },
+      "archetype_scores": {
+        "trusting_loyalist": 0.1118,
+        "dependable_loyalist": 0.114,
+        "consensus_seeker": 0.0968,
+        "explorer": 0.1096,
+        "prevention_planner": 0.1095,
+        "reliable_cooperator": 0.0881,
+        "careful_truster": 0.1232,
+        "status_seeker": 0.0587,
+        "easy_decider": 0.103
+      },
+      "best_archetype": "careful_truster",
+      "best_crossover": 0.1232
+    },
+    {
+      "domain": "techcrunch.com",
+      "url": "https://techcrunch.com/2026/04/13/vercel-ceo-guillermo-rauch-signals-ipo-readiness-as-ai-agents-fuel-revenue-surge/",
+      "title": "Vercel CEO Guillermo Rauch signals IPO readiness as AI agents fuel revenue surge | TechCrunch",
+      "text_length": 6329,
+      "affect": 0.0,
+      "dominant_goal": "planning_completion",
+      "dominant_strength": 0.3,
+      "goal_scores": {
+        "affiliation_safety": 0.1,
+        "social_alignment": 0.225,
+        "threat_reduction": 0.1,
+        "novelty_exploration": 0.1,
+        "competence_verification": 0.1,
+        "planning_completion": 0.3,
+        "status_signaling": 0.2
+      },
+      "archetype_scores": {
+        "trusting_loyalist": 0.0745,
+        "dependable_loyalist": 0.0811,
+        "consensus_seeker": 0.0803,
+        "explorer": 0.0939,
+        "prevention_planner": 0.1033,
+        "reliable_cooperator": 0.0745,
+        "careful_truster": 0.0853,
+        "status_seeker": 0.1043,
+        "easy_decider": 0.135
+      },
+      "best_archetype": "easy_decider",
+      "best_crossover": 0.135
+    },
+    {
+      "domain": "techcrunch.com",
+      "url": "https://techcrunch.com/events/techcrunch-disrupt/",
+      "title": "TechCrunch Disrupt 2026 | TechCrunch",
+      "text_length": 14883,
+      "affect": 0.0,
+      "dominant_goal": "planning_completion",
+      "dominant_strength": 0.3,
+      "goal_scores": {
+        "affiliation_safety": 0.1,
+        "social_alignment": 0.1,
+        "novelty_exploration": 0.2,
+        "planning_completion": 0.3,
+        "indulgence_permission": 0.0375,
+        "status_signaling": 0.2
+      },
+      "archetype_scores": {
+        "trusting_loyalist": 0.0812,
+        "dependable_loyalist": 0.0836,
+        "consensus_seeker": 0.073,
+        "explorer": 0.0527,
+        "prevention_planner": 0.0941,
+        "reliable_cooperator": 0.0716,
+        "careful_truster": 0.0639,
+        "status_seeker": 0.1375,
+        "easy_decider": 0.125
+      },
+      "best_archetype": "status_seeker",
+      "best_crossover": 0.1375
+    },
+    {
+      "domain": "techcrunch.com",
+      "url": "https://techcrunch.com/category/enterprise/",
+      "title": "Enterprise News | TechCrunch",
+      "text_length": 5483,
+      "affect": 0.2,
+      "dominant_goal": "threat_reduction",
+      "dominant_strength": 0.3,
+      "goal_scores": {
+        "social_alignment": 0.21,
+        "threat_reduction": 0.3,
+        "novelty_exploration": 0.12,
+        "competence_verification": 0.1,
+        "planning_completion": 0.1,
+        "status_signaling": 0.3
+      },
+      "archetype_scores": {
+        "trusting_loyalist": 0.1277,
+        "dependable_loyalist": 0.133,
+        "consensus_seeker": 0.1089,
+        "explorer": 0.1281,
+        "prevention_planner": 0.1238,
+        "reliable_cooperator": 0.1068,
+        "careful_truster": 0.1494,
+        "status_seeker": 0.1304,
+        "easy_decider": 0.067
+      },
+      "best_archetype": "careful_truster",
+      "best_crossover": 0.1494
+    },
+    {
+      "domain": "kiplinger.com",
+      "url": "https://www.kiplinger.com/investing/stocks/nasdaq-secures-longest-win-streak-since-2023-stock-market-today",
+      "title": "Nasdaq Hits Longest Win Streak Since 2023: Stock Market Today | Kiplinger",
+      "text_length": 10030,
+      "affect": 0.6,
+      "dominant_goal": "planning_completion",
+      "dominant_strength": 0.5,
+      "goal_scores": {
+        "affiliation_safety": 0.16,
+        "social_alignment": 0.08,
+        "threat_reduction": 0.4,
+        "novelty_exploration": 0.16,
+        "competence_verification": 0.1,
+        "planning_completion": 0.5,
+        "indulgence_permission": 0.08,
+        "status_signaling": 0.24
+      },
+      "archetype_scores": {
+        "trusting_loyalist": 0.1972,
+        "dependable_loyalist": 0.2014,
+        "consensus_seeker": 0.1945,
+        "explorer": 0.2165,
+        "prevention_planner": 0.1897,
+        "reliable_cooperator": 0.2092,
+        "careful_truster": 0.2254,
+        "status_seeker": 0.1635,
+        "easy_decider": 0.1842
+      },
+      "best_archetype": "careful_truster",
+      "best_crossover": 0.2254
+    },
+    {
+      "domain": "kiplinger.com",
+      "url": "https://www.kiplinger.com/puzzles/quizzes",
+      "title": "Quizzes | Kiplinger",
+      "text_length": 3881,
+      "affect": 0.0,
+      "dominant_goal": "threat_reduction",
+      "dominant_strength": 0.5,
+      "goal_scores": {
+        "social_alignment": 0.05,
+        "threat_reduction": 0.5,
+        "novelty_exploration": 0.2,
+        "competence_verification": 0.1,
+        "planning_completion": 0.1,
+        "status_signaling": 0.05
+      },
+      "archetype_scores": {
+        "trusting_loyalist": 0.1546,
+        "dependable_loyalist": 0.1595,
+        "consensus_seeker": 0.1405,
+        "explorer": 0.1836,
+        "prevention_planner": 0.1221,
+        "reliable_cooperator": 0.1515,
+        "careful_truster": 0.2031,
+        "status_seeker": 0.0261,
+        "easy_decider": 0.035
+      },
+      "best_archetype": "careful_truster",
+      "best_crossover": 0.2031
+    },
+    {
+      "domain": "kiplinger.com",
+      "url": "https://www.kiplinger.com/personal-finance/travel/how-to-get-money-back-vacation-abroad-goes-awry",
+      "title": "How You Can Get Your Money Back When a Vacation Abroad Goes Awry | Kiplinger",
+      "text_length": 11864,
+      "affect": 0.6,
+      "dominant_goal": "threat_reduction",
+      "dominant_strength": 0.4,
+      "goal_scores": {
+        "affiliation_safety": 0.16,
+        "social_alignment": 0.08,
+        "threat_reduction": 0.4,
+        "novelty_exploration": 0.16,
+        "competence_verification": 0.1,
+        "planning_completion": 0.4,
+        "indulgence_permission": 0.08,
+        "status_signaling": 0.24
+      },
+      "archetype_scores": {
+        "trusting_loyalist": 0.1435,
+        "dependable_loyalist": 0.1517,
+        "consensus_seeker": 0.1608,
+        "explorer": 0.211,
+        "prevention_planner": 0.1552,
+        "reliable_cooperator": 0.1717,
+        "careful_truster": 0.1935,
+        "status_seeker": 0.1162,
+        "easy_decider": 0.1464
+      },
+      "best_archetype": "explorer",
+      "best_crossover": 0.211
+    },
+    {
+      "domain": "linkedin.com",
+      "url": "https://www.linkedin.com/products/categories/human-resources-management-systems",
+      "title": "Best Human Resources Management Systems (HRMS) | Products | LinkedIn",
+      "text_length": 8300,
+      "affect": 0.6,
+      "dominant_goal": "affiliation_safety",
+      "dominant_strength": 0.44,
+      "goal_scores": {
+        "affiliation_safety": 0.44,
+        "social_alignment": 0.08,
+        "threat_reduction": 0.2,
+        "novelty_exploration": 0.24,
+        "competence_verification": 0.3,
+        "status_signaling": 0.24
+      },
+      "archetype_scores": {
+        "trusting_loyalist": 0.11,
+        "dependable_loyalist": 0.1253,
+        "consensus_seeker": 0.1802,
+        "explorer": 0.2366,
+        "prevention_planner": 0.1674,
+        "reliable_cooperator": 0.1934,
+        "careful_truster": 0.1588,
+        "status_seeker": 0.1513,
+        "easy_decider": 0.082
+      },
+      "best_archetype": "explorer",
+      "best_crossover": 0.2366
+    },
+    {
+      "domain": "linkedin.com",
+      "url": "https://www.linkedin.com/products/categories/e-commerce-platforms",
+      "title": "Best E-Commerce Platforms | Products | LinkedIn",
+      "text_length": 5487,
+      "affect": 0.6,
+      "dominant_goal": "affiliation_safety",
+      "dominant_strength": 0.44,
+      "goal_scores": {
+        "affiliation_safety": 0.44,
+        "social_alignment": 0.08,
+        "threat_reduction": 0.1,
+        "novelty_exploration": 0.16,
+        "indulgence_permission": 0.08,
+        "status_signaling": 0.24
+      },
+      "archetype_scores": {
+        "trusting_loyalist": 0.1018,
+        "dependable_loyalist": 0.1122,
+        "consensus_seeker": 0.1724,
+        "explorer": 0.2157,
+        "prevention_planner": 0.1473,
+        "reliable_cooperator": 0.1822,
+        "careful_truster": 0.1356,
+        "status_seeker": 0.1722,
+        "easy_decider": 0.114
+      },
+      "best_archetype": "explorer",
+      "best_crossover": 0.2157
+    },
+    {
+      "domain": "linkedin.com",
+      "url": "https://www.linkedin.com/top-content/soft-skills-emotional-intelligence/",
+      "title": "Top Soft Skills & Emotional Intelligence Content from LinkedIn Members",
+      "text_length": 28769,
+      "affect": 0.2,
+      "dominant_goal": "status_signaling",
+      "dominant_strength": 0.3,
+      "goal_scores": {
+        "affiliation_safety": 0.18,
+        "social_alignment": 0.06,
+        "novelty_exploration": 0.135,
+        "competence_verification": 0.2,
+        "planning_completion": 0.2,
+        "indulgence_permission": 0.06,
+        "status_signaling": 0.3
+      },
+      "archetype_scores": {
+        "trusting_loyalist": 0.0745,
+        "dependable_loyalist": 0.0775,
+        "consensus_seeker": 0.0876,
+        "explorer": 0.0814,
+        "prevention_planner": 0.1065,
+        "reliable_cooperator": 0.0898,
+        "careful_truster": 0.068,
+        "status_seeker": 0.1754,
+        "easy_decider": 0.113
+      },
+      "best_archetype": "status_seeker",
+      "best_crossover": 0.1754
+    },
+    {
+      "domain": "vox.com",
+      "url": "https://www.vox.com/politics/481087/us-iran-trump-war-israel-politics-explainer",
+      "title": "The US-Iran war, explained | VoxVoxPodcastVideoVoxCloseVideoPodcastCrosswordFacebookInstagramYoutubeRSSTikTokVoxSharePodcastVoxFacebookInstagramYoutub",
+      "text_length": 22728,
+      "affect": -0.2,
+      "dominant_goal": "threat_reduction",
+      "dominant_strength": 0.3,
+      "goal_scores": {
+        "affiliation_safety": 0.05,
+        "social_alignment": 0.175,
+        "threat_reduction": 0.3,
+        "novelty_exploration": 0.075,
+        "planning_completion": 0.1,
+        "indulgence_permission": 0.05
+      },
+      "archetype_scores": {
+        "trusting_loyalist": 0.1329,
+        "dependable_loyalist": 0.1366,
+        "consensus_seeker": 0.1263,
+        "explorer": 0.1518,
+        "prevention_planner": 0.1149,
+        "reliable_cooperator": 0.1266,
+        "careful_truster": 0.1588,
+        "status_seeker": 0.038,
+        "easy_decider": 0.0875
+      },
+      "best_archetype": "careful_truster",
+      "best_crossover": 0.1588
+    },
+    {
+      "domain": "vox.com",
+      "url": "https://www.vox.com/rss/index.xml",
+      "title": "Vox",
+      "text_length": 1231,
+      "affect": 0.0,
+      "dominant_goal": "affiliation_safety",
+      "dominant_strength": 0.0,
+      "goal_scores": {},
+      "archetype_scores": {
+        "trusting_loyalist": 0.0,
+        "dependable_loyalist": 0.0,
+        "consensus_seeker": 0.0,
+        "explorer": 0.0,
+        "prevention_planner": 0.0,
+        "reliable_cooperator": 0.0,
+        "careful_truster": 0.0,
+        "status_seeker": 0.0,
+        "easy_decider": 0.0
+      },
+      "best_archetype": "trusting_loyalist",
+      "best_crossover": 0.0
+    },
+    {
+      "domain": "vox.com",
+      "url": "https://www.vox.com/politics/479423/america-after-trump-democracy",
+      "title": "Where Is American democracy headed? | VoxVoxPodcastVideoVoxCloseVideoPodcastCrosswordFacebookInstagramYoutubeRSSTikTokVoxPodcastPlayPlayPodcastPlayPod",
+      "text_length": 5871,
+      "affect": -0.2,
+      "dominant_goal": "threat_reduction",
+      "dominant_strength": 0.2,
+      "goal_scores": {
+        "threat_reduction": 0.2,
+        "novelty_exploration": 0.15,
+        "planning_completion": 0.2,
+        "indulgence_permission": 0.1,
+        "status_signaling": 0.1
+      },
+      "archetype_scores": {
+        "trusting_loyalist": 0.1301,
+        "dependable_loyalist": 0.1269,
+        "consensus_seeker": 0.1026,
+        "explorer": 0.09,
+        "prevention_planner": 0.0992,
+        "reliable_cooperator": 0.1083,
+        "careful_truster": 0.1251,
+        "status_seeker": 0.0978,
+        "easy_decider": 0.09
+      },
+      "best_archetype": "trusting_loyalist",
+      "best_crossover": 0.1301
+    },
+    {
+      "domain": "elitetraveler.com",
+      "url": "https://elitetraveler.com/finest-dining/wines-and-spirits",
+      "title": "Cellars & Spirits News - Elite Traveler",
+      "text_length": 7840,
+      "affect": 1.0,
+      "dominant_goal": "status_signaling",
+      "dominant_strength": 0.75,
+      "goal_scores": {
+        "affiliation_safety": 0.4,
+        "threat_reduction": 0.1,
+        "novelty_exploration": 0.5625,
+        "competence_verification": 0.2,
+        "indulgence_permission": 0.2,
+        "status_signaling": 0.75
+      },
+      "archetype_scores": {
+        "trusting_loyalist": 0.2613,
+        "dependable_loyalist": 0.2633,
+        "consensus_seeker": 0.252,
+        "explorer": 0.1871,
+        "prevention_planner": 0.273,
+        "reliable_cooperator": 0.2657,
+        "careful_truster": 0.2094,
+        "status_seeker": 0.4962,
+        "easy_decider": 0.14
+      },
+      "best_archetype": "status_seeker",
+      "best_crossover": 0.4962
+    },
+    {
+      "domain": "elitetraveler.com",
+      "url": "https://elitetraveler.com/cars-jets-and-yachts/cars/defender-octa-2",
+      "title": "Land Rover Defender OCTA Defies Expectations in South Africa",
+      "text_length": 11267,
+      "affect": 1.0,
+      "dominant_goal": "status_signaling",
+      "dominant_strength": 0.75,
+      "goal_scores": {
+        "affiliation_safety": 0.4,
+        "threat_reduction": 0.1,
+        "novelty_exploration": 0.5625,
+        "competence_verification": 0.2,
+        "indulgence_permission": 0.2,
+        "status_signaling": 0.75
+      },
+      "archetype_scores": {
+        "trusting_loyalist": 0.2613,
+        "dependable_loyalist": 0.2633,
+        "consensus_seeker": 0.252,
+        "explorer": 0.1871,
+        "prevention_planner": 0.273,
+        "reliable_cooperator": 0.2657,
+        "careful_truster": 0.2094,
+        "status_seeker": 0.4962,
+        "easy_decider": 0.14
+      },
+      "best_archetype": "status_seeker",
+      "best_crossover": 0.4962
+    },
+    {
+      "domain": "elitetraveler.com",
+      "url": "https://elitetraveler.com/travel/wellness-travel/south-africa-safari-wellness",
+      "title": "Top 5 Wellness Retreats in South Africa for a Mindful Escape",
+      "text_length": 12711,
+      "affect": 1.0,
+      "dominant_goal": "status_signaling",
+      "dominant_strength": 1.0,
+      "goal_scores": {
+        "affiliation_safety": 0.4,
+        "threat_reduction": 0.1,
+        "novelty_exploration": 0.5625,
+        "competence_verification": 0.2,
+        "planning_completion": 0.1,
+        "indulgence_permission": 0.2,
+        "status_signaling": 1.0
+      },
+      "archetype_scores": {
+        "trusting_loyalist": 0.2613,
+        "dependable_loyalist": 0.2633,
+        "consensus_seeker": 0.252,
+        "explorer": 0.1871,
+        "prevention_planner": 0.2837,
+        "reliable_cooperator": 0.2657,
+        "careful_truster": 0.2094,
+        "status_seeker": 0.5832,
+        "easy_decider": 0.145
+      },
+      "best_archetype": "status_seeker",
+      "best_crossover": 0.5832
+    },
+    {
+      "domain": "tsa.gov",
+      "url": "https://www.tsa.gov/news/press/releases/2026/02/05/tsa-successfully-rolls-out-tsa-confirmid-0",
+      "title": "TSA successfully rolls out TSA ConfirmID | Transportation Security AdministrationLock",
+      "text_length": 6611,
+      "affect": 0.2,
+      "dominant_goal": "planning_completion",
+      "dominant_strength": 0.5,
+      "goal_scores": {
+        "affiliation_safety": 0.06,
+        "threat_reduction": 0.1,
+        "novelty_exploration": 0.06,
+        "competence_verification": 0.1,
+        "planning_completion": 0.5,
+        "indulgence_permission": 0.06,
+        "status_signaling": 0.12
+      },
+      "archetype_scores": {
+        "trusting_loyalist": 0.0688,
+        "dependable_loyalist": 0.0684,
+        "consensus_seeker": 0.0674,
+        "explorer": 0.0683,
+        "prevention_planner": 0.0794,
+        "reliable_cooperator": 0.0716,
+        "careful_truster": 0.0716,
+        "status_seeker": 0.0809,
+        "easy_decider": 0.158
+      },
+      "best_archetype": "easy_decider",
+      "best_crossover": 0.158
+    },
+    {
+      "domain": "tsa.gov",
+      "url": "https://www.tsa.gov/contact/customer-service",
+      "title": "Customer Service | Transportation Security AdministrationLock",
+      "text_length": 25031,
+      "affect": 0.2,
+      "dominant_goal": "planning_completion",
+      "dominant_strength": 0.5,
+      "goal_scores": {
+        "affiliation_safety": 0.12,
+        "threat_reduction": 0.2,
+        "novelty_exploration": 0.06,
+        "planning_completion": 0.5,
+        "status_signaling": 0.12
+      },
+      "archetype_scores": {
+        "trusting_loyalist": 0.0836,
+        "dependable_loyalist": 0.0887,
+        "consensus_seeker": 0.0937,
+        "explorer": 0.1143,
+        "prevention_planner": 0.096,
+        "reliable_cooperator": 0.1027,
+        "careful_truster": 0.106,
+        "status_seeker": 0.0704,
+        "easy_decider": 0.143
+      },
+      "best_archetype": "easy_decider",
+      "best_crossover": 0.143
+    },
+    {
+      "domain": "tsa.gov",
+      "url": "https://www.tsa.gov/news/press/releases/2025/12/01/tsa-introduces-new-45-fee-option-for-travelers-without-real-id",
+      "title": "TSA introduces new $45 fee option for travelers without REAL ID starting February 1 | Transportation Security AdministrationLock",
+      "text_length": 7529,
+      "affect": 0.0,
+      "dominant_goal": "planning_completion",
+      "dominant_strength": 0.5,
+      "goal_scores": {
+        "affiliation_safety": 0.05,
+        "threat_reduction": 0.1,
+        "novelty_exploration": 0.05,
+        "planning_completion": 0.5,
+        "status_signaling": 0.05
+      },
+      "archetype_scores": {
+        "trusting_loyalist": 0.0467,
+        "dependable_loyalist": 0.049,
+        "consensus_seeker": 0.0474,
+        "explorer": 0.0536,
+        "prevention_planner": 0.0571,
+        "reliable_cooperator": 0.0517,
+        "careful_truster": 0.0548,
+        "status_seeker": 0.0348,
+        "easy_decider": 0.1325
+      },
+      "best_archetype": "easy_decider",
+      "best_crossover": 0.1325
+    },
+    {
+      "domain": "espn.com",
+      "url": "https://www.espn.com/watch/collections/48556/mlb-t-live-upcoming",
+      "title": "Stream MLB.TV - Live & Upcoming on Watch ESPN - ESPNNFLNBAMLBNHLGolfSoccerWNBASavannah BananasMore SportsWatchFantasySearchFilms & ShowsSupport & FAQs",
+      "text_length": 4240,
+      "affect": 0.0,
+      "dominant_goal": "planning_completion",
+      "dominant_strength": 0.2,
+      "goal_scores": {
+        "novelty_exploration": 0.05,
+        "planning_completion": 0.2
+      },
+      "archetype_scores": {
+        "trusting_loyalist": 0.0143,
+        "dependable_loyalist": 0.0144,
+        "consensus_seeker": 0.0079,
+        "explorer": 0.0,
+        "prevention_planner": 0.016,
+        "reliable_cooperator": 0.0083,
+        "careful_truster": 0.0084,
+        "status_seeker": 0.0109,
+        "easy_decider": 0.05
+      },
+      "best_archetype": "easy_decider",
+      "best_crossover": 0.05
+    },
+    {
+      "domain": "espn.com",
+      "url": "https://www.espn.com/mlb/scoreboard",
+      "title": "MLB Scores, 2026 Season - ESPNNFLNBAMLBNHLGolfSoccerWNBAMore SportsWatchFantasySearchTeamsOddsMore",
+      "text_length": 4084,
+      "affect": 0.0,
+      "dominant_goal": "competence_verification",
+      "dominant_strength": 0.3,
+      "goal_scores": {
+        "novelty_exploration": 0.05,
+        "competence_verification": 0.3,
+        "planning_completion": 0.2
+      },
+      "archetype_scores": {
+        "trusting_loyalist": 0.0143,
+        "dependable_loyalist": 0.0144,
+        "consensus_seeker": 0.0079,
+        "explorer": 0.0,
+        "prevention_planner": 0.0281,
+        "reliable_cooperator": 0.0083,
+        "careful_truster": 0.0084,
+        "status_seeker": 0.0109,
+        "easy_decider": 0.05
+      },
+      "best_archetype": "easy_decider",
+      "best_crossover": 0.05
+    },
+    {
+      "domain": "espn.com",
+      "url": "https://www.espn.com/watch/player/_/id/adbffb65-fc5f-40d6-abfe-98a1948714e4",
+      "title": "WNBA Draft 2026 Presented by State Street Investment Management SPY (4/13/26) - Live Stream - Watch ESPN",
+      "text_length": 4013,
+      "affect": -0.2,
+      "dominant_goal": "threat_reduction",
+      "dominant_strength": 0.2,
+      "goal_scores": {
+        "threat_reduction": 0.2,
+        "novelty_exploration": 0.05,
+        "competence_verification": 0.1,
+        "planning_completion": 0.2,
+        "status_signaling": 0.05
+      },
+      "archetype_scores": {
+        "trusting_loyalist": 0.0707,
+        "dependable_loyalist": 0.0725,
+        "consensus_seeker": 0.0605,
+        "explorer": 0.0714,
+        "prevention_planner": 0.0621,
+        "reliable_cooperator": 0.0662,
+        "careful_truster": 0.0857,
+        "status_seeker": 0.0283,
+        "easy_decider": 0.05
+      },
+      "best_archetype": "careful_truster",
+      "best_crossover": 0.0857
+    }
+  ]
+}
