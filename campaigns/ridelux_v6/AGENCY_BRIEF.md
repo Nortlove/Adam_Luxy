@@ -59,7 +59,7 @@ The moderate segment (rating 4-6) is where the subtle archetypes matter most —
 
 ### Targeting Archetypes (7 — these convert)
 
-### 1. Trusting Loyalist (35% of audience) — **3.52x lift**
+### 1. Trusting Loyalist (33% of budget) — **3.52x lift**
 - **Defining interaction**: agreeableness × brand_trust
 - **Psychology**: Gives benefit of the doubt, low skepticism, responds to warmth and social proof
 - **What works**: Social proof, welcoming tone, easy booking, minimal persuasion needed
@@ -67,7 +67,7 @@ The moderate segment (rating 4-6) is where the subtle archetypes matter most —
 - **Peak hours**: 6-9 AM weekday, 5-10 PM (evening research)
 - **Budget allocation**: $78.75/day (35% of total)
 
-### 2. Reliable Cooperator (22% of audience) — **1.69x lift**
+### 2. Reliable Cooperator (21% of budget) — **1.69x lift**
 - **Defining interaction**: conscientiousness × agreeableness
 - **Psychology**: Not impulsive — they PLAN. Values structure, scheduling, advance booking
 - **What works**: Implementation intentions, calendar sync, specific scheduling ("Book your Tuesday 6am pickup now")
@@ -75,7 +75,7 @@ The moderate segment (rating 4-6) is where the subtle archetypes matter most —
 - **Peak hours**: 6-9 AM weekday (planning), 5-8 PM (evening scheduling)
 - **Budget allocation**: $49.50/day (22% of total)
 
-### 3. Careful Truster (18% of audience)
+### 3. Careful Truster (17% of budget)
 - **Defining interaction**: brand_trust × prevention_focus
 - **Psychology**: High need for evidence, risk-averse, reads reviews extensively
 - **What works**: Social proof, data/statistics, safety credentials, testimonials from similar people
@@ -83,7 +83,7 @@ The moderate segment (rating 4-6) is where the subtle archetypes matter most —
 - **Peak hours**: 5-8 AM (pre-travel anxiety), 5-10 PM (evening research), 10 PM-5 AM (late night anxiety)
 - **Budget allocation**: $40.50/day (18% of total)
 
-### 4. Explorer (12% of audience) — **1.91x lift**
+### 4. Explorer (11% of budget) — **1.91x lift**
 - **Defining interaction**: openness × promotion_focus
 - **Psychology**: Novelty-seeking, aspirational, curious about new experiences
 - **What works**: Narrative storytelling, aspirational imagery, new experience framing, curiosity hooks
@@ -91,7 +91,7 @@ The moderate segment (rating 4-6) is where the subtle archetypes matter most —
 - **Peak hours**: 9 AM-5 PM (business hours), 7-10 PM (evening browsing)
 - **Budget allocation**: $27.00/day (12% of total)
 
-### 5. Prevention Planner (8% of audience)
+### 5. Prevention Planner (7% of budget)
 - **Defining interaction**: conscientiousness × prevention_focus
 - **Psychology**: Safety-focused, detail-oriented, needs to prevent negative outcomes
 - **What works**: Authority/credentials, safety data, insurance/guarantee messaging, structured evidence
@@ -99,7 +99,7 @@ The moderate segment (rating 4-6) is where the subtle archetypes matter most —
 - **Peak hours**: 5-8 AM (pre-travel anxiety), 8-10 PM (evening planning)
 - **Budget allocation**: $18.00/day (8% of total)
 
-### 6. Dependable Loyalist (7% of audience) — **6.6x lift in moderate segment**
+### 6. Dependable Loyalist (7% of budget) — **6.6x lift in moderate segment**
 - **Defining interaction**: brand_trust × conscientiousness
 - **Psychology**: The "quiet converters" — not extreme on any single dimension, but the combination of trusting the brand AND being conscientious means they follow through. Discovered in the moderate segment where single traits don't predict conversion.
 - **What works**: Facts, credentials, straightforward booking process. No flash needed — reliability sells.
@@ -107,7 +107,7 @@ The moderate segment (rating 4-6) is where the subtle archetypes matter most —
 - **Peak hours**: 6-9 AM weekday (planning), 5-8 PM (evening)
 - **Budget allocation**: $15.75/day (7% of total)
 
-### 7. Consensus Seeker (5% of audience) — **3.3x lift in moderate segment**
+### 7. Consensus Seeker (5% of budget) — **3.3x lift in moderate segment**
 - **Defining interaction**: agreeableness × social_proof_reliance
 - **Psychology**: Converts specifically via social proof — they need to see that people like them chose this service. Not authority, not aspiration — peer endorsement.
 - **What works**: Testimonials from relatable people, "others like you chose...", peer reviews, numbers ("50,000 executives")
@@ -264,16 +264,27 @@ Go to **Audiences** → **Create Audience**:
 | 4 | `luxy_converted_exclude` | Exclusion | Event: luxy_booking_complete | 90 days |
 | 5 | `luxy_booking_abandoned` | Retargeting | Event: luxy_booking_start AND NOT luxy_booking_complete | 7 days |
 
-**CRITICAL**: Audience #4 (`luxy_converted_exclude`) must be applied as an **exclusion** to ALL 15 campaigns.
+**CRITICAL**: Audience #4 (`luxy_converted_exclude`) must be applied as an **exclusion** to ALL 28 campaigns.
 
 ### 4. Upload Domain Lists
 
-We provide two upload-ready CSV files (domain only, one per line):
+We provide **7 per-archetype whitelists** and **1 shared blacklist**. Each campaign group gets its own Site Inclusion List — the domains are matched to the psychological goals that archetype's ad fulfills.
 
-- **`stackadapt_whitelist_upload.csv`** (41 domains) → Upload as **Site Inclusion List**
-- **`stackadapt_blacklist_upload.csv`** (21 domains) → Upload as **Site Exclusion List**
+**Per-archetype whitelists** (upload one per campaign group):
 
-These domains are psychologically profiled — each is selected because the content creates a mental state that aligns with one of the three archetypes. Do not add random domains.
+| Campaign Group | Whitelist File | Domains |
+|---|---|---|
+| Trusting Loyalist | `stackadapt_whitelist_trusting_loyalist.csv` | 14 |
+| Reliable Cooperator | `stackadapt_whitelist_reliable_cooperator.csv` | 17 |
+| Careful Truster | `stackadapt_whitelist_careful_truster.csv` | 21 |
+| Explorer | `stackadapt_whitelist_explorer.csv` | 15 |
+| Prevention Planner | `stackadapt_whitelist_prevention_planner.csv` | 17 |
+| Dependable Loyalist | `stackadapt_whitelist_dependable_loyalist.csv` | 20 |
+| Consensus Seeker | `stackadapt_whitelist_consensus_seeker.csv` | 11 |
+
+**Shared blacklist**: `stackadapt_blacklist_upload.csv` (21 domains) → Upload as **Site Exclusion List** on ALL campaigns.
+
+**Why per-archetype?** Each domain was scored by the psychological goals its content activates. A Forbes article primes authority/status goals — ideal for Dependable Loyalist, wrong for Explorer. Matching the domain to the archetype ensures the page is already priming the goal that our ad fulfills.
 
 ### 5. Create 7 Campaign Groups
 
@@ -427,6 +438,8 @@ The `{...}` values are StackAdapt macros — do NOT replace them manually.
 | Careful Truster | $7-9 | Evidence-heavy, boost during research windows |
 | Explorer | $10-12 | High lifetime value, premium/aspirational inventory |
 | Prevention Planner | $7-9 | Authority-heavy, professional inventory |
+| Dependable Loyalist | $8-10 | Quiet converters, facts-driven inventory |
+| Consensus Seeker | $7-9 | Social proof-driven, review/community inventory |
 
 **Device multipliers**: Desktop 1.0×, Mobile 1.1×, Tablet 0.9×
 
@@ -486,7 +499,7 @@ You have full discretion on bid optimization — these are starting recommendati
 - [ ] Both teams review all 28 campaigns together
 - [ ] Test click from each campaign → verify luxyride.com loads with URL params
 - [ ] Confirm reporting cadence (agency sends Monday, INFORMATIV sends Wednesday)
-- [ ] Set all 15 campaigns to **ACTIVE**
+- [ ] Set all 28 campaigns to **ACTIVE**
 
 ---
 
@@ -495,9 +508,11 @@ You have full discretion on bid optimization — these are starting recommendati
 | File | What To Do With It |
 |------|-------------------|
 | `AGENCY_BRIEF.md` | This document — your guide |
-| `stackadapt_whitelist_upload.csv` | Upload to StackAdapt as Site Inclusion List |
-| `stackadapt_blacklist_upload.csv` | Upload to StackAdapt as Site Exclusion List |
-| `luxy_ride_creatives.json` | Machine-readable creative specs (reference) |
+| `AGENCY_HANDOFF_COMPLETE.md` | Step-by-step StackAdapt setup instructions |
+| `luxy_ride_complete_creatives.json` | All 28 campaign specs (machine-readable) |
+| `stackadapt_whitelist_[archetype].csv` (7 files) | Per-archetype Site Inclusion Lists |
+| `stackadapt_blacklist_upload.csv` | Shared Site Exclusion List (all campaigns) |
+| `domain_archetype_mapping.json` | Domain rankings by archetype (reference) |
 
 ---
 

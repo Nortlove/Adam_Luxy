@@ -100,7 +100,7 @@
 
 **Shared blacklist** — apply `stackadapt_blacklist_upload.csv` (21 domains) to ALL campaigns.
 
-**Why per-archetype whitelists?** Each domain was scored by the psychological goals its content activates. A Forbes article primes status/authority goals — ideal for Status Seeker ads, counterproductive for Prevention Planner ads. Matching the domain to the archetype ensures the page content is already priming the goal that our ad fulfills.
+**Why per-archetype whitelists?** Each domain was scored by the psychological goals its content activates. A Forbes article primes authority/competence goals — ideal for Dependable Loyalist ads, counterproductive for Prevention Planner ads. Matching the domain to the archetype ensures the page content is already priming the goal that our ad fulfills.
 
 ### 5. Create 7 Campaign Groups
 
