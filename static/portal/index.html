@@ -290,10 +290,10 @@ function AnimatedGraph() {
       // Center label
       ctx.font = "bold 17px 'DM Sans', sans-serif";
       ctx.fillStyle = "rgba(210, 170, 255, 0.95)";
-      ctx.fillText("27-DIM EDGES × 6.75M", 400, H / 2 - 12);
+      ctx.fillText("27-DIM EDGES × 3.2B+", 400, H / 2 - 12);
       ctx.font = "16px 'DM Sans', sans-serif";
       ctx.fillStyle = "rgba(210, 170, 255, 0.95)";
-      ctx.fillText("16,883 Cross-Category Validated Edges", 400, H / 2 + 10);
+      ctx.fillText("86B+ Validated Psychological Measurements", 400, H / 2 + 10);
       animRef.current = requestAnimationFrame(animate);
     }
     animate();
@@ -600,7 +600,7 @@ function EdgeDimensionVis() {
       paddingLeft: 12,
       marginTop: 4
     }
-  }, "+ 19 additional dimensions per edge \xD7 6.75M computed edges = 86B+ measurements"));
+  }, "+ 19 additional dimensions per edge \xD7 3.2B+ computed edges = 86B+ measurements"));
 }
 
 // ─── INTELLIGENCE DEPTH VISUALIZATION ──────────────────────────────
@@ -619,7 +619,7 @@ function IntelligenceDepthCanvas() {
     { label: "AD PSYCHOLOGY", detail: "80 constructs \u00B7 5 domains", color: COLORS.accent, width: 62 },
     { label: "BUYER PSYCHOLOGY", detail: "247 constructs \u00B7 22 domains", color: COLORS.emerald, width: 72 },
     { label: "PEER PERSUASION", detail: "98 constructs from verified reviews", color: COLORS.purple, width: 80 },
-    { label: "EDGE INTELLIGENCE", detail: "27 dimensions \u00D7 6.75M validated edges + 16,883 cross-category", color: COLORS.gold, width: 90 },
+    { label: "EDGE INTELLIGENCE", detail: "27 dimensions \u00D7 3.2B+ validated edges", color: COLORS.gold, width: 90 },
     { label: "CONTINUOUS LEARNING", detail: "15 systems compounding every impression", color: COLORS.accent, width: 100 },
   ];
 
@@ -773,8 +773,8 @@ function IntelligenceDepthCanvas() {
   },
   [
     { n: "882", label: "constructs" },
-    { n: "6.75M", label: "pilot edges" },
-    { n: "86B", label: "corpus measurements" },
+    { n: "3.2B+", label: "edges" },
+    { n: "86B", label: "measurements" },
     { n: "27", label: "dims / edge" },
   ].map((s, i) => /*#__PURE__*/React.createElement("div", {
     key: i,
@@ -825,7 +825,7 @@ function ScaleComparisonTowers() {
 
   const rows = [
     { label: "Constructs", comp: "15\u201325", adam: "882" },
-    { label: "Validated edges", comp: "0", adam: "6.75M" },
+    { label: "Validated edges", comp: "0", adam: "3.2B+" },
     { label: "Measurements", comp: "0", adam: "86B+" },
     { label: "Cross-category", comp: "No", adam: "Native" },
     { label: "Cookie-required", comp: "Yes", adam: "No" },
@@ -1296,7 +1296,7 @@ function BilateralEdgeGraphic() {
           React.createElement("span", { style: { fontSize: 13, color: COLORS.textDim } }, "constructs \u00D7 2 sides")
         ),
         React.createElement("div", { style: { marginTop: 14, display: "flex", flexDirection: "column", gap: 6 } },
-          [["Validated edges", "6.75M"], ["Cross-category transfer", "Native"], ["Cookie-required", "No"]].map(function(r, i) {
+          [["Validated edges", "3.2B+"], ["Cross-category transfer", "Native"], ["Cookie-required", "No"]].map(function(r, i) {
             return React.createElement("div", { key: i, style: { display: "flex", justifyContent: "space-between", fontSize: 13, color: COLORS.textDim, fontFamily: "'DM Sans', sans-serif" } },
               React.createElement("span", null, r[0]),
               React.createElement("span", { style: { color: COLORS.emerald, fontWeight: 600, fontFamily: "'DM Mono', monospace" } }, r[1])
@@ -1425,7 +1425,7 @@ function InformativInvestorExperience() {
       margin: "0 auto 40px",
       fontSize: 19
     }
-  }, "Every ad platform predicts what you\u2019ll buy based on what you\u2019ve done. We predict based on ", /*#__PURE__*/React.createElement("em", null, "who you are"), " and ", /*#__PURE__*/React.createElement("em", null, "what your mind is doing right now"), " \u2014 the nonconscious goals activated by the content you\u2019re reading, matched to ads that fulfill those goals automatically. 937 million transactions. 16,883 validated bilateral edges. ", /*#__PURE__*/React.createElement("em", null, "Each person is a unique psychological experiment"), ".")), /*#__PURE__*/React.createElement(FadeIn, {
+  }, "Every ad platform predicts what you\u2019ll buy based on what you\u2019ve done. We predict based on ", /*#__PURE__*/React.createElement("em", null, "who you are"), " and ", /*#__PURE__*/React.createElement("em", null, "what your mind is doing right now"), " \u2014 the nonconscious goals activated by the content you\u2019re reading, matched to ads that fulfill those goals automatically. Built on 937 million verified transactions and 3.2 billion psychologically annotated edges. ", /*#__PURE__*/React.createElement("em", null, "Each person is a unique psychological experiment"), ".")), /*#__PURE__*/React.createElement(FadeIn, {
     delay: 600
   }, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -1439,13 +1439,13 @@ function InformativInvestorExperience() {
     unit: "M+",
     label: "Verified purchase events analyzed"
   }, {
-    value: "6.75",
-    unit: "M",
+    value: "3.2",
+    unit: "B+",
     label: "Bilateral psychological edges"
   }, {
-    value: "10",
-    unit: "",
-    label: "Cross-category validated archetypes"
+    value: "86",
+    unit: "B+",
+    label: "Validated psychological measurements"
   }, {
     value: "40–54",
     unit: "%",
@@ -2313,7 +2313,7 @@ function InformativInvestorExperience() {
     color: COLORS.accent
   }, {
     step: "PROCESS",
-    content: "Statistical alignment computed between ad and buyer psychology for every purchase → 6.75M edges, 27 dimensions each",
+    content: "Statistical alignment computed between ad and buyer psychology for every purchase → 3.2B+ edges, 27 dimensions each",
     color: COLORS.gold
   }, {
     step: "OUTPUT",
@@ -2518,7 +2518,7 @@ function InformativInvestorExperience() {
       color: COLORS.gold,
       lineHeight: 1
     }
-  }, "6.75M"), /*#__PURE__*/React.createElement("div", {
+  }, "3.2B+"), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 13,
       color: COLORS.textDim,
@@ -2934,7 +2934,7 @@ function InformativInvestorExperience() {
   }, {
     label: "PROPRIETARY GRAPH DATASET",
     color: COLORS.emerald,
-    detail: "6.75M edges, 86B measurements from 937M purchases. The largest psychological dataset ever created."
+    detail: "3.2B+ bilateral edges, 86B+ measurements from 937M purchases. The largest psychological dataset ever created."
   }, {
     label: "PROPRIETARY LEARNING ARCH.",
     color: COLORS.purple,
@@ -3563,7 +3563,7 @@ function InformativInvestorExperience() {
       maxWidth: 900,
       margin: "0 auto 20px"
     }
-  }, "Production Intelligence System.", /*#__PURE__*/React.createElement("br", null), "15 Learning Layers. 8 Nonconscious Goals. 10 Archetypes."), /*#__PURE__*/React.createElement("p", {
+  }, "Full Production Intelligence Stack.", /*#__PURE__*/React.createElement("br", null), "15 Learning Layers. One Integrated System."), /*#__PURE__*/React.createElement("p", {
     style: {
       ...bodyStyle,
       maxWidth: 700,
@@ -4073,15 +4073,15 @@ function InformativInvestorExperience() {
       /*#__PURE__*/React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 20, marginBottom: 32 } },
         [{
           title: "Intelligence Engine", path: "#sec-bilateral", accent: COLORS.gold,
-          desc: "The bilateral psycholinguistic graph \u2014 6.75M edges encoding 27-dimensional buyer-seller psychological alignment, validated across luxury car + airline data.",
-          tag: "FULL SYSTEM", metrics: ["441 Constructs", "27 Dimensions", "6.75M Edges"],
+          desc: "The bilateral psycholinguistic graph \u2014 3.2B+ edges encoding 27-dimensional buyer-seller psychological alignment across 937M+ verified purchases.",
+          tag: "FULL SYSTEM", metrics: ["441 Constructs", "27 Dimensions", "3.2B+ Edges"],
         }, {
           title: "System Architecture", path: "#sec-architecture", accent: COLORS.purple,
-          desc: "Production infrastructure \u2014 FastAPI, Neo4j graph, Redis, 15-layer learning system, 8-worker deployment on Railway with 24 vCPU.",
+          desc: "Production intelligence platform \u2014 FastAPI, Neo4j graph, Redis, 15-layer active learning, real-time creative decisioning under 200ms.",
           tag: "ARCHITECTURE", metrics: ["API Layer", "15 Learning Layers", "< 200ms"],
         }, {
-          title: "LUXY Ride Pilot", path: "#sec-retargeting", accent: COLORS.emerald,
-          desc: "Live 30-day pilot for LUXY Ride luxury car service \u2014 28 campaigns, 7 archetypes, per-archetype domain targeting, $240/day budget.",
+          title: "Live Pilot Campaign", path: "#sec-retargeting", accent: COLORS.emerald,
+          desc: "First live deployment \u2014 luxury transportation vertical with therapeutic retargeting, nonconscious goal activation, and per-archetype domain targeting.",
           tag: "ACTIVE PILOT", metrics: ["28 Campaigns", "10 Archetypes", "Live Data"],
         }].map(function(item, i) {
           return /*#__PURE__*/React.createElement("a", {
@@ -4121,17 +4121,17 @@ function InformativInvestorExperience() {
     /*#__PURE__*/React.createElement(FadeIn, { delay: 400 },
       /*#__PURE__*/React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 20 } },
         [{
-          title: "StackAdapt DSP Integration", path: "#sec-demos", accent: COLORS.accent,
-          desc: "Live DSP integration \u2014 bilateral cascade delivers real-time creative intelligence to StackAdapt at bid time. Goal activation layer modulates mechanism selection based on page context.",
-          tag: "LIVE \u2014 LUXY RIDE PILOT",
+          title: "DSP Integration Layer", path: "#sec-demos", accent: COLORS.accent,
+          desc: "Real-time creative intelligence delivered at bid time to any DSP. Bilateral cascade produces mechanism-matched ad parameters in under 200ms.",
+          tag: "DSP PARTNER",
         }, {
-          title: "Nonconscious Goal Targeting", path: "#sec-goalpriming", accent: "#c084fc",
-          desc: "Crossover page intelligence \u2014 page content activates nonconscious goals, ad serves as goal fulfillment. 8 goals, 140 markers, active learning.",
-          tag: "PRODUCTION SYSTEM",
+          title: "Nonconscious Goal Activation", path: "#sec-goalpriming", accent: "#c084fc",
+          desc: "Page content activates nonconscious goals \u2014 the ad fulfills them. 8 goal types, 140+ linguistic markers, 3-level active learning posteriors.",
+          tag: "CORE TECHNOLOGY",
         }, {
-          title: "Therapeutic Retargeting Engine", path: "#sec-retargeting", accent: COLORS.emerald,
-          desc: "Per-person puzzle solver with 6 belief dimensions, 16 therapeutic mechanisms, within-subject experimental design. Each touch is a diagnostic intervention.",
-          tag: "PRODUCTION SYSTEM",
+          title: "Therapeutic Retargeting", path: "#sec-retargeting", accent: COLORS.emerald,
+          desc: "Each person is a unique puzzle. 6 belief dimensions, 16 therapeutic mechanisms, within-subject design. Knows when to push, when to wait, when to release.",
+          tag: "CORE TECHNOLOGY",
         }].map(function(item, i) {
           return /*#__PURE__*/React.createElement("a", {
             key: i, href: item.path,
