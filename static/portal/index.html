@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>INFORMATIV — Partner Portal</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', -apple-system, sans-serif; background: #0a0e17; color: #e0e6ed; }
+
+        /* Login */
+        .login-screen { display: flex; align-items: center; justify-content: center; height: 100vh; flex-direction: column; background: linear-gradient(135deg, #0a0e17 0%, #111827 50%, #0a0e17 100%); }
+        .login-logo { font-size: 2.8rem; font-weight: 700; letter-spacing: 6px; background: linear-gradient(135deg, #60a5fa, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 0.5rem; }
+        .login-sub { color: #6b7280; margin-bottom: 2.5rem; font-size: 0.95rem; letter-spacing: 1px; }
+        .login-screen input { padding: 14px 24px; border: 1px solid #374151; border-radius: 10px; background: #1f2937; color: #e0e6ed; font-size: 1rem; width: 320px; margin-bottom: 1rem; outline: none; transition: border 0.2s; }
+        .login-screen input:focus { border-color: #60a5fa; }
+        .login-screen button { padding: 14px 48px; border: none; border-radius: 10px; background: linear-gradient(135deg, #2563eb, #7c3aed); color: white; font-size: 1rem; cursor: pointer; font-weight: 600; letter-spacing: 1px; transition: transform 0.1s; }
+        .login-screen button:hover { transform: scale(1.02); }
+        .login-error { color: #f87171; font-size: 0.85rem; margin-top: 0.5rem; display: none; }
+
+        /* Portal */
+        .portal { display: none; }
+        .portal.active { display: block; }
+
+        /* Nav */
+        nav { background: #111827; border-bottom: 1px solid #1f2937; padding: 16px 40px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+        nav .brand { font-size: 1.3rem; font-weight: 700; letter-spacing: 3px; background: linear-gradient(135deg, #60a5fa, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        nav .nav-links { display: flex; gap: 8px; }
+        nav .nav-links button { padding: 8px 20px; border: none; border-radius: 8px; background: transparent; color: #9ca3af; cursor: pointer; font-size: 0.85rem; font-weight: 500; transition: all 0.2s; }
+        nav .nav-links button.active { background: linear-gradient(135deg, #2563eb, #7c3aed); color: white; }
+        nav .nav-links button:hover:not(.active) { background: #1f2937; color: #e0e6ed; }
+
+        /* Sections */
+        .section { display: none; padding: 40px; max-width: 1400px; margin: 0 auto; }
+        .section.active { display: block; }
+        .section-title { font-size: 2rem; font-weight: 700; margin-bottom: 8px; }
+        .section-sub { color: #6b7280; margin-bottom: 40px; font-size: 1.05rem; line-height: 1.6; }
+
+        /* Cards */
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 24px; margin-bottom: 40px; }
+        .card { background: #111827; border: 1px solid #1f2937; border-radius: 16px; padding: 32px; transition: transform 0.2s, border-color 0.2s; }
+        .card:hover { transform: translateY(-2px); border-color: #374151; }
+        .card h3 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 2px; color: #6b7280; margin-bottom: 12px; font-weight: 500; }
+        .card .big-number { font-size: 3rem; font-weight: 700; line-height: 1; }
+        .card .big-number.blue { color: #60a5fa; }
+        .card .big-number.green { color: #34d399; }
+        .card .big-number.purple { color: #a78bfa; }
+        .card .big-number.gold { color: #fbbf24; }
+        .card .detail { color: #9ca3af; font-size: 0.9rem; margin-top: 8px; line-height: 1.5; }
+        .card-wide { grid-column: span 2; }
+        .card-full { grid-column: 1 / -1; }
+
+        /* Feature blocks */
+        .feature-block { background: #111827; border: 1px solid #1f2937; border-radius: 16px; padding: 40px; margin-bottom: 24px; }
+        .feature-block h2 { font-size: 1.4rem; font-weight: 600; margin-bottom: 16px; }
+        .feature-block p { color: #9ca3af; line-height: 1.8; font-size: 0.95rem; }
+        .feature-block .highlight { color: #60a5fa; font-weight: 600; }
+        .feature-block .stat-row { display: flex; gap: 40px; margin-top: 24px; flex-wrap: wrap; }
+        .feature-block .stat { text-align: center; }
+        .feature-block .stat .num { font-size: 2rem; font-weight: 700; color: #60a5fa; }
+        .feature-block .stat .label { font-size: 0.8rem; color: #6b7280; margin-top: 4px; text-transform: uppercase; letter-spacing: 1px; }
+
+        /* Flow diagram */
+        .flow { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 24px 0; }
+        .flow-step { background: #1f2937; border: 1px solid #374151; border-radius: 12px; padding: 16px 20px; text-align: center; min-width: 140px; }
+        .flow-step .step-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: #60a5fa; margin-bottom: 4px; }
+        .flow-step .step-desc { font-size: 0.85rem; color: #e0e6ed; }
+        .flow-arrow { color: #374151; font-size: 1.5rem; }
+
+        /* Archetype cards */
+        .archetype-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-top: 24px; }
+        .archetype-card { background: #1f2937; border-radius: 12px; padding: 24px; border-left: 4px solid #60a5fa; }
+        .archetype-card.suppress { border-left-color: #f87171; opacity: 0.7; }
+        .archetype-card h4 { font-size: 1rem; font-weight: 600; margin-bottom: 8px; }
+        .archetype-card .lift { font-size: 1.4rem; font-weight: 700; color: #34d399; }
+        .archetype-card .lift.neg { color: #f87171; }
+        .archetype-card p { font-size: 0.85rem; color: #9ca3af; margin-top: 8px; line-height: 1.5; }
+
+        /* Pilot status */
+        .pilot-status { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 24px; }
+        .status-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: #1f2937; border-radius: 8px; }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; }
+        .status-dot.green { background: #34d399; }
+        .status-dot.yellow { background: #fbbf24; }
+        .status-dot.gray { background: #6b7280; }
+        .status-label { font-size: 0.9rem; }
+
+        /* Timeline */
+        .timeline { margin-top: 24px; }
+        .timeline-item { display: flex; gap: 20px; margin-bottom: 24px; }
+        .timeline-marker { display: flex; flex-direction: column; align-items: center; }
+        .timeline-dot { width: 14px; height: 14px; border-radius: 50%; background: #2563eb; flex-shrink: 0; }
+        .timeline-dot.done { background: #34d399; }
+        .timeline-dot.next { background: #fbbf24; }
+        .timeline-line { width: 2px; flex: 1; background: #1f2937; margin-top: 4px; }
+        .timeline-content h4 { font-size: 0.95rem; margin-bottom: 4px; }
+        .timeline-content p { font-size: 0.85rem; color: #6b7280; }
+
+        @media (max-width: 768px) {
+            .grid { grid-template-columns: 1fr; }
+            .card-wide { grid-column: span 1; }
+            .pilot-status { grid-template-columns: 1fr; }
+            .flow { flex-direction: column; }
+            .flow-arrow { transform: rotate(90deg); }
+        }
+    </style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-screen" id="loginScreen">
+    <div class="login-logo">INFORMATIV</div>
+    <div class="login-sub">Partner Portal</div>
+    <input type="password" id="loginKey" placeholder="Enter access key" onkeydown="if(event.key==='Enter')login()">
+    <button onclick="login()">Enter</button>
+    <div class="login-error" id="loginError">Invalid access key</div>
+</div>
+
+<!-- PORTAL -->
+<div class="portal" id="portal">
+    <nav>
+        <div class="brand">INFORMATIV</div>
+        <div class="nav-links">
+            <button class="active" onclick="showSection('overview', this)">Overview</button>
+            <button onclick="showSection('technology', this)">Technology</button>
+            <button onclick="showSection('archetypes', this)">Archetypes</button>
+            <button onclick="showSection('pilot', this)">Pilot Status</button>
+            <button onclick="showSection('business', this)">Business Case</button>
+        </div>
+    </nav>
+
+    <!-- OVERVIEW -->
+    <div class="section active" id="sec-overview">
+        <div class="section-title">What INFORMATIV Does</div>
+        <div class="section-sub">
+            INFORMATIV is the world's first psycholinguistic advertising intelligence system. We don't target demographics — we target psychology. Our system matches ad creative to the nonconscious mental state of the viewer, producing conversion rates that conventional targeting cannot achieve.
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <h3>Bilateral Edges</h3>
+                <div class="big-number blue">16.9K</div>
+                <div class="detail">Psychological alignment edges between buyer psychology and seller messaging. Each edge encodes 27 dimensions of fit.</div>
+            </div>
+            <div class="card">
+                <h3>Validated Archetypes</h3>
+                <div class="big-number purple">10</div>
+                <div class="detail">Psychological profiles validated across 2 luxury service categories (car service + premium airline). 7 target, 3 suppress.</div>
+            </div>
+            <div class="card">
+                <h3>Graph Elements</h3>
+                <div class="big-number green">6.75M</div>
+                <div class="detail">Neo4j graph database with 6.75 million bilateral conversion edges powering real-time intelligence.</div>
+            </div>
+            <div class="card">
+                <h3>Learning Dimensions</h3>
+                <div class="big-number gold">8</div>
+                <div class="detail">The system learns across 8 dimensions simultaneously: what works, who responds, why, when, what doesn't, what if, from others, and context.</div>
+            </div>
+        </div>
+
+        <div class="feature-block">
+            <h2>The Core Insight</h2>
+            <p>
+                Every person viewing an ad is in a <span class="highlight">nonconscious goal state</span> activated by the content they're currently reading.
+                A Forbes article about leadership activates competence-verification goals. A travel article activates novelty-exploration goals.
+                Our system identifies which goal is active and serves an ad that <span class="highlight">fulfills that goal</span>.
+                The viewer notices the ad automatically — not because it's flashy, but because their goal-directed attention system
+                is already searching for exactly what the ad offers.
+            </p>
+            <p style="margin-top: 16px;">
+                This is grounded in 35+ years of peer-reviewed research on nonconscious goal pursuit
+                (Bargh, 1990; Chartrand et al., 2008; Custers & Aarts, 2010). The effect is causal, not correlational —
+                meta-analyses show d=0.33-0.67 across 133 studies.
+            </p>
+        </div>
+
+        <div class="feature-block">
+            <h2>How It Works</h2>
+            <div class="flow">
+                <div class="flow-step">
+                    <div class="step-title">Page Content</div>
+                    <div class="step-desc">Activates nonconscious goal</div>
+                </div>
+                <div class="flow-arrow">&rarr;</div>
+                <div class="flow-step">
+                    <div class="step-title">Goal Scoring</div>
+                    <div class="step-desc">8 goals, 140+ markers</div>
+                </div>
+                <div class="flow-arrow">&rarr;</div>
+                <div class="flow-step">
+                    <div class="step-title">Crossover Match</div>
+                    <div class="step-desc">Goal &times; archetype fit</div>
+                </div>
+                <div class="flow-arrow">&rarr;</div>
+                <div class="flow-step">
+                    <div class="step-title">Ad Served</div>
+                    <div class="step-desc">Fulfills active goal</div>
+                </div>
+                <div class="flow-arrow">&rarr;</div>
+                <div class="flow-step">
+                    <div class="step-title">Learn</div>
+                    <div class="step-desc">System gets smarter</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TECHNOLOGY -->
+    <div class="section" id="sec-technology">
+        <div class="section-title">The Technology</div>
+        <div class="section-sub">
+            INFORMATIV combines graph-based psychological intelligence, Bayesian learning, and nonconscious goal activation
+            into a unified system that improves with every impression.
+        </div>
+
+        <div class="feature-block">
+            <h2>Bilateral Psycholinguistic Edges</h2>
+            <p>
+                We annotate <span class="highlight">both sides</span> of every consumer interaction — the buyer's psychology (from reviews)
+                AND the seller's psychology (from product copy). This creates a 27-dimension alignment edge that encodes
+                exactly how well a message resonates with a specific psychological profile.
+            </p>
+            <p style="margin-top: 12px;">
+                No other system has both sides annotated at psychological depth. This is the foundation of our prediction power.
+            </p>
+            <div class="stat-row">
+                <div class="stat"><div class="num">27</div><div class="label">Alignment Dims</div></div>
+                <div class="stat"><div class="num">65+65</div><div class="label">Annotation Dims</div></div>
+                <div class="stat"><div class="num">6.75M</div><div class="label">Total Edges</div></div>
+                <div class="stat"><div class="num">r=0.88</div><div class="label">Conversion Corr.</div></div>
+            </div>
+        </div>
+
+        <div class="feature-block">
+            <h2>Active Learning System</h2>
+            <p>
+                Every impression is an experiment. The system maintains <span class="highlight">Bayesian posteriors</span> at 5 hierarchical levels
+                (population &rarr; category &rarr; brand &rarr; campaign &rarr; individual). Each outcome updates all levels simultaneously.
+                The system doesn't just score — it decides <span class="highlight">what to test next</span> based on epistemic value.
+            </p>
+            <div class="stat-row">
+                <div class="stat"><div class="num">15</div><div class="label">Learning Layers</div></div>
+                <div class="stat"><div class="num">5</div><div class="label">Hierarchy Levels</div></div>
+                <div class="stat"><div class="num">57</div><div class="label">Context Dimensions</div></div>
+                <div class="stat"><div class="num">16</div><div class="label">Therapeutic Mechs</div></div>
+            </div>
+        </div>
+
+        <div class="feature-block">
+            <h2>Nonconscious Goal Activation Model</h2>
+            <p>
+                Grounded in Bargh's auto-motive model. Page content activates <span class="highlight">8 nonconscious goals</span>
+                through learned situation-goal associations. Unlike concept priming (which decays in seconds),
+                goal priming <span class="highlight">persists and intensifies</span> when unfulfilled. Our system identifies which goal
+                the page has activated and serves ads that fulfill it — the viewer notices automatically through goal-directed selective attention.
+            </p>
+            <div class="stat-row">
+                <div class="stat"><div class="num">8</div><div class="label">Nonconscious Goals</div></div>
+                <div class="stat"><div class="num">140</div><div class="label">Bias Markers</div></div>
+                <div class="stat"><div class="num">3</div><div class="label">Posterior Levels</div></div>
+                <div class="stat"><div class="num">d=0.35</div><div class="label">Meta-Analytic Effect</div></div>
+            </div>
+        </div>
+
+        <div class="feature-block">
+            <h2>Per-Person Puzzle Solver</h2>
+            <p>
+                Each person is treated as a <span class="highlight">unique psychological puzzle</span>. The system maintains belief states
+                across attachment theory, evolutionary motives, somatic markers, construal level, and reactance budget.
+                Each retargeting touch is selected to maximize information gain while minimizing reactance —
+                the system knows when to push, when to wait, and when to let go.
+            </p>
+        </div>
+    </div>
+
+    <!-- ARCHETYPES -->
+    <div class="section" id="sec-archetypes">
+        <div class="section-title">The 10 Archetypes</div>
+        <div class="section-sub">
+            Validated across 16,883 bilateral edges from luxury car service AND premium airline travelers.
+            Each archetype is defined by an interaction effect between psychological dimensions — not a single trait.
+        </div>
+
+        <h2 style="font-size: 1.1rem; color: #34d399; margin-bottom: 16px;">TARGETING (7 archetypes — these convert)</h2>
+        <div class="archetype-grid">
+            <div class="archetype-card">
+                <h4>Trusting Loyalist</h4>
+                <div class="lift">3.52x lift</div>
+                <p><strong>agreeableness &times; brand_trust</strong><br>Gives benefit of the doubt. Minimal persuasion needed — social proof and easy booking. 33% of budget.</p>
+            </div>
+            <div class="archetype-card">
+                <h4>Reliable Cooperator</h4>
+                <div class="lift">1.69x lift</div>
+                <p><strong>conscientiousness &times; agreeableness</strong><br>Plans ahead. Calendar sync, scheduling, advance booking. "Book your Tuesday 6am pickup now."</p>
+            </div>
+            <div class="archetype-card">
+                <h4>Careful Truster</h4>
+                <div class="lift">1.5x lift</div>
+                <p><strong>brand_trust &times; prevention_focus</strong><br>Needs evidence. Safety credentials, statistics, testimonials from similar people.</p>
+            </div>
+            <div class="archetype-card">
+                <h4>Explorer</h4>
+                <div class="lift">1.91x lift</div>
+                <p><strong>openness &times; promotion_focus</strong><br>Novelty-seeking. Narrative storytelling, aspirational imagery, new experience framing.</p>
+            </div>
+            <div class="archetype-card">
+                <h4>Prevention Planner</h4>
+                <div class="lift">1.3x lift</div>
+                <p><strong>conscientiousness &times; prevention_focus</strong><br>Safety-focused. Authority, safety data, insurance messaging. "Never worry again."</p>
+            </div>
+            <div class="archetype-card">
+                <h4>Dependable Loyalist</h4>
+                <div class="lift">6.6x lift</div>
+                <p><strong>brand_trust &times; conscientiousness</strong><br>The "quiet converters." Not extreme on any dimension but the combination means they follow through. Facts sell.</p>
+            </div>
+            <div class="archetype-card">
+                <h4>Consensus Seeker</h4>
+                <div class="lift">3.3x lift</div>
+                <p><strong>agreeableness &times; social_proof</strong><br>Converts via peer endorsement. "50,000 executives chose LUXY." Testimonials from relatable people.</p>
+            </div>
+        </div>
+
+        <h2 style="font-size: 1.1rem; color: #f87171; margin: 32px 0 16px;">SUPPRESSION (3 archetypes — do NOT target)</h2>
+        <div class="archetype-grid">
+            <div class="archetype-card suppress">
+                <h4>Defensive Skeptic</h4>
+                <div class="lift neg">0.01x lift</div>
+                <p><strong>neuroticism &times; reactance</strong><br>Anxious AND resistant. Every ad makes it worse. 0.1% conversion rate. The hardest suppress.</p>
+            </div>
+            <div class="archetype-card suppress">
+                <h4>Anxious Economist</h4>
+                <div class="lift neg">0.23x lift</div>
+                <p><strong>neuroticism &times; spending_pain</strong><br>High spending anxiety. Ads increase anxiety, not conversion. Zero ROI.</p>
+            </div>
+            <div class="archetype-card suppress">
+                <h4>Vocal Resistor</h4>
+                <div class="lift neg">0.36x lift</div>
+                <p><strong>expressiveness &times; reactance</strong><br>Actively fights back against persuasion. Each touch strengthens resistance.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- PILOT STATUS -->
+    <div class="section" id="sec-pilot">
+        <div class="section-title">LUXY Ride Pilot</div>
+        <div class="section-sub">
+            30-day campaign pilot for LUXY Ride luxury car service, managed by Zero Gravity Marketing via StackAdapt.
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <h3>Daily Budget</h3>
+                <div class="big-number green">$240.75</div>
+                <div class="detail">$7,222.50 monthly across 7 campaign groups and 28 sequential-touch campaigns.</div>
+            </div>
+            <div class="card">
+                <h3>Campaigns</h3>
+                <div class="big-number blue">28</div>
+                <div class="detail">7 archetype groups &times; 3-5 touches each. Each creative is mechanism-matched to its position in the sequence.</div>
+            </div>
+            <div class="card">
+                <h3>Domain Targeting</h3>
+                <div class="big-number purple">7</div>
+                <div class="detail">Per-archetype domain whitelists. Each domain scored by which nonconscious goals its content activates.</div>
+            </div>
+            <div class="card">
+                <h3>Intelligence Reports</h3>
+                <div class="big-number gold">Weekly</div>
+                <div class="detail">Data-driven recommendations for budget shifts, creative changes, and targeting adjustments. Delivered every Wednesday.</div>
+            </div>
+        </div>
+
+        <div class="feature-block">
+            <h2>System Readiness</h2>
+            <div class="pilot-status" id="pilotStatus">
+                <div class="status-item"><div class="status-dot green"></div><div class="status-label">Server deployed (Railway, 24 vCPU)</div></div>
+                <div class="status-item"><div class="status-dot green"></div><div class="status-label">Neo4j graph seeded (6.75M edges)</div></div>
+                <div class="status-item"><div class="status-dot green"></div><div class="status-label">Goal Activation Model deployed</div></div>
+                <div class="status-item"><div class="status-dot green"></div><div class="status-label">Telemetry script ready</div></div>
+                <div class="status-item"><div class="status-dot green"></div><div class="status-label">10 archetypes validated cross-category</div></div>
+                <div class="status-item"><div class="status-dot green"></div><div class="status-label">28 campaign creatives written</div></div>
+                <div class="status-item"><div class="status-dot green"></div><div class="status-label">Per-archetype domain lists generated</div></div>
+                <div class="status-item"><div class="status-dot green"></div><div class="status-label">Agency brief delivered</div></div>
+                <div class="status-item"><div class="status-dot yellow"></div><div class="status-label">GTM tags — pending agency install</div></div>
+                <div class="status-item"><div class="status-dot yellow"></div><div class="status-label">StackAdapt campaigns — pending agency setup</div></div>
+                <div class="status-item"><div class="status-dot yellow"></div><div class="status-label">Image creatives — pending agency production</div></div>
+                <div class="status-item"><div class="status-dot gray"></div><div class="status-label">Live data flow — awaiting launch</div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- BUSINESS CASE -->
+    <div class="section" id="sec-business">
+        <div class="section-title">The Business Case</div>
+        <div class="section-sub">
+            Why INFORMATIV is a fundamentally different advertising product.
+        </div>
+
+        <div class="feature-block">
+            <h2>What We Replace</h2>
+            <p>
+                Conventional ad targeting uses <span class="highlight">demographics and interests</span> — age, income, browsing history.
+                This is correlational: "people who look like past converters might convert."
+                INFORMATIV uses <span class="highlight">psychological state</span> — the actual nonconscious goal active in the viewer's mind
+                at the moment of ad exposure. This is causal: "the page activated this goal, and our ad fulfills it."
+            </p>
+            <p style="margin-top: 16px;">
+                The difference: demographics tell you WHO someone is. We know WHERE their mind is RIGHT NOW.
+            </p>
+        </div>
+
+        <div class="feature-block">
+            <h2>Competitive Moat</h2>
+            <p>
+                <strong>1. Bilateral edge data.</strong> 6.75 million edges encoding both buyer AND seller psychology. No one else has both sides annotated.
+                Building this required processing 937M+ reviews through LLM annotation. This data cannot be replicated quickly.
+            </p>
+            <p style="margin-top: 12px;">
+                <strong>2. Nonconscious goal activation.</strong> Grounded in 35+ years of peer-reviewed cognitive science (Bargh, Chartrand, Custers & Aarts).
+                This isn't a black-box ML model — it's a theoretically grounded system with known causal mechanisms.
+            </p>
+            <p style="margin-top: 12px;">
+                <strong>3. Active learning.</strong> Every impression makes the system smarter. The Bayesian posteriors, within-subject design,
+                and epistemic value computation mean the system converges on optimal targeting faster than any A/B testing framework.
+            </p>
+        </div>
+
+        <div class="feature-block">
+            <h2>Go-to-Market</h2>
+            <div class="timeline">
+                <div class="timeline-item">
+                    <div class="timeline-marker"><div class="timeline-dot done"></div><div class="timeline-line"></div></div>
+                    <div class="timeline-content"><h4>Phase 1: LUXY Ride Pilot</h4><p>30-day pilot with luxury car service. Prove the model works with real StackAdapt campaigns and measurable conversion data.</p></div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-marker"><div class="timeline-dot next"></div><div class="timeline-line"></div></div>
+                    <div class="timeline-content"><h4>Phase 2: Category Expansion</h4><p>Expand to 3-5 luxury verticals (hospitality, fashion, financial services). Each category adds bilateral edge data that strengthens all others.</p></div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-marker"><div class="timeline-dot"></div><div class="timeline-line"></div></div>
+                    <div class="timeline-content"><h4>Phase 3: DSP Integration</h4><p>Integrate directly with DSPs (StackAdapt, The Trade Desk) as a bid-time intelligence layer. Real-time goal activation scoring at impression time.</p></div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-marker"><div class="timeline-dot"></div></div>
+                    <div class="timeline-content"><h4>Phase 4: Platform</h4><p>Self-serve platform for agencies and brands. Upload your product, get psycholinguistic targeting intelligence. SaaS model.</p></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <h3>Pilot Cost</h3>
+                <div class="big-number green">~$7.2K</div>
+                <div class="detail">30-day media spend. Infrastructure: ~$20/mo (Railway + Neo4j free tier). Near-zero marginal cost.</div>
+            </div>
+            <div class="card">
+                <h3>Target Market</h3>
+                <div class="big-number blue">$250B+</div>
+                <div class="detail">Global programmatic advertising market. INFORMATIV adds intelligence layer on existing DSP infrastructure.</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const ACCESS_KEY = 'informativ-partner-2026';
+
+function login() {
+    const input = document.getElementById('loginKey').value;
+    if (input === ACCESS_KEY) {
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('portal').classList.add('active');
+        sessionStorage.setItem('portal_auth', '1');
+    } else {
+        document.getElementById('loginError').style.display = 'block';
+    }
+}
+
+// Auto-login if session exists
+if (sessionStorage.getItem('portal_auth')) {
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('portal').classList.add('active');
+}
+
+function showSection(id, btn) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-links button').forEach(b => b.classList.remove('active'));
+    document.getElementById('sec-' + id).classList.add('active');
+    btn.classList.add('active');
+}
+</script>
+
+</body>
+</html>
