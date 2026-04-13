@@ -1,0 +1,3141 @@
+{
+  "crawled_at": "2026-04-13",
+  "total_domains": 108,
+  "crawled_successfully": 75,
+  "failed": 33,
+  "domains": {
+    "forbes.com": {
+      "domain": "forbes.com",
+      "category": "business_finance",
+      "crawled": true,
+      "title": "Forbes",
+      "meta_description": "Forbes is a global media company, focusing on business, investing, technology, entrepreneurship, leadership, and lifestyle.",
+      "headings_sample": [
+        "Money & Markets",
+        "Forbes Vetted",
+        "Education",
+        "Lifestyle",
+        "Forbes Featured"
+      ],
+      "text_length": 5000,
+      "affect_valence": 0.2,
+      "goal_scores": {
+        "affiliation_safety": 0.06,
+        "threat_reduction": 0.3,
+        "novelty_exploration": 0.24,
+        "competence_verification": 0.2,
+        "status_signaling": 0.39
+      },
+      "dominant_goal": "status_signaling",
+      "dominant_goal_strength": 0.39,
+      "goal_shielded": [
+        "threat_reduction",
+        "planning_completion"
+      ],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.0906,
+        "dependable_loyalist": 0.093,
+        "consensus_seeker": 0.0695,
+        "explorer": 0.0429,
+        "prevention_planner": 0.0958,
+        "reliable_cooperator": 0.0744,
+        "careful_truster": 0.0727,
+        "status_seeker": 0.1957,
+        "easy_decider": 0.009
+      },
+      "best_archetype": "status_seeker",
+      "best_crossover": 0.1957
+    },
+    "fortune.com": {
+      "domain": "fortune.com",
+      "category": "business_finance",
+      "crawled": true,
+      "title": "Fortune - Fortune 500 Daily & Breaking Business NewsPlayPlayPlayPlayPlayFortune Secondary LogoFacebook iconTwitter iconLinkedIn iconInstagram iconPinterest icon",
+      "meta_description": "Unrivaled access, premier storytelling, and the best of business since 1930.",
+      "headings_sample": [],
+      "text_length": 5000,
+      "affect_valence": 0.2,
+      "goal_scores": {
+        "affiliation_safety": 0.06,
+        "social_alignment": 0.06,
+        "threat_reduction": 0.1,
+        "novelty_exploration": 0.06,
+        "planning_completion": 0.2,
+        "status_signaling": 0.39
+      },
+      "dominant_goal": "status_signaling",
+      "dominant_goal_strength": 0.39,
+      "goal_shielded": [
+        "threat_reduction",
+        "planning_completion"
+      ],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.0303,
+        "dependable_loyalist": 0.033,
+        "consensus_seeker": 0.0337,
+        "explorer": 0.0346,
+        "prevention_planner": 0.0508,
+        "reliable_cooperator": 0.0331,
+        "careful_truster": 0.0309,
+        "status_seeker": 0.1565,
+        "easy_decider": 0.031
+      },
+      "best_archetype": "status_seeker",
+      "best_crossover": 0.1565
+    },
+    "bloomberg.com": {
+      "domain": "bloomberg.com",
+      "category": "business_finance",
+      "crawled": true,
+      "title": "Bloomberg - Business News, Stock Markets, Finance, Breaking & World NewsSearchChevron DownChevron DownChevron DownMenuChevron DownChevron DownArrow UpArrow UpArrow UpArrow UpArrow UpArrow DownArrow Do",
+      "meta_description": "Bloomberg delivers business and markets news, data, analysis, and video to the world, featuring stories from Businessweek and Bloomberg News",
+      "headings_sample": [
+        "Bloomberg",
+        "For Customers",
+        "Support",
+        "Company",
+        "Communications"
+      ],
+      "text_length": 5000,
+      "affect_valence": -0.2,
+      "goal_scores": {
+        "affiliation_safety": 0.05,
+        "threat_reduction": 0.1,
+        "novelty_exploration": 0.05,
+        "competence_verification": 0.1,
+        "planning_completion": 0.1
+      },
+      "dominant_goal": "threat_reduction",
+      "dominant_goal_strength": 0.1,
+      "goal_shielded": [],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.0467,
+        "dependable_loyalist": 0.049,
+        "consensus_seeker": 0.0474,
+        "explorer": 0.0536,
+        "prevention_planner": 0.0471,
+        "reliable_cooperator": 0.0517,
+        "careful_truster": 0.0548,
+        "status_seeker": 0.0174,
+        "easy_decider": 0.0325
+      },
+      "best_archetype": "careful_truster",
+      "best_crossover": 0.0548
+    },
+    "wsj.com": {
+      "domain": "wsj.com",
+      "category": "business_finance",
+      "crawled": false,
+      "error": "HTTP Error 401: HTTP Forbidden"
+    },
+    "ft.com": {
+      "domain": "ft.com",
+      "category": "business_finance",
+      "crawled": false,
+      "error": "HTTP Error 403: Forbidden"
+    },
+    "cnbc.com": {
+      "domain": "cnbc.com",
+      "category": "business_finance",
+      "crawled": true,
+      "title": "Stock Markets, Business News, Financials, Earnings - CNBC",
+      "meta_description": "CNBC is the world leader in business news and real-time financial market coverage. Find fast, actionable information.",
+      "headings_sample": [
+        "QUOTE FINDER",
+        "Most Active",
+        "Unusual Volume",
+        "Special Reports",
+        "Trending Now"
+      ],
+      "text_length": 5000,
+      "affect_valence": -0.4,
+      "goal_scores": {
+        "affiliation_safety": 0.05,
+        "social_alignment": 0.05,
+        "threat_reduction": 0.3,
+        "novelty_exploration": 0.1125,
+        "planning_completion": 0.2,
+        "status_signaling": 0.05
+      },
+      "dominant_goal": "threat_reduction",
+      "dominant_goal_strength": 0.3,
+      "goal_shielded": [],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.1231,
+        "dependable_loyalist": 0.1277,
+        "consensus_seeker": 0.1125,
+        "explorer": 0.13,
+        "prevention_planner": 0.1056,
+        "reliable_cooperator": 0.12,
+        "careful_truster": 0.1457,
+        "status_seeker": 0.0484,
+        "easy_decider": 0.0675
+      },
+      "best_archetype": "careful_truster",
+      "best_crossover": 0.1457
+    },
+    "barrons.com": {
+      "domain": "barrons.com",
+      "category": "business_finance",
+      "crawled": false,
+      "error": "HTTP Error 401: HTTP Forbidden"
+    },
+    "economist.com": {
+      "domain": "economist.com",
+      "category": "business_finance",
+      "crawled": false,
+      "error": "HTTP Error 403: Forbidden"
+    },
+    "hbr.org": {
+      "domain": "hbr.org",
+      "category": "business_finance",
+      "crawled": true,
+      "title": "Harvard Business Review - Ideas and Advice for LeadersHarvard Business Review LogoHarvard Business Review LogoHarvard Business Review Logo",
+      "meta_description": "Find new ideas and classic advice on strategy, innovation and leadership, for global leaders from the world's best business and management experts.",
+      "headings_sample": [
+        "Explore HBR",
+        "Popular Topics",
+        "For Subscribers",
+        "My Account",
+        "The Latest"
+      ],
+      "text_length": 5000,
+      "affect_valence": 0.2,
+      "goal_scores": {
+        "affiliation_safety": 0.18,
+        "social_alignment": 0.045,
+        "threat_reduction": 0.1,
+        "novelty_exploration": 0.12,
+        "competence_verification": 0.1,
+        "planning_completion": 0.2,
+        "status_signaling": 0.3
+      },
+      "dominant_goal": "status_signaling",
+      "dominant_goal_strength": 0.3,
+      "goal_shielded": [],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.0794,
+        "dependable_loyalist": 0.086,
+        "consensus_seeker": 0.095,
+        "explorer": 0.1045,
+        "prevention_planner": 0.1066,
+        "reliable_cooperator": 0.101,
+        "careful_truster": 0.0896,
+        "status_seeker": 0.1539,
+        "easy_decider": 0.086
+      },
+      "best_archetype": "status_seeker",
+      "best_crossover": 0.1539
+    },
+    "inc.com": {
+      "domain": "inc.com",
+      "category": "business_finance",
+      "crawled": false,
+      "error": "HTTP Error 403: Forbidden"
+    },
+    "fastcompany.com": {
+      "domain": "fastcompany.com",
+      "category": "business_finance",
+      "crawled": false,
+      "error": "HTTP Error 403: Forbidden"
+    },
+    "businessinsider.com": {
+      "domain": "businessinsider.com",
+      "category": "business_finance",
+      "crawled": true,
+      "title": "Business Insider - Latest News in Tech, Markets, Economy & InnovationBusiness Insider",
+      "meta_description": "Business Insider tells the global tech, finance, stock market, media, economy, lifestyle, real estate, AI and innovative stories you want to know.",
+      "headings_sample": [
+        "Business Insider - Top Stories",
+        "Featured",
+        "Most popular",
+        "Great reads",
+        "Videos"
+      ],
+      "text_length": 5000,
+      "affect_valence": 0.2,
+      "goal_scores": {
+        "social_alignment": 0.1575,
+        "threat_reduction": 0.4,
+        "novelty_exploration": 0.12,
+        "competence_verification": 0.1,
+        "status_signaling": 0.33
+      },
+      "dominant_goal": "threat_reduction",
+      "dominant_goal_strength": 0.4,
+      "goal_shielded": [
+        "novelty_exploration",
+        "indulgence_permission"
+      ],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.1263,
+        "dependable_loyalist": 0.1316,
+        "consensus_seeker": 0.1173,
+        "explorer": 0.1586,
+        "prevention_planner": 0.1177,
+        "reliable_cooperator": 0.1199,
+        "careful_truster": 0.1686,
+        "status_seeker": 0.12,
+        "easy_decider": 0.0315
+      },
+      "best_archetype": "careful_truster",
+      "best_crossover": 0.1686
+    },
+    "reuters.com": {
+      "domain": "reuters.com",
+      "category": "business_finance",
+      "crawled": false,
+      "error": "HTTP Error 401: HTTP Forbidden"
+    },
+    "marketwatch.com": {
+      "domain": "marketwatch.com",
+      "category": "business_finance",
+      "crawled": false,
+      "error": "HTTP Error 401: HTTP Forbidden"
+    },
+    "seekingalpha.com": {
+      "domain": "seekingalpha.com",
+      "category": "business_finance",
+      "crawled": true,
+      "title": "Seeking Alpha | Stock Market Analysis & Tools for Investors",
+      "meta_description": "Join Seeking Alpha, the largest investing community in the world. Get stock market news and analysis, investing ideas, earnings calls, charts and portfolio analysis tools.",
+      "headings_sample": [
+        "Seeking Alpha - Stock Market Analysis & Tools for Investors",
+        "Latest News",
+        "Trending Analysis",
+        "Trending News",
+        "In Case You Missed It"
+      ],
+      "text_length": 5000,
+      "affect_valence": 0.4,
+      "goal_scores": {
+        "affiliation_safety": 0.07,
+        "social_alignment": 0.21,
+        "threat_reduction": 0.2,
+        "novelty_exploration": 0.14,
+        "planning_completion": 0.2,
+        "indulgence_permission": 0.0525,
+        "status_signaling": 0.1575
+      },
+      "dominant_goal": "social_alignment",
+      "dominant_goal_strength": 0.21,
+      "goal_shielded": [],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.1272,
+        "dependable_loyalist": 0.1309,
+        "consensus_seeker": 0.118,
+        "explorer": 0.1272,
+        "prevention_planner": 0.1251,
+        "reliable_cooperator": 0.1148,
+        "careful_truster": 0.1369,
+        "status_seeker": 0.1103,
+        "easy_decider": 0.1235
+      },
+      "best_archetype": "careful_truster",
+      "best_crossover": 0.1369
+    },
+    "investopedia.com": {
+      "domain": "investopedia.com",
+      "category": "business_finance",
+      "crawled": false,
+      "error": "HTTP Error 403: Forbidden"
+    },
+    "kiplinger.com": {
+      "domain": "kiplinger.com",
+      "category": "business_finance",
+      "crawled": true,
+      "title": "Kiplinger | Personal Finance News, Investing Advice, Business Forecasts",
+      "meta_description": "Leader in personal finance news and business forecasting. Get trusted advice on investing, retirement, taxes, saving, real estate, cars, college, insurance.",
+      "headings_sample": [
+        "Kiplinger",
+        "4 Money Habits Boomers Swore By That Millennials Are Walking Away From",
+        "How 'This Single Mother with Only a High School Education' Reached $1 Million and Retired at 59",
+        "Got a $10k Tax Refund? Here's What You Can Do With It",
+        "How to Keep the Magnificent 7 From Endangering Your Portfolio"
+      ],
+      "text_length": 5000,
+      "affect_valence": 0.2,
+      "goal_scores": {
+        "affiliation_safety": 0.12,
+        "social_alignment": 0.06,
+        "threat_reduction": 0.5,
+        "novelty_exploration": 0.06,
+        "competence_verification": 0.1,
+        "planning_completion": 0.3,
+        "indulgence_permission": 0.015,
+        "status_signaling": 0.09
+      },
+      "dominant_goal": "threat_reduction",
+      "dominant_goal_strength": 0.5,
+      "goal_shielded": [
+        "novelty_exploration",
+        "indulgence_permission"
+      ],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.1579,
+        "dependable_loyalist": 0.1661,
+        "consensus_seeker": 0.169,
+        "explorer": 0.228,
+        "prevention_planner": 0.1497,
+        "reliable_cooperator": 0.1825,
+        "careful_truster": 0.2184,
+        "status_seeker": 0.0505,
+        "easy_decider": 0.1062
+      },
+      "best_archetype": "explorer",
+      "best_crossover": 0.228
+    },
+    "thestreet.com": {
+      "domain": "thestreet.com",
+      "category": "business_finance",
+      "crawled": false,
+      "error": "HTTP Error 403: Forbidden"
+    },
+    "fool.com": {
+      "domain": "fool.com",
+      "category": "business_finance",
+      "crawled": true,
+      "title": "Stock Market News & Investing Research | The Motley FoolBarsArrow-Thin-DownArrow-Thin-DownArrow-Thin-DownArrow-Thin-DownArrow-Thin-DownArrow-Thin-DownArrow-Thin-DownArrow-Thin-DownArrow-Thin-DownArrow",
+      "meta_description": "The Motley Fool has been providing investing insights and personal finance to millions of people for over 25 years. Learn how we make the world Smarter, Happier & Richer.",
+      "headings_sample": [
+        "Top 10 Stocks to BUY NOW",
+        "Trending News",
+        "Popular Topics",
+        "Tom Gardner: 5 Stocks to Hold for 5+ Years",
+        "Investing Solutions Designed To Make Money Over The Long Term"
+      ],
+      "text_length": 5000,
+      "affect_valence": 0.6,
+      "goal_scores": {
+        "social_alignment": 0.24,
+        "threat_reduction": 0.1,
+        "novelty_exploration": 0.08,
+        "planning_completion": 0.2,
+        "indulgence_permission": 0.06,
+        "status_signaling": 0.33
+      },
+      "dominant_goal": "status_signaling",
+      "dominant_goal_strength": 0.33,
+      "goal_shielded": [
+        "threat_reduction",
+        "planning_completion"
+      ],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.0569,
+        "dependable_loyalist": 0.0572,
+        "consensus_seeker": 0.0463,
+        "explorer": 0.0423,
+        "prevention_planner": 0.0695,
+        "reliable_cooperator": 0.0343,
+        "careful_truster": 0.05,
+        "status_seeker": 0.1504,
+        "easy_decider": 0.082
+      },
+      "best_archetype": "status_seeker",
+      "best_crossover": 0.1504
+    },
+    "morningstar.com": {
+      "domain": "morningstar.com",
+      "category": "business_finance",
+      "crawled": true,
+      "title": "Morningstar | Empowering Investor Success",
+      "meta_description": "Morningstar is an investment research company offering mutual fund, ETF, and stock analysis, ratings, and data, and portfolio tools. Discover actionable insights today.",
+      "headings_sample": [
+        "morningstar.com",
+        "Featured",
+        "5 Stocks to Buy Before Growth Stocks Come Back",
+        "What Is the \u2018Retirement Risk Zone?\u2019",
+        "Markets Brief: Could the Fed Still Cut Rates in 2026?"
+      ],
+      "text_length": 5000,
+      "affect_valence": 0.4,
+      "goal_scores": {
+        "affiliation_safety": 0.07,
+        "social_alignment": 0.0525,
+        "threat_reduction": 0.3,
+        "novelty_exploration": 0.14,
+        "competence_verification": 0.2,
+        "planning_completion": 0.1,
+        "indulgence_permission": 0.0525,
+        "status_signaling": 0.21
+      },
+      "dominant_goal": "threat_reduction",
+      "dominant_goal_strength": 0.3,
+      "goal_shielded": [],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.1488,
+        "dependable_loyalist": 0.1515,
+        "consensus_seeker": 0.1361,
+        "explorer": 0.1471,
+        "prevention_planner": 0.1368,
+        "reliable_cooperator": 0.1438,
+        "careful_truster": 0.1655,
+        "status_seeker": 0.1286,
+        "easy_decider": 0.067
+      },
+      "best_archetype": "careful_truster",
+      "best_crossover": 0.1655
+    },
+    "crunchbase.com": {
+      "domain": "crunchbase.com",
+      "category": "business_finance",
+      "crawled": true,
+      "title": "Crunchbase",
+      "meta_description": "",
+      "headings_sample": [
+        "Make better decisions, faster"
+      ],
+      "text_length": 5000,
+      "affect_valence": 0.2,
+      "goal_scores": {
+        "social_alignment": 0.06,
+        "threat_reduction": 0.1,
+        "novelty_exploration": 0.24,
+        "planning_completion": 0.15
+      },
+      "dominant_goal": "novelty_exploration",
+      "dominant_goal_strength": 0.24,
+      "goal_shielded": [],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.0994,
+        "dependable_loyalist": 0.1012,
+        "consensus_seeker": 0.0674,
+        "explorer": 0.0417,
+        "prevention_planner": 0.0785,
+        "reliable_cooperator": 0.0686,
+        "careful_truster": 0.0826,
+        "status_seeker": 0.0522,
+        "easy_decider": 0.0495
+      },
+      "best_archetype": "dependable_loyalist",
+      "best_crossover": 0.1012
+    },
+    "pitchbook.com": {
+      "domain": "pitchbook.com",
+      "category": "business_finance",
+      "crawled": false,
+      "error": "HTTP Error 403: Forbidden"
+    },
+    "cntraveler.com": {
+      "domain": "cntraveler.com",
+      "category": "travel_luxury",
+      "crawled": true,
+      "title": "Cond\u00e9 Nast Traveler - Travel Reviews, News, Guides & Tips | Cond\u00e9 Nast TravelerSearchAccountMenuAccountSearchMenuChevronChevronChevronChevronSearchMenuSearchClosePinterestFacebookSnapchatInstagramXLar",
+      "meta_description": "Get the latest travel news, guides, tips and ideas. See photos and slideshows of the most beautiful places, best vacation spots and places to visit.",
+      "headings_sample": [
+        "Cond\u00e9 Nast Traveler",
+        "Featured",
+        "How to Spend Three Perfect Days in Paris, According to a Local",
+        "The Most Beautiful Places in Ireland",
+        "The Most Exciting Hotel Openings of Spring 2026, From Saint Lucia to Maine"
+      ],
+      "text_length": 5000,
+      "affect_valence": 0.8,
+      "goal_scores": {
+        "affiliation_safety": 0.09,
+        "social_alignment": 0.09,
+        "novelty_exploration": 0.27,
+        "competence_verification": 0.1,
+        "planning_completion": 0.1,
+        "status_signaling": 0.18
+      },
+      "dominant_goal": "novelty_exploration",
+      "dominant_goal_strength": 0.27,
+      "goal_shielded": [],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.0885,
+        "dependable_loyalist": 0.0924,
+        "consensus_seeker": 0.0711,
+        "explorer": 0.0411,
+        "prevention_planner": 0.0952,
+        "reliable_cooperator": 0.0707,
+        "careful_truster": 0.0649,
+        "status_seeker": 0.133,
+        "easy_decider": 0.0565
+      },
+      "best_archetype": "status_seeker",
+      "best_crossover": 0.133
+    },
+    "travelandleisure.com": {
+      "domain": "travelandleisure.com",
+      "category": "travel_luxury",
+      "crawled": false,
+      "error": "HTTP Error 403: Forbidden"
+    },
+    "afar.com": {
+      "domain": "afar.com",
+      "category": "travel_luxury",
+      "crawled": false,
+      "error": "HTTP Error 403: Forbidden"
+    },
+    "departures.com": {
+      "domain": "departures.com",
+      "category": "travel_luxury",
+      "crawled": false,
+      "error": "<urlopen error [Errno 8] nodename nor servname provided, or not known>"
+    },
+    "robbreport.com": {
+      "domain": "robbreport.com",
+      "category": "travel_luxury",
+      "crawled": true,
+      "title": "Robb Report \u2013 The Best Luxury Cars, Jets, Yachts, Travel, WatchesRobb ReportSearchCloseFacebookInstagramPinterestYouTubePMCRR OneRobb ReportMenuCloseRobb ReportRR OneSearchCloseFacebookInstagramPinter",
+      "meta_description": "The Best Luxury Cars, Jets, Yachts, Travel, Watches",
+      "headings_sample": [
+        "Get the Magazine",
+        "Newsletter",
+        "Culinary Masters",
+        "THE VAULT",
+        "Most-Read Stories"
+      ],
+      "text_length": 5000,
+      "affect_valence": 0.8,
+      "goal_scores": {
+        "threat_reduction": 0.2,
+        "novelty_exploration": 0.18,
+        "competence_verification": 0.1,
+        "planning_completion": 0.2,
+        "indulgence_permission": 0.18,
+        "status_signaling": 0.495
+      },
+      "dominant_goal": "status_signaling",
+      "dominant_goal_strength": 0.495,
+      "goal_shielded": [
+        "threat_reduction",
+        "planning_completion"
+      ],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.1181,
+        "dependable_loyalist": 0.1095,
+        "consensus_seeker": 0.0863,
+        "explorer": 0.0477,
+        "prevention_planner": 0.1034,
+        "reliable_cooperator": 0.0872,
+        "careful_truster": 0.0865,
+        "status_seeker": 0.2661,
+        "easy_decider": 0.082
+      },
+      "best_archetype": "status_seeker",
+      "best_crossover": 0.2661
+    },
+    "elitetraveler.com": {
+      "domain": "elitetraveler.com",
+      "category": "travel_luxury",
+      "crawled": true,
+      "title": "Elite Traveler: Luxury Lifestyle Magazine",
+      "meta_description": "Elite Traveler focuses purely on content that champions sustainable, ethical and environmentally conscious luxury.",
+      "headings_sample": [
+        "Escape",
+        "Savor",
+        "Motion",
+        "Couture",
+        "Maison"
+      ],
+      "text_length": 5000,
+      "affect_valence": 0.8,
+      "goal_scores": {
+        "affiliation_safety": 0.27,
+        "threat_reduction": 0.1,
+        "novelty_exploration": 0.5062,
+        "competence_verification": 0.1,
+        "indulgence_permission": 0.18,
+        "status_signaling": 0.675
+      },
+      "dominant_goal": "status_signaling",
+      "dominant_goal_strength": 0.675,
+      "goal_shielded": [
+        "threat_reduction",
+        "planning_completion"
+      ],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.2283,
+        "dependable_loyalist": 0.2275,
+        "consensus_seeker": 0.2036,
+        "explorer": 0.137,
+        "prevention_planner": 0.2249,
+        "reliable_cooperator": 0.2136,
+        "careful_truster": 0.1753,
+        "status_seeker": 0.4348,
+        "easy_decider": 0.1125
+      },
+      "best_archetype": "status_seeker",
+      "best_crossover": 0.4348
+    },
+    "luxurytravelmagazine.com": {
+      "domain": "luxurytravelmagazine.com",
+      "category": "travel_luxury",
+      "crawled": true,
+      "title": "Luxury Travel Magazine Recommends World's Best Hotels Resorts Spas Villas",
+      "meta_description": "World's finest luxury hotels and travel experiences and exclusive destinations, resorts spas villas for your family vacation or romantic getaway.",
+      "headings_sample": [
+        "Private Rio de Janeiro Tours You\u2019ll Never Forget",
+        "Sofitel Paris",
+        "Blue Waters Resort & Spa - Antigua",
+        "Porto Zante Villas & Spa - Zakynthos, Greece - Luxury Resort",
+        "JW Marriott The Rosseau Muskoka Resort & Spa"
+      ],
+      "text_length": 5000,
+      "affect_valence": 1.0,
+      "goal_scores": {
+        "threat_reduction": 0.1,
+        "novelty_exploration": 0.5,
+        "planning_completion": 0.1,
+        "indulgence_permission": 0.2,
+        "status_signaling": 1.0
+      },
+      "dominant_goal": "status_signaling",
+      "dominant_goal_strength": 1.0,
+      "goal_shielded": [
+        "threat_reduction",
+        "planning_completion"
+      ],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.2102,
+        "dependable_loyalist": 0.2007,
+        "consensus_seeker": 0.1368,
+        "explorer": 0.0443,
+        "prevention_planner": 0.183,
+        "reliable_cooperator": 0.1394,
+        "careful_truster": 0.1368,
+        "status_seeker": 0.5174,
+        "easy_decider": 0.085
+      },
+      "best_archetype": "status_seeker",
+      "best_crossover": 0.5174
+    },
+    "pursuitist.com": {
+      "domain": "pursuitist.com",
+      "category": "travel_luxury",
+      "crawled": true,
+      "title": "Pursuitist - 5-Star Product Reviews & Luxury Travel Guides",
+      "meta_description": "Experience the world of 5-star luxury with Pursuitist. Discover exclusive travel destinations, achieve elite status with point & mile hacks, and explore curated premium products. From high-end fashion",
+      "headings_sample": [],
+      "text_length": 5000,
+      "affect_valence": 1.0,
+      "goal_scores": {
+        "affiliation_safety": 0.1,
+        "novelty_exploration": 0.65,
+        "competence_verification": 0.1,
+        "planning_completion": 0.1,
+        "indulgence_permission": 0.2,
+        "status_signaling": 1.0
+      },
+      "dominant_goal": "status_signaling",
+      "dominant_goal_strength": 1.0,
+      "goal_shielded": [
+        "threat_reduction",
+        "planning_completion"
+      ],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.2558,
+        "dependable_loyalist": 0.2492,
+        "consensus_seeker": 0.1816,
+        "explorer": 0.0729,
+        "prevention_planner": 0.2331,
+        "reliable_cooperator": 0.1874,
+        "careful_truster": 0.1697,
+        "status_seeker": 0.563,
+        "easy_decider": 0.1
+      },
+      "best_archetype": "status_seeker",
+      "best_crossover": 0.563
+    },
+    "jamesedition.com": {
+      "domain": "jamesedition.com",
+      "category": "travel_luxury",
+      "crawled": false,
+      "error": "HTTP Error 403: Forbidden"
+    },
+    "bespokemagazine.com": {
+      "domain": "bespokemagazine.com",
+      "category": "travel_luxury",
+      "crawled": false,
+      "error": "<urlopen error [SSL: TLSV1_ALERT_INTERNAL_ERROR] tlsv1 alert internal error (_ssl.c:1000)>"
+    },
+    "townandcountrymag.com": {
+      "domain": "townandcountrymag.com",
+      "category": "travel_luxury",
+      "crawled": true,
+      "title": "Luxury Style, Travel, and Leisure - Town & Country Magazine",
+      "meta_description": "The trusted source of inside information on access and influence, taste, elegant living, and unpretentious fun - an irreplaceable guide to the very best the world has to offer.",
+      "headings_sample": [],
+      "text_length": 5000,
+      "affect_valence": 1.0,
+      "goal_scores": {
+        "affiliation_safety": 0.1,
+        "novelty_exploration": 0.1,
+        "competence_verification": 0.1,
+        "planning_completion": 0.2,
+        "indulgence_permission": 0.1,
+        "status_signaling": 0.75
+      },
+      "dominant_goal": "status_signaling",
+      "dominant_goal_strength": 0.75,
+      "goal_shielded": [
+        "threat_reduction",
+        "planning_completion"
+      ],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.0676,
+        "dependable_loyalist": 0.0655,
+        "consensus_seeker": 0.0684,
+        "explorer": 0.0543,
+        "prevention_planner": 0.0944,
+        "reliable_cooperator": 0.071,
+        "careful_truster": 0.055,
+        "status_seeker": 0.3261,
+        "easy_decider": 0.065
+      },
+      "best_archetype": "status_seeker",
+      "best_crossover": 0.3261
+    },
+    "architecturaldigest.com": {
+      "domain": "architecturaldigest.com",
+      "category": "travel_luxury",
+      "crawled": true,
+      "title": "Architectural Digest Homepage | Architectural DigestMenuSearchMenuChevronChevronSearchSearchCloseMenuMenuPlayPlayPlayPlayPlayPlayPlayPlayPlayPlayGalleryGalleryFacebookXPinterestInstagramYouTubeTiktokL",
+      "meta_description": "Architectural Digest is the international design authority, featuring the work of top architects and designers.",
+      "headings_sample": [
+        "Architectural Digest",
+        "Home Tours",
+        "Design Inspo",
+        "Celebrity Open Door",
+        "Where To Travel"
+      ],
+      "text_length": 5000,
+      "affect_valence": 0.0,
+      "goal_scores": {
+        "affiliation_safety": 0.1,
+        "social_alignment": 0.05,
+        "threat_reduction": 0.2,
+        "novelty_exploration": 0.375,
+        "planning_completion": 0.1,
+        "status_signaling": 0.15
+      },
+      "dominant_goal": "novelty_exploration",
+      "dominant_goal_strength": 0.375,
+      "goal_shielded": [
+        "threat_reduction",
+        "affiliation_safety"
+      ],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.1224,
+        "dependable_loyalist": 0.1242,
+        "consensus_seeker": 0.0776,
+        "explorer": 0.0264,
+        "prevention_planner": 0.1011,
+        "reliable_cooperator": 0.0793,
+        "careful_truster": 0.0845,
+        "status_seeker": 0.1363,
+        "easy_decider": 0.038
+      },
+      "best_archetype": "status_seeker",
+      "best_crossover": 0.1363
+    },
+    "dwell.com": {
+      "domain": "dwell.com",
+      "category": "travel_luxury",
+      "crawled": false,
+      "error": "HTTP Error 403: Forbidden"
+    },
+    "vogue.com": {
+      "domain": "vogue.com",
+      "category": "travel_luxury",
+      "crawled": true,
+      "title": "Vogue: Fashion, Beauty, Celebrity, Fashion Shows | VogueSearchAccountMenuMenuExpandChevronExpandExpandExpandExpandExpandSearchGalleryGalleryGalleryGalleryPlayPlayPlayPlayPlayPlayPlayGalleryFacebookXPi",
+      "meta_description": "The latest fashion news, beauty coverage, celebrity style, fashion week updates, culture reviews, and videos on Vogue.com.",
+      "headings_sample": [
+        "Vogue",
+        "A Sneak Peak Inside \u201cCostume Art\u201d at the Metropolitan Museum of Art",
+        "Inside the Best Parties of Coachella 2026",
+        "The 96 Best Looks From the New York Bridal Fashion Week Spring 2027 Collections",
+        "68 Thoughts I Had About Season 3, Episode 1 of"
+      ],
+      "text_length": 5000,
+      "affect_valence": 0.4,
+      "goal_scores": {
+        "threat_reduction": 0.4,
+        "novelty_exploration": 0.07,
+        "competence_verification": 0.2,
+        "planning_completion": 0.2,
+        "status_signaling": 0.14
+      },
+      "dominant_goal": "threat_reduction",
+      "dominant_goal_strength": 0.4,
+      "goal_shielded": [
+        "novelty_exploration",
+        "indulgence_permission"
+      ],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.1169,
+        "dependable_loyalist": 0.1202,
+        "consensus_seeker": 0.1075,
+        "explorer": 0.1429,
+        "prevention_planner": 0.1026,
+        "reliable_cooperator": 0.1183,
+        "careful_truster": 0.1569,
+        "status_seeker": 0.0517,
+        "easy_decider": 0.05
+      },
+      "best_archetype": "careful_truster",
+      "best_crossover": 0.1569
+    },
+    "gq.com": {
+      "domain": "gq.com",
+      "category": "travel_luxury",
+      "crawled": true,
+      "title": "GQ - Men's Fashion, Style, Grooming, Fitness, Entertainment, Lifestyle, News & Politics | GQMenuMenuChevronSearchGalleryGalleryGalleryPlayPlayInstagramYouTubeFacebookXTiktokLargeChevron",
+      "meta_description": "The latest tips and advice for men on style, grooming, fitness, best products, travel destinations and more.  Find politics, sports and entertainment news.",
+      "headings_sample": [
+        "Top Stories",
+        "The Real-Life Diet of Joe Baena, Who Got the Bodybuilding Encyclopedia From His Dad, Arnold Schwarzenegger",
+        "Justin Bieber Dressed Down in a Hoodie for His Coachella Headlining Set",
+        "Inside Maison Margiela\u2019s Fence-Swinging Chinese Spectacle",
+        "This Low-Key Aesop Scent Might Be Its Best Kept Secret"
+      ],
+      "text_length": 5000,
+      "affect_valence": 0.4,
+      "goal_scores": {
+        "affiliation_safety": 0.0525,
+        "social_alignment": 0.21,
+        "threat_reduction": 0.3,
+        "novelty_exploration": 0.14,
+        "planning_completion": 0.1,
+        "status_signaling": 0.14
+      },
+      "dominant_goal": "threat_reduction",
+      "dominant_goal_strength": 0.3,
+      "goal_shielded": [],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.1378,
+        "dependable_loyalist": 0.1446,
+        "consensus_seeker": 0.1259,
+        "explorer": 0.1469,
+        "prevention_planner": 0.1279,
+        "reliable_cooperator": 0.1253,
+        "careful_truster": 0.1609,
+        "status_seeker": 0.086,
+        "easy_decider": 0.0749
+      },
+      "best_archetype": "careful_truster",
+      "best_crossover": 0.1609
+    },
+    "esquire.com": {
+      "domain": "esquire.com",
+      "category": "travel_luxury",
+      "crawled": true,
+      "title": "Esquire - Men's Fashion, Cocktails, Politics, Interviews, and Women",
+      "meta_description": "Esquire is your destination for the latest news headlines, culture coverage, political developments, celebrity interviews, mens fashion advice, and food & drink recipes.",
+      "headings_sample": [],
+      "text_length": 5000,
+      "affect_valence": 0.6,
+      "goal_scores": {
+        "novelty_exploration": 0.08,
+        "planning_completion": 0.2,
+        "indulgence_permission": 0.16,
+        "status_signaling": 0.24
+      },
+      "dominant_goal": "status_signaling",
+      "dominant_goal_strength": 0.24,
+      "goal_shielded": [],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.072,
+        "dependable_loyalist": 0.0641,
+        "consensus_seeker": 0.0547,
+        "explorer": 0.0297,
+        "prevention_planner": 0.0621,
+        "reliable_cooperator": 0.054,
+        "careful_truster": 0.0497,
+        "status_seeker": 0.1496,
+        "easy_decider": 0.114
+      },
+      "best_archetype": "status_seeker",
+      "best_crossover": 0.1496
+    },
+    "vanityfair.com": {
+      "domain": "vanityfair.com",
+      "category": "travel_luxury",
+      "crawled": true,
+      "title": "Vanity Fair -  Entertainment, Politics, and Fashion News | Vanity FairMenuExpandExpandSearchGalleryGalleryGalleryFacebookXInstagramPinterestYouTubeLargeChevron",
+      "meta_description": "Entertainment, TV, politics, celebrity, fashion, and beauty news and commentary.",
+      "headings_sample": [
+        "Vanity Fair",
+        "Trump's Catholic Schism: How MAGA Worked to Make the Church Conservative Again",
+        "Eight Celebrity Weddings More Dramatic Than",
+        "How",
+        "Maurizio Cattelan\u2019s Latest Conceptual Masterpiece? A Silent Dinner in Chicago."
+      ],
+      "text_length": 5000,
+      "affect_valence": 0.4,
+      "goal_scores": {
+        "social_alignment": 0.1837,
+        "threat_reduction": 0.1,
+        "novelty_exploration": 0.14,
+        "planning_completion": 0.1,
+        "status_signaling": 0.07
+      },
+      "dominant_goal": "social_alignment",
+      "dominant_goal_strength": 0.1837,
+      "goal_shielded": [],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.0759,
+        "dependable_loyalist": 0.0792,
+        "consensus_seeker": 0.0581,
+        "explorer": 0.0541,
+        "prevention_planner": 0.072,
+        "reliable_cooperator": 0.0521,
+        "careful_truster": 0.0738,
+        "status_seeker": 0.0548,
+        "easy_decider": 0.0617
+      },
+      "best_archetype": "dependable_loyalist",
+      "best_crossover": 0.0792
+    },
+    "thecut.com": {
+      "domain": "thecut.com",
+      "category": "travel_luxury",
+      "crawled": true,
+      "title": "The Cut \u2013 Fashion, Beauty, Politics, Sex and Celebrity",
+      "meta_description": "The Cut is a New York Magazine site covering women\u2019s lives and interests, from politics, feminism, work, money, relationships, mental health, style, pop culture, parenting, and more.",
+      "headings_sample": [
+        "The Cut",
+        "\u2018I Spray Myself With Magnesium and Read Under a Chicken Light.\u2019",
+        "The Latest",
+        "The Cut Shop",
+        "group chat material"
+      ],
+      "text_length": 5000,
+      "affect_valence": 0.0,
+      "goal_scores": {
+        "social_alignment": 0.225,
+        "threat_reduction": 0.1,
+        "novelty_exploration": 0.05,
+        "planning_completion": 0.1,
+        "status_signaling": 0.1
+      },
+      "dominant_goal": "social_alignment",
+      "dominant_goal_strength": 0.225,
+      "goal_shielded": [],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.0519,
+        "dependable_loyalist": 0.0556,
+        "consensus_seeker": 0.0461,
+        "explorer": 0.0582,
+        "prevention_planner": 0.0592,
+        "reliable_cooperator": 0.0372,
+        "careful_truster": 0.0614,
+        "status_seeker": 0.0457,
+        "easy_decider": 0.07
+      },
+      "best_archetype": "easy_decider",
+      "best_crossover": 0.07
+    },
+    "manofmany.com": {
+      "domain": "manofmany.com",
+      "category": "travel_luxury",
+      "crawled": true,
+      "title": "Man of Many  | The latest in Products, Culture & Style",
+      "meta_description": "Man of Many is one of Australia\u2019s leading independent digital news platforms and the 2025 Media Brand of the Year. Founded in 2012.",
+      "headings_sample": [
+        "Man of Many - The latest in Products, Culture & Style",
+        "Trending Stories",
+        "How We Test Products",
+        "52+",
+        "8,000+"
+      ],
+      "text_length": 5000,
+      "affect_valence": 0.4,
+      "goal_scores": {
+        "social_alignment": 0.14,
+        "threat_reduction": 0.2,
+        "novelty_exploration": 0.0525,
+        "competence_verification": 0.1,
+        "indulgence_permission": 0.14,
+        "status_signaling": 0.14
+      },
+      "dominant_goal": "threat_reduction",
+      "dominant_goal_strength": 0.2,
+      "goal_shielded": [],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.1203,
+        "dependable_loyalist": 0.1167,
+        "consensus_seeker": 0.1051,
+        "explorer": 0.1114,
+        "prevention_planner": 0.1006,
+        "reliable_cooperator": 0.1024,
+        "careful_truster": 0.1268,
+        "status_seeker": 0.1027,
+        "easy_decider": 0.084
+      },
+      "best_archetype": "careful_truster",
+      "best_crossover": 0.1268
+    },
+    "uncrate.com": {
+      "domain": "uncrate.com",
+      "category": "travel_luxury",
+      "crawled": true,
+      "title": "Uncrate",
+      "meta_description": "The original buyer's guide for men, filled with the world's best gear, apparel, and automobiles.",
+      "headings_sample": [
+        "\u201cIf James Bond were to make an app for the stuff he wanted to buy, this would be the app.\u201d"
+      ],
+      "text_length": 5000,
+      "affect_valence": 0.2,
+      "goal_scores": {
+        "affiliation_safety": 0.12,
+        "novelty_exploration": 0.06,
+        "competence_verification": 0.2,
+        "planning_completion": 0.3,
+        "status_signaling": 0.06
+      },
+      "dominant_goal": "planning_completion",
+      "dominant_goal_strength": 0.3,
+      "goal_shielded": [],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.0271,
+        "dependable_loyalist": 0.0306,
+        "consensus_seeker": 0.0411,
+        "explorer": 0.0429,
+        "prevention_planner": 0.0555,
+        "reliable_cooperator": 0.0447,
+        "careful_truster": 0.0287,
+        "status_seeker": 0.0496,
+        "easy_decider": 0.093
+      },
+      "best_archetype": "easy_decider",
+      "best_crossover": 0.093
+    },
+    "booking.com": {
+      "domain": "booking.com",
+      "category": "travel_planning",
+      "crawled": true,
+      "title": "",
+      "meta_description": "",
+      "headings_sample": [],
+      "text_length": 0,
+      "affect_valence": 0.0,
+      "goal_scores": {},
+      "dominant_goal": "affiliation_safety",
+      "dominant_goal_strength": 0.0,
+      "goal_shielded": [],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.0,
+        "dependable_loyalist": 0.0,
+        "consensus_seeker": 0.0,
+        "explorer": 0.0,
+        "prevention_planner": 0.0,
+        "reliable_cooperator": 0.0,
+        "careful_truster": 0.0,
+        "status_seeker": 0.0,
+        "easy_decider": 0.0
+      },
+      "best_archetype": "trusting_loyalist",
+      "best_crossover": 0.0
+    },
+    "expedia.com": {
+      "domain": "expedia.com",
+      "category": "travel_planning",
+      "crawled": false,
+      "error": "HTTP Error 429: Too Many Requests"
+    },
+    "kayak.com": {
+      "domain": "kayak.com",
+      "category": "travel_planning",
+      "crawled": true,
+      "title": "Search Flights, Hotels & Rental Cars | KAYAK",
+      "meta_description": "KAYAK searches hundreds of other travel sites at once to find the information you need to make the right decisions on flights, hotels & rental cars.",
+      "headings_sample": [
+        "Start your travel planning here",
+        "Search",
+        "Las Vegas",
+        "Los Angeles",
+        "Orlando"
+      ],
+      "text_length": 5000,
+      "affect_valence": 0.0,
+      "goal_scores": {
+        "threat_reduction": 0.1,
+        "novelty_exploration": 0.1,
+        "competence_verification": 0.1,
+        "planning_completion": 0.1
+      },
+      "dominant_goal": "threat_reduction",
+      "dominant_goal_strength": 0.1,
+      "goal_shielded": [],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.0568,
+        "dependable_loyalist": 0.0578,
+        "consensus_seeker": 0.0421,
+        "explorer": 0.0357,
+        "prevention_planner": 0.0471,
+        "reliable_cooperator": 0.0455,
+        "careful_truster": 0.0554,
+        "status_seeker": 0.0217,
+        "easy_decider": 0.025
+      },
+      "best_archetype": "dependable_loyalist",
+      "best_crossover": 0.0578
+    },
+    "tripadvisor.com": {
+      "domain": "tripadvisor.com",
+      "category": "travel_planning",
+      "crawled": false,
+      "error": "HTTP Error 403: Forbidden"
+    },
+    "hotels.com": {
+      "domain": "hotels.com",
+      "category": "travel_planning",
+      "crawled": false,
+      "error": "HTTP Error 429: Too Many Requests"
+    },
+    "priceline.com": {
+      "domain": "priceline.com",
+      "category": "travel_planning",
+      "crawled": true,
+      "title": "Priceline.com - The Best Deals on Hotels, Flights and Rental Cars.Go to Priceline HomepageArrowRightArrowRightArrowRightArrowRight",
+      "meta_description": "Deep Discounts on Hotels, Flights and Rental Cars.  Get Exclusive Savings with Priceline.com.",
+      "headings_sample": [
+        "Save big on your next hotel",
+        "Deals this week"
+      ],
+      "text_length": 5000,
+      "affect_valence": 0.6,
+      "goal_scores": {
+        "affiliation_safety": 0.08,
+        "novelty_exploration": 0.24,
+        "competence_verification": 0.1,
+        "planning_completion": 0.4,
+        "status_signaling": 0.33
+      },
+      "dominant_goal": "planning_completion",
+      "dominant_goal_strength": 0.4,
+      "goal_shielded": [
+        "social_alignment"
+      ],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.0754,
+        "dependable_loyalist": 0.0778,
+        "consensus_seeker": 0.0589,
+        "explorer": 0.0286,
+        "prevention_planner": 0.0934,
+        "reliable_cooperator": 0.0628,
+        "careful_truster": 0.0526,
+        "status_seeker": 0.1774,
+        "easy_decider": 0.112
+      },
+      "best_archetype": "status_seeker",
+      "best_crossover": 0.1774
+    },
+    "travelocity.com": {
+      "domain": "travelocity.com",
+      "category": "travel_planning",
+      "crawled": false,
+      "error": "HTTP Error 429: Too Many Requests"
+    },
+    "orbitz.com": {
+      "domain": "orbitz.com",
+      "category": "travel_planning",
+      "crawled": false,
+      "error": "HTTP Error 429: Too Many Requests"
+    },
+    "google.com/travel": {
+      "domain": "google.com/travel",
+      "category": "travel_planning",
+      "crawled": true,
+      "title": "Google Travel",
+      "meta_description": "",
+      "headings_sample": [],
+      "text_length": 627,
+      "affect_valence": 0.2,
+      "goal_scores": {
+        "threat_reduction": 0.1,
+        "novelty_exploration": 0.12,
+        "status_signaling": 0.06
+      },
+      "dominant_goal": "novelty_exploration",
+      "dominant_goal_strength": 0.12,
+      "goal_shielded": [],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.0626,
+        "dependable_loyalist": 0.0635,
+        "consensus_seeker": 0.0453,
+        "explorer": 0.0357,
+        "prevention_planner": 0.0465,
+        "reliable_cooperator": 0.0488,
+        "careful_truster": 0.0587,
+        "status_seeker": 0.047,
+        "easy_decider": 0.0
+      },
+      "best_archetype": "dependable_loyalist",
+      "best_crossover": 0.0635
+    },
+    "skyscanner.com": {
+      "domain": "skyscanner.com",
+      "category": "travel_planning",
+      "crawled": true,
+      "title": "Compare Cheap Flights & Book Airline Tickets to Everywhere | Skyscanner",
+      "meta_description": "Book and compare the cheapest flights from all major airlines and online travel agents, and find the best plane tickets to all your favorite destinations.",
+      "headings_sample": [],
+      "text_length": 71,
+      "affect_valence": 0.2,
+      "goal_scores": {
+        "planning_completion": 0.2,
+        "status_signaling": 0.06
+      },
+      "dominant_goal": "planning_completion",
+      "dominant_goal_strength": 0.2,
+      "goal_shielded": [],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.0,
+        "dependable_loyalist": 0.0,
+        "consensus_seeker": 0.0,
+        "explorer": 0.0,
+        "prevention_planner": 0.0084,
+        "reliable_cooperator": 0.0,
+        "careful_truster": 0.0,
+        "status_seeker": 0.0209,
+        "easy_decider": 0.05
+      },
+      "best_archetype": "easy_decider",
+      "best_crossover": 0.05
+    },
+    "momondo.com": {
+      "domain": "momondo.com",
+      "category": "travel_planning",
+      "crawled": true,
+      "title": "Cheap Flights - Search and Compare Flights | momondo",
+      "meta_description": "Find the cheapest flights with momondo. We find and compare fares from more than 1,000 airlines and travel sites, giving you the best rates",
+      "headings_sample": [
+        "Trending cities",
+        "Trending countries",
+        "Flight deals by destination",
+        "Find and compare cheap flights"
+      ],
+      "text_length": 5000,
+      "affect_valence": 0.2,
+      "goal_scores": {
+        "social_alignment": 0.06,
+        "novelty_exploration": 0.12,
+        "status_signaling": 0.06
+      },
+      "dominant_goal": "novelty_exploration",
+      "dominant_goal_strength": 0.12,
+      "goal_shielded": [],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.0368,
+        "dependable_loyalist": 0.0377,
+        "consensus_seeker": 0.0221,
+        "explorer": 0.006,
+        "prevention_planner": 0.0323,
+        "reliable_cooperator": 0.0198,
+        "careful_truster": 0.0239,
+        "status_seeker": 0.047,
+        "easy_decider": 0.012
+      },
+      "best_archetype": "status_seeker",
+      "best_crossover": 0.047
+    },
+    "flightaware.com": {
+      "domain": "flightaware.com",
+      "category": "travel_planning",
+      "crawled": true,
+      "title": "FlightAware - Flight Tracker / Flight Status",
+      "meta_description": "Best Flight Tracker: Live Tracking Maps, Flight Status, and Airport Delays for airline flights, private/GA flights, and airports.",
+      "headings_sample": [
+        "An innovative lineup of data products and applications.",
+        "Tailored solutions for each aviation industry.",
+        "A worldwide network of coverage.",
+        "Real-time, historical, and predictive flight tracking."
+      ],
+      "text_length": 2167,
+      "affect_valence": 0.6,
+      "goal_scores": {
+        "affiliation_safety": 0.08,
+        "social_alignment": 0.08,
+        "novelty_exploration": 0.24,
+        "indulgence_permission": 0.08,
+        "status_signaling": 0.16
+      },
+      "dominant_goal": "novelty_exploration",
+      "dominant_goal_strength": 0.24,
+      "goal_shielded": [],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.1032,
+        "dependable_loyalist": 0.1027,
+        "consensus_seeker": 0.0842,
+        "explorer": 0.0514,
+        "prevention_planner": 0.0936,
+        "reliable_cooperator": 0.0832,
+        "careful_truster": 0.0759,
+        "status_seeker": 0.1426,
+        "easy_decider": 0.06
+      },
+      "best_archetype": "status_seeker",
+      "best_crossover": 0.1426
+    },
+    "flightradar24.com": {
+      "domain": "flightradar24.com",
+      "category": "travel_planning",
+      "crawled": true,
+      "title": "Live Flight Tracker - Real-Time Flight Tracker Map | Flightradar24",
+      "meta_description": "Flightradar24 is the best live flight tracker that shows air traffic in real time. Best coverage and cool features!",
+      "headings_sample": [],
+      "text_length": 66,
+      "affect_valence": 0.2,
+      "goal_scores": {
+        "status_signaling": 0.06
+      },
+      "dominant_goal": "status_signaling",
+      "dominant_goal_strength": 0.06,
+      "goal_shielded": [],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.0,
+        "dependable_loyalist": 0.0,
+        "consensus_seeker": 0.0,
+        "explorer": 0.0,
+        "prevention_planner": 0.0024,
+        "reliable_cooperator": 0.0,
+        "careful_truster": 0.0,
+        "status_seeker": 0.0209,
+        "easy_decider": 0.0
+      },
+      "best_archetype": "status_seeker",
+      "best_crossover": 0.0209
+    },
+    "seatguru.com": {
+      "domain": "seatguru.com",
+      "category": "travel_planning",
+      "crawled": true,
+      "title": "Travel News & Information - Tips, Deals, Gear, Airport & Airline News",
+      "meta_description": "",
+      "headings_sample": [],
+      "text_length": 161,
+      "affect_valence": 0.0,
+      "goal_scores": {
+        "novelty_exploration": 0.05,
+        "planning_completion": 0.1
+      },
+      "dominant_goal": "planning_completion",
+      "dominant_goal_strength": 0.1,
+      "goal_shielded": [],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.0143,
+        "dependable_loyalist": 0.0144,
+        "consensus_seeker": 0.0079,
+        "explorer": 0.0,
+        "prevention_planner": 0.013,
+        "reliable_cooperator": 0.0083,
+        "careful_truster": 0.0084,
+        "status_seeker": 0.0109,
+        "easy_decider": 0.025
+      },
+      "best_archetype": "easy_decider",
+      "best_crossover": 0.025
+    },
+    "thepointsguy.com": {
+      "domain": "thepointsguy.com",
+      "category": "travel_planning",
+      "crawled": true,
+      "title": "The Points Guy - Maximize your travel.",
+      "meta_description": "Maximize your travel with hands-on travel advice, guides, reviews, deal alerts, and more from The Points Guy. Check out our recommendations so you can travel more often and more comfortably.",
+      "headings_sample": [
+        "Your life rewarded",
+        "Global stories of award travel, points + miles",
+        "News",
+        "This charming Greek Island is getting a chic new Hyatt this summer",
+        "Guides"
+      ],
+      "text_length": 5000,
+      "affect_valence": 0.6,
+      "goal_scores": {
+        "threat_reduction": 0.1,
+        "novelty_exploration": 0.16,
+        "competence_verification": 0.3,
+        "planning_completion": 0.2,
+        "indulgence_permission": 0.16,
+        "status_signaling": 0.24
+      },
+      "dominant_goal": "competence_verification",
+      "dominant_goal_strength": 0.3,
+      "goal_shielded": [],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.1232,
+        "dependable_loyalist": 0.1161,
+        "consensus_seeker": 0.0937,
+        "explorer": 0.0654,
+        "prevention_planner": 0.1102,
+        "reliable_cooperator": 0.0962,
+        "careful_truster": 0.1018,
+        "status_seeker": 0.167,
+        "easy_decider": 0.114
+      },
+      "best_archetype": "status_seeker",
+      "best_crossover": 0.167
+    },
+    "onemileatatime.com": {
+      "domain": "onemileatatime.com",
+      "category": "travel_planning",
+      "crawled": true,
+      "title": "One Mile at a Time: Airline Travel News, Reviews and Credit Card Offers",
+      "meta_description": "The latest travel news, reviews, and strategies to maximize travel status. Earn more miles, points, and rewards with today's best credit card offers.",
+      "headings_sample": [
+        "The Latest Airline News and Travel Offers",
+        "Recent OMAAT Articles",
+        "Latest Trip Reports"
+      ],
+      "text_length": 5000,
+      "affect_valence": 0.6,
+      "goal_scores": {
+        "affiliation_safety": 0.16,
+        "threat_reduction": 0.1,
+        "novelty_exploration": 0.08,
+        "competence_verification": 0.1,
+        "indulgence_permission": 0.08,
+        "status_signaling": 0.24
+      },
+      "dominant_goal": "status_signaling",
+      "dominant_goal_strength": 0.24,
+      "goal_shielded": [],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.089,
+        "dependable_loyalist": 0.0904,
+        "consensus_seeker": 0.1021,
+        "explorer": 0.1077,
+        "prevention_planner": 0.097,
+        "reliable_cooperator": 0.109,
+        "careful_truster": 0.0951,
+        "status_seeker": 0.1461,
+        "easy_decider": 0.056
+      },
+      "best_archetype": "status_seeker",
+      "best_crossover": 0.1461
+    },
+    "upgradedpoints.com": {
+      "domain": "upgradedpoints.com",
+      "category": "travel_planning",
+      "crawled": true,
+      "title": "Upgraded Points: Maximize Your Points, Miles & Travel Experience",
+      "meta_description": "Learn how to maximize the number of travel points and frequent flier miles you earn - and then use them for the most valuable redemptions.",
+      "headings_sample": [
+        "Our Readers Travel Like They Never Thought Possible...",
+        "Upgrade Your Travel",
+        "Latest News",
+        "Top Credit Cards",
+        "Latest Credit Card Guides"
+      ],
+      "text_length": 5000,
+      "affect_valence": 0.6,
+      "goal_scores": {
+        "affiliation_safety": 0.08,
+        "social_alignment": 0.08,
+        "threat_reduction": 0.2,
+        "novelty_exploration": 0.24,
+        "competence_verification": 0.3,
+        "planning_completion": 0.1,
+        "indulgence_permission": 0.08,
+        "status_signaling": 0.32
+      },
+      "dominant_goal": "status_signaling",
+      "dominant_goal_strength": 0.32,
+      "goal_shielded": [
+        "threat_reduction",
+        "planning_completion"
+      ],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.1145,
+        "dependable_loyalist": 0.1143,
+        "consensus_seeker": 0.0947,
+        "explorer": 0.0657,
+        "prevention_planner": 0.1207,
+        "reliable_cooperator": 0.0948,
+        "careful_truster": 0.0913,
+        "status_seeker": 0.1983,
+        "easy_decider": 0.065
+      },
+      "best_archetype": "status_seeker",
+      "best_crossover": 0.1983
+    },
+    "nerdwallet.com/travel": {
+      "domain": "nerdwallet.com/travel",
+      "category": "travel_planning",
+      "crawled": true,
+      "title": "Travel Money Hub: Loyalty Programs, Cards, and More - NerdWallet",
+      "meta_description": "Dreaming of a vacation? We've got the tools and tips to help you compare and find the smartest travel credit cards and loyalty programs. Future you will thank you.",
+      "headings_sample": [
+        "You\u2019re our first priority.",
+        "Travel"
+      ],
+      "text_length": 5000,
+      "affect_valence": 0.2,
+      "goal_scores": {
+        "affiliation_safety": 0.06,
+        "novelty_exploration": 0.12,
+        "competence_verification": 0.2,
+        "indulgence_permission": 0.06,
+        "status_signaling": 0.06
+      },
+      "dominant_goal": "competence_verification",
+      "dominant_goal_strength": 0.2,
+      "goal_shielded": [],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.0578,
+        "dependable_loyalist": 0.0566,
+        "consensus_seeker": 0.0505,
+        "explorer": 0.0326,
+        "prevention_planner": 0.0579,
+        "reliable_cooperator": 0.0525,
+        "careful_truster": 0.043,
+        "status_seeker": 0.073,
+        "easy_decider": 0.033
+      },
+      "best_archetype": "status_seeker",
+      "best_crossover": 0.073
+    },
+    "theinfatuation.com": {
+      "domain": "theinfatuation.com",
+      "category": "travel_planning",
+      "crawled": true,
+      "title": "The Infatuation",
+      "meta_description": "Find the best restaurants around the world.",
+      "headings_sample": [
+        "The Most Exciting Bakeries In The Country Right Now",
+        "The 25 Most Iconic Dishes In America",
+        "Is Liking Brunch Nature Or Nurture?",
+        "These Restaurants Are Spawning Across The Country",
+        "Where To Eat On Your Next Vacation"
+      ],
+      "text_length": 4933,
+      "affect_valence": 0.4,
+      "goal_scores": {
+        "social_alignment": 0.14,
+        "threat_reduction": 0.1,
+        "novelty_exploration": 0.07,
+        "planning_completion": 0.1,
+        "status_signaling": 0.1575
+      },
+      "dominant_goal": "status_signaling",
+      "dominant_goal_strength": 0.1575,
+      "goal_shielded": [],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.0541,
+        "dependable_loyalist": 0.0567,
+        "consensus_seeker": 0.0447,
+        "explorer": 0.0497,
+        "prevention_planner": 0.0571,
+        "reliable_cooperator": 0.0406,
+        "careful_truster": 0.0593,
+        "status_seeker": 0.07,
+        "easy_decider": 0.053
+      },
+      "best_archetype": "status_seeker",
+      "best_crossover": 0.07
+    },
+    "opentable.com": {
+      "domain": "opentable.com",
+      "category": "travel_planning",
+      "crawled": false,
+      "error": "HTTP Error 403: Forbidden"
+    },
+    "nytimes.com": {
+      "domain": "nytimes.com",
+      "category": "news_current",
+      "crawled": true,
+      "title": "The New York Times - Breaking News, US News, World News and Videos",
+      "meta_description": "Live news, investigations, opinion, photos and video by the journalists of The New York Times from more than 150 countries around the world. Subscribe for coverage of U.S. and international news, poli",
+      "headings_sample": [
+        "New York Times - Top Stories",
+        "Live",
+        "Top Stories",
+        "Weather",
+        "Site Index"
+      ],
+      "text_length": 5000,
+      "affect_valence": 0.0,
+      "goal_scores": {
+        "affiliation_safety": 0.05,
+        "social_alignment": 0.05,
+        "threat_reduction": 0.1,
+        "novelty_exploration": 0.05,
+        "competence_verification": 0.1,
+        "status_signaling": 0.05
+      },
+      "dominant_goal": "threat_reduction",
+      "dominant_goal_strength": 0.1,
+      "goal_shielded": [],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.0488,
+        "dependable_loyalist": 0.0517,
+        "consensus_seeker": 0.05,
+        "explorer": 0.0586,
+        "prevention_planner": 0.051,
+        "reliable_cooperator": 0.0517,
+        "careful_truster": 0.058,
+        "status_seeker": 0.0348,
+        "easy_decider": 0.0175
+      },
+      "best_archetype": "explorer",
+      "best_crossover": 0.0586
+    },
+    "washingtonpost.com": {
+      "domain": "washingtonpost.com",
+      "category": "news_current",
+      "crawled": true,
+      "title": "The Washington Post - Breaking news and latest headlines, U.S. news, world news, and videoLoading...Loading...Loading...Loading...Loading...Loading...Loading...Loading...Loading...Loading...Loading...",
+      "meta_description": "Breaking news, live coverage, investigations, analysis, video, photos and opinions from The Washington Post. Subscribe for the latest on U.S. and international news, politics, business, technology, cl",
+      "headings_sample": [],
+      "text_length": 5000,
+      "affect_valence": 0.0,
+      "goal_scores": {
+        "affiliation_safety": 0.05,
+        "social_alignment": 0.1,
+        "threat_reduction": 0.1,
+        "novelty_exploration": 0.05,
+        "status_signaling": 0.05
+      },
+      "dominant_goal": "social_alignment",
+      "dominant_goal_strength": 0.1,
+      "goal_shielded": [],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.0508,
+        "dependable_loyalist": 0.0544,
+        "consensus_seeker": 0.0526,
+        "explorer": 0.0636,
+        "prevention_planner": 0.0519,
+        "reliable_cooperator": 0.0517,
+        "careful_truster": 0.0612,
+        "status_seeker": 0.0348,
+        "easy_decider": 0.0275
+      },
+      "best_archetype": "explorer",
+      "best_crossover": 0.0636
+    },
+    "cnn.com": {
+      "domain": "cnn.com",
+      "category": "news_current",
+      "crawled": true,
+      "title": "Breaking News, Latest News and Videos | CNNClose icon",
+      "meta_description": "View the latest news and breaking news today for U.S., world, weather, entertainment, politics and health at CNN.com.",
+      "headings_sample": [
+        "CNN values your feedback",
+        "Trump threatens to sink Iranian 'fast attack ships' that near blockade",
+        "More Top Stories",
+        "pop culture",
+        "Orb\u00e1n defeated in Hungary"
+      ],
+      "text_length": 5000,
+      "affect_valence": 0.0,
+      "goal_scores": {
+        "threat_reduction": 0.3,
+        "novelty_exploration": 0.05,
+        "competence_verification": 0.2,
+        "planning_completion": 0.1,
+        "indulgence_permission": 0.1,
+        "status_signaling": 0.1
+      },
+      "dominant_goal": "threat_reduction",
+      "dominant_goal_strength": 0.3,
+      "goal_shielded": [],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.1297,
+        "dependable_loyalist": 0.1272,
+        "consensus_seeker": 0.1132,
+        "explorer": 0.1257,
+        "prevention_planner": 0.1042,
+        "reliable_cooperator": 0.1207,
+        "careful_truster": 0.147,
+        "status_seeker": 0.0761,
+        "easy_decider": 0.065
+      },
+      "best_archetype": "careful_truster",
+      "best_crossover": 0.147
+    },
+    "bbc.com": {
+      "domain": "bbc.com",
+      "category": "news_current",
+      "crawled": true,
+      "title": "BBC Home - Breaking News, World News, US News, Sports, Business, Innovation, Climate, Culture, Travel, Video & AudioBritish Broadcasting CorporationBritish Broadcasting Corporation",
+      "meta_description": "Visit BBC for trusted reporting on the latest world and US news, sports, business, climate, innovation, culture and much more.",
+      "headings_sample": [
+        "US blockade of Iranian ports takes effect as Trump says Tehran wants a deal 'very badly'",
+        "US blockade of Iranian ports explained in two minutes",
+        "Italian PM condemns ally Trump over 'unacceptable' Pope criticism",
+        "Trump deletes post depicting him as Jesus-like figure after backlash",
+        "Analysis: Jubilation in Budapest will be felt in Europe but leaves Moscow cold"
+      ],
+      "text_length": 5000,
+      "affect_valence": -0.2,
+      "goal_scores": {
+        "affiliation_safety": 0.2,
+        "social_alignment": 0.05,
+        "threat_reduction": 0.2,
+        "novelty_exploration": 0.05,
+        "planning_completion": 0.2
+      },
+      "dominant_goal": "affiliation_safety",
+      "dominant_goal_strength": 0.2,
+      "goal_shielded": [],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.0894,
+        "dependable_loyalist": 0.0975,
+        "consensus_seeker": 0.1158,
+        "explorer": 0.1479,
+        "prevention_planner": 0.1011,
+        "reliable_cooperator": 0.1242,
+        "careful_truster": 0.1199,
+        "status_seeker": 0.037,
+        "easy_decider": 0.09
+      },
+      "best_archetype": "explorer",
+      "best_crossover": 0.1479
+    },
+    "npr.org": {
+      "domain": "npr.org",
+      "category": "news_current",
+      "crawled": true,
+      "title": "NPR - Breaking News, Analysis, Music, Arts & Podcasts : NPR",
+      "meta_description": "Top stories in the U.S. and world news, politics, health, science, business, music, arts and culture. Nonprofit journalism with a mission. This is NPR.",
+      "headings_sample": [
+        "5 things to know about P\u00e9ter Magyar, Hungary's new prime minister",
+        "Trump vows to sink Iranian ships approaching a U.S. blockade of Strait of Hormuz",
+        "Pope Leo brushes off Trump criticism amid growing Vatican\u2013U.S. tensions over Iran war",
+        "More than a quarter of private colleges are at risk of closing, a new projection shows",
+        "Can red light therapy really deliver a beauty and health glow-up? Here's the science"
+      ],
+      "text_length": 5000,
+      "affect_valence": 0.0,
+      "goal_scores": {
+        "affiliation_safety": 0.05,
+        "social_alignment": 0.05,
+        "threat_reduction": 0.55,
+        "novelty_exploration": 0.05,
+        "planning_completion": 0.3,
+        "status_signaling": 0.15
+      },
+      "dominant_goal": "threat_reduction",
+      "dominant_goal_strength": 0.55,
+      "goal_shielded": [
+        "novelty_exploration",
+        "indulgence_permission"
+      ],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.1643,
+        "dependable_loyalist": 0.1709,
+        "consensus_seeker": 0.1621,
+        "explorer": 0.2193,
+        "prevention_planner": 0.1422,
+        "reliable_cooperator": 0.1756,
+        "careful_truster": 0.2252,
+        "status_seeker": 0.0609,
+        "easy_decider": 0.0925
+      },
+      "best_archetype": "careful_truster",
+      "best_crossover": 0.2252
+    },
+    "apnews.com": {
+      "domain": "apnews.com",
+      "category": "news_current",
+      "crawled": true,
+      "title": "Associated Press News: Breaking News, Latest Headlines and Videos  | AP News",
+      "meta_description": "Read the latest headlines, breaking news, and videos at APNews.com, the definitive source for independent journalism from every corner of the globe.",
+      "headings_sample": [
+        "Short Stories",
+        "Most read",
+        "AP NEWS GAMES",
+        "LATEST NEWS"
+      ],
+      "text_length": 5000,
+      "affect_valence": 0.0,
+      "goal_scores": {
+        "threat_reduction": 0.1,
+        "novelty_exploration": 0.05,
+        "planning_completion": 0.2,
+        "indulgence_permission": 0.05,
+        "status_signaling": 0.35
+      },
+      "dominant_goal": "status_signaling",
+      "dominant_goal_strength": 0.35,
+      "goal_shielded": [
+        "threat_reduction",
+        "planning_completion"
+      ],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.0353,
+        "dependable_loyalist": 0.033,
+        "consensus_seeker": 0.0263,
+        "explorer": 0.0164,
+        "prevention_planner": 0.0388,
+        "reliable_cooperator": 0.0268,
+        "careful_truster": 0.0275,
+        "status_seeker": 0.1478,
+        "easy_decider": 0.03
+      },
+      "best_archetype": "status_seeker",
+      "best_crossover": 0.1478
+    },
+    "axios.com": {
+      "domain": "axios.com",
+      "category": "news_current",
+      "crawled": false,
+      "error": "HTTP Error 403: Forbidden"
+    },
+    "politico.com": {
+      "domain": "politico.com",
+      "category": "news_current",
+      "crawled": false,
+      "error": "HTTP Error 403: Forbidden"
+    },
+    "theatlantic.com": {
+      "domain": "theatlantic.com",
+      "category": "news_current",
+      "crawled": true,
+      "title": "The AtlanticThe Atlanticaudioaudioaudioaudioaudioaudioaudioaudioaudiofacebookinstagramyoutubetwitterlinkedinflipboardfacebookinstagramyoutubetwitterlinkedinflipboardprivacy-options",
+      "meta_description": "The Atlantic covers news, politics, culture, technology, health, and more, through its articles, podcasts, videos, and flagship magazine.",
+      "headings_sample": [
+        "Site Navigation",
+        "Sections",
+        "The Print Edition",
+        "Today\u2019s",
+        "The Parable of the President"
+      ],
+      "text_length": 5000,
+      "affect_valence": 0.0,
+      "goal_scores": {
+        "social_alignment": 0.05,
+        "threat_reduction": 0.4,
+        "novelty_exploration": 0.225,
+        "planning_completion": 0.2,
+        "indulgence_permission": 0.05,
+        "status_signaling": 0.1
+      },
+      "dominant_goal": "threat_reduction",
+      "dominant_goal_strength": 0.4,
+      "goal_shielded": [
+        "novelty_exploration",
+        "indulgence_permission"
+      ],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.1309,
+        "dependable_loyalist": 0.1344,
+        "consensus_seeker": 0.1176,
+        "explorer": 0.1497,
+        "prevention_planner": 0.106,
+        "reliable_cooperator": 0.1259,
+        "careful_truster": 0.1676,
+        "status_seeker": 0.0476,
+        "easy_decider": 0.064
+      },
+      "best_archetype": "careful_truster",
+      "best_crossover": 0.1676
+    },
+    "newyorker.com": {
+      "domain": "newyorker.com",
+      "category": "news_current",
+      "crawled": true,
+      "title": "The New YorkerSearchMenuDotsListenListenListenDotsDotsListenListenListenListenDotsDotsListenListenListenListenListenListenDotsDotsListenListenDotsDotsListenListenListenDotsListenListenListenListenDots",
+      "meta_description": "Reporting, Profiles, breaking news, cultural coverage, podcasts, videos, and cartoons from The New Yorker.",
+      "headings_sample": [
+        "The New Yorker",
+        "Slammers",
+        "Today\u2019s Mix",
+        "Hungary\u2019s Election Shows That Even Strongmen Can Lose",
+        "A Lesson of Vietnam: Getting in Is Easier than Getting Out"
+      ],
+      "text_length": 5000,
+      "affect_valence": -0.2,
+      "goal_scores": {
+        "social_alignment": 0.05,
+        "threat_reduction": 0.2,
+        "novelty_exploration": 0.05,
+        "competence_verification": 0.1,
+        "planning_completion": 0.2
+      },
+      "dominant_goal": "threat_reduction",
+      "dominant_goal_strength": 0.2,
+      "goal_shielded": [],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.0728,
+        "dependable_loyalist": 0.0752,
+        "consensus_seeker": 0.0632,
+        "explorer": 0.0764,
+        "prevention_planner": 0.065,
+        "reliable_cooperator": 0.0662,
+        "careful_truster": 0.0888,
+        "status_seeker": 0.0109,
+        "easy_decider": 0.06
+      },
+      "best_archetype": "careful_truster",
+      "best_crossover": 0.0888
+    },
+    "slate.com": {
+      "domain": "slate.com",
+      "category": "news_current",
+      "crawled": true,
+      "title": "Slate Magazine - Politics, Business, Technology, and the ArtsActivating this button will toggle the display of additional contentSlate homepageOpen menuClose menuActivating this button will toggle the",
+      "meta_description": "Online magazine of news, politics, technology, and culture. Combines humor and insight in thoughtful analyses of current events and political news.",
+      "headings_sample": [
+        "Things Are Looking Quite Bad for Trump",
+        "The Core Principle Animating Trump\u2019s Second Term",
+        "Trump and Hegseth Have No Idea What Gives America\u2019s Military Its Power. The Resulting Damage Is Untold.",
+        "Trump Has Actually Been Very Canny About the Abortion Pill. That May Be About to Change.",
+        "The Left"
+      ],
+      "text_length": 5000,
+      "affect_valence": 0.0,
+      "goal_scores": {
+        "affiliation_safety": 0.05,
+        "threat_reduction": 0.2,
+        "novelty_exploration": 0.1,
+        "competence_verification": 0.1,
+        "planning_completion": 0.1,
+        "indulgence_permission": 0.075,
+        "status_signaling": 0.05
+      },
+      "dominant_goal": "threat_reduction",
+      "dominant_goal_strength": 0.2,
+      "goal_shielded": [],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.1122,
+        "dependable_loyalist": 0.1117,
+        "consensus_seeker": 0.1013,
+        "explorer": 0.1032,
+        "prevention_planner": 0.0934,
+        "reliable_cooperator": 0.1081,
+        "careful_truster": 0.1188,
+        "status_seeker": 0.0685,
+        "easy_decider": 0.0625
+      },
+      "best_archetype": "careful_truster",
+      "best_crossover": 0.1188
+    },
+    "vox.com": {
+      "domain": "vox.com",
+      "category": "news_current",
+      "crawled": true,
+      "title": "VoxVoxPodcastVideoVoxCloseVideoPodcastCrosswordFacebookInstagramYoutubeRSSTikTokCrosswordVoxPodcastPlayPlayPlayPlayPodcastPodcastPlayPodcastPodcastVoxFacebookInstagramYoutubeRSSTikTok",
+      "meta_description": "Vox is a general interest news site for the 21st century. Its mission: to help everyone understand our complicated world, so that we can all help shape it. In text, video and audio, our reporters expl",
+      "headings_sample": [
+        "Making sense of it all:",
+        "The context you need, when you need it",
+        "Top links",
+        "Even Better",
+        "Future Perfect"
+      ],
+      "text_length": 5000,
+      "affect_valence": 0.2,
+      "goal_scores": {
+        "social_alignment": 0.27,
+        "novelty_exploration": 0.18,
+        "planning_completion": 0.2,
+        "indulgence_permission": 0.12,
+        "status_signaling": 0.135
+      },
+      "dominant_goal": "social_alignment",
+      "dominant_goal_strength": 0.27,
+      "goal_shielded": [],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.0996,
+        "dependable_loyalist": 0.0971,
+        "consensus_seeker": 0.0742,
+        "explorer": 0.0493,
+        "prevention_planner": 0.0969,
+        "reliable_cooperator": 0.0603,
+        "careful_truster": 0.0746,
+        "status_seeker": 0.1226,
+        "easy_decider": 0.152
+      },
+      "best_archetype": "easy_decider",
+      "best_crossover": 0.152
+    },
+    "usatoday.com": {
+      "domain": "usatoday.com",
+      "category": "news_current",
+      "crawled": true,
+      "title": "USA TODAY - Breaking News and Latest News Today",
+      "meta_description": "USA TODAY delivers current national and local news, sports, entertainment, finance, technology, and more through award-winning journalism, photos, and videos.",
+      "headings_sample": [],
+      "text_length": 5000,
+      "affect_valence": 0.6,
+      "goal_scores": {
+        "threat_reduction": 0.1,
+        "novelty_exploration": 0.16,
+        "planning_completion": 0.3,
+        "status_signaling": 0.16
+      },
+      "dominant_goal": "planning_completion",
+      "dominant_goal_strength": 0.3,
+      "goal_shielded": [],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.074,
+        "dependable_loyalist": 0.075,
+        "consensus_seeker": 0.0516,
+        "explorer": 0.0357,
+        "prevention_planner": 0.0675,
+        "reliable_cooperator": 0.0554,
+        "careful_truster": 0.0654,
+        "status_seeker": 0.0904,
+        "easy_decider": 0.075
+      },
+      "best_archetype": "status_seeker",
+      "best_crossover": 0.0904
+    },
+    "time.com": {
+      "domain": "time.com",
+      "category": "news_current",
+      "crawled": true,
+      "title": "TIME | Current & Breaking News | National & World Updates",
+      "meta_description": "Breaking news and analysis from time.com. Politics, world news, photos, video, tech reviews, health, science, and entertainment news.",
+      "headings_sample": [
+        "TIME | Current & Breaking News | National & World Updates",
+        "Newsletters",
+        "People",
+        "Voices",
+        "TIME Earth Awards | 2026"
+      ],
+      "text_length": 5000,
+      "affect_valence": -0.6,
+      "goal_scores": {
+        "affiliation_safety": 0.1,
+        "threat_reduction": 0.5,
+        "novelty_exploration": 0.1,
+        "competence_verification": 0.1,
+        "status_signaling": 0.05
+      },
+      "dominant_goal": "threat_reduction",
+      "dominant_goal_strength": 0.5,
+      "goal_shielded": [
+        "novelty_exploration",
+        "indulgence_permission"
+      ],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.1551,
+        "dependable_loyalist": 0.1622,
+        "consensus_seeker": 0.1611,
+        "explorer": 0.2143,
+        "prevention_planner": 0.1303,
+        "reliable_cooperator": 0.1772,
+        "careful_truster": 0.2121,
+        "status_seeker": 0.0348,
+        "easy_decider": 0.015
+      },
+      "best_archetype": "explorer",
+      "best_crossover": 0.2143
+    },
+    "newsweek.com": {
+      "domain": "newsweek.com",
+      "category": "news_current",
+      "crawled": true,
+      "title": "Newsweek - Latest Breaking News, US, World, Politics, Business, Tech and Videos.",
+      "meta_description": "Newsweek provides in-depth analysis on news, world events, politics, business, tech, entertainment, healthcare, & trending videos. Subscribe for breaking news alerts!",
+      "headings_sample": [
+        "Iran War Live Updates: Trump Issues New Warning to Iran Over Ships Approaching Blockade",
+        "Top Stories",
+        "Trump Puts China in Zugzwang and Forces a Visible Choice",
+        "Donald Trump, Pope Leo Popularity Compared Amid Iran War Feud",
+        "Why Both Parties Keep Getting Latino Voters Wrong"
+      ],
+      "text_length": 5000,
+      "affect_valence": 0.0,
+      "goal_scores": {
+        "affiliation_safety": 0.0375,
+        "social_alignment": 0.075,
+        "threat_reduction": 0.2,
+        "novelty_exploration": 0.0375,
+        "planning_completion": 0.3,
+        "status_signaling": 0.15
+      },
+      "dominant_goal": "planning_completion",
+      "dominant_goal_strength": 0.3,
+      "goal_shielded": [],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.0734,
+        "dependable_loyalist": 0.0771,
+        "consensus_seeker": 0.0724,
+        "explorer": 0.0923,
+        "prevention_planner": 0.0775,
+        "reliable_cooperator": 0.075,
+        "careful_truster": 0.0942,
+        "status_seeker": 0.0652,
+        "easy_decider": 0.0956
+      },
+      "best_archetype": "easy_decider",
+      "best_crossover": 0.0956
+    },
+    "linkedin.com": {
+      "domain": "linkedin.com",
+      "category": "professional",
+      "crawled": true,
+      "title": "LinkedIn: Log In or Sign Up",
+      "meta_description": "1 billion members | Manage your professional identity. Build and engage with your professional network. Access knowledge, insights and opportunities.",
+      "headings_sample": [
+        "Discover new opportunities",
+        "Explore top LinkedIn content",
+        "Find the right job or internship for you",
+        "Post your job for millions of people to see",
+        "Discover the best software tools"
+      ],
+      "text_length": 5000,
+      "affect_valence": 0.6,
+      "goal_scores": {
+        "affiliation_safety": 0.32,
+        "social_alignment": 0.24,
+        "threat_reduction": 0.1,
+        "novelty_exploration": 0.52,
+        "competence_verification": 0.1,
+        "planning_completion": 0.1,
+        "status_signaling": 0.24
+      },
+      "dominant_goal": "novelty_exploration",
+      "dominant_goal_strength": 0.52,
+      "goal_shielded": [
+        "threat_reduction",
+        "affiliation_safety"
+      ],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.1698,
+        "dependable_loyalist": 0.1752,
+        "consensus_seeker": 0.1168,
+        "explorer": 0.054,
+        "prevention_planner": 0.1612,
+        "reliable_cooperator": 0.1103,
+        "careful_truster": 0.12,
+        "status_seeker": 0.2049,
+        "easy_decider": 0.0826
+      },
+      "best_archetype": "status_seeker",
+      "best_crossover": 0.2049
+    },
+    "glassdoor.com": {
+      "domain": "glassdoor.com",
+      "category": "professional",
+      "crawled": false,
+      "error": "HTTP Error 403: Forbidden"
+    },
+    "indeed.com": {
+      "domain": "indeed.com",
+      "category": "professional",
+      "crawled": false,
+      "error": "HTTP Error 403: Forbidden"
+    },
+    "medium.com": {
+      "domain": "medium.com",
+      "category": "professional",
+      "crawled": false,
+      "error": "HTTP Error 403: Forbidden"
+    },
+    "substack.com": {
+      "domain": "substack.com",
+      "category": "professional",
+      "crawled": true,
+      "title": "Substack",
+      "meta_description": "The app for independent voices",
+      "headings_sample": [
+        "The app for independent voices"
+      ],
+      "text_length": 226,
+      "affect_valence": 0.0,
+      "goal_scores": {
+        "novelty_exploration": 0.05
+      },
+      "dominant_goal": "novelty_exploration",
+      "dominant_goal_strength": 0.05,
+      "goal_shielded": [],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.0143,
+        "dependable_loyalist": 0.0144,
+        "consensus_seeker": 0.0079,
+        "explorer": 0.0,
+        "prevention_planner": 0.01,
+        "reliable_cooperator": 0.0083,
+        "careful_truster": 0.0084,
+        "status_seeker": 0.0109,
+        "easy_decider": 0.0
+      },
+      "best_archetype": "dependable_loyalist",
+      "best_crossover": 0.0144
+    },
+    "techcrunch.com": {
+      "domain": "techcrunch.com",
+      "category": "professional",
+      "crawled": true,
+      "title": "TechCrunch | Startup and Technology News",
+      "meta_description": "TechCrunch | Reporting on the business of technology, startups, venture capital funding, and Silicon Valley",
+      "headings_sample": [
+        "Topics",
+        "More from TechCrunch",
+        "Latest News",
+        "Most Popular",
+        "Upcoming Events"
+      ],
+      "text_length": 5000,
+      "affect_valence": 0.2,
+      "goal_scores": {
+        "social_alignment": 0.39,
+        "threat_reduction": 0.3,
+        "novelty_exploration": 0.12,
+        "planning_completion": 0.2,
+        "status_signaling": 0.015
+      },
+      "dominant_goal": "social_alignment",
+      "dominant_goal_strength": 0.39,
+      "goal_shielded": [
+        "autonomy_assertion",
+        "novelty_exploration"
+      ],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.1077,
+        "dependable_loyalist": 0.1151,
+        "consensus_seeker": 0.1033,
+        "explorer": 0.1461,
+        "prevention_planner": 0.1098,
+        "reliable_cooperator": 0.0909,
+        "careful_truster": 0.1448,
+        "status_seeker": 0.0104,
+        "easy_decider": 0.128
+      },
+      "best_archetype": "explorer",
+      "best_crossover": 0.1461
+    },
+    "wired.com": {
+      "domain": "wired.com",
+      "category": "professional",
+      "crawled": true,
+      "title": "WIRED - The Latest in Technology, Science, Culture and Business | WIREDMenuMenuAccountAccountChevronExpandSearchPausePlayPlayPlayPlayPlayPlayPlayPlayPlayPlayLargeChevronFacebookXPinterestYouTubeInstag",
+      "meta_description": "We bring you the future as it happens. From the latest in science and technology to the big stories in business and culture, we've got you covered.",
+      "headings_sample": [
+        "WIRED",
+        "Today's Picks",
+        "Curating...",
+        "The FBI Didn\u2019t Answer Texts From Minnesota Investigators for Days After Renee Good\u2019s Killing",
+        "The Next Attorney General Will Probably Be an Election Denier"
+      ],
+      "text_length": 5000,
+      "affect_valence": 0.4,
+      "goal_scores": {
+        "affiliation_safety": 0.07,
+        "social_alignment": 0.07,
+        "threat_reduction": 0.4,
+        "novelty_exploration": 0.21,
+        "competence_verification": 0.3,
+        "planning_completion": 0.2,
+        "indulgence_permission": 0.0525,
+        "status_signaling": 0.35
+      },
+      "dominant_goal": "threat_reduction",
+      "dominant_goal_strength": 0.4,
+      "goal_shielded": [
+        "novelty_exploration",
+        "indulgence_permission"
+      ],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.1368,
+        "dependable_loyalist": 0.1426,
+        "consensus_seeker": 0.1368,
+        "explorer": 0.1768,
+        "prevention_planner": 0.1435,
+        "reliable_cooperator": 0.1458,
+        "careful_truster": 0.1793,
+        "status_seeker": 0.1432,
+        "easy_decider": 0.0787
+      },
+      "best_archetype": "careful_truster",
+      "best_crossover": 0.1793
+    },
+    "theverge.com": {
+      "domain": "theverge.com",
+      "category": "professional",
+      "crawled": true,
+      "title": "The VergeThe VergeHamburger Navigation ButtonHamburger Navigation ButtonThe VergeCloseExpandExpandExpandExpandExpandExpandExpandExpandExpandExpandExpandExpandExpandFacebookThreadsInstagramYoutubeRSSTh",
+      "meta_description": "The Verge is about technology and how it makes us feel. Founded in 2011, we offer our audience everything from breaking news to reviews to award-winning features and investigations, on our site, in vi",
+      "headings_sample": [
+        "Top Stories",
+        "Today\u2019s Storystream",
+        "Most Popular",
+        "Just For You",
+        "Entertainment"
+      ],
+      "text_length": 5000,
+      "affect_valence": 0.2,
+      "goal_scores": {
+        "social_alignment": 0.21,
+        "threat_reduction": 0.1,
+        "novelty_exploration": 0.06,
+        "competence_verification": 0.1,
+        "planning_completion": 0.1,
+        "status_signaling": 0.12
+      },
+      "dominant_goal": "social_alignment",
+      "dominant_goal_strength": 0.21,
+      "goal_shielded": [],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.0541,
+        "dependable_loyalist": 0.0576,
+        "consensus_seeker": 0.0468,
+        "explorer": 0.0567,
+        "prevention_planner": 0.0645,
+        "reliable_cooperator": 0.0389,
+        "careful_truster": 0.0621,
+        "status_seeker": 0.0548,
+        "easy_decider": 0.067
+      },
+      "best_archetype": "easy_decider",
+      "best_crossover": 0.067
+    },
+    "arstechnica.com": {
+      "domain": "arstechnica.com",
+      "category": "professional",
+      "crawled": true,
+      "title": "Ars Technica - Serving the Technologist since 1998. News, reviews, and analysis.",
+      "meta_description": "News and reviews, covering IT, AI, science, space, health, gaming, cybersecurity, tech policy, computers, mobile devices, and operating systems.",
+      "headings_sample": [
+        "Ars Technica homepage"
+      ],
+      "text_length": 5000,
+      "affect_valence": 0.2,
+      "goal_scores": {
+        "social_alignment": 0.21,
+        "threat_reduction": 0.3,
+        "novelty_exploration": 0.24,
+        "competence_verification": 0.2,
+        "status_signaling": 0.06
+      },
+      "dominant_goal": "threat_reduction",
+      "dominant_goal_strength": 0.3,
+      "goal_shielded": [],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.1621,
+        "dependable_loyalist": 0.1674,
+        "consensus_seeker": 0.1279,
+        "explorer": 0.1281,
+        "prevention_planner": 0.1393,
+        "reliable_cooperator": 0.1266,
+        "careful_truster": 0.1695,
+        "status_seeker": 0.073,
+        "easy_decider": 0.042
+      },
+      "best_archetype": "careful_truster",
+      "best_crossover": 0.1695
+    },
+    "brides.com": {
+      "domain": "brides.com",
+      "category": "lifestyle_events",
+      "crawled": false,
+      "error": "HTTP Error 403: Forbidden"
+    },
+    "theknot.com": {
+      "domain": "theknot.com",
+      "category": "lifestyle_events",
+      "crawled": true,
+      "title": "The Knot\u00ae Wedding Planning Website: Tools, Inspiration & More",
+      "meta_description": "Meet your wedding planner BFF. The Knot offers All-In-One wedding planning with easy to use tools, guides, & inspo to make your wedding journey effortless.",
+      "headings_sample": [
+        "Your wedding team and everything in between",
+        "Plan the \u2018I do\u2019 that\u2019s so you",
+        "Get started with planning"
+      ],
+      "text_length": 2106,
+      "affect_valence": 0.4,
+      "goal_scores": {
+        "affiliation_safety": 0.07,
+        "social_alignment": 0.07,
+        "novelty_exploration": 0.3937,
+        "competence_verification": 0.2,
+        "planning_completion": 0.3,
+        "indulgence_permission": 0.035,
+        "status_signaling": 0.07
+      },
+      "dominant_goal": "novelty_exploration",
+      "dominant_goal_strength": 0.3937,
+      "goal_shielded": [
+        "threat_reduction",
+        "affiliation_safety"
+      ],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.1275,
+        "dependable_loyalist": 0.1274,
+        "consensus_seeker": 0.0788,
+        "explorer": 0.0185,
+        "prevention_planner": 0.1151,
+        "reliable_cooperator": 0.078,
+        "careful_truster": 0.0805,
+        "status_seeker": 0.1224,
+        "easy_decider": 0.1051
+      },
+      "best_archetype": "trusting_loyalist",
+      "best_crossover": 0.1275
+    },
+    "weddingwire.com": {
+      "domain": "weddingwire.com",
+      "category": "lifestyle_events",
+      "crawled": true,
+      "title": "Weddings, Wedding Venues - WeddingWire",
+      "meta_description": "Weddings - The easiest way to find local wedding venues, cakes, dresses, invitations &amp; more. WeddingWire is stress free, hassle free, and just plain free.",
+      "headings_sample": [
+        "Let's find your wedding team",
+        "Find every vendor you need",
+        "Enjoy planning your wedding",
+        "Your free wedding website",
+        "Planning tools"
+      ],
+      "text_length": 5000,
+      "affect_valence": 1.0,
+      "goal_scores": {
+        "affiliation_safety": 0.1,
+        "social_alignment": 0.15,
+        "threat_reduction": 0.1,
+        "novelty_exploration": 0.1,
+        "planning_completion": 0.4,
+        "status_signaling": 0.4125
+      },
+      "dominant_goal": "status_signaling",
+      "dominant_goal_strength": 0.4125,
+      "goal_shielded": [
+        "threat_reduction",
+        "planning_completion"
+      ],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.0488,
+        "dependable_loyalist": 0.0538,
+        "consensus_seeker": 0.0553,
+        "explorer": 0.0579,
+        "prevention_planner": 0.0778,
+        "reliable_cooperator": 0.0513,
+        "careful_truster": 0.0496,
+        "status_seeker": 0.1783,
+        "easy_decider": 0.065
+      },
+      "best_archetype": "status_seeker",
+      "best_crossover": 0.1783
+    },
+    "zola.com": {
+      "domain": "zola.com",
+      "category": "lifestyle_events",
+      "crawled": true,
+      "title": "Wedding Planning: Website, Invites, Venues, Registry, & More",
+      "meta_description": "Your one-stop destination for all things wedding. Free wedding website, registry, and tools. Find the perfect venue. Shop invites. Your wedding starts here!",
+      "headings_sample": [
+        "Wedding planning",
+        "From venues and save the dates to a free wedding website, a registry and even your cake \u2014 Zola is here for all the days along the way",
+        "Share it all on a",
+        "Get more from your",
+        "Discover the best"
+      ],
+      "text_length": 5000,
+      "affect_valence": 0.8,
+      "goal_scores": {
+        "affiliation_safety": 0.09,
+        "social_alignment": 0.09,
+        "threat_reduction": 0.1,
+        "novelty_exploration": 0.495,
+        "competence_verification": 0.2,
+        "planning_completion": 0.2,
+        "status_signaling": 0.2025
+      },
+      "dominant_goal": "novelty_exploration",
+      "dominant_goal_strength": 0.495,
+      "goal_shielded": [
+        "threat_reduction",
+        "affiliation_safety"
+      ],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.1526,
+        "dependable_loyalist": 0.1548,
+        "consensus_seeker": 0.0929,
+        "explorer": 0.0226,
+        "prevention_planner": 0.1378,
+        "reliable_cooperator": 0.0928,
+        "careful_truster": 0.0991,
+        "status_seeker": 0.1804,
+        "easy_decider": 0.0707
+      },
+      "best_archetype": "status_seeker",
+      "best_crossover": 0.1804
+    },
+    "marthastewart.com": {
+      "domain": "marthastewart.com",
+      "category": "lifestyle_events",
+      "crawled": false,
+      "error": "HTTP Error 403: Forbidden"
+    },
+    "people.com": {
+      "domain": "people.com",
+      "category": "lifestyle_events",
+      "crawled": false,
+      "error": "HTTP Error 403: Forbidden"
+    },
+    "ew.com": {
+      "domain": "ew.com",
+      "category": "lifestyle_events",
+      "crawled": false,
+      "error": "HTTP Error 403: Forbidden"
+    },
+    "eater.com": {
+      "domain": "eater.com",
+      "category": "lifestyle_events",
+      "crawled": true,
+      "title": "EaterApp IconApp IconEaterCloseMapVideoExpandExternal LinkExternal LinkExternal LinkExternal LinkExternal LinkExternal LinkExternal LinkFacebookTwitterInstagramYoutubeRSSVideoMapMapMapMapMapMapMapMapM",
+      "meta_description": "A national site covering food and dining culture, with 23 city sites tracking local dining scenes across hundreds of maps.",
+      "headings_sample": [
+        "The Final Fork",
+        "Add to Cart",
+        "The Latest",
+        "The Final Fork",
+        "Add to Cart"
+      ],
+      "text_length": 5000,
+      "affect_valence": 0.2,
+      "goal_scores": {
+        "social_alignment": 0.27,
+        "novelty_exploration": 0.06,
+        "planning_completion": 0.1,
+        "status_signaling": 0.06
+      },
+      "dominant_goal": "social_alignment",
+      "dominant_goal_strength": 0.27,
+      "goal_shielded": [],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.0284,
+        "dependable_loyalist": 0.0318,
+        "consensus_seeker": 0.0237,
+        "explorer": 0.027,
+        "prevention_planner": 0.0439,
+        "reliable_cooperator": 0.0099,
+        "careful_truster": 0.0273,
+        "status_seeker": 0.0339,
+        "easy_decider": 0.079
+      },
+      "best_archetype": "easy_decider",
+      "best_crossover": 0.079
+    },
+    "timeout.com": {
+      "domain": "timeout.com",
+      "category": "lifestyle_events",
+      "crawled": true,
+      "title": "Time Out | Best Things To Do and Events In Cities Worldwide",
+      "meta_description": "Your ultimate guide to the best art and entertainment, food and drink, attractions, hotels and things to do in the world\u2019s greatest cities.",
+      "headings_sample": [
+        "Welcome to Time Out",
+        "Your ultimate guide to the world\u2019s best cities",
+        "The world\u2019s best cities for green spaces and nature in 2026",
+        "The best family holidays in the world to try this year",
+        "The 51 most beautiful places in the world"
+      ],
+      "text_length": 5000,
+      "affect_valence": 0.8,
+      "goal_scores": {
+        "novelty_exploration": 0.495,
+        "competence_verification": 0.1,
+        "planning_completion": 0.2,
+        "status_signaling": 0.18
+      },
+      "dominant_goal": "novelty_exploration",
+      "dominant_goal_strength": 0.495,
+      "goal_shielded": [
+        "threat_reduction",
+        "affiliation_safety"
+      ],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.1417,
+        "dependable_loyalist": 0.1421,
+        "consensus_seeker": 0.0782,
+        "explorer": 0.0,
+        "prevention_planner": 0.1164,
+        "reliable_cooperator": 0.0818,
+        "careful_truster": 0.0828,
+        "status_seeker": 0.1702,
+        "easy_decider": 0.05
+      },
+      "best_archetype": "status_seeker",
+      "best_crossover": 0.1702
+    },
+    "eventbrite.com": {
+      "domain": "eventbrite.com",
+      "category": "lifestyle_events",
+      "crawled": true,
+      "title": "Eventbrite - Discover the Best Local Events & Things to Do",
+      "meta_description": "Eventbrite - Discover the Best Local Events & Things to Do",
+      "headings_sample": [
+        "Browsing events in",
+        "Top destinations in United States",
+        "Popular cities",
+        "Site Navigation"
+      ],
+      "text_length": 3241,
+      "affect_valence": 0.6,
+      "goal_scores": {
+        "social_alignment": 0.16,
+        "novelty_exploration": 0.36,
+        "planning_completion": 0.3,
+        "status_signaling": 0.16
+      },
+      "dominant_goal": "novelty_exploration",
+      "dominant_goal_strength": 0.36,
+      "goal_shielded": [
+        "threat_reduction",
+        "affiliation_safety"
+      ],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.1097,
+        "dependable_loyalist": 0.112,
+        "consensus_seeker": 0.0653,
+        "explorer": 0.016,
+        "prevention_planner": 0.1033,
+        "reliable_cooperator": 0.0595,
+        "careful_truster": 0.0704,
+        "status_seeker": 0.1339,
+        "easy_decider": 0.107
+      },
+      "best_archetype": "status_seeker",
+      "best_crossover": 0.1339
+    },
+    "tsa.gov": {
+      "domain": "tsa.gov",
+      "category": "safety_official",
+      "crawled": true,
+      "title": "Home | Transportation Security AdministrationLock",
+      "meta_description": "The TSA website serves as a comprehensive resource for travelers, offering information on security screening procedures, travel tips, and programs like TSA PreCheck\u00ae. It provides guidance on packing, ",
+      "headings_sample": [
+        "Travel",
+        "Media",
+        "About",
+        "For Industry",
+        "Contact"
+      ],
+      "text_length": 4772,
+      "affect_valence": 0.2,
+      "goal_scores": {
+        "affiliation_safety": 0.06,
+        "threat_reduction": 0.1,
+        "novelty_exploration": 0.06,
+        "competence_verification": 0.1,
+        "planning_completion": 0.5,
+        "indulgence_permission": 0.06,
+        "status_signaling": 0.12
+      },
+      "dominant_goal": "planning_completion",
+      "dominant_goal_strength": 0.5,
+      "goal_shielded": [
+        "social_alignment"
+      ],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.0688,
+        "dependable_loyalist": 0.0684,
+        "consensus_seeker": 0.0674,
+        "explorer": 0.0683,
+        "prevention_planner": 0.0794,
+        "reliable_cooperator": 0.0716,
+        "careful_truster": 0.0716,
+        "status_seeker": 0.0809,
+        "easy_decider": 0.158
+      },
+      "best_archetype": "easy_decider",
+      "best_crossover": 0.158
+    },
+    "weather.com": {
+      "domain": "weather.com",
+      "category": "safety_official",
+      "crawled": true,
+      "title": "National and Local Weather Radar, Daily Forecast and News from The Weather ChannelHamburgerThe Weather CompanyHomeTodayRadarVideoCloseThe Weather CompanyHomeTodayRadarVideoHamburgerThe Weather Company",
+      "meta_description": "The Weather Channel and weather.com provide a national and local weather forecast for cities, as well as weather radar, report and hurricane coverage",
+      "headings_sample": [
+        "Severe Weather, Including Tornadoes, Flooding Rain, Will Hammer Parts Of The Plains, Midwest This Week",
+        "Top Stories",
+        "Not All Warming Looks the Same: New Study Reveals How Climate Change Is Playing Out Across US",
+        "Super Typhoon Charges Toward US Territory",
+        "Would You Believe A Snowstorm And A Tornado On The Same Day?"
+      ],
+      "text_length": 3614,
+      "affect_valence": 0.2,
+      "goal_scores": {
+        "social_alignment": 0.12,
+        "novelty_exploration": 0.12,
+        "status_signaling": 0.06
+      },
+      "dominant_goal": "social_alignment",
+      "dominant_goal_strength": 0.12,
+      "goal_shielded": [],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.0393,
+        "dependable_loyalist": 0.0409,
+        "consensus_seeker": 0.0253,
+        "explorer": 0.012,
+        "prevention_planner": 0.0382,
+        "reliable_cooperator": 0.0198,
+        "careful_truster": 0.0277,
+        "status_seeker": 0.047,
+        "easy_decider": 0.024
+      },
+      "best_archetype": "status_seeker",
+      "best_crossover": 0.047
+    },
+    "miserymap.com": {
+      "domain": "miserymap.com",
+      "category": "safety_official",
+      "crawled": true,
+      "title": "MiseryMap.com is for sale | HugeDomains",
+      "meta_description": "Providing a surprisingly human shopping experience. Trusted and secure. Millions of domains to choose from.",
+      "headings_sample": [
+        "MiseryMap.com",
+        "Since 2005, we've helped thousands of people get the perfect domain name",
+        "Our promise to you",
+        "30-day money back guarantee",
+        "Quick delivery of the domain"
+      ],
+      "text_length": 5000,
+      "affect_valence": 0.2,
+      "goal_scores": {
+        "affiliation_safety": 0.18,
+        "social_alignment": 0.06,
+        "threat_reduction": 0.2,
+        "novelty_exploration": 0.18,
+        "planning_completion": 0.3
+      },
+      "dominant_goal": "planning_completion",
+      "dominant_goal_strength": 0.3,
+      "goal_shielded": [],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.1254,
+        "dependable_loyalist": 0.1331,
+        "consensus_seeker": 0.1316,
+        "explorer": 0.1417,
+        "prevention_planner": 0.1271,
+        "reliable_cooperator": 0.1399,
+        "careful_truster": 0.1392,
+        "status_seeker": 0.0626,
+        "easy_decider": 0.114
+      },
+      "best_archetype": "explorer",
+      "best_crossover": 0.1417
+    },
+    "consumerreports.com": {
+      "domain": "consumerreports.com",
+      "category": "safety_official",
+      "crawled": true,
+      "title": "Product Reviews and Ratings, Buying Advice and Consumer Advocacy - Consumer ReportsConsumer Reports 90th Anniversary Logo DesktopConsumer Reports 90th Anniversary Logo MobileClose ButtonClose ButtonAc",
+      "meta_description": "Get unbiased ratings and reviews for 10,000+ products and services from Consumer Reports, plus trusted advice and in-depth reporting on what matters most.",
+      "headings_sample": [
+        "Buy, Own, and Live Better",
+        "Best Deals on Grills, Lawn Care Tools, and More Outdoor Essentials",
+        "Best New-Car Deals",
+        "Graco Recalls All SnugRide Turn & Slide Rotating Infant Car Seats",
+        "Best and Worst Phone Plan Providers"
+      ],
+      "text_length": 5000,
+      "affect_valence": 0.8,
+      "goal_scores": {
+        "affiliation_safety": 0.18,
+        "social_alignment": 0.09,
+        "threat_reduction": 0.3,
+        "novelty_exploration": 0.09,
+        "competence_verification": 0.3,
+        "planning_completion": 0.1,
+        "indulgence_permission": 0.09,
+        "status_signaling": 0.27
+      },
+      "dominant_goal": "threat_reduction",
+      "dominant_goal_strength": 0.3,
+      "goal_shielded": [],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.1567,
+        "dependable_loyalist": 0.161,
+        "consensus_seeker": 0.1689,
+        "explorer": 0.1971,
+        "prevention_planner": 0.1661,
+        "reliable_cooperator": 0.177,
+        "careful_truster": 0.1851,
+        "status_seeker": 0.1643,
+        "easy_decider": 0.106
+      },
+      "best_archetype": "explorer",
+      "best_crossover": 0.1971
+    },
+    "bbb.org": {
+      "domain": "bbb.org",
+      "category": "safety_official",
+      "crawled": true,
+      "title": "BBB | Better Business Bureau",
+      "meta_description": "BBB helps consumers and businesses in the United States and Canada. Find trusted BBB Accredited Businesses. Get BBB Accredited. File a complaint, leave a review, report a scam.",
+      "headings_sample": [
+        "Cookies on BBB.org",
+        "Navigation menu",
+        "Select a Language",
+        "TRUST, BUILT LOCALLY.",
+        "Find trusted partners"
+      ],
+      "text_length": 1657,
+      "affect_valence": 0.4,
+      "goal_scores": {
+        "affiliation_safety": 0.105,
+        "novelty_exploration": 0.14,
+        "competence_verification": 0.2,
+        "planning_completion": 0.2,
+        "status_signaling": 0.07
+      },
+      "dominant_goal": "competence_verification",
+      "dominant_goal_strength": 0.2,
+      "goal_shielded": [],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.0488,
+        "dependable_loyalist": 0.0519,
+        "consensus_seeker": 0.0497,
+        "explorer": 0.0375,
+        "prevention_planner": 0.0659,
+        "reliable_cooperator": 0.0536,
+        "careful_truster": 0.0397,
+        "status_seeker": 0.0685,
+        "easy_decider": 0.0658
+      },
+      "best_archetype": "status_seeker",
+      "best_crossover": 0.0685
+    },
+    "nhtsa.gov": {
+      "domain": "nhtsa.gov",
+      "category": "safety_official",
+      "crawled": true,
+      "title": "NHTSA | National Highway Traffic Safety AdministrationLock",
+      "meta_description": "Get resources and info about staying safe on America\u2019s roads. And, find out if there\u2019s a recall on your car or how to report a vehicle safety problem.",
+      "headings_sample": [
+        "It's National Distracted Driving Awareness Month",
+        "Check for Recalls",
+        "Takata Air Bags",
+        "Car Seats and Booster Seats",
+        "Available Manufacturers"
+      ],
+      "text_length": 5000,
+      "affect_valence": -0.8,
+      "goal_scores": {
+        "social_alignment": 0.05,
+        "threat_reduction": 0.5,
+        "novelty_exploration": 0.1,
+        "competence_verification": 0.3
+      },
+      "dominant_goal": "threat_reduction",
+      "dominant_goal_strength": 0.5,
+      "goal_shielded": [
+        "novelty_exploration",
+        "indulgence_permission"
+      ],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.1489,
+        "dependable_loyalist": 0.1537,
+        "consensus_seeker": 0.1374,
+        "explorer": 0.1836,
+        "prevention_planner": 0.1211,
+        "reliable_cooperator": 0.1482,
+        "careful_truster": 0.1998,
+        "status_seeker": 0.0043,
+        "easy_decider": 0.01
+      },
+      "best_archetype": "careful_truster",
+      "best_crossover": 0.1998
+    },
+    "espn.com": {
+      "domain": "espn.com",
+      "category": "sports_entertainment",
+      "crawled": true,
+      "title": "ESPN - Serving Sports Fans. Anytime. Anywhere.",
+      "meta_description": "Visit ESPN for live scores, highlights and sports news. Stream exclusive games on ESPN and play fantasy sports.",
+      "headings_sample": [
+        "\ud83d\udccdWatch on ESPN",
+        "Quick Links",
+        "Favorites",
+        "Customize ESPN",
+        "Fantasy"
+      ],
+      "text_length": 5000,
+      "affect_valence": 0.0,
+      "goal_scores": {
+        "affiliation_safety": 0.05,
+        "threat_reduction": 0.2,
+        "novelty_exploration": 0.05,
+        "competence_verification": 0.3,
+        "planning_completion": 0.4,
+        "status_signaling": 0.275
+      },
+      "dominant_goal": "planning_completion",
+      "dominant_goal_strength": 0.4,
+      "goal_shielded": [
+        "social_alignment"
+      ],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.0749,
+        "dependable_loyalist": 0.078,
+        "consensus_seeker": 0.0737,
+        "explorer": 0.0893,
+        "prevention_planner": 0.0952,
+        "reliable_cooperator": 0.0807,
+        "careful_truster": 0.0934,
+        "status_seeker": 0.113,
+        "easy_decider": 0.1075
+      },
+      "best_archetype": "status_seeker",
+      "best_crossover": 0.113
+    },
+    "bleacherreport.com": {
+      "domain": "bleacherreport.com",
+      "category": "sports_entertainment",
+      "crawled": true,
+      "title": "Bleacher Report | Sports. Highlights. News. Now.Bleacher ReportBleacher Report",
+      "meta_description": "Fan easier, fan faster and fan better with Bleacher Report. Keep up with the latest storylines, expert analysis, highlights and scores for all your favorite sports.",
+      "headings_sample": [
+        "New Mock Draft with Potential Megatrade \ud83d\udd2e",
+        "Bold Offseason Trade Ideas \ud83d\udca1",
+        "Breaking Down Playoff Race \ud83e\uddd0",
+        "TOP HEADLINES",
+        "5-Star Edge Makes College Choice"
+      ],
+      "text_length": 5000,
+      "affect_valence": 0.4,
+      "goal_scores": {
+        "affiliation_safety": 0.07,
+        "novelty_exploration": 0.07,
+        "competence_verification": 0.1,
+        "status_signaling": 0.455
+      },
+      "dominant_goal": "status_signaling",
+      "dominant_goal_strength": 0.455,
+      "goal_shielded": [
+        "threat_reduction",
+        "planning_completion"
+      ],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.0259,
+        "dependable_loyalist": 0.0279,
+        "consensus_seeker": 0.0295,
+        "explorer": 0.025,
+        "prevention_planner": 0.0503,
+        "reliable_cooperator": 0.0319,
+        "careful_truster": 0.0226,
+        "status_seeker": 0.1826,
+        "easy_decider": 0.0105
+      },
+      "best_archetype": "status_seeker",
+      "best_crossover": 0.1826
+    },
+    "si.com": {
+      "domain": "si.com",
+      "category": "sports_entertainment",
+      "crawled": true,
+      "title": "Sports Illustrated",
+      "meta_description": "Sports Illustrated, SI.com provides sports news, expert analysis, highlights, stats and scores for the NFL, NBA, MLB, NHL, college football, soccer, fantasy, gambling and more",
+      "headings_sample": [
+        "WNBA Mock Draft: Final Projections Before Monday\u2019s Picks",
+        "NBA Mock Draft: How Lottery Odds Impact First Round",
+        "Albert Breer\u2019s Takeaways: The Prospect Who Makes Sense for the Jets at No. 2",
+        "TOP HEADLINES",
+        "Sergio Garcia Defiant After Breaking Driver, On-Course Meltdown"
+      ],
+      "text_length": 5000,
+      "affect_valence": 0.2,
+      "goal_scores": {
+        "affiliation_safety": 0.12,
+        "social_alignment": 0.06,
+        "threat_reduction": 0.3,
+        "novelty_exploration": 0.06,
+        "competence_verification": 0.1,
+        "planning_completion": 0.1,
+        "status_signaling": 0.12
+      },
+      "dominant_goal": "threat_reduction",
+      "dominant_goal_strength": 0.3,
+      "goal_shielded": [],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.1143,
+        "dependable_loyalist": 0.121,
+        "consensus_seeker": 0.1232,
+        "explorer": 0.156,
+        "prevention_planner": 0.1139,
+        "reliable_cooperator": 0.1317,
+        "careful_truster": 0.1484,
+        "status_seeker": 0.0704,
+        "easy_decider": 0.055
+      },
+      "best_archetype": "explorer",
+      "best_crossover": 0.156
+    },
+    "golfdigest.com": {
+      "domain": "golfdigest.com",
+      "category": "sports_entertainment",
+      "crawled": true,
+      "title": "Golf Digest: Golf Instruction, Equipment Reviews & Course Rankings | GolfDigest.comInstagram LogoX LogoYoutube IconFacebook LogoTikTok Logo",
+      "meta_description": "Golf Digest is the definitive source for how to play, what to play, and where to play golf.",
+      "headings_sample": [
+        "Legal Terms and Privacy",
+        "50 defining Masters moments, ranked",
+        "50 defining Masters moments, ranked",
+        "Follow Us",
+        "We're still missing the thing that makes Rory McIlroy great"
+      ],
+      "text_length": 5000,
+      "affect_valence": 0.4,
+      "goal_scores": {
+        "social_alignment": 0.07,
+        "novelty_exploration": 0.14,
+        "competence_verification": 0.35,
+        "planning_completion": 0.2,
+        "indulgence_permission": 0.14,
+        "status_signaling": 0.105
+      },
+      "dominant_goal": "competence_verification",
+      "dominant_goal_strength": 0.35,
+      "goal_shielded": [
+        "indulgence_permission",
+        "novelty_exploration"
+      ],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.0195,
+        "dependable_loyalist": 0.019,
+        "consensus_seeker": 0.0155,
+        "explorer": 0.0122,
+        "prevention_planner": 0.0421,
+        "reliable_cooperator": 0.0118,
+        "careful_truster": 0.0155,
+        "status_seeker": 0.0511,
+        "easy_decider": 0.0752
+      },
+      "best_archetype": "easy_decider",
+      "best_crossover": 0.0752
+    },
+    "tennis.com": {
+      "domain": "tennis.com",
+      "category": "sports_entertainment",
+      "crawled": true,
+      "title": "Tennis Live Scores News Videos Player Rankings | Tennis.com",
+      "meta_description": "Tennis Live Scores News Videos Player Rankings",
+      "headings_sample": [
+        "Live Scores",
+        "Advertising",
+        "Live Scores",
+        "Carlos crosses Murray\u2019s money mark \ud83e\udd11",
+        "Sinner sails to No. 1 with Monte Carlo \ud83c\udfc6"
+      ],
+      "text_length": 5000,
+      "affect_valence": 0.0,
+      "goal_scores": {
+        "novelty_exploration": 0.05,
+        "competence_verification": 0.1,
+        "planning_completion": 0.3
+      },
+      "dominant_goal": "planning_completion",
+      "dominant_goal_strength": 0.3,
+      "goal_shielded": [],
+      "archetype_crossover_scores": {
+        "trusting_loyalist": 0.0143,
+        "dependable_loyalist": 0.0144,
+        "consensus_seeker": 0.0079,
+        "explorer": 0.0,
+        "prevention_planner": 0.023,
+        "reliable_cooperator": 0.0083,
+        "careful_truster": 0.0084,
+        "status_seeker": 0.0109,
+        "easy_decider": 0.075
+      },
+      "best_archetype": "easy_decider",
+      "best_crossover": 0.075
+    },
+    "skimagazine.com": {
+      "domain": "skimagazine.com",
+      "category": "sports_entertainment",
+      "crawled": false,
+      "error": "<urlopen error [Errno 8] nodename nor servname provided, or not known>"
+    }
+  }
+}

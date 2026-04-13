@@ -82,7 +82,7 @@ GOAL_TAXONOMY: Dict[str, NonconsciousGoal] = {
             "illusory_truth",       # repeated = true → trust through consistency
             "in_group_favoritism",  # "people like me trust this" → belonging safety
         ],
-        fulfills_archetypes=["trusting_loyalist", "dependable_loyalist", "careful_truster"],
+        fulfills_archetypes=["consensus_seeker", "explorer", "reliable_cooperator", "prevention_planner", "dependable_loyalist", "careful_truster"],
         requires_positive_affect=True,
         persistence_minutes=15.0,
         shields_against=["novelty_exploration", "status_competition"],
@@ -104,7 +104,7 @@ GOAL_TAXONOMY: Dict[str, NonconsciousGoal] = {
             "in_group_favoritism",     # "our kind does this" → group membership
             "identifiable_victim",     # personal stories → empathic contagion
         ],
-        fulfills_archetypes=["consensus_seeker", "trusting_loyalist"],
+        fulfills_archetypes=["consensus_seeker", "prevention_planner", "social_alignment"],
         requires_positive_affect=True,
         persistence_minutes=10.0,
         shields_against=["autonomy_assertion", "novelty_exploration"],
@@ -129,7 +129,7 @@ GOAL_TAXONOMY: Dict[str, NonconsciousGoal] = {
             "risk_compensation",   # safety cues → license to act on protected threat
             "ostrich_effect",      # avoiding threat info → when forced to see it, goal activates
         ],
-        fulfills_archetypes=["prevention_planner", "careful_truster"],
+        fulfills_archetypes=["explorer", "reliable_cooperator", "consensus_seeker", "prevention_planner", "dependable_loyalist", "careful_truster"],
         requires_positive_affect=False,  # Threat goals activate even without positive affect
         persistence_minutes=20.0,  # Threat goals are highly persistent
         shields_against=["novelty_exploration", "indulgence_permission"],
@@ -152,7 +152,7 @@ GOAL_TAXONOMY: Dict[str, NonconsciousGoal] = {
             "optimism_bias",       # believe good things will happen → approach the new
             "attentional_bias",    # attention captured by novel stimuli
         ],
-        fulfills_archetypes=["explorer"],
+        fulfills_archetypes=["prevention_planner", "dependable_loyalist", "trusting_loyalist", "reliable_cooperator", "consensus_seeker", "explorer"],
         requires_positive_affect=True,
         persistence_minutes=10.0,
         shields_against=["threat_reduction", "affiliation_safety"],
@@ -175,7 +175,7 @@ GOAL_TAXONOMY: Dict[str, NonconsciousGoal] = {
             "confirmation_bias",       # seeking confirming evidence → want to confirm quality
             "peak_end_rule",           # judging by highlights → seek quality highlights
         ],
-        fulfills_archetypes=["dependable_loyalist", "reliable_cooperator"],
+        fulfills_archetypes=["prevention_planner", "dependable_loyalist"],
         requires_positive_affect=False,
         persistence_minutes=12.0,
         shields_against=["indulgence_permission", "novelty_exploration"],
@@ -224,7 +224,7 @@ GOAL_TAXONOMY: Dict[str, NonconsciousGoal] = {
             "effort_justification",    # worked hard → deserve reward
             "positivity_effect",       # focus on positive → approach reward
         ],
-        fulfills_archetypes=["easy_decider", "status_seeker", "explorer"],
+        fulfills_archetypes=["consensus_seeker", "reliable_cooperator", "dependable_loyalist", "trusting_loyalist", "prevention_planner", "careful_truster", "easy_decider"],
         requires_positive_affect=True,
         persistence_minutes=8.0,  # Reward goals have shorter persistence
         shields_against=["threat_reduction", "competence_verification"],
@@ -442,50 +442,94 @@ GOAL_ACTIVATION_MARKERS: Dict[str, Dict] = {
 # and with what strength? The strength reflects how directly the
 # ad creative addresses the activated goal.
 
+# =============================================================================
+# DATA-DERIVED FULFILLMENT STRENGTHS
+# =============================================================================
+# Source: moderate segment premium airline travelers (N=5,024, base rate 7.6%)
+# Method: dimension gap analysis between converters and non-converters within
+# each archetype subgroup, mapped to goals via DIM_TO_GOALS mapping.
+#
+# These replace the hardcoded values that were based on intuition.
+# Key finding: affiliation_safety and threat_reduction are universal gates
+# (needed by ALL archetypes). The differentiating goals (novelty, indulgence,
+# social) are what TIP the decision for each archetype.
+#
+# Updated: 2026-04-13 from data/derived_fulfillment_strengths.json
+
 ARCHETYPE_GOAL_FULFILLMENT: Dict[str, Dict[str, float]] = {
     "trusting_loyalist": {
-        "affiliation_safety": 0.95,    # Direct fulfillment — "trusted by 50K+"
-        "social_alignment": 0.70,      # "peers choose LUXY"
-        "competence_verification": 0.40,
+        # Data surprise: indulgence_permission is #1, not affiliation_safety
+        # Trust is the GATE (they need it to click) but the converting GOAL
+        # is permission to indulge and novelty — trust is assumed, reward drives action
+        "indulgence_permission": 0.74,
+        "novelty_exploration": 0.69,
+        "threat_reduction": 0.68,
+        "affiliation_safety": 0.20,
+        "social_alignment": 0.10,
     },
     "dependable_loyalist": {
-        "competence_verification": 0.90,  # Direct — credentials, metrics
-        "affiliation_safety": 0.75,       # Reliability = trust
-        "planning_completion": 0.50,
+        "threat_reduction": 0.86,
+        "novelty_exploration": 0.85,
+        "indulgence_permission": 0.76,
+        "affiliation_safety": 0.33,
+        "social_alignment": 0.16,
     },
     "consensus_seeker": {
-        "social_alignment": 0.95,        # Direct — "others like you chose"
-        "affiliation_safety": 0.60,
+        # Strongest fulfillment across the board — fence-sitters who convert
+        # when ALL major goals are addressed simultaneously
+        "affiliation_safety": 1.00,
+        "threat_reduction": 1.00,
+        "indulgence_permission": 1.00,
+        "novelty_exploration": 0.60,
+        "social_alignment": 0.20,
     },
     "explorer": {
-        "novelty_exploration": 0.95,     # Direct — "experience something new"
-        "indulgence_permission": 0.60,   # "you deserve this experience"
-        "status_signaling": 0.40,
+        # Data surprise: affiliation_safety and threat_reduction are top goals,
+        # not novelty_exploration. Explorers need trust/safety RESOLVED first,
+        # then novelty tips them over. Novelty is differentiating, not primary.
+        "affiliation_safety": 1.00,
+        "threat_reduction": 1.00,
+        "indulgence_permission": 0.52,
+        "social_alignment": 0.28,
     },
     "prevention_planner": {
-        "threat_reduction": 0.95,        # Direct — "eliminate pickup anxiety"
-        "competence_verification": 0.70, # Safety metrics, DOT ratings
-        "planning_completion": 0.50,
+        # Hardest to convert (3.0% in moderate). Need everything.
+        "affiliation_safety": 1.00,
+        "threat_reduction": 1.00,
+        "novelty_exploration": 1.00,
+        "indulgence_permission": 0.95,
+        "social_alignment": 0.49,
+        "status_signaling": 0.20,
+        "competence_verification": 0.20,
+        "planning_completion": 0.15,
     },
     "reliable_cooperator": {
-        "planning_completion": 0.95,     # Direct — "book your Tuesday pickup"
-        "competence_verification": 0.65,
-        "affiliation_safety": 0.45,
+        "affiliation_safety": 1.00,
+        "threat_reduction": 1.00,
+        "indulgence_permission": 0.88,
+        "novelty_exploration": 0.57,
     },
     "careful_truster": {
-        "affiliation_safety": 0.85,
-        "threat_reduction": 0.75,
-        "competence_verification": 0.80,
+        "threat_reduction": 0.97,
+        "indulgence_permission": 0.57,
+        "novelty_exploration": 0.42,
+        "affiliation_safety": 0.39,
+        "social_alignment": 0.16,
     },
+    # Status Seeker and Easy Decider: insufficient moderate-segment data
+    # for derivation. These use theory-informed priors (to be updated
+    # from pilot conversion data once available).
     "status_seeker": {
-        "status_signaling": 0.95,        # Direct — "join the elite"
-        "indulgence_permission": 0.80,   # "you've earned this"
-        "novelty_exploration": 0.40,
+        "status_signaling": 0.80,
+        "indulgence_permission": 0.70,
+        "novelty_exploration": 0.50,
+        "affiliation_safety": 0.30,
     },
     "easy_decider": {
-        "indulgence_permission": 0.90,   # Direct — "just do it, you deserve it"
-        "planning_completion": 0.60,     # "one tap booking"
-        "social_alignment": 0.50,
+        "indulgence_permission": 0.80,
+        "planning_completion": 0.50,
+        "social_alignment": 0.40,
+        "affiliation_safety": 0.30,
     },
 }
 

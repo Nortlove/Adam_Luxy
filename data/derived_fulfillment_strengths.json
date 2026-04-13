@@ -1,0 +1,56 @@
+{
+  "source": "moderate_segment_premium_airline_N=3586",
+  "method": "dimension_gap_analysis_and_deviation_from_base",
+  "archetypes": {
+    "trusting_loyalist": {
+      "novelty_exploration": 0.69,
+      "social_alignment": 0.102,
+      "affiliation_safety": 0.204,
+      "threat_reduction": 0.675,
+      "indulgence_permission": 0.739
+    },
+    "dependable_loyalist": {
+      "novelty_exploration": 0.851,
+      "social_alignment": 0.162,
+      "affiliation_safety": 0.328,
+      "threat_reduction": 0.862,
+      "indulgence_permission": 0.764
+    },
+    "consensus_seeker": {
+      "novelty_exploration": 0.601,
+      "social_alignment": 0.201,
+      "affiliation_safety": 1.0,
+      "threat_reduction": 1.0,
+      "indulgence_permission": 1.0
+    },
+    "explorer": {
+      "social_alignment": 0.284,
+      "affiliation_safety": 1.0,
+      "threat_reduction": 1.0,
+      "indulgence_permission": 0.521
+    },
+    "prevention_planner": {
+      "novelty_exploration": 0.996,
+      "competence_verification": 0.197,
+      "planning_completion": 0.154,
+      "social_alignment": 0.49,
+      "affiliation_safety": 1.0,
+      "threat_reduction": 1.0,
+      "indulgence_permission": 0.951,
+      "status_signaling": 0.202
+    },
+    "reliable_cooperator": {
+      "novelty_exploration": 0.569,
+      "affiliation_safety": 1.0,
+      "threat_reduction": 1.0,
+      "indulgence_permission": 0.883
+    },
+    "careful_truster": {
+      "novelty_exploration": 0.423,
+      "social_alignment": 0.162,
+      "affiliation_safety": 0.388,
+      "threat_reduction": 0.97,
+      "indulgence_permission": 0.57
+    }
+  }
+}
