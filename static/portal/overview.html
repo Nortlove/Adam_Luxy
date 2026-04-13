@@ -4349,9 +4349,19 @@ function NavigationIndex() {
       style: {
         background: COLORS.bgCard + "ee", backdropFilter: "blur(12px)",
         border: "1px solid " + COLORS.border, borderRadius: 12,
-        padding: "12px 8px", minWidth: 180,
+        padding: "12px 8px", minWidth: 180, maxHeight: "80vh", overflowY: "auto",
       }
     },
+      React.createElement("a", {
+        href: "index.html",
+        style: {
+          display: "flex", alignItems: "center", gap: 6,
+          padding: "8px 12px", marginBottom: 6, borderRadius: 6,
+          fontSize: 12, fontWeight: 600, color: COLORS.accent,
+          textDecoration: "none", background: COLORS.accent + "10",
+          transition: "background 0.2s",
+        }
+      }, "\u2190 Portal Home"),
       React.createElement("div", {
         style: {
           fontFamily: "'DM Mono', monospace", fontSize: 9,
@@ -4874,6 +4884,22 @@ function ArchetypeSection({ sectionStyle, labelStyle, h2Style, bodyStyle, cardSt
     setTimeout(fixLightSections, 500);
     // Also observe for dynamic changes
     new MutationObserver(fixLightSections).observe(document.getElementById('root'), {childList: true, subtree: true});
+
+    // Scroll to hash anchor after React has rendered
+    function scrollToHash() {
+      if (window.location.hash) {
+        var el = document.getElementById(window.location.hash.substring(1));
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          return true;
+        }
+      }
+      return false;
+    }
+    // Try multiple times as React renders progressively
+    setTimeout(scrollToHash, 300);
+    setTimeout(scrollToHash, 800);
+    setTimeout(scrollToHash, 1500);
   </script>
 </body>
 </html>
