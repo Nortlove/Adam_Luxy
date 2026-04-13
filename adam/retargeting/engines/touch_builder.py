@@ -169,6 +169,44 @@ class TouchBuilder:
             # Add to creative strategy so downstream systems know the page target
             creative_strategy["target_page_cluster"] = target_page_cluster
 
+        # ── Goal Activation Context Prescription ──
+        # Uses the GoalActivationLearner's hunt recommendations to prescribe
+        # which page categories (and thus which nonconscious goals) the next
+        # touch should target. This is the active hunt: the system decides
+        # WHERE to serve the next ad based on what goal needs to be activated.
+        goal_context_prescription = {}
+        try:
+            from adam.intelligence.goal_activation import get_goal_learner, GOAL_TAXONOMY
+            learner = get_goal_learner()
+            archetype_id = diagnosis.archetype_id if diagnosis else ""
+            if archetype_id:
+                # Get hunt recommendations
+                available_categories = [
+                    "business_news", "travel_lifestyle", "luxury_lifestyle",
+                    "news", "safety_reviews", "tech_innovation", "professional",
+                    "social", "general",
+                ]
+                recs = learner.get_hunt_recommendations(
+                    available_categories, archetype_id, top_k=3,
+                )
+                if recs:
+                    goal_context_prescription = {
+                        "recommended_page_categories": [
+                            {"category": r[0], "combined_score": round(r[1], 3),
+                             "expected_crossover": round(r[2], 3),
+                             "epistemic_value": round(r[3], 3)}
+                            for r in recs
+                        ],
+                        "archetype": archetype_id,
+                        "hunt_rationale": (
+                            f"Top category: {recs[0][0]} "
+                            f"(exploit={recs[0][2]:.3f}, explore={recs[0][3]:.3f})"
+                        ),
+                    }
+                    creative_strategy["goal_context_prescription"] = goal_context_prescription
+        except Exception:
+            pass
+
         return TherapeuticTouch(
             sequence_id=sequence_id,
             position_in_sequence=position,

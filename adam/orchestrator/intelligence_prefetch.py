@@ -243,6 +243,23 @@ class IntelligencePrefetchService:
         except Exception as e:
             logger.debug("Failed to create mechanism registry: %s", e)
 
+        # ── Goal Activation Context ──
+        # Provides page/domain goal activation data to atoms so they can
+        # reason about the nonconscious goal state the page has primed.
+        # This enables atoms to adjust their reasoning based on what goals
+        # are already active in the reader's mind.
+        if buyer_uncertainty and isinstance(buyer_uncertainty, dict):
+            # Buyer uncertainty may carry context from the cascade
+            goal_data = buyer_uncertainty.get("goal_activation")
+            if goal_data:
+                ad_context["goal_activation_context"] = goal_data
+                sources_populated.append("goal_activation_context")
+        # Also inject cumulative goal priming from user profile if available
+        if user_profile and user_profile.get("cumulative_goal_priming"):
+            ad_context["cumulative_goal_priming"] = user_profile["cumulative_goal_priming"]
+            ad_context["impression_domains"] = user_profile.get("impression_domains", [])
+            sources_populated.append("cumulative_goal_priming")
+
         # Metadata for observability
         elapsed_ms = (time.monotonic() - start) * 1000
         ad_context["_prefetch_meta"] = {

@@ -1077,6 +1077,8 @@ def apply_context_modulation(
     referrer: str = "",
     keywords: Optional[List[str]] = None,
     iab_categories: Optional[List[str]] = None,
+    # Segment ID for goal activation crossover scoring
+    segment_id: str = "",
 ) -> CreativeIntelligence:
     """Apply contextual adjustments to the cascade result.
 
@@ -1495,6 +1497,145 @@ def apply_context_modulation(
                     f"conf={reader_position.confidence:.2f}"
                 )
 
+    # ── GOAL ACTIVATION: Nonconscious Goal Priming Layer ──
+    # This is the crossover page intelligence layer. Grounded in Bargh's
+    # auto-motive model: page content activates nonconscious goals, and
+    # the ad serves as goal fulfillment. Goal-relevant ads are noticed
+    # automatically through goal-directed selective attention.
+    #
+    # Unlike concept priming (which decays in seconds), goal priming
+    # PERSISTS and INTENSIFIES when unfulfilled (Forster et al., 2007).
+    # A mismatched ad faces ACTIVE SUPPRESSION from goal shielding (Shah, 2003).
+    #
+    # This layer:
+    # 1. Scores the page for nonconscious goal activation
+    # 2. Computes crossover score (goal activation × archetype fulfillment)
+    # 3. Modulates mechanism scores based on goal alignment
+    # 4. Stores goal activation data for downstream learning
+    try:
+        from adam.intelligence.goal_activation import (
+            score_page_goal_activation,
+            compute_crossover_score_learned,
+            get_goal_learner,
+            GOAL_TAXONOMY,
+            ARCHETYPE_GOAL_FULFILLMENT,
+        )
+
+        # Build page text from available signals
+        page_text_parts = []
+        if page_title:
+            page_text_parts.append(page_title)
+        if keywords:
+            page_text_parts.append(" ".join(keywords))
+        if iab_categories:
+            page_text_parts.append(" ".join(iab_categories))
+        # Use domain name itself as weak signal
+        if domain:
+            page_text_parts.append(domain.replace(".", " ").replace("-", " "))
+
+        # Estimate affect valence from existing context intelligence
+        affect_valence = 0.5  # neutral default
+        if result.context_intelligence:
+            ev = result.context_intelligence.get("emotional_valence", 0.5)
+            if isinstance(ev, (int, float)):
+                affect_valence = ev
+
+        page_text = " ".join(page_text_parts)
+        if page_text.strip():
+            # Parse archetype from segment_id for crossover computation
+            archetype_for_crossover = ""
+            if segment_id:
+                archetype_for_crossover, _, _ = _parse_segment_id(segment_id)
+
+            goal_result = score_page_goal_activation(page_text, affect_valence)
+
+            if goal_result.dominant_strength > 0.1:
+                # Apply goal-based mechanism modulation
+                # If the dominant goal aligns with specific mechanisms,
+                # boost those mechanisms and dampen misaligned ones
+                _GOAL_MECHANISM_ALIGNMENT = {
+                    "affiliation_safety": {"social_proof": 1.25, "authority": 1.15, "scarcity": 0.80},
+                    "social_alignment": {"social_proof": 1.30, "unity": 1.20, "scarcity": 0.75},
+                    "threat_reduction": {"loss_aversion": 1.25, "authority": 1.20, "commitment": 1.10, "curiosity": 0.75},
+                    "novelty_exploration": {"curiosity": 1.30, "liking": 1.15, "scarcity": 1.10, "authority": 0.80},
+                    "competence_verification": {"authority": 1.25, "cognitive_ease": 1.15, "scarcity": 0.85},
+                    "planning_completion": {"commitment": 1.25, "cognitive_ease": 1.20, "loss_aversion": 1.10},
+                    "indulgence_permission": {"liking": 1.25, "social_proof": 1.15, "scarcity": 1.10, "authority": 0.85},
+                    "status_signaling": {"scarcity": 1.25, "authority": 1.20, "social_proof": 1.10, "reciprocity": 0.80},
+                }
+
+                dominant = goal_result.dominant_goal
+                if dominant in _GOAL_MECHANISM_ALIGNMENT and result.mechanism_scores:
+                    adjustments = _GOAL_MECHANISM_ALIGNMENT[dominant]
+                    strength = goal_result.dominant_strength
+
+                    for mech, multiplier in adjustments.items():
+                        if mech in result.mechanism_scores:
+                            # Scale adjustment by goal strength
+                            scaled = 1.0 + (multiplier - 1.0) * strength
+                            result.mechanism_scores[mech] *= scaled
+
+                    # Goal shielding: dampen mechanisms aligned with SUPPRESSED goals
+                    for shielded_goal in goal_result.goal_shielded:
+                        if shielded_goal in _GOAL_MECHANISM_ALIGNMENT:
+                            for mech, mult in _GOAL_MECHANISM_ALIGNMENT[shielded_goal].items():
+                                if mult > 1.0 and mech in result.mechanism_scores:
+                                    # This mechanism serves a suppressed goal — dampen
+                                    result.mechanism_scores[mech] *= 0.85
+
+                    # Re-rank after goal modulation
+                    ranked = sorted(result.mechanism_scores.items(), key=lambda x: x[1], reverse=True)
+                    if len(ranked) >= 1:
+                        result.primary_mechanism = ranked[0][0]
+                    if len(ranked) >= 2:
+                        result.secondary_mechanism = ranked[1][0]
+
+                # Compute crossover score if archetype known
+                crossover_score = 0.0
+                if archetype_for_crossover:
+                    crossover_score = compute_crossover_score_learned(
+                        goal_result, resolve_archetype(archetype_for_crossover)
+                    )
+
+                # Compute epistemic value for the hunt
+                learner = get_goal_learner()
+                page_category = ""
+                if domain:
+                    from adam.retargeting.engines.signal_collector import NonconsciousSignalCollector
+                    page_category = NonconsciousSignalCollector._classify_domain_category(domain)
+
+                epistemic = learner.compute_epistemic_value(
+                    page_category or "general",
+                    resolve_archetype(archetype_for_crossover) if archetype_for_crossover else "",
+                    goal_result,
+                ) if archetype_for_crossover else 0.0
+
+                # Store goal activation in context_intelligence for:
+                # 1. Response enrichment (API consumer sees goal data)
+                # 2. Outcome handler learning (record_observation)
+                # 3. Retargeting sequence (cumulative priming)
+                if result.context_intelligence is None:
+                    result.context_intelligence = {}
+                result.context_intelligence["goal_activation"] = {
+                    "goal_scores": goal_result.goal_scores,
+                    "dominant_goal": goal_result.dominant_goal,
+                    "dominant_strength": goal_result.dominant_strength,
+                    "affect_valence": goal_result.affect_valence,
+                    "goal_shielded": goal_result.goal_shielded,
+                    "evidence": {g: markers[:3] for g, markers in goal_result.evidence.items() if markers},
+                    "crossover_score": crossover_score,
+                    "epistemic_value": epistemic,
+                    "page_category": page_category,
+                }
+
+                result.reasoning.append(
+                    f"GoalActivation: dominant={dominant} ({goal_result.dominant_strength:.2f}), "
+                    f"crossover={crossover_score:.3f}, epistemic={epistemic:.3f}, "
+                    f"shielded={goal_result.goal_shielded}"
+                )
+    except Exception as e:
+        logger.debug("Goal activation layer skipped: %s", e)
+
     return result
 
 
@@ -1714,11 +1855,12 @@ def run_bilateral_cascade(
             result.primary_mechanism = mechanism_hint
             result.reasoning.append(f"Segment hint: mechanism={mechanism_hint} applied (cascade ≤ L2)")
 
-    # Context modulation (device, temporal, AND page context intelligence)
+    # Context modulation (device, temporal, page context, AND goal activation)
     result = apply_context_modulation(
         result, device_type, time_of_day, iab_category, page_url,
         page_title=page_title, referrer=referrer,
         keywords=keywords, iab_categories=iab_categories,
+        segment_id=segment_id,
     )
 
     # Synergy check

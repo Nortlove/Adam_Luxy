@@ -310,6 +310,59 @@ class OutcomeHandler:
                 logger.debug("Page gradient accumulation skipped: %s", e)
 
         # =====================================================================
+        # 10c. GOAL ACTIVATION LEARNING (Crossover Page Intelligence)
+        #
+        # Records (page_context, goal_activation, archetype, mechanism, outcome)
+        # into the GoalActivationLearner. Updates three posterior levels:
+        #   - Goal-Page: does this page category actually activate this goal?
+        #   - Fulfillment: does this goal actually drive conversion for this archetype?
+        #   - Marker weights: which linguistic features predict goal activation?
+        #
+        # This is the active learning loop that makes the crossover page
+        # system increasingly intelligent over time. (Bargh auto-motive model)
+        # =====================================================================
+        context_domain = metadata.get("context_domain", "")
+        goal_activation_data = metadata.get("goal_activation", {})
+        archetype = metadata.get("archetype", metadata.get("attributed_archetype", ""))
+        if context_domain and archetype and goal_activation_data:
+            try:
+                from adam.intelligence.goal_activation import (
+                    get_goal_learner,
+                    GoalActivationResult,
+                )
+                learner = get_goal_learner()
+                # Reconstruct GoalActivationResult from metadata
+                goal_result = GoalActivationResult(
+                    goal_scores=goal_activation_data.get("goal_scores", {}),
+                    dominant_goal=goal_activation_data.get("dominant_goal", ""),
+                    dominant_strength=goal_activation_data.get("dominant_strength", 0.0),
+                    affect_valence=goal_activation_data.get("affect_valence", 0.5),
+                    goal_shielded=goal_activation_data.get("goal_shielded", []),
+                    evidence=goal_activation_data.get("evidence", {}),
+                )
+                # Determine page category from domain
+                from adam.retargeting.engines.signal_collector import NonconsciousSignalCollector
+                page_category = NonconsciousSignalCollector._classify_domain_category(context_domain)
+                crossover_predicted = goal_activation_data.get("crossover_score", 0.0)
+
+                learner.record_observation(
+                    page_category=page_category,
+                    goal_activation=goal_result,
+                    archetype=archetype,
+                    mechanism=mechanism_sent,
+                    outcome_value=outcome_value,
+                    crossover_predicted=crossover_predicted,
+                )
+                results["updates"]["goal_activation_learning"] = {
+                    "page_category": page_category,
+                    "dominant_goal": goal_result.dominant_goal,
+                    "archetype": archetype,
+                    "outcome": outcome_value,
+                }
+            except Exception as e:
+                logger.debug("Goal activation learning skipped: %s", e)
+
+        # =====================================================================
         # 11. MECHANISM INTERACTION LEARNING (Portfolio Optimization)
         #
         # Records which mechanisms were co-activated and what the outcome

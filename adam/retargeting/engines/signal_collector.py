@@ -88,6 +88,7 @@ class NonconsciousSignalCollector:
         self._accumulate_engagement_hour(profile, payload)
         self._accumulate_campaign_attribution(profile, payload)
         self._accumulate_touch_outcome(profile, payload)
+        self._accumulate_page_context(profile, payload)
         self._compute_device_mismatch(profile, payload)
         await self._store_sapid_mapping(profile, payload)
 
@@ -337,6 +338,92 @@ class NonconsciousSignalCollector:
         if payload.is_ad_attributed:
             # Ad click = engaged with this touch
             profile.touch_outcomes.append(True)
+
+    def _accumulate_page_context(
+        self, profile: StoredSignalProfile, payload: TelemetrySessionPayload
+    ) -> None:
+        """Accumulate page context for Goal Activation Model.
+
+        Records the publisher domain and scores goal activation if domain
+        is available. Maintains cumulative goal priming across touches —
+        goals persist and intensify when unfulfilled (Bargh, 2001;
+        Forster et al., 2007).
+        """
+        if not payload.is_ad_attributed:
+            return  # Only track context for ad-attributed impressions
+
+        domain = payload.domain or ""
+        if domain:
+            profile.impression_domains.append(domain)
+
+            # Classify domain into category (lightweight — uses heuristics)
+            category = self._classify_domain_category(domain)
+            profile.impression_domain_categories.append(category)
+
+            # Score goal activation from domain category
+            # (Full page-text scoring happens at bid time via the cascade;
+            # here we use the domain-level proxy for profile accumulation)
+            try:
+                from adam.intelligence.goal_activation import (
+                    GOAL_TAXONOMY,
+                    get_goal_learner,
+                )
+                learner = get_goal_learner()
+                goal_scores = {}
+                for goal_id in GOAL_TAXONOMY:
+                    eff = learner.get_goal_page_effectiveness(goal_id, category)
+                    if eff > 0.1:
+                        goal_scores[goal_id] = round(eff, 3)
+                profile.impression_goal_activations.append(goal_scores)
+
+                # Update cumulative goal priming — goals persist and intensify
+                for goal_id, score in goal_scores.items():
+                    current = profile.cumulative_goal_priming.get(goal_id, 0.0)
+                    # Goal persistence: unfulfilled goals GROW (not decay)
+                    # Fulfilled goals (user converted) would reset, but
+                    # that's handled at conversion time
+                    persistence = GOAL_TAXONOMY[goal_id].persistence_minutes
+                    # Simple accumulation with diminishing returns
+                    new_val = current + score * (1.0 - current * 0.3)
+                    profile.cumulative_goal_priming[goal_id] = round(
+                        min(1.0, new_val), 3
+                    )
+            except Exception:
+                profile.impression_goal_activations.append({})
+
+        # Cap lists to prevent unbounded growth
+        max_history = 50
+        if len(profile.impression_domains) > max_history:
+            profile.impression_domains = profile.impression_domains[-max_history:]
+            profile.impression_domain_categories = profile.impression_domain_categories[-max_history:]
+            profile.impression_goal_activations = profile.impression_goal_activations[-max_history:]
+
+    @staticmethod
+    def _classify_domain_category(domain: str) -> str:
+        """Lightweight domain → category classification.
+
+        Uses heuristic patterns. The full context_intelligence module
+        (693K domains) handles the authoritative mapping; this is for
+        fast accumulation in the signal collector hot path.
+        """
+        d = domain.lower()
+        if any(k in d for k in ("forbes", "wsj", "bloomberg", "ft.com", "economist")):
+            return "business_news"
+        if any(k in d for k in ("traveler", "travel", "skift", "atlas", "lonely")):
+            return "travel_lifestyle"
+        if any(k in d for k in ("nyt", "cnn", "bbc", "reuters", "apnews")):
+            return "news"
+        if any(k in d for k in ("robb", "luxury", "elite", "prestige", "haute")):
+            return "luxury_lifestyle"
+        if any(k in d for k in ("safety", "insurance", "security", "consumer")):
+            return "safety_reviews"
+        if any(k in d for k in ("tech", "wired", "verge", "ars", "engadget")):
+            return "tech_innovation"
+        if any(k in d for k in ("linkedin", "hbr", "inc.com", "entrepreneur")):
+            return "professional"
+        if any(k in d for k in ("reddit", "facebook", "twitter", "instagram")):
+            return "social"
+        return "general"
 
     def _compute_device_mismatch(
         self, profile: StoredSignalProfile, payload: TelemetrySessionPayload

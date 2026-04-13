@@ -1,12 +1,12 @@
 # INFORMATIV × LUXY Ride — Agency Campaign Brief
 ## For: [Agency Name]
-## Date: April 8, 2026
+## Date: April 12, 2026
 
 ---
 
 ## WHAT THIS IS
 
-INFORMATIV has developed a **psycholinguistic advertising intelligence system** that matches ad creative to audience psychology. We've analyzed luxury transportation consumers and identified three distinct psychological profiles. Each profile responds to different messaging strategies.
+INFORMATIV has developed a **psycholinguistic advertising intelligence system** that matches ad creative to audience psychology. We've analyzed **13,297 luxury service consumers** across two categories (luxury transportation + premium air travel) and identified seven distinct psychological profiles — five to target, two to suppress. Each profile responds to different messaging strategies.
 
 This brief provides everything you need to run a 30-day pilot campaign in your StackAdapt account for LUXY Ride, optimized by our intelligence system.
 
@@ -51,32 +51,88 @@ Weekly report to agency:
 
 ---
 
-## THE THREE AUDIENCE ARCHETYPES
+## THE TEN AUDIENCE ARCHETYPES
 
-Our analysis identified three psychological profiles among luxury transportation buyers. Each responds to different persuasion mechanisms:
+Our analysis identified ten psychological profiles among luxury service buyers — validated across **16,883 bilateral edges** (1,492 luxury transportation + 11,805 premium airline satisfied + 3,586 premium airline moderate). Each archetype is defined by an *interaction effect* between psychological dimensions, not a single trait.
 
-### 1. Careful Truster (26% of audience)
+The moderate segment (rating 4-6) is where the subtle archetypes matter most — these are people on the fence. Single dimensions don't predict them, but the right *combinations* unlock 6-9x lift.
+
+### Targeting Archetypes (7 — these convert)
+
+### 1. Trusting Loyalist (35% of audience) — **3.52x lift**
+- **Defining interaction**: agreeableness × brand_trust
+- **Psychology**: Gives benefit of the doubt, low skepticism, responds to warmth and social proof
+- **What works**: Social proof, welcoming tone, easy booking, minimal persuasion needed
+- **What fails**: Over-explaining, hard sell, aggressive urgency
+- **Peak hours**: 6-9 AM weekday, 5-10 PM (evening research)
+- **Budget allocation**: $78.75/day (35% of total)
+
+### 2. Reliable Cooperator (22% of audience) — **1.69x lift**
+- **Defining interaction**: conscientiousness × agreeableness
+- **Psychology**: Not impulsive — they PLAN. Values structure, scheduling, advance booking
+- **What works**: Implementation intentions, calendar sync, specific scheduling ("Book your Tuesday 6am pickup now")
+- **What fails**: Vague aspirational messaging, urgency pressure
+- **Peak hours**: 6-9 AM weekday (planning), 5-8 PM (evening scheduling)
+- **Budget allocation**: $49.50/day (22% of total)
+
+### 3. Careful Truster (18% of audience)
+- **Defining interaction**: brand_trust × prevention_focus
 - **Psychology**: High need for evidence, risk-averse, reads reviews extensively
 - **What works**: Social proof, data/statistics, safety credentials, testimonials from similar people
 - **What fails**: Urgency, scarcity, aggressive CTAs
 - **Peak hours**: 5-8 AM (pre-travel anxiety), 5-10 PM (evening research), 10 PM-5 AM (late night anxiety)
-- **Budget allocation**: $58.50/day (26% of total)
+- **Budget allocation**: $40.50/day (18% of total)
 
-### 2. Status Seeker (38% of audience)
-- **Psychology**: Status-conscious, luxury-oriented, responds to exclusivity and aspiration
-- **What works**: Narrative storytelling, aspirational imagery, social proof from high-status peers
-- **What fails**: Discount messaging, budget positioning, too much detail
-- **Peak hours**: 6-9 AM weekday (commute planning), 9 AM-5 PM (business hours)
-- **Budget allocation**: $84.83/day (38% of total)
+### 4. Explorer (12% of audience) — **1.91x lift**
+- **Defining interaction**: openness × promotion_focus
+- **Psychology**: Novelty-seeking, aspirational, curious about new experiences
+- **What works**: Narrative storytelling, aspirational imagery, new experience framing, curiosity hooks
+- **What fails**: Repetitive messaging, conservative framing, too much detail
+- **Peak hours**: 9 AM-5 PM (business hours), 7-10 PM (evening browsing)
+- **Budget allocation**: $27.00/day (12% of total)
 
-### 3. Easy Decider (36% of audience)
-- **Psychology**: Low deliberation, action-oriented, responds to convenience and friction removal
-- **What works**: Loss framing, implementation prompts, micro-commitments, one-click booking
-- **What fails**: Long-form content, comparison charts, too many options
-- **Peak hours**: Flat throughout day (they convert anytime), slight boost 5-10 PM
-- **Budget allocation**: $81.67/day (36% of total)
+### 5. Prevention Planner (8% of audience)
+- **Defining interaction**: conscientiousness × prevention_focus
+- **Psychology**: Safety-focused, detail-oriented, needs to prevent negative outcomes
+- **What works**: Authority/credentials, safety data, insurance/guarantee messaging, structured evidence
+- **What fails**: Aspirational/emotional messaging, social proof from dissimilar peers
+- **Peak hours**: 5-8 AM (pre-travel anxiety), 8-10 PM (evening planning)
+- **Budget allocation**: $18.00/day (8% of total)
 
-**Total daily budget: $225.00**
+### 6. Dependable Loyalist (7% of audience) — **6.6x lift in moderate segment**
+- **Defining interaction**: brand_trust × conscientiousness
+- **Psychology**: The "quiet converters" — not extreme on any single dimension, but the combination of trusting the brand AND being conscientious means they follow through. Discovered in the moderate segment where single traits don't predict conversion.
+- **What works**: Facts, credentials, straightforward booking process. No flash needed — reliability sells.
+- **What fails**: Over-the-top aspirational messaging, urgency pressure, discount positioning
+- **Peak hours**: 6-9 AM weekday (planning), 5-8 PM (evening)
+- **Budget allocation**: $15.75/day (7% of total)
+
+### 7. Consensus Seeker (5% of audience) — **3.3x lift in moderate segment**
+- **Defining interaction**: agreeableness × social_proof_reliance
+- **Psychology**: Converts specifically via social proof — they need to see that people like them chose this service. Not authority, not aspiration — peer endorsement.
+- **What works**: Testimonials from relatable people, "others like you chose...", peer reviews, numbers ("50,000 executives")
+- **What fails**: Aspirational/exclusive messaging (makes them feel it's not for them), authority claims
+- **Peak hours**: 5-10 PM (evening research when they check reviews)
+- **Budget allocation**: $11.25/day (5% of total)
+
+### Suppression Archetypes (3 — do NOT target)
+
+### 8. Defensive Skeptic (4% of audience) — **0.01x lift (HARDEST SUPPRESS)**
+- **Defining interaction**: neuroticism × reactance
+- **Psychology**: Anxious AND resistant — the worst combination. Every ad increases both anxiety and resistance simultaneously. Discovered in moderate segment: 0.1% conversion rate (N=955).
+- **Why suppress**: This is the single most wasteful segment to advertise to. Absolutely zero ROI.
+
+### 9. Anxious Economist (3% of audience) — **0.23x lift (SUPPRESS)**
+- **Defining interaction**: neuroticism × spending_pain
+- **Psychology**: High anxiety about spending, price-focused, any ad increases anxiety
+- **Why suppress**: 0% conversion in luxury car data, 0.23x in airline data. Every impression makes them LESS likely to convert.
+
+### 10. Vocal Resistor (2% of audience) — **0.36x lift (SUPPRESS)**
+- **Defining interaction**: emotional_expressiveness × reactance
+- **Psychology**: Actively resists persuasion, ads trigger reactance
+- **Why suppress**: 1% conversion. Ad spend on this segment is wasted — they push back harder with each touch.
+
+**Total daily budget: $240.75** (targeting archetypes only — $0 allocated to suppression archetypes)
 
 ---
 
@@ -84,14 +140,15 @@ Our analysis identified three psychological profiles among luxury transportation
 
 ### Overview
 ```
-3 Campaign Groups (one per archetype)
-  × 5 Campaigns each (sequential touches)
-  = 15 Campaigns total
-  = 15 Creatives (one per campaign — NO rotation)
+7 Campaign Groups (one per targeting archetype)
+  × 3-4 Campaigns each (sequential touches)
+  = 28 Campaigns total
+  = 28 Creatives (one per campaign — NO rotation)
+  + 3 Suppression audiences (Defensive Skeptic, Anxious Economist, Vocal Resistor)
 ```
 
 ### Why One Creative Per Campaign
-Each creative is specifically designed for its position in the retargeting sequence. Touch 1 introduces the story. Touch 2 provides evidence. Touch 3 deepens the argument. Touch 4 resolves objections. Touch 5 drives action. Rotating creatives breaks this sequence and defeats the purpose.
+Each creative is specifically designed for its position in the retargeting sequence. Touch 1 introduces the story. Touch 2 provides evidence. Touch 3 drives action. Rotating creatives breaks this sequence and defeats the purpose.
 
 ---
 
@@ -218,18 +275,22 @@ We provide two upload-ready CSV files (domain only, one per line):
 
 These domains are psychologically profiled — each is selected because the content creates a mental state that aligns with one of the three archetypes. Do not add random domains.
 
-### 5. Create 3 Campaign Groups
+### 5. Create 7 Campaign Groups
 
 | # | Name | Daily Budget |
 |---|------|-------------|
-| 1 | `LUXY — Careful Truster` | $58.50 |
-| 2 | `LUXY — Status Seeker` | $84.83 |
-| 3 | `LUXY — Easy Decider` | $81.67 |
+| 1 | `LUXY — Trusting Loyalist` | $78.75 |
+| 2 | `LUXY — Reliable Cooperator` | $49.50 |
+| 3 | `LUXY — Careful Truster` | $40.50 |
+| 4 | `LUXY — Explorer` | $27.00 |
+| 5 | `LUXY — Prevention Planner` | $18.00 |
+| 6 | `LUXY — Dependable Loyalist` | $15.75 |
+| 7 | `LUXY — Consensus Seeker` | $11.25 |
 
 - **Optimization Goal**: Conversions (luxy_booking_complete)
 - **Flight dates**: 30-day pilot window
 
-### 6. Create 15 Campaigns + Upload 15 Creatives
+### 6. Create 28 Campaigns + Upload 28 Creatives
 
 **Click URL for ALL campaigns** (critical — this feeds our intelligence):
 ```
@@ -239,48 +300,101 @@ The `{...}` values are StackAdapt macros — do NOT replace them manually.
 
 ---
 
-### Careful Truster Campaigns (5)
+### Trusting Loyalist Campaigns (5) — 3.52x lift
 
 | Campaign | Creative Copy | Audience | Daily $ | Opt. Goal |
 |----------|------|----------|---------|-----------|
-| `CT-T1` | **Headline**: "I swore I'd never use a car service again" **Body**: "Sarah, a Fortune 500 exec, faced the same dilemma after multiple disappointing rides. The fear of unprofessionalism." **CTA**: "Her story" | luxy_all_visitors | $17.52 | Clicks |
-| `CT-T2` | **Headline**: "We've All Heard The Horror Stories" **Body**: "Late pickups. Rude drivers. Hidden fees. 847 Fortune 500 CEOs still choose us daily. Here's the data they see." **CTA**: "See proof" | luxy_all_visitors | $14.04 | Clicks |
-| `CT-T3` | **Headline**: "47,000 executives trust LUXY with their reputation" **Body**: "Independent audit: 99.7% on-time arrival rate. DOT safety rating: Superior. Average driver tenure: 8.2 years." **CTA**: "See proof" | luxy_booking_visitors | $11.70 | Conversions |
-| `CT-T4` | **Headline**: "I Was Wrong About Premium Car Services" **Body**: "CFO Sarah Mitchell: 'Thought they were all unreliable until LUXY's driver waited 2 hours for my delayed flight.'" **CTA**: "See proof" | luxy_booking_abandoned | $9.36 | Conversions |
-| `CT-T5` | **Headline**: "847,000+ rides completed. Zero security incidents." **Body**: "We know you've heard stories. Here's ours: background-checked drivers, live GPS tracking, 24/7 support team." **CTA**: "Book now" | luxy_high_intent | $5.88 | Conversions |
+| `TL-T1` | **Headline**: "Your kind of service. Your kind of people." **Body**: "Thousands of travelers like you chose LUXY this week. See what they're saying." **CTA**: "See reviews" | luxy_all_visitors | $23.63 | Clicks |
+| `TL-T2` | **Headline**: "847 Fortune 500 execs ride with us daily" **Body**: "Trusted by professionals who value consistency. 99.7% on-time. No surprises." **CTA**: "Learn more" | luxy_all_visitors | $19.69 | Clicks |
+| `TL-T3` | **Headline**: "Welcome back. Your driver remembers your preferences." **Body**: "Temperature, music, route — saved from your last ride. That's what 'premium' actually means." **CTA**: "Book now" | luxy_booking_visitors | $15.75 | Conversions |
+| `TL-T4` | **Headline**: "Your colleagues trust us. Now it's your turn." **Body**: "Join 50,000+ executives who switched from rideshare chaos. One tap booking, familiar faces, zero friction." **CTA**: "Book now" | luxy_booking_abandoned | $11.81 | Conversions |
+| `TL-T5` | **Headline**: "Ready when you are" **Body**: "Tap. Book. Relax. Your usual driver. Your usual route. Your usual comfort." **CTA**: "Book now" | luxy_high_intent | $7.87 | Conversions |
+
+**Frequency**: Max 2/day, 8/week
+**Dayparting**: +20% bid 6-9 AM weekday, +15% bid 5-10 PM, flat weekend
+
+---
+
+### Reliable Cooperator Campaigns (5) — 1.69x lift
+
+| Campaign | Creative Copy | Audience | Daily $ | Opt. Goal |
+|----------|------|----------|---------|-----------|
+| `RC-T1` | **Headline**: "Plan your week. Including the ride." **Body**: "Professionals who plan ahead choose LUXY. Schedule your week's rides in 2 minutes on Sunday night." **CTA**: "See how" | luxy_all_visitors | $14.85 | Clicks |
+| `RC-T2` | **Headline**: "Tuesday 6am flight? Book your 4:15am pickup now." **Body**: "Your driver confirmed. Route optimized. ETA locked in. One less thing to coordinate." **CTA**: "Schedule ride" | luxy_all_visitors | $12.38 | Clicks |
+| `RC-T3` | **Headline**: "Your calendar. Your rides. Synced." **Body**: "Connect your calendar — LUXY auto-suggests rides for your travel days. Confirm with one tap." **CTA**: "Connect calendar" | luxy_booking_visitors | $9.90 | Conversions |
+| `RC-T4` | **Headline**: "Tomorrow's ride is ready. Are you?" **Body**: "Flight SFO→JFK confirmed. LUXY pickup scheduled 4:15am. Driver assigned. All set." **CTA**: "Confirm" | luxy_booking_abandoned | $7.43 | Conversions |
+| `RC-T5` | **Headline**: "Your Q2 travel, sorted in 3 minutes" **Body**: "Upload your travel schedule. We'll pre-book every ride. Modify anytime. Zero stress." **CTA**: "Upload schedule" | luxy_high_intent | $4.95 | Conversions |
+
+**Frequency**: Max 2/day, 7/week
+**Dayparting**: +30% bid 6-9 AM weekday (planning window), +15% bid 5-8 PM (evening planning), -20% weekend
+
+---
+
+### Careful Truster Campaigns (4)
+
+| Campaign | Creative Copy | Audience | Daily $ | Opt. Goal |
+|----------|------|----------|---------|-----------|
+| `CT-T1` | **Headline**: "I swore I'd never use a car service again" **Body**: "Sarah, a Fortune 500 exec, faced the same dilemma after multiple disappointing rides. The fear of unprofessionalism." **CTA**: "Her story" | luxy_all_visitors | $14.18 | Clicks |
+| `CT-T2` | **Headline**: "We've All Heard The Horror Stories" **Body**: "Late pickups. Rude drivers. Hidden fees. 847 Fortune 500 CEOs still choose us daily. Here's the data they see." **CTA**: "See proof" | luxy_all_visitors | $10.13 | Clicks |
+| `CT-T3` | **Headline**: "47,000 executives trust LUXY with their reputation" **Body**: "Independent audit: 99.7% on-time arrival rate. DOT safety rating: Superior. Average driver tenure: 8.2 years." **CTA**: "See proof" | luxy_booking_visitors | $8.10 | Conversions |
+| `CT-T4` | **Headline**: "847,000+ rides completed. Zero security incidents." **Body**: "Background-checked drivers, live GPS tracking, 24/7 support team. We earned our trust." **CTA**: "Book now" | luxy_high_intent | $8.10 | Conversions |
 
 **Frequency**: Max 3/day, 12/week
 **Dayparting**: +30% bid 5-8 AM, +20% bid 5-10 PM, +40% bid 10 PM-5 AM, -20% bid noon-5 PM weekday
 
 ---
 
-### Status Seeker Campaigns (5)
+### Explorer Campaigns (4) — 1.91x lift
 
 | Campaign | Creative Copy | Audience | Daily $ | Opt. Goal |
 |----------|------|----------|---------|-----------|
-| `SS-T1` | **Headline**: "You've earned success. Where's the service?" **Body**: "Built your empire through precision and excellence. Yet you're stuck with transportation that doesn't match." **CTA**: "See More" | luxy_all_visitors | $25.45 | Clicks |
-| `SS-T2` | **Headline**: "I thought luxury cars were just showing off" **Body**: "CEO Sarah M. felt the same way—until missing three deals stuck in traffic while her Uber was late again." **CTA**: "Her story" | luxy_all_visitors | $20.36 | Clicks |
-| `SS-T3` | **Headline**: "You've built this life. You deserve this ride." **Body**: "Fortune 500 CEOs choose LUXY for 47% of business travel. Real-time tracking, vetted drivers, transparent rates." **CTA**: "Book now" | luxy_booking_visitors | $16.97 | Conversions |
-| `SS-T4` | **Headline**: "Finally, transportation that gets me" **Body**: "Sarah, a Fortune 500 exec: 'LUXY drivers understand my world. No small talk, perfect timing, total discretion.'" **CTA**: "Book now" | luxy_booking_abandoned | $13.57 | Conversions |
-| `SS-T5` | **Headline**: "You've Joined the Top 1% Who Choose Differently" **Body**: "847,000 executives trust LUXY because their reputation depends on flawless execution. You understand that standard." **CTA**: "Book Now" | luxy_high_intent | $8.48 | Conversions |
+| `EX-T1` | **Headline**: "What if your next ride changed how you travel forever?" **Body**: "Forget everything you know about car services. LUXY is something different entirely." **CTA**: "Discover" | luxy_all_visitors | $9.45 | Clicks |
+| `EX-T2` | **Headline**: "The city looks different from the back of a LUXY" **Body**: "Noise-cancelling cabin. Panoramic views. Your own mobile office. This isn't transportation — it's transformation." **CTA**: "Experience it" | luxy_all_visitors | $6.75 | Clicks |
+| `EX-T3` | **Headline**: "You haven't experienced New York until you've experienced it from here" **Body**: "Curated routes. Hidden gems. Your driver knows the city's secrets. Every ride is a discovery." **CTA**: "Book an experience" | luxy_booking_visitors | $5.40 | Conversions |
+| `EX-T4` | **Headline**: "Your next adventure starts curbside" **Body**: "First-time LUXY riders get a complimentary route upgrade. See the city the way locals wish they could." **CTA**: "Try it" | luxy_high_intent | $5.40 | Conversions |
 
-**Frequency**: Max 2/day, 8/week
-**Dayparting**: +30% bid 6-9 AM weekday, +10% bid 9 AM-5 PM weekday, -10% bid 5-8 PM, -30% bid 8-11 PM weekday, -20% to -40% weekend
+**Frequency**: Max 2/day, 6/week
+**Dayparting**: +10% bid 9 AM-5 PM, +20% bid 7-10 PM, flat weekend
 
 ---
 
-### Easy Decider Campaigns (5)
+### Prevention Planner Campaigns (4)
 
 | Campaign | Creative Copy | Audience | Daily $ | Opt. Goal |
 |----------|------|----------|---------|-----------|
-| `ED-T1` | **Headline**: "Another delay. Another missed opportunity." **Body**: "While you research options, competitors close deals from luxury cars. Every ride you postpone costs status." **CTA**: "See rates" | luxy_all_visitors | $24.50 | Clicks |
-| `ED-T2` | **Headline**: "Your driver is waiting. You're still in line." **Body**: "When your flight lands, you have 90 seconds to decide: rideshare chaos or your reserved LUXY waiting curbside." **CTA**: "Reserve now" | luxy_all_visitors | $19.60 | Clicks |
-| `ED-T3` | **Headline**: "Your driver is already in your area" **Body**: "Just check if we serve your route. Takes 10 seconds. No booking required." **CTA**: "Check route" | luxy_booking_visitors | $16.33 | Conversions |
-| `ED-T4` | **Headline**: "Your driver is already en route" **Body**: "Open the app. Your usual pickup location is saved. Driver arrives in 4 minutes. Zero friction, maximum comfort." **CTA**: "Open App" | luxy_booking_abandoned | $13.07 | Conversions |
-| `ED-T5` | **Headline**: "50,000+ executives choose LUXY for airport runs" **Body**: "Your colleagues already know. Next Tuesday 6am flight? Just open the app, tap your saved airport." **CTA**: "Save mine" | luxy_high_intent | $8.17 | Conversions |
+| `PP-T1` | **Headline**: "What's your backup plan when rideshare fails?" **Body**: "Every week, 23% of airport rideshare pickups are delayed 15+ minutes. Professionals plan ahead." **CTA**: "See the data" | luxy_all_visitors | $6.30 | Clicks |
+| `PP-T2` | **Headline**: "DOT Safety Rating: Superior. Insurance: $10M." **Body**: "Background-checked drivers (FBI + state). Live GPS tracking. 24/7 dispatch. Real-time ETAs to your assistant." **CTA**: "Safety details" | luxy_all_visitors | $4.50 | Clicks |
+| `PP-T3` | **Headline**: "Your flight lands at 11pm. Who's meeting you?" **Body**: "LUXY monitors your flight in real-time. Delay? We adjust. Cancel? Full refund. Your driver is there when you land." **CTA**: "Pre-book" | luxy_booking_visitors | $3.60 | Conversions |
+| `PP-T4` | **Headline**: "Never worry about ground transportation again" **Body**: "Guaranteed pickup. Flight monitoring. Trip insurance included. Fixed pricing — no surge, no surprises." **CTA**: "Book now" | luxy_high_intent | $3.60 | Conversions |
 
-**Frequency**: Max 2/day, 6/week
-**Dayparting**: +20% bid 6-9 AM weekday, +10% bid 5-10 PM, flat weekend, -30% bid midnight-6 AM
+**Frequency**: Max 2/day, 8/week
+**Dayparting**: +30% bid 5-8 AM (pre-travel anxiety), +20% bid 8-10 PM (evening planning)
+
+---
+
+### Dependable Loyalist Campaigns (3) — 6.6x lift in moderate segment
+
+| Campaign | Creative Copy | Audience | Daily $ | Opt. Goal |
+|----------|------|----------|---------|-----------|
+| `DL-T1` | **Headline**: "Reliable transportation for people who plan ahead" **Body**: "99.7% on-time. Fixed pricing. Background-checked drivers. 8.2 years average driver tenure. The facts speak." **CTA**: "See details" | luxy_all_visitors | $6.30 | Clicks |
+| `DL-T2` | **Headline**: "Your standards deserve a service that keeps them" **Body**: "Real-time flight monitoring. Automatic delay adjustment. Written pickup guarantee. Zero ambiguity." **CTA**: "Learn more" | luxy_all_visitors | $4.73 | Clicks |
+| `DL-T3` | **Headline**: "Consistent service. Every single ride." **Body**: "Same standards. Same professionalism. Same peace of mind. Whether it's your first ride or your hundredth." **CTA**: "Book now" | luxy_booking_visitors | $4.73 | Conversions |
+
+**Frequency**: Max 2/day, 7/week
+**Dayparting**: +20% bid 6-9 AM weekday, +15% bid 5-8 PM
+
+---
+
+### Consensus Seeker Campaigns (3) — 3.3x lift in moderate segment
+
+| Campaign | Creative Copy | Audience | Daily $ | Opt. Goal |
+|----------|------|----------|---------|-----------|
+| `CS-T1` | **Headline**: "50,000 professionals switched this year. Here's why." **Body**: "Real reviews from real riders. See what professionals like you say about making the switch from rideshare." **CTA**: "Read reviews" | luxy_all_visitors | $4.50 | Clicks |
+| `CS-T2` | **Headline**: "'I wish I'd switched sooner' — David M., CFO" **Body**: "Join thousands of professionals who upgraded their commute. 4.9/5 average rating across 847,000 rides." **CTA**: "See more reviews" | luxy_all_visitors | $3.38 | Clicks |
+| `CS-T3` | **Headline**: "Your colleagues already know" **Body**: "87% of LUXY riders were referred by another professional. The people you trust, trust us." **CTA**: "Book now" | luxy_booking_visitors | $3.38 | Conversions |
+
+**Frequency**: Max 2/day, 7/week
+**Dayparting**: +15% bid 5-10 PM (evening review-reading), flat daytime
 
 ---
 
@@ -288,9 +402,13 @@ The `{...}` values are StackAdapt macros — do NOT replace them manually.
 
 | Archetype | Visual Style | Palette | Mood |
 |-----------|-------------|---------|------|
+| **Trusting Loyalist** | Warm, inviting, familiar. Smiling driver greeting a returning passenger. Interior comfort details. Soft lighting, welcoming tones. | Warm navy, cream, gold | Welcome, familiar, trusted |
+| **Reliable Cooperator** | Organized, structured, efficient. Calendar interface overlay. Airport terminal with clear signage. Clean typography. | Slate blue, white, green accents | Planned, organized, confident |
 | **Careful Truster** | Clean, professional, reassuring. Driver in uniform. Pristine vehicle exterior. Data overlays showing safety stats. Well-lit, no dramatic shadows. | Navy, white, silver | Competent, safe, reliable |
-| **Status Seeker** | Premium, aspirational. City skyline at dusk. Luxury interior leather detail. Executive stepping out. High contrast. | Black, gold, deep burgundy | Exclusive, powerful, deserved |
-| **Easy Decider** | Dynamic, action-oriented. Airport curbside pickup. Phone showing app interface. Split-second moment. Fast visual pace. | High contrast, white + brand accent | Easy, fast, done |
+| **Explorer** | Cinematic, aspirational. City skyline at golden hour. Panoramic car window view. Unexpected urban beauty. Discovery energy. | Black, gold, deep burgundy | Exciting, new, possibility |
+| **Prevention Planner** | Controlled, authoritative, safe. DOT badge close-up. GPS tracking interface. Professional driver credentials. Clean, structured layouts. | Dark navy, white, red accent | Secure, verified, guaranteed |
+| **Dependable Loyalist** | Clean, factual, understated. Statistics overlay. Professional driver headshot. Vehicle detail shot. No flash — just quality. | Charcoal, white, muted blue | Reliable, proven, straightforward |
+| **Consensus Seeker** | People-focused. Happy riders, star ratings, testimonial cards. Group of professionals. Warm, social, relatable. Not aspirational — approachable. | Warm white, blue, green | Peer-approved, relatable, trusted |
 
 **Sizes needed per creative**:
 - 1200 × 627 px (primary landscape)
@@ -304,9 +422,11 @@ The `{...}` values are StackAdapt macros — do NOT replace them manually.
 
 | Archetype | Suggested Base CPM | Rationale |
 |-----------|-------------------|-----------|
-| Status Seeker | $10-12 | Highest lifetime value, premium inventory |
-| Easy Decider | $8-10 | High conversion rate, standard inventory |
-| Careful Truster | $7-9 | Volume play, boost during research windows |
+| Trusting Loyalist | $10-12 | Highest volume + 3.52x lift, premium inventory |
+| Reliable Cooperator | $9-11 | High conversion rate, structured inventory |
+| Careful Truster | $7-9 | Evidence-heavy, boost during research windows |
+| Explorer | $10-12 | High lifetime value, premium/aspirational inventory |
+| Prevention Planner | $7-9 | Authority-heavy, professional inventory |
 
 **Device multipliers**: Desktop 1.0×, Mobile 1.1×, Tablet 0.9×
 
@@ -344,15 +464,15 @@ You have full discretion on bid optimization — these are starting recommendati
 - [ ] StackAdapt pixel firing confirmed (Pixels page → Last Fired timestamp)
 - [ ] 4 conversion events created with exact names from this document
 - [ ] 5 audiences created with exact names from this document
-- [ ] `luxy_converted_exclude` applied as exclusion to ALL 15 campaigns
+- [ ] `luxy_converted_exclude` applied as exclusion to ALL 28 campaigns
 - [ ] Whitelist CSV uploaded (41 domains)
 - [ ] Blacklist CSV uploaded (21 domains)
-- [ ] 3 campaign groups created with correct daily budgets
-- [ ] 15 campaigns created with correct audiences and copy
+- [ ] 5 campaign groups created with correct daily budgets
+- [ ] 28 campaigns created with correct audiences and copy
 - [ ] Click URLs include StackAdapt macros (copy the template exactly)
 - [ ] Frequency caps set per archetype
 - [ ] Dayparting bid adjustments set per archetype
-- [ ] 15 image creatives produced and uploaded (one per campaign)
+- [ ] 28 image creatives produced and uploaded (one per campaign)
 - [ ] All campaigns in DRAFT for final review
 
 ### INFORMATIV Confirms:
@@ -363,7 +483,7 @@ You have full discretion on bid optimization — these are starting recommendati
 - [ ] Pre-flight validation passes (41/41)
 
 ### Joint Sign-Off:
-- [ ] Both teams review all 15 campaigns together
+- [ ] Both teams review all 28 campaigns together
 - [ ] Test click from each campaign → verify luxyride.com loads with URL params
 - [ ] Confirm reporting cadence (agency sends Monday, INFORMATIV sends Wednesday)
 - [ ] Set all 15 campaigns to **ACTIVE**
@@ -413,4 +533,4 @@ Replace the event IDs with the ones generated when you create the conversion eve
 
 ---
 
-*This campaign is powered by INFORMATIV bilateral psycholinguistic intelligence — matching ad messages to audience psychology using analysis of 1,492 bilateral psychological edges across luxury transportation consumers.*
+*This campaign is powered by INFORMATIV bilateral psycholinguistic intelligence — matching ad messages to audience psychology using analysis of 13,297 bilateral psychological edges across luxury service consumers (1,492 luxury transportation + 11,805 premium airline travelers). Archetypes validated cross-category with N=11,805.*

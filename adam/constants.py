@@ -46,13 +46,21 @@ ARCHETYPE_ALIASES = {
     "special_occasion": "status_seeker",
     "first_timer": "easy_decider",
     "repeat_loyal": "easy_decider",
-    # Interaction-effect archetypes (from cross-category analysis)
+    # Interaction-effect archetypes (validated: 11,805 polar + 3,586 moderate)
     "explorer": "explorer",
     "prevention_planner": "prevention_planner",
     "reliable_cooperator": "reliable_cooperator",
     "anxious_economist": "anxious_economist",
     "vocal_resistor": "vocal_resistor",
-    "loyalist": "loyalist",
+    "loyalist": "trusting_loyalist",
+    "trusting_loyalist": "trusting_loyalist",
+    "confident_promoter": "trusting_loyalist",  # brand_trust × promotion_focus (9.1x in moderate)
+    # Subtle archetypes from moderate segment (rating 4-6, N=3,586)
+    "dependable_loyalist": "dependable_loyalist",  # brand_trust × conscientiousness (6.6x in moderate)
+    "consensus_seeker": "consensus_seeker",         # agreeableness × social_proof (3.3x in moderate)
+    "defensive_skeptic": "defensive_skeptic",       # neuroticism × reactance (0.01x — HARDEST suppress)
+    "careful_analyst": "prevention_planner",         # NFC × prevention (0.46x — maps to prevention_planner)
+    "methodical_evaluator": "dependable_loyalist",   # alias
 }
 
 # Campaign ID prefix → archetype mapping
@@ -64,16 +72,24 @@ CAMPAIGN_ARCHETYPE_MAP = {
     "EX": "explorer",
     "PP": "prevention_planner",
     "RC": "reliable_cooperator",
+    "TL": "trusting_loyalist",
+    "DL": "dependable_loyalist",
+    "CS": "consensus_seeker",
 }
 
-# All active archetypes for iteration
+# All active archetypes for iteration (cross-category validated)
 ALL_ARCHETYPES = [
     "careful_truster", "status_seeker", "easy_decider",
     "explorer", "prevention_planner", "reliable_cooperator",
+    "trusting_loyalist", "dependable_loyalist", "consensus_seeker",
 ]
 
-# Archetypes to auto-suppress (0% conversion in cross-category analysis)
-SUPPRESS_ARCHETYPES = ["anxious_economist", "vocal_resistor"]
+# Archetypes to auto-suppress (validated from moderate segment, N=3,586)
+SUPPRESS_ARCHETYPES = [
+    "anxious_economist",    # neuroticism × spending_pain, 0.23x lift
+    "vocal_resistor",       # expressiveness × reactance, 0.36x lift
+    "defensive_skeptic",    # neuroticism × reactance, 0.01x lift (worst)
+]
 
 
 def resolve_archetype(raw: str) -> str:
@@ -160,12 +176,16 @@ SEGMENT_ID_REGEX = re.compile(
     r"(achiever|guardian|explorer|connector|analyst|creator"
     r"|corporate_executive|airport_anxiety|special_occasion|first_timer|repeat_loyal"
     r"|status_seeker|easy_decider|careful_truster|skeptical_analyst|disillusioned"
+    r"|trusting_loyalist|reliable_cooperator|prevention_planner"
+    r"|dependable_loyalist|consensus_seeker"
     r"|luxury_transportation)"
     r"(_social_proof|_authority|_scarcity|_reciprocity|_commitment|_liking"
-    r"|_unity|_cognitive_ease|_curiosity|_loss_aversion)?"
+    r"|_unity|_cognitive_ease|_curiosity|_loss_aversion|_aspiration|_urgency)?"
     r"(_beauty|_personal_care|_luxury_transportation|_luxury"
     r"|_corporate_executive|_airport_anxiety|_special_occasion|_first_timer|_repeat_loyal"
-    r"|_status_seeker|_easy_decider|_careful_truster|_skeptical_analyst|_disillusioned)?"
+    r"|_status_seeker|_easy_decider|_careful_truster|_skeptical_analyst|_disillusioned"
+    r"|_trusting_loyalist|_reliable_cooperator|_prevention_planner"
+    r"|_dependable_loyalist|_consensus_seeker)?"
     r"_(t1|t2|t3)$"
 )
 

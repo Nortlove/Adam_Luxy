@@ -389,6 +389,32 @@ class StoredSignalProfile(BaseModel):
         description="Engagement count per hour of day (0-23)",
     )
 
+    # Page context history (Goal Activation Model)
+    impression_domains: List[str] = Field(
+        default_factory=list,
+        description="Publisher domains where ads were shown (ordered by touch)",
+    )
+    impression_domain_categories: List[str] = Field(
+        default_factory=list,
+        description="Domain categories for each impression (e.g., 'business_news', 'luxury_lifestyle')",
+    )
+    impression_goal_activations: List[Dict[str, float]] = Field(
+        default_factory=list,
+        description="Goal activation scores at each impression (goal_id → score)",
+    )
+    cumulative_goal_priming: Dict[str, float] = Field(
+        default_factory=dict,
+        description="Accumulated goal priming across all touches — goals persist and intensify",
+    )
+    best_crossover_domain: str = Field(
+        "",
+        description="Domain with highest observed crossover (click/conversion) for this user",
+    )
+    best_crossover_score: float = Field(
+        0.0,
+        description="Crossover score of best performing domain for this user",
+    )
+
     # Last updated
     last_updated: float = Field(default_factory=time.time)
 

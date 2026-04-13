@@ -93,7 +93,7 @@ class PersonState:
     responds_to_organic: bool = False  # Do they self-direct?
 
     # ── Interaction-Effect Archetype ──
-    interaction_archetype: str = ""  # explorer, loyalist, reliable_cooperator, prevention_planner, anxious_economist, vocal_resistor
+    interaction_archetype: str = ""  # explorer, trusting_loyalist, reliable_cooperator, prevention_planner, anxious_economist, vocal_resistor
     interaction_archetype_confidence: float = 0.0
     suppress: bool = False           # True for anxious_economist, vocal_resistor
     suppress_reason: str = ""
@@ -115,7 +115,7 @@ class PersonState:
         return {k: v for k, v in self.__dict__.items()}
 
 
-def infer_person(profile: Dict, conversions: List[Dict] = None) -> PersonState:
+def infer_person(profile: Dict, conversions: List[Dict] = None, context: Dict = None) -> PersonState:
     """The SINGLE unified inference function.
 
     Takes ALL available evidence and produces ONE coherent understanding
@@ -125,6 +125,8 @@ def infer_person(profile: Dict, conversions: List[Dict] = None) -> PersonState:
     Args:
         profile: The StoredSignalProfile data (all sessions accumulated)
         conversions: Any conversion events for this user
+        context: Optional page/domain context from the current impression.
+            Includes goal_activation data when available.
 
     Returns:
         PersonState — complete unified understanding
@@ -167,11 +169,23 @@ def infer_person(profile: Dict, conversions: List[Dict] = None) -> PersonState:
     price_dwell = section_dwell.get("section-pricing", 0)
     action_dwell = section_dwell.get("section-booking", 0)
     fleet_dwell = section_dwell.get("section-fleet", 0)
+    social_proof_engagement = section_dwell.get("section-reviews", 0) + section_dwell.get("section-testimonials", 0)
     total_dwell = sum(section_dwell.values())
 
     touch_outcomes = profile.get("touch_outcomes", [])
     n_clicks = sum(1 for t in touch_outcomes if t)
     n_touches = len(touch_outcomes)
+
+    # Cumulative goal priming from page context history
+    # Goals persist and intensify across the retargeting sequence
+    cumulative_goals = profile.get("cumulative_goal_priming", {})
+    impression_domains = profile.get("impression_domains", [])
+    best_crossover_domain = profile.get("best_crossover_domain", "")
+
+    # Current impression context (if available)
+    current_goal_activation = {}
+    if context and context.get("goal_activation"):
+        current_goal_activation = context["goal_activation"]
 
     click_trajectory = profile.get("click_latency_trajectory", "")
     click_slope = profile.get("click_latency_slope", 0)
@@ -269,28 +283,44 @@ def infer_person(profile: Dict, conversions: List[Dict] = None) -> PersonState:
     # Priority order: suppress first (save money), then specific types, then general
     # Each requires BOTH dimensions to be high
 
-    # SUPPRESS FIRST: Anxious Economist (neuroticism HIGH + spending_pain HIGH) — 0x
-    if neuroticism_proxy > 0.55 and spending_pain_proxy > 0.55:
+    # ── SUPPRESS FIRST (save money) ──
+
+    # Defensive Skeptic (neuroticism HIGH + reactance HIGH) — 0.01x lift (WORST)
+    # Discovered in moderate segment: 0.1% conversion rate (N=955)
+    if neuroticism_proxy > 0.55 and reactance:
+        state.interaction_archetype = "defensive_skeptic"
+        state.interaction_archetype_confidence = neuroticism_proxy
+        state.suppress = True
+        state.suppress_reason = (
+            f"Defensive Skeptic: neuroticism={neuroticism_proxy:.2f}, reactance=detected. "
+            "0.1% conversion rate in moderate segment (N=955). "
+            "The hardest suppress — anxious AND resistant. Every touch makes it worse."
+        )
+
+    # Anxious Economist (neuroticism HIGH + spending_pain HIGH) — 0.23x lift
+    elif neuroticism_proxy > 0.55 and spending_pain_proxy > 0.55:
         state.interaction_archetype = "anxious_economist"
         state.interaction_archetype_confidence = min(neuroticism_proxy, spending_pain_proxy)
         state.suppress = True
         state.suppress_reason = (
             f"Anxious Economist: neuroticism={neuroticism_proxy:.2f}, "
             f"spending_pain={spending_pain_proxy:.2f}. "
-            "0% conversion rate in cross-category analysis (n=173). "
+            "0% conversion in luxury car data, 0.23x in airline (N=399). "
             "Ad spend on this profile generates anxiety, not conversion."
         )
 
-    # SUPPRESS: Vocal Resistor (reactance + deep engagement = fighting back)
+    # Vocal Resistor (reactance + deep engagement = fighting back) — 0.36x lift
     elif reactance and total_dwell > 15:
         state.interaction_archetype = "vocal_resistor"
         state.interaction_archetype_confidence = 0.7
         state.suppress = True
         state.suppress_reason = (
             "Vocal Resistor: reactance detected with deep engagement. "
-            "1% conversion rate in cross-category analysis (n=153). "
+            "0.36x lift in cross-category analysis (N=203). "
             "Advertising triggers resistance. Release immediately."
         )
+
+    # ── TARGET ARCHETYPES (ordered: strongest interaction first) ──
 
     # The Prevention Planner (conscientiousness HIGH + prevention HIGH)
     # Check BEFORE loyalist because safety-focused planners look agreeable
@@ -298,7 +328,7 @@ def infer_person(profile: Dict, conversions: List[Dict] = None) -> PersonState:
         state.interaction_archetype = "prevention_planner"
         state.interaction_archetype_confidence = min(conscientiousness_proxy, prevention_proxy)
 
-    # The Explorer (openness HIGH + promotion HIGH) — 2x lift
+    # The Explorer (openness HIGH + promotion HIGH) — 1.91x lift
     elif openness_proxy > 0.6 and promotion_proxy > 0.6 and prevention_proxy < 0.55:
         state.interaction_archetype = "explorer"
         state.interaction_archetype_confidence = min(openness_proxy, promotion_proxy)
@@ -308,10 +338,26 @@ def infer_person(profile: Dict, conversions: List[Dict] = None) -> PersonState:
         state.interaction_archetype = "reliable_cooperator"
         state.interaction_archetype_confidence = min(conscientiousness_proxy, agreeableness_proxy)
 
-    # The Loyalist (agreeableness HIGH + trust dwell + LOW negativity evidence)
+    # The Trusting Loyalist (agreeableness HIGH + trust dwell + LOW negativity evidence)
+    # Cross-category validated: 3.52x polar, 8.1x in moderate segment
     elif agreeableness_proxy > 0.7 and trust_dwell > 10 and not reactance and prevention_proxy < 0.55:
-        state.interaction_archetype = "loyalist"
+        state.interaction_archetype = "trusting_loyalist"
         state.interaction_archetype_confidence = agreeableness_proxy
+
+    # The Dependable Loyalist (brand_trust HIGH + conscientiousness HIGH)
+    # Subtle archetype from moderate segment: 66.4% conv (N=119), 6.6x lift
+    # These are the "quiet converters" — not extreme on any one dim, but
+    # the combination of trust + conscientiousness means they follow through.
+    elif trust_dwell > 8 and conscientiousness_proxy > 0.6 and neuroticism_proxy < 0.45:
+        state.interaction_archetype = "dependable_loyalist"
+        state.interaction_archetype_confidence = conscientiousness_proxy
+
+    # The Consensus Seeker (agreeableness MODERATE + social proof engagement)
+    # Moderate segment: 33.3% conv (N=39), 3.3x lift
+    # Reachable specifically via social proof — testimonials, "others like you"
+    elif agreeableness_proxy > 0.5 and social_proof_engagement > 5 and not reactance:
+        state.interaction_archetype = "consensus_seeker"
+        state.interaction_archetype_confidence = agreeableness_proxy * 0.8
 
     # ── Step 2: What's the trajectory? ──
     # All signals together paint the trajectory picture.
@@ -446,12 +492,13 @@ def infer_person(profile: Dict, conversions: List[Dict] = None) -> PersonState:
         state.prediction_error_level = 0.3
         state.touches_remaining = 2.0
 
-    elif state.interaction_archetype == "loyalist":
+    elif state.interaction_archetype == "trusting_loyalist":
         state.communication_style = "welcoming"
         state.recommended_mechanism = "social_proof_matched"
         state.mechanism_rationale = (
-            f"Loyalist archetype (agreeableness={agreeableness_proxy:.2f}). "
-            f"2x base conversion rate. Gives benefit of the doubt. "
+            f"Trusting Loyalist archetype (agreeableness={agreeableness_proxy:.2f}). "
+            f"3.52x lift (cross-category validated, N=11,805). "
+            f"Gives benefit of the doubt. "
             f"Minimal persuasion needed — just social proof and easy booking. "
             f"2 touches max. Don't over-explain — they already believe you."
         )
@@ -481,6 +528,32 @@ def infer_person(profile: Dict, conversions: List[Dict] = None) -> PersonState:
             f"This is regulatory fit — match their prevention focus."
         )
         state.prediction_error_level = 0.2
+        state.touches_remaining = 3.0
+
+    elif state.interaction_archetype == "dependable_loyalist":
+        state.communication_style = "straightforward_reliable"
+        state.recommended_mechanism = "evidence_proof"
+        state.mechanism_rationale = (
+            f"Dependable Loyalist (conscientiousness={conscientiousness_proxy:.2f}, "
+            f"trust_dwell={trust_dwell:.0f}s). 66.4% conv in moderate segment (6.6x lift). "
+            f"Quiet converters — not extreme on any dimension but the brand_trust × "
+            f"conscientiousness combination means they follow through. "
+            f"Give them facts, credentials, straightforward booking. 3 touches."
+        )
+        state.prediction_error_level = 0.25
+        state.touches_remaining = 3.0
+
+    elif state.interaction_archetype == "consensus_seeker":
+        state.communication_style = "social_validating"
+        state.recommended_mechanism = "social_proof_matched"
+        state.mechanism_rationale = (
+            f"Consensus Seeker (agreeableness={agreeableness_proxy:.2f}, "
+            f"social_proof_engagement={social_proof_engagement:.0f}s). "
+            f"33.3% conv in moderate segment (3.3x lift). "
+            f"Converts specifically via social proof — testimonials, 'others like you chose...', "
+            f"peer endorsements. NOT authority or aspiration — they need to see PEOPLE like them."
+        )
+        state.prediction_error_level = 0.35
         state.touches_remaining = 3.0
 
     # STANDARD CLASSIFICATION — when no interaction archetype detected
@@ -668,6 +741,40 @@ def infer_person(profile: Dict, conversions: List[Dict] = None) -> PersonState:
         parts.append(f"Estimated {state.touches_remaining:.0f} touches to conversion ({state.conversion_probability:.0%} probability)")
     else:
         parts.append(f"RELEASE: {state.continue_reason}")
+
+    # ── Context-aware enrichment: cumulative goal priming ──
+    # If we have goal priming history across touches, incorporate it into
+    # the narrative and mechanism recommendation
+    if cumulative_goals:
+        # Find the dominant cumulative goal
+        dominant_cumulative = max(cumulative_goals, key=cumulative_goals.get)
+        cumulative_strength = cumulative_goals[dominant_cumulative]
+        if cumulative_strength > 0.3:
+            parts.append(
+                f"Cumulative goal priming: {dominant_cumulative} "
+                f"(strength={cumulative_strength:.2f} across {len(impression_domains)} touches)"
+            )
+            # If the cumulative goal aligns with the archetype, boost confidence
+            try:
+                from adam.intelligence.goal_activation import ARCHETYPE_GOAL_FULFILLMENT
+                archetype = state.interaction_archetype or profile.get("attributed_archetype", "")
+                fulfillment = ARCHETYPE_GOAL_FULFILLMENT.get(archetype, {})
+                if dominant_cumulative in fulfillment and fulfillment[dominant_cumulative] > 0.5:
+                    state.conversion_probability = min(0.95, state.conversion_probability * 1.15)
+                    parts.append(
+                        f"Goal-archetype alignment: {dominant_cumulative} fulfills {archetype}"
+                    )
+            except Exception:
+                pass
+
+    # If current impression has goal activation data, add context note
+    if current_goal_activation and current_goal_activation.get("dominant_goal"):
+        dominant_now = current_goal_activation["dominant_goal"]
+        crossover = current_goal_activation.get("crossover_score", 0)
+        if crossover > 0.2:
+            parts.append(
+                f"Current context activates {dominant_now} goal (crossover={crossover:.2f})"
+            )
 
     state.narrative = ". ".join(parts) + "."
 
