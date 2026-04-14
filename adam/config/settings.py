@@ -181,7 +181,10 @@ class APISettings(BaseSettings):
     
     # CORS
     cors_origins: List[str] = Field(
-        default=["http://localhost:3000", "http://localhost:8080"],
+        default=[
+            "http://localhost:3000", "http://localhost:8080",
+            "https://luxyride.com", "https://www.luxyride.com",
+        ],
         env="CORS_ORIGINS"
     )
     

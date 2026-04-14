@@ -253,6 +253,31 @@ https://luxyride.com/?sapid={SA_POSTBACK_ID}&cid={CAMPAIGN_ID}&crid={CREATIVE_ID
 
 **Agency implements** recommended changes within 24 hours.
 
+### Data We Need From You (Ongoing)
+
+As the campaign runs, please provide the following to INFORMATIV at each optimization cycle. This feeds our intelligence system and improves targeting accuracy:
+
+1. **Conversion URL patterns** — After the first conversions come in, share the exact URLs of the booking confirmation page(s) that fire the `luxy_booking_complete` event. Example: `luxyride.com/booking/confirmed` or `luxyride.com/thank-you`. We need this to calibrate our server-side conversion tracking.
+
+2. **Campaign performance export** — Every other day, export a campaign-level CSV from StackAdapt: impressions, clicks, conversions, spend, CTR, conversion rate, by campaign. Email to INFORMATIV team.
+
+3. **Domain-level performance** — If StackAdapt provides domain-level reporting, include that in the export. This tells us which specific domains are producing clicks and conversions, which directly improves our targeting model.
+
+4. **Any unexpected patterns** — If you notice one audience overspending or underspending relative to its budget, or if a particular domain is consuming disproportionate budget, flag it. This is valuable signal.
+
+5. **Conversion details when available** — As bookings come in, share what you can about the conversion: which campaign, which creative, which domain the user was on when they clicked. This is the gold data that trains the system.
+
+### What INFORMATIV Sends You (Every Other Day)
+
+A specific action report with:
+- **Budget shifts**: "Move $X from [audience] to [audience] because [data]"
+- **Domain changes**: "Add [domain] to [audience] whitelist because [data]" or "Remove [domain] because [data]"
+- **Creative flags**: "[Campaign] CTR below threshold — consider creative refresh"
+- **Suppression updates**: "Add these users to exclusion audience"
+- **New test recommendations**: "Test [domain/audience combination] with $X budget"
+
+Every recommendation includes the data behind it. Nothing is a guess.
+
 ---
 
 ## BEFORE LAUNCH CHECKLIST
@@ -260,7 +285,8 @@ https://luxyride.com/?sapid={SA_POSTBACK_ID}&cid={CAMPAIGN_ID}&crid={CREATIVE_ID
 ### Agency:
 - [ ] Both GTM tags installed and published
 - [ ] StackAdapt pixel confirmed firing
-- [ ] 6 conversion events created
+- [ ] Verify LUXY Ride booking confirmation URL pattern and share with INFORMATIV
+- [ ] 6 conversion events created (adjust URL rules if booking confirmation URL differs from default)
 - [ ] 5 audiences created
 - [ ] `luxy_converted_exclude` on ALL 18 campaigns
 - [ ] Per-audience whitelists uploaded
