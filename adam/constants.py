@@ -66,6 +66,20 @@ ARCHETYPE_ALIASES = {
 # Campaign ID prefix → archetype mapping
 # Used by signal_collector, conversion endpoint, ops intelligence
 CAMPAIGN_ARCHETYPE_MAP = {
+    # 6-audience launch (April 2026)
+    "EA": "reliable_cooperator",      # Corporate Travel Arrangers (EAs)
+    "TM": "dependable_loyalist",      # Corporate Travel Managers
+    "HM": "dependable_loyalist",      # Home Market (CT/NYC)
+    "EV": "prevention_planner",       # Event / Meeting Planners
+    "LG": "careful_truster",          # Legal Vertical (BigLaw)
+    "LS": "careful_truster",          # Life Sciences / Pharma
+    # Phase 2 audiences
+    "FI": "dependable_loyalist",      # Financial Dealmakers
+    "SP": "dependable_loyalist",      # Supply Partners (SEPARATE campaign)
+    "PA": "trusting_loyalist",        # Private Aviation
+    "CF": "careful_truster",          # CFO / T&E
+    "HT": "dependable_loyalist",      # Hotel B2B
+    # Legacy prefixes (old campaign structure)
     "CT": "careful_truster",
     "SS": "status_seeker",
     "ED": "easy_decider",

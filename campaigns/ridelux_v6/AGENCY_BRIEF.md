@@ -142,7 +142,7 @@ https://luxyride.com/?sapid={SA_POSTBACK_ID}&cid={CAMPAIGN_ID}&crid={CREATIVE_ID
 | Campaign | Headline | Body | CTA | $/day | Goal |
 |---|---|---|---|---|---|
 | TM-T1 | "43% of companies don't have a chauffeured contract. Yours?" | BTN 2026 survey: service consistency jumped 0.47 points for preferred partners. LUXY serves 400+ companies through Concur, TripActions, CWT, Amex GBT, CTM, FCM. | See the data | $428 | Clicks |
-| TM-T2 | "SOC 2 certified. ISO-aligned. Sunshine Act ready." | Company-employed chauffeurs scored 4.43/5 — highest in BTN survey. Background checks, GPS tracking, 24/7 dispatch. | Request vendor packet | $286 | Clicks |
+| TM-T2 | "Company-employed chauffeurs. Scored 4.43/5 in BTN survey." | The highest driver quality metric in the BTN 2026 ground transportation survey. Background checks, GPS tracking, 24/7 dispatch. The compliance your program requires. | Request vendor packet | $286 | Clicks |
 | TM-T3 | "Add LUXY to your preferred vendor list" | Corporate rates. Policy-compliant booking. Real-time trip-level spend data. 400+ companies onboarded. No minimum commitment. | Start corporate program | $143 | Conversions |
 
 **Frequency**: 2/day, 7/week | **Dayparting**: +20% 9-11am, +15% 2-4pm
@@ -189,9 +189,9 @@ https://luxyride.com/?sapid={SA_POSTBACK_ID}&cid={CAMPAIGN_ID}&crid={CREATIVE_ID
 
 | Campaign | Headline | Body | CTA | $/day | Goal |
 |---|---|---|---|---|---|
-| LS-T1 | "Audit-ready ground transport for HCP guest travel" | Every HCP ride is a Sunshine Act transfer of value. LUXY captures booker, passenger, addresses, duration, amount — audit-ready. | See compliance features | $120 | Clicks |
-| LS-T2 | "Fewer than half of pharma programs meet a global standard" | BCD benchmarking of 15 global life sciences travel policies found fewer than half meet a consistent standard. 43% have no compliant ground transport. LUXY: one platform, SOC 2 certified, Sunshine Act export built in. | Request compliance demo | $80 | Clicks |
-| LS-T3 | "The only ground transport built for regulated verticals" | Sunshine Act. EFPIA. Event tagging. HCP flags. Integrated with BCD, Amex GBT, CWT. Built for pharma. | Start pilot program | $40 | Conversions |
+| LS-T1 | "Ground transport built for life sciences compliance" | Every HCP ride creates reporting obligations. LUXY captures booker, passenger, addresses, duration, amount — the data your compliance team needs, in every ride receipt. | See compliance features | $120 | Clicks |
+| LS-T2 | "Fewer than half of pharma programs meet a global standard" | BCD benchmarking of 15 global life sciences travel policies found fewer than half meet a consistent standard. LUXY: one platform, one standard, every ride documented. | Request compliance demo | $80 | Clicks |
+| LS-T3 | "Ground transport designed for regulated industries" | Detailed ride documentation. Passenger records. Event association. Integrated with BCD, Amex GBT, CWT. Purpose-built for industries where every ride is auditable. | Start pilot program | $40 | Conversions |
 
 **Frequency**: 2/day, 6/week | **Dayparting**: +20% 9-11am
 
