@@ -41,6 +41,8 @@ See AGENCY_BRIEF.md. CRITICAL: Apply `luxy_converted_exclude` to ALL 18 campaign
 
 Blacklist (ALL campaigns): `stackadapt_blacklist_upload.csv`
 
+**After uploading each whitelist:** Run a forecast in StackAdapt to check inventory availability. If inventory is insufficient for a whitelist, add keyword fallback targeting as described in AGENCY_BRIEF.md (Section: Domain Targeting Notes). Report results to INFORMATIV.
+
 ### 5. Create 6 campaign groups
 
 | # | Name | Daily Budget |

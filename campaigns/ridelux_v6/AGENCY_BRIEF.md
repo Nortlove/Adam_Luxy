@@ -113,6 +113,36 @@ This brief provides everything you need to run a year-long campaign in StackAdap
 
 **Shared blacklist**: `stackadapt_blacklist_upload.csv` → ALL campaigns.
 
+### IMPORTANT: Inventory Verification Before Launch
+
+**Before setting any campaign to ACTIVE**, please verify domain-level inventory availability in StackAdapt's forecasting tool for each whitelist. Many of these domains are niche B2B trade publications that may have limited programmatic inventory.
+
+**For each audience whitelist:**
+1. Upload the CSV to StackAdapt as a Site Inclusion List
+2. Run a forecast/estimate for that campaign group at the assigned daily budget
+3. Check estimated daily impressions
+
+**If estimated impressions are below the daily budget target** (meaning StackAdapt can't spend the allocated budget on those domains alone), add **contextual keyword targeting** as a supplement:
+
+| Audience | Fallback Keyword Targets |
+|---|---|
+| Travel Arrangers | "corporate travel management" + "executive assistant travel" + "ground transportation booking" |
+| Travel Managers | "corporate travel program" + "travel management company" + "preferred vendor ground transport" |
+| Home Market | Keep whitelist only — regional pubs should have sufficient inventory |
+| Event Planners | "event transportation" + "meeting logistics" + "group ground transport" + "conference planning" |
+| Legal | "law firm travel" + "legal travel management" + "BigLaw" + "litigation travel" |
+| Life Sciences | "pharma travel compliance" + "HCP travel" + "life sciences travel management" |
+
+**The keyword targeting supplements the whitelist — it does NOT replace it.** StackAdapt should target impressions that match EITHER the whitelist domains OR the keyword context. This ensures we spend the full budget while maintaining targeting relevance.
+
+**Report back to INFORMATIV** after running forecasts: which audiences have sufficient whitelist inventory and which needed keyword supplementation. This affects our optimization strategy.
+
+### Domain Targeting Notes for Specific Audiences
+
+**Event Planners** — this whitelist has only 4 domains. Keyword supplementation is almost certainly needed. Target keywords: "event transportation logistics", "conference shuttle service", "group airport transfer", "meeting planner ground transport". StackAdapt's contextual targeting should find relevant inventory across event industry content.
+
+**Legal + Life Sciences** — these share the same whitelist. If they compete for inventory and one audience consistently outbids the other, consider splitting into separate whitelists with distinct domains. Alternatively, supplement with audience-specific keywords as above.
+
 ---
 
 ## CLICK URL (ALL campaigns)
@@ -234,6 +264,9 @@ https://luxyride.com/?sapid={SA_POSTBACK_ID}&cid={CAMPAIGN_ID}&crid={CREATIVE_ID
 - [ ] 5 audiences created
 - [ ] `luxy_converted_exclude` on ALL 18 campaigns
 - [ ] Per-audience whitelists uploaded
+- [ ] **Inventory forecast run for each whitelist** (see Domain Targeting section)
+- [ ] **Keyword fallback added where whitelist inventory is insufficient**
+- [ ] **Forecast results reported to INFORMATIV** (which audiences needed supplementation)
 - [ ] Shared blacklist on all campaigns
 - [ ] 6 campaign groups with correct budgets
 - [ ] 18 campaigns with correct copy
@@ -241,7 +274,6 @@ https://luxyride.com/?sapid={SA_POSTBACK_ID}&cid={CAMPAIGN_ID}&crid={CREATIVE_ID
 - [ ] Frequency caps set per audience
 - [ ] Dayparting set per audience
 - [ ] 18 image creatives uploaded
-- [ ] Supply Partner campaigns on SEPARATE line item
 - [ ] All campaigns in DRAFT
 
 ### INFORMATIV:
