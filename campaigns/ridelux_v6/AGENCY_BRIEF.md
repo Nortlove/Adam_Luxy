@@ -6,9 +6,9 @@
 
 ## WHAT THIS IS
 
-INFORMATIV has developed a **psycholinguistic advertising intelligence system** that matches ad creative to the psychological context of the reader. We've analyzed LUXY Ride's actual customer base — corporate travel arrangers, travel managers, event planners, legal ops, pharma compliance, and financial dealmakers — and identified **11 distinct audiences** with **11 distinct creative treatments**.
+INFORMATIV has developed a **psycholinguistic advertising intelligence system** that matches ad creative to the psychological context of the reader. We've analyzed LUXY Ride's actual customer base — corporate travel arrangers, travel managers, event planners, legal ops, pharma compliance, and financial dealmakers — and identified **6 launch audiences** (with 5 more in Phase 2) with **6 distinct creative treatments** for launch.
 
-This brief provides everything you need to run a year-long campaign in StackAdapt for LUXY Ride at approximately **$24,000/week ($96K/month)**.
+This brief provides everything you need to run a year-long campaign in StackAdapt for LUXY Ride at approximately **$24,000/week ($96K/month), concentrated for maximum learning velocity**.
 
 **Key insight:** LUXY Ride is a **corporate black car service** integrated with Concur, TripActions, CWT, Amex GBT, CTM, and FCM. The customer is never "a person who likes luxury." The customer is an EA booking for an executive, a travel manager evaluating vendors, an event planner coordinating group arrivals. Every domain, every creative, and every targeting decision in this brief reflects that reality.
 
@@ -37,21 +37,16 @@ This brief provides everything you need to run a year-long campaign in StackAdap
 
 | # | Audience | Budget | Weekly $ | Campaigns |
 |---|---|---|---|---|
-| 1 | Corporate Travel Arrangers (EAs) | 22% | $5,279 | EA-T1, EA-T2, EA-T3 |
-| 2 | Corporate Travel Managers | 20% | $4,799 | TM-T1, TM-T2, TM-T3 |
-| 3 | Home Market (CT/NYC) | 15% | $3,599 | HM-T1, HM-T2, HM-T3 |
-| 4 | Event / Meeting / Incentive Planners | 10% | $2,400 | EV-T1, EV-T2, EV-T3 |
-| 5 | Legal Vertical (BigLaw) | 8% | $1,920 | LG-T1, LG-T2, LG-T3 |
+| 1 | Corporate Travel Arrangers (EAs) | 28% | $6,719 | EA-T1, EA-T2, EA-T3 |
+| 2 | Corporate Travel Managers | 25% | $5,999 | TM-T1, TM-T2, TM-T3 |
+| 3 | Home Market (CT/NYC) | 18% | $4,319 | HM-T1, HM-T2, HM-T3 |
+| 4 | Event / Meeting / Incentive Planners | 12% | $2,880 | EV-T1, EV-T2, EV-T3 |
+| 5 | Legal Vertical (BigLaw) | 10% | $2,400 | LG-T1, LG-T2, LG-T3 |
 | 6 | Life Sciences / Pharma | 7% | $1,680 | LS-T1, LS-T2, LS-T3 |
-| 7 | Financial Services Dealmakers | 6% | $1,440 | FI-T1, FI-T2 |
-| 8 | Supply Partner Recruitment * | 5% | $1,200 | SP-T1, SP-T2 |
-| 9 | Private Aviation | 3% | $720 | PA-T1, PA-T2 |
-| 10 | CFO / T&E Policy Owners | 2% | $480 | CF-T1, CF-T2 |
-| 11 | Hotel Industry (B2B) | 2% | $480 | HT-T1, HT-T2 |
 
-**Total: $24,000/week ($3,428/day) — 28 campaigns**
+**Total: $24,000/week ($3,428/day) — 18 campaigns**
 
-\* Supply Partners is a SEPARATE campaign with different landing page and conversion events.
+**Phase 2 audiences (weeks 5+, based on Phase 1 data):**
 
 ---
 
@@ -88,7 +83,6 @@ This brief provides everything you need to run a year-long campaign in StackAdap
 | 3 | `luxy_booking_start` | Page Load | Booking trigger | 7 days | No |
 | 4 | `luxy_booking_complete` | Custom Event | Confirmation page | 7 days | **YES** |
 | 5 | `luxy_corporate_signup` | Page Load | Corporate Program signup | 14 days | No |
-| 6 | `luxy_supply_partner_apply` | Page Load | Supply Partners application | 14 days | No |
 
 ---
 
@@ -102,7 +96,7 @@ This brief provides everything you need to run a year-long campaign in StackAdap
 | 4 | `luxy_converted_exclude` | Exclusion | Event: luxy_booking_complete | 90 days |
 | 5 | `luxy_booking_abandoned` | Retargeting | booking_start AND NOT complete | 7 days |
 
-**CRITICAL**: Apply `luxy_converted_exclude` as exclusion to ALL 28 campaigns.
+**CRITICAL**: Apply `luxy_converted_exclude` as exclusion to ALL 18 campaigns.
 
 ---
 
@@ -110,17 +104,12 @@ This brief provides everything you need to run a year-long campaign in StackAdap
 
 | Audience | Whitelist File |
 |---|---|
-| Travel Arrangers | `stackadapt_whitelist_reliable_cooperator.csv` |
+| Travel Arrangers (EAs) | `stackadapt_whitelist_reliable_cooperator.csv` |
 | Travel Managers | `stackadapt_whitelist_dependable_loyalist.csv` |
-| Home Market | `stackadapt_whitelist_home_market.csv` |
+| Home Market (CT/NYC) | `stackadapt_whitelist_home_market.csv` |
 | Event Planners | `stackadapt_whitelist_prevention_planner.csv` |
 | Legal Vertical | `stackadapt_whitelist_careful_truster.csv` |
-| Life Sciences | `stackadapt_whitelist_careful_truster.csv` |
-| Financial Dealmakers | `stackadapt_whitelist_financial_dealmaker.csv` |
-| Supply Partners | `stackadapt_whitelist_supply_side.csv` |
-| Private Aviation | `stackadapt_whitelist_trusting_loyalist.csv` |
-| CFO / T&E | `stackadapt_whitelist_careful_truster.csv` |
-| Hotel B2B | `stackadapt_whitelist_dependable_loyalist.csv` |
+| Life Sciences | `stackadapt_whitelist_careful_truster.csv` (shared with Legal) |
 
 **Shared blacklist**: `stackadapt_blacklist_upload.csv` → ALL campaigns.
 
@@ -136,47 +125,47 @@ https://luxyride.com/?sapid={SA_POSTBACK_ID}&cid={CAMPAIGN_ID}&crid={CREATIVE_ID
 
 ## CAMPAIGN DETAILS
 
-### 1. Corporate Travel Arrangers — EA (22%, $754/day)
+### 1. Corporate Travel Arrangers — EA (22%, $960/day)
 
 | Campaign | Headline | Body | CTA | $/day | Goal |
 |---|---|---|---|---|---|
-| EA-T1 | "Your executive's next trip, booked in 30 seconds" | LUXY integrates with Concur, TripActions, and every major TMC. Your travelers get professional chauffeurs. You get one-click booking and real-time trip tracking. | See how it works | $377 | Clicks |
-| EA-T2 | "The ground transport your travelers actually deserve" | Not all car services are equal. Company-employed drivers. Background checks. Flight monitoring. Your executive's preferences saved from the first ride. | Compare services | $251 | Clicks |
-| EA-T3 | "Your booking hub for every airport, every city" | One platform, 100+ cities, integrated with your travel management system. Book for your travelers in seconds. Concierge Dashboard built for travel arrangers. | Start booking | $126 | Conversions |
+| EA-T1 | "Your executive's next trip, booked in 30 seconds" | LUXY integrates with Concur, TripActions, and every major TMC. Your travelers get professional chauffeurs. You get one-click booking and real-time trip tracking. | See how it works | $480 | Clicks |
+| EA-T2 | "The ground transport your travelers actually deserve" | Not all car services are equal. Company-employed drivers. Background checks. Flight monitoring. Your executive's preferences saved from the first ride. | Compare services | $320 | Clicks |
+| EA-T3 | "Your booking hub for every airport, every city" | One platform, 100+ cities, integrated with your travel management system. Book for your travelers in seconds. Concierge Dashboard built for travel arrangers. | Start booking | $160 | Conversions |
 
 **Frequency**: 2/day, 7/week | **Dayparting**: +20% 8-10am, +15% 1-3pm
 
 ---
 
-### 2. Corporate Travel Managers (20%, $686/day)
+### 2. Corporate Travel Managers (20%, $857/day)
 
 | Campaign | Headline | Body | CTA | $/day | Goal |
 |---|---|---|---|---|---|
-| TM-T1 | "43% of companies don't have a chauffeured contract. Yours?" | BTN 2026 survey: service consistency jumped 0.47 points for preferred partners. LUXY serves 400+ companies through Concur, TripActions, CWT, Amex GBT, CTM, FCM. | See the data | $343 | Clicks |
-| TM-T2 | "SOC 2 certified. ISO-aligned. Sunshine Act ready." | Company-employed chauffeurs scored 4.43/5 — highest in BTN survey. Background checks, GPS tracking, 24/7 dispatch. | Request vendor packet | $229 | Clicks |
-| TM-T3 | "Add LUXY to your preferred vendor list" | Corporate rates. Policy-compliant booking. Real-time trip-level spend data. 400+ companies onboarded. No minimum commitment. | Start corporate program | $114 | Conversions |
+| TM-T1 | "43% of companies don't have a chauffeured contract. Yours?" | BTN 2026 survey: service consistency jumped 0.47 points for preferred partners. LUXY serves 400+ companies through Concur, TripActions, CWT, Amex GBT, CTM, FCM. | See the data | $428 | Clicks |
+| TM-T2 | "SOC 2 certified. ISO-aligned. Sunshine Act ready." | Company-employed chauffeurs scored 4.43/5 — highest in BTN survey. Background checks, GPS tracking, 24/7 dispatch. | Request vendor packet | $286 | Clicks |
+| TM-T3 | "Add LUXY to your preferred vendor list" | Corporate rates. Policy-compliant booking. Real-time trip-level spend data. 400+ companies onboarded. No minimum commitment. | Start corporate program | $143 | Conversions |
 
 **Frequency**: 2/day, 7/week | **Dayparting**: +20% 9-11am, +15% 2-4pm
 
 ---
 
-### 3. Home Market — CT/NYC (15%, $514/day)
+### 3. Home Market — CT/NYC (15%, $617/day)
 
 | Campaign | Headline | Body | CTA | $/day | Goal |
 |---|---|---|---|---|---|
-| HM-T1 | "The Connecticut-based car service trusted by 400+ companies" | Stamford to JFK. Greenwich to LaGuardia. New Haven to Newark. Chauffeurs who know your routes, your buildings, your airports. | See local coverage | $257 | Clicks |
-| HM-T2 | "Your NYC ground transport, handled" | Midtown to Teterboro in 40 minutes. Wall Street to JFK, door to door. 99.7% on-time across the tri-state. | Check your route | $171 | Clicks |
-| HM-T3 | "Your neighbors already ride with us" | 400+ companies in the CT/NYC corridor trust LUXY. Corporate rates, Concur integration, chauffeurs who know the tri-state. | Book your first ride | $86 | Conversions |
+| HM-T1 | "The Connecticut-based car service trusted by 400+ companies" | Stamford to JFK. Greenwich to LaGuardia. New Haven to Newark. Chauffeurs who know your routes, your buildings, your airports. | See local coverage | $309 | Clicks |
+| HM-T2 | "Your NYC ground transport, handled" | Midtown to Teterboro in 40 minutes. Wall Street to JFK, door to door. 99.7% on-time across the tri-state. | Check your route | $206 | Clicks |
+| HM-T3 | "Your neighbors already ride with us" | 400+ companies in the CT/NYC corridor trust LUXY. Corporate rates, Concur integration, chauffeurs who know the tri-state. | Book your first ride | $103 | Conversions |
 
 **Frequency**: 2/day, 8/week | **Dayparting**: +25% 7-9am, +20% 5-7pm
 
 ---
 
-### 4. Event Planners (10%, $343/day)
+### 4. Event Planners (12%, $411/day)
 
 | Campaign | Headline | Body | CTA | $/day | Goal |
 |---|---|---|---|---|---|
-| EV-T1 | "Your 200-person airport arrival, handled" | Multi-vehicle coordination across every LUXY city. Backup operators at every location. Real-time manifest tracking. | See group capabilities | $171 | Clicks |
+| EV-T1 | "Your 200-person airport arrival, handled" | Multi-vehicle coordination across every LUXY city. Backup operators at every location. Real-time manifest tracking. | See group capabilities | $206 | Clicks |
 | EV-T2 | "Zero transportation failures at your next event" | Flight monitoring for every attendee. Automatic delay adjustment. Contingency vehicles pre-positioned. | Plan your event | $114 | Clicks |
 | EV-T3 | "The event planner's ground transport partner" | Conferences. Incentive trips. Galas. Board retreats. One booking hub, every city, every vehicle class. | Get a group quote | $58 | Conversions |
 
@@ -184,13 +173,13 @@ https://luxyride.com/?sapid={SA_POSTBACK_ID}&cid={CAMPAIGN_ID}&crid={CREATIVE_ID
 
 ---
 
-### 5. Legal Vertical (8%, $274/day)
+### 5. Legal Vertical (10%, $343/day)
 
 | Campaign | Headline | Body | CTA | $/day | Goal |
 |---|---|---|---|---|---|
-| LG-T1 | "On time, every time. Your billable hour is non-negotiable." | A partner billing $1,200/hr cannot afford a 45-minute rideshare delay. Company-employed chauffeurs, flight monitoring, guaranteed pickup. | Learn more | $137 | Clicks |
-| LG-T2 | "SOC 2 data handling. Vetted for BigLaw." | Background-checked drivers. GPS tracking. Disbursement-ready receipts. Duty of care for associates in unfamiliar cities. | See credentials | $91 | Clicks |
-| LG-T3 | "Depositions. Court appearances. Client visits. Covered." | Courthouse to hotel. Office to airport. 100+ cities, integrated with Amex GBT Legal. | Set up firm account | $46 | Conversions |
+| LG-T1 | "On time, every time. Your billable hour is non-negotiable." | A partner billing $1,200/hr cannot afford a 45-minute rideshare delay. Company-employed chauffeurs, flight monitoring, guaranteed pickup. | Learn more | $171 | Clicks |
+| LG-T2 | "SOC 2 data handling. Vetted for BigLaw." | Background-checked drivers. GPS tracking. Disbursement-ready receipts. Duty of care for associates in unfamiliar cities. | See credentials | $114 | Clicks |
+| LG-T3 | "Depositions. Court appearances. Client visits. Covered." | Courthouse to hotel. Office to airport. 100+ cities, integrated with Amex GBT Legal. | Set up firm account | $57 | Conversions |
 
 **Frequency**: 2/day, 6/week | **Dayparting**: +20% 7-9am, +15% 5-8pm
 
@@ -208,63 +197,6 @@ https://luxyride.com/?sapid={SA_POSTBACK_ID}&cid={CAMPAIGN_ID}&crid={CREATIVE_ID
 
 ---
 
-### 7. Financial Dealmakers (6%, $206/day)
-
-| Campaign | Headline | Body | CTA | $/day | Goal |
-|---|---|---|---|---|---|
-| FI-T1 | "From the airport to the 8am management presentation" | IPO roadshows. Due diligence trips. Deal closings. 72 hours or 72 minutes in advance. | Book instantly | $137 | Clicks |
-| FI-T2 | "Your deal team's ground transport, handled" | Multi-city itineraries. Last-minute changes. Client-billable receipts. Missed meetings collapse transactions. | Set up team account | $69 | Conversions |
-
-**Frequency**: 2/day, 6/week | **Dayparting**: +25% 6-9am, +20% 4-7pm
-
----
-
-### 8. Supply Partners (5%, $171/day) — SEPARATE CAMPAIGN
-
-**Different landing page (Supply Partners signup). Different conversion event (`luxy_supply_partner_apply`). Do NOT combine with demand-side campaigns.**
-
-| Campaign | Headline | Body | CTA | $/day | Goal |
-|---|---|---|---|---|---|
-| SP-T1 | "Your single-city operation can serve 100 cities tonight" | Join LUXY's Supply Partners network. 400+ companies already booking through our platform. Company-employed drivers scored 4.43/5 in the BTN survey. Your fleet, their bookings. | Learn about the network | $114 | Clicks |
-| SP-T2 | "400+ companies booking. Your fleet filling." | Independent operators who meet our standard. Background checks, vehicle standards, dispatch integration. | Apply to join | $57 | Conversions |
-
-**Frequency**: 1/day, 4/week | **Dayparting**: Flat
-
----
-
-### 9. Private Aviation (3%, $103/day)
-
-| Campaign | Headline | Body | CTA | $/day | Goal |
-|---|---|---|---|---|---|
-| PA-T1 | "From FBO to destination, without the wait" | Teterboro. Van Nuys. Opa-Locka. Every executive terminal. Chauffeur meets you planeside. | See FBO coverage | $69 | Clicks |
-| PA-T2 | "The ground transport your charter broker recommends" | Private aviation demands private ground. 99.7% on-time rate. Background-checked chauffeurs who understand executive terminals, tail numbers, and discretion. Trusted by charter brokers nationwide. | Book your next arrival | $34 | Conversions |
-
-**Frequency**: 1/day, 5/week | **Dayparting**: +20% 6-9am, +15% 4-7pm
-
----
-
-### 10. CFO / T&E (2%, $69/day)
-
-| Campaign | Headline | Body | CTA | $/day | Goal |
-|---|---|---|---|---|---|
-| CF-T1 | "Reduce unmanaged ground transport leakage by 34%" | 34% of ground transport spend is unmanaged. The average company leaks $47K annually. LUXY: real-time spend dashboards, policy compliance at booking, Concur captures every ride. | See the savings | $46 | Clicks |
-| CF-T2 | "Your T&E policy, enforced at booking" | Corporate rates locked. Vehicle class restrictions. Real-time dashboards. Audit-ready. | Request pricing | $23 | Conversions |
-
-**Frequency**: 1/day, 4/week | **Dayparting**: +20% 9-11am
-
----
-
-### 11. Hotel B2B (2%, $69/day)
-
-| Campaign | Headline | Body | CTA | $/day | Goal |
-|---|---|---|---|---|---|
-| HT-T1 | "Your concierge desk, our global fleet" | 400+ companies already trust LUXY for ground transport. Add us to your preferred vendor list — free. Professional chauffeurs in 100+ cities. Guest satisfaction scores that reflect on your property. | Learn about partnership | $46 | Clicks |
-| HT-T2 | "Every guest arrival, elevated" | Airport pickup coordinated with check-in. Flight monitoring. Driver in your lobby or curbside. | Set up property account | $23 | Conversions |
-
-**Frequency**: 1/day, 4/week | **Dayparting**: +15% 9am-12pm
-
----
-
 ## IMAGE ART DIRECTION
 
 | Audience | Visual Style | Palette |
@@ -275,11 +207,6 @@ https://luxyride.com/?sapid={SA_POSTBACK_ID}&cid={CAMPAIGN_ID}&crid={CREATIVE_ID
 | Event Planners | Group arrivals, multiple vehicles, venue exterior | Black, emerald |
 | Legal | Courthouse, downtown professional, boardroom | Dark navy, silver |
 | Life Sciences | Lab-to-airport, compliance documents | White, blue, trust green |
-| Financial Dealmakers | Airport to office, fast urban, deal energy | Black, gold |
-| Supply Partners | Fleet vehicles, professional driver, operations | Blue, professional |
-| Private Aviation | FBO tarmac, planeside pickup, executive terminal | Black, platinum |
-| CFO / T&E | Financial dashboards, expense reports | Charcoal, green |
-| Hotel B2B | Hotel entrance, concierge desk, guest arrival | Warm gold |
 
 **Sizes**: 1200x627 (primary), 600x600 (square), 800x600 (alternate). JPG/PNG under 2MB.
 
@@ -305,15 +232,15 @@ https://luxyride.com/?sapid={SA_POSTBACK_ID}&cid={CAMPAIGN_ID}&crid={CREATIVE_ID
 - [ ] StackAdapt pixel confirmed firing
 - [ ] 6 conversion events created
 - [ ] 5 audiences created
-- [ ] `luxy_converted_exclude` on ALL 28 campaigns
+- [ ] `luxy_converted_exclude` on ALL 18 campaigns
 - [ ] Per-audience whitelists uploaded
 - [ ] Shared blacklist on all campaigns
-- [ ] 11 campaign groups with correct budgets
-- [ ] 28 campaigns with correct copy
+- [ ] 6 campaign groups with correct budgets
+- [ ] 18 campaigns with correct copy
 - [ ] Click URLs include StackAdapt macros
 - [ ] Frequency caps set per audience
 - [ ] Dayparting set per audience
-- [ ] 28 image creatives uploaded
+- [ ] 18 image creatives uploaded
 - [ ] Supply Partner campaigns on SEPARATE line item
 - [ ] All campaigns in DRAFT
 
@@ -324,7 +251,7 @@ https://luxyride.com/?sapid={SA_POSTBACK_ID}&cid={CAMPAIGN_ID}&crid={CREATIVE_ID
 - [ ] Intelligence report generator tested
 
 ### Joint:
-- [ ] Review all 28 campaigns
+- [ ] Review all 18 campaigns
 - [ ] Test clicks verified
 - [ ] Optimization cadence confirmed (every 48 hours)
 - [ ] Set all to ACTIVE
@@ -339,7 +266,7 @@ https://luxyride.com/?sapid={SA_POSTBACK_ID}&cid={CAMPAIGN_ID}&crid={CREATIVE_ID
 | `AGENCY_BRIEF.md` | This document |
 | `AGENCY_HANDOFF_COMPLETE.md` | Step-by-step setup |
 | `luxy_ride_complete_creatives.json` | 28 campaign specs |
-| `stackadapt_whitelist_*.csv` (8 files) | Per-audience whitelists |
+| `stackadapt_whitelist_*.csv` (6 files) | Per-audience whitelists |
 | `stackadapt_blacklist_upload.csv` | Shared exclusion list |
 | `IMAGE_CREATIVE_BRIEFS.md` | Image specifications |
 

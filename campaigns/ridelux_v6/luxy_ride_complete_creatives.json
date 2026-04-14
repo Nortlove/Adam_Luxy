@@ -1,23 +1,26 @@
 {
   "generated_at": "2026-04-14",
-  "model": "11_audience_from_research",
-  "source": "campaigns/luxyride_whitelist_master.md",
+  "model": "6_audience_phase1_launch",
   "daily_budget": 3428.0,
   "weekly_budget": 23996.0,
-  "total_audiences": 11,
-  "total_campaigns": 28,
+  "total_audiences": 6,
+  "total_campaigns": 18,
+  "phase2_audiences": [
+    "Financial Dealmakers (add weeks 5+ or IPO season)",
+    "Supply Partners (separate campaign, launch when confirmed)",
+    "Private Aviation (add when conversion data justifies CPMs)",
+    "CFO/T&E (fold into Travel Managers)",
+    "Hotel B2B (fold into Travel Managers)"
+  ],
   "audiences": [
     {
       "id": "ea",
       "name": "Corporate Travel Arrangers (EAs)",
       "prefix": "EA",
-      "allocation_pct": 22,
-      "archetypes": [
-        "reliable_cooperator"
-      ],
+      "allocation_pct": 28,
       "touches": 3,
       "frequency_cap": "2/day, 7/week",
-      "dayparting": "+20% 8-10am weekday (EA planning window), +15% 1-3pm (afternoon bookings)",
+      "dayparting": "+20% 8-10am weekday, +15% 1-3pm",
       "domains_file": "stackadapt_whitelist_reliable_cooperator.csv",
       "creatives": [
         {
@@ -27,7 +30,7 @@
           "body": "LUXY integrates with Concur, TripActions, and every major TMC. Your travelers get professional chauffeurs. You get one-click booking and real-time trip tracking.",
           "cta": "See how it works",
           "mechanism": "implementation_intention",
-          "daily_budget": 377.08,
+          "daily_budget": 479.92,
           "campaign_id": "EA-T1"
         },
         {
@@ -37,7 +40,7 @@
           "body": "Not all car services are equal. Company-employed drivers. Background checks. Flight monitoring. Your executive's preferences saved from the first ride.",
           "cta": "Compare services",
           "mechanism": "evidence_proof",
-          "daily_budget": 251.39,
+          "daily_budget": 319.95,
           "campaign_id": "EA-T2"
         },
         {
@@ -47,22 +50,18 @@
           "body": "One platform, 100+ cities, integrated with your travel management system. Book for your travelers in seconds. Concierge Dashboard built for travel arrangers.",
           "cta": "Start booking",
           "mechanism": "micro_commitment",
-          "daily_budget": 125.69,
+          "daily_budget": 159.97,
           "campaign_id": "EA-T3"
         }
       ],
-      "daily_budget": 754.16,
-      "weekly_budget": 5279.12
+      "daily_budget": 959.84,
+      "weekly_budget": 6718.88
     },
     {
       "id": "tm",
       "name": "Corporate Travel Managers",
       "prefix": "TM",
-      "allocation_pct": 20,
-      "archetypes": [
-        "dependable_loyalist",
-        "reliable_cooperator"
-      ],
+      "allocation_pct": 25,
       "touches": 3,
       "frequency_cap": "2/day, 7/week",
       "dayparting": "+20% 9-11am weekday, +15% 2-4pm",
@@ -75,7 +74,7 @@
           "body": "BTN 2026 survey: service consistency jumped 0.47 points for companies with preferred partners. LUXY serves 400+ companies through Concur, TripActions, CWT, Amex GBT, CTM, and FCM.",
           "cta": "See the data",
           "mechanism": "evidence_proof",
-          "daily_budget": 342.8,
+          "daily_budget": 428.5,
           "campaign_id": "TM-T1"
         },
         {
@@ -85,7 +84,7 @@
           "body": "Company-employed chauffeurs scored 4.43/5 \u2014 highest in the BTN survey. Background checks, GPS tracking, 24/7 dispatch. The compliance your program requires.",
           "cta": "Request vendor packet",
           "mechanism": "evidence_proof",
-          "daily_budget": 228.53,
+          "daily_budget": 285.67,
           "campaign_id": "TM-T2"
         },
         {
@@ -95,24 +94,21 @@
           "body": "Corporate rates. Policy-compliant booking. Real-time trip-level spend data. 400+ companies already onboarded. No minimum commitment.",
           "cta": "Start corporate program",
           "mechanism": "implementation_intention",
-          "daily_budget": 114.27,
+          "daily_budget": 142.83,
           "campaign_id": "TM-T3"
         }
       ],
-      "daily_budget": 685.6,
-      "weekly_budget": 4799.2
+      "daily_budget": 857.0,
+      "weekly_budget": 5999.0
     },
     {
       "id": "hm",
       "name": "Home Market (CT/NYC Corridor)",
       "prefix": "HM",
-      "allocation_pct": 15,
-      "archetypes": [
-        "dependable_loyalist"
-      ],
+      "allocation_pct": 18,
       "touches": 3,
       "frequency_cap": "2/day, 8/week",
-      "dayparting": "+25% 7-9am weekday, +20% 5-7pm, flat weekend",
+      "dayparting": "+25% 7-9am weekday, +20% 5-7pm",
       "domains_file": "stackadapt_whitelist_home_market.csv",
       "creatives": [
         {
@@ -122,7 +118,7 @@
           "body": "From Stamford to JFK. Greenwich to LaGuardia. New Haven to Newark. Professional chauffeurs who know your routes, your buildings, your airports.",
           "cta": "See local coverage",
           "mechanism": "social_proof_matched",
-          "daily_budget": 257.1,
+          "daily_budget": 308.52,
           "campaign_id": "HM-T1"
         },
         {
@@ -132,7 +128,7 @@
           "body": "Midtown to Teterboro in 40 minutes. Wall Street to JFK, door to door. 99.7% on-time across the tri-state. The local service that scales nationally.",
           "cta": "Check your route",
           "mechanism": "evidence_proof",
-          "daily_budget": 171.4,
+          "daily_budget": 205.68,
           "campaign_id": "HM-T2"
         },
         {
@@ -142,25 +138,21 @@
           "body": "400+ companies in the CT/NYC corridor trust LUXY. Corporate rates, Concur integration, professional chauffeurs who know the tri-state like their own driveway.",
           "cta": "Book your first ride",
           "mechanism": "social_proof_matched",
-          "daily_budget": 85.7,
+          "daily_budget": 102.84,
           "campaign_id": "HM-T3"
         }
       ],
-      "daily_budget": 514.2,
-      "weekly_budget": 3599.4
+      "daily_budget": 617.04,
+      "weekly_budget": 4319.28
     },
     {
       "id": "ev",
       "name": "Event / Meeting / Incentive Planners",
       "prefix": "EV",
-      "allocation_pct": 10,
-      "archetypes": [
-        "reliable_cooperator",
-        "prevention_planner"
-      ],
+      "allocation_pct": 12,
       "touches": 3,
       "frequency_cap": "2/day, 7/week",
-      "dayparting": "+20% 9am-12pm weekday (planning hours)",
+      "dayparting": "+20% 9am-12pm weekday",
       "domains_file": "stackadapt_whitelist_prevention_planner.csv",
       "creatives": [
         {
@@ -170,7 +162,7 @@
           "body": "Multi-vehicle coordination across every LUXY city. Backup operators at every location. Real-time manifest tracking. Because one stranded attendee is one too many.",
           "cta": "See group capabilities",
           "mechanism": "anxiety_resolution",
-          "daily_budget": 171.4,
+          "daily_budget": 205.68,
           "campaign_id": "EV-T1"
         },
         {
@@ -180,7 +172,7 @@
           "body": "Flight monitoring for every attendee. Automatic delay adjustment. Contingency vehicles pre-positioned. Your event logistics, bulletproof.",
           "cta": "Plan your event",
           "mechanism": "anxiety_resolution",
-          "daily_budget": 114.27,
+          "daily_budget": 137.12,
           "campaign_id": "EV-T2"
         },
         {
@@ -190,22 +182,18 @@
           "body": "Conferences. Incentive trips. Galas. Board retreats. One booking hub, every city, every vehicle class. Flawless execution is the only standard.",
           "cta": "Get a group quote",
           "mechanism": "implementation_intention",
-          "daily_budget": 57.13,
+          "daily_budget": 68.56,
           "campaign_id": "EV-T3"
         }
       ],
-      "daily_budget": 342.8,
-      "weekly_budget": 2399.6
+      "daily_budget": 411.36,
+      "weekly_budget": 2879.52
     },
     {
       "id": "lg",
       "name": "Legal Vertical (BigLaw)",
       "prefix": "LG",
-      "allocation_pct": 8,
-      "archetypes": [
-        "dependable_loyalist",
-        "careful_truster"
-      ],
+      "allocation_pct": 10,
       "touches": 3,
       "frequency_cap": "2/day, 6/week",
       "dayparting": "+20% 7-9am weekday, +15% 5-8pm",
@@ -214,45 +202,42 @@
         {
           "touch": 1,
           "opt_goal": "clicks",
-          "headline": "On time, every time. Because your billable hour is non-negotiable.",
-          "body": "A partner billing $1,200/hour cannot afford a 45-minute rideshare delay. LUXY: company-employed chauffeurs, flight monitoring, guaranteed pickup.",
+          "headline": "On time, every time. Your billable hour is non-negotiable.",
+          "body": "A partner billing $1,200/hr cannot afford a 45-minute rideshare delay. Company-employed chauffeurs, flight monitoring, guaranteed pickup.",
           "cta": "Learn more",
           "mechanism": "loss_framing",
-          "daily_budget": 137.12,
+          "daily_budget": 171.4,
           "campaign_id": "LG-T1"
         },
         {
           "touch": 2,
           "opt_goal": "clicks",
-          "headline": "SOC 2 data handling. The only car service vetted for BigLaw.",
+          "headline": "SOC 2 data handling. Vetted for BigLaw.",
           "body": "Background-checked drivers. GPS tracking. Disbursement-ready receipts. Duty of care for associates in unfamiliar cities. Your firm's standard, met.",
           "cta": "See credentials",
           "mechanism": "evidence_proof",
-          "daily_budget": 91.41,
+          "daily_budget": 114.27,
           "campaign_id": "LG-T2"
         },
         {
           "touch": 3,
           "opt_goal": "conversions",
           "headline": "Depositions. Court appearances. Client visits. Covered.",
-          "body": "From courthouse to hotel. From office to airport. 100+ cities, one booking platform, integrated with Amex GBT Legal and every major TMC.",
+          "body": "Courthouse to hotel. Office to airport. 100+ cities, integrated with Amex GBT Legal and every major TMC.",
           "cta": "Set up firm account",
           "mechanism": "implementation_intention",
-          "daily_budget": 45.71,
+          "daily_budget": 57.13,
           "campaign_id": "LG-T3"
         }
       ],
-      "daily_budget": 274.24,
-      "weekly_budget": 1919.68
+      "daily_budget": 342.8,
+      "weekly_budget": 2399.6
     },
     {
       "id": "ls",
       "name": "Life Sciences / Pharma",
       "prefix": "LS",
       "allocation_pct": 7,
-      "archetypes": [
-        "careful_truster"
-      ],
       "touches": 3,
       "frequency_cap": "2/day, 6/week",
       "dayparting": "+20% 9-11am weekday",
@@ -262,7 +247,7 @@
           "touch": 1,
           "opt_goal": "clicks",
           "headline": "Audit-ready ground transport for HCP guest travel",
-          "body": "Every ride your company pays for an HCP is a transfer of value under the Sunshine Act. LUXY captures booker, passenger, addresses, duration, amount \u2014 audit-ready from day one.",
+          "body": "Every HCP ride is a Sunshine Act transfer of value. LUXY captures booker, passenger, addresses, duration, amount \u2014 audit-ready from day one.",
           "cta": "See compliance features",
           "mechanism": "evidence_proof",
           "daily_budget": 119.98,
@@ -271,7 +256,7 @@
         {
           "touch": 2,
           "opt_goal": "clicks",
-          "headline": "Fewer than half of pharma travel programs meet a global standard",
+          "headline": "Fewer than half of pharma programs meet a global standard",
           "body": "BCD benchmarking of 15 global life sciences travel policies found fewer than half meet a consistent standard. 43% have no compliant ground transport. LUXY: one platform, SOC 2 certified, Sunshine Act export built in.",
           "cta": "Request compliance demo",
           "mechanism": "evidence_proof",
@@ -291,193 +276,6 @@
       ],
       "daily_budget": 239.96,
       "weekly_budget": 1679.72
-    },
-    {
-      "id": "fi",
-      "name": "Financial Services Dealmakers",
-      "prefix": "FI",
-      "allocation_pct": 6,
-      "archetypes": [
-        "dependable_loyalist"
-      ],
-      "touches": 2,
-      "frequency_cap": "2/day, 6/week",
-      "dayparting": "+25% 6-9am weekday (pre-meeting), +20% 4-7pm",
-      "domains_file": "stackadapt_whitelist_financial_dealmaker.csv",
-      "creatives": [
-        {
-          "touch": 1,
-          "opt_goal": "clicks",
-          "headline": "From the airport to the 8am management presentation",
-          "body": "IPO roadshows. Due diligence trips. Deal closings. 72 hours or 72 minutes in advance \u2014 your car is confirmed, your driver briefed, your route optimized.",
-          "cta": "Book instantly",
-          "mechanism": "implementation_intention",
-          "daily_budget": 137.12,
-          "campaign_id": "FI-T1"
-        },
-        {
-          "touch": 2,
-          "opt_goal": "conversions",
-          "headline": "Your deal team's ground transport, handled",
-          "body": "Multi-city itineraries. Last-minute changes. Client-billable receipts. One platform for every airport in every deal market. Because missed meetings collapse transactions.",
-          "cta": "Set up team account",
-          "mechanism": "loss_framing",
-          "daily_budget": 68.56,
-          "campaign_id": "FI-T2"
-        }
-      ],
-      "daily_budget": 205.68,
-      "weekly_budget": 1439.76
-    },
-    {
-      "id": "sp",
-      "name": "Supply Partner Recruitment",
-      "prefix": "SP",
-      "allocation_pct": 5,
-      "archetypes": [
-        "dependable_loyalist"
-      ],
-      "touches": 2,
-      "frequency_cap": "1/day, 4/week",
-      "dayparting": "flat (operators browse trade press throughout day)",
-      "domains_file": "stackadapt_whitelist_supply_side.csv",
-      "note": "SEPARATE CAMPAIGN \u2014 different landing page (Supply Partners signup), different conversion events",
-      "creatives": [
-        {
-          "touch": 1,
-          "opt_goal": "clicks",
-          "headline": "Your single-city operation can serve 100 cities tonight",
-          "body": "Join LUXY's Supply Partners network. 400+ companies already booking through our platform. Company-employed drivers scored 4.43/5 in the BTN survey. Your fleet, their bookings.",
-          "cta": "Learn about the network",
-          "mechanism": "evidence_proof",
-          "daily_budget": 114.27,
-          "campaign_id": "SP-T1"
-        },
-        {
-          "touch": 2,
-          "opt_goal": "conversions",
-          "headline": "400+ companies booking. Your fleet filling.",
-          "body": "LUXY partners with independent operators who meet our quality standard. Background checks, vehicle standards, dispatch integration. Grow your utilization, not your overhead.",
-          "cta": "Apply to join",
-          "mechanism": "implementation_intention",
-          "daily_budget": 57.13,
-          "campaign_id": "SP-T2"
-        }
-      ],
-      "daily_budget": 171.4,
-      "weekly_budget": 1199.8
-    },
-    {
-      "id": "pa",
-      "name": "Private Aviation Passengers",
-      "prefix": "PA",
-      "allocation_pct": 3,
-      "archetypes": [
-        "trusting_loyalist"
-      ],
-      "touches": 2,
-      "frequency_cap": "1/day, 5/week",
-      "dayparting": "+20% 6-9am weekday, +15% 4-7pm",
-      "domains_file": "stackadapt_whitelist_trusting_loyalist.csv",
-      "creatives": [
-        {
-          "touch": 1,
-          "opt_goal": "clicks",
-          "headline": "From FBO to destination, without the wait",
-          "body": "Teterboro. Van Nuys. Opa-Locka. Every executive terminal nationwide. Your chauffeur meets you planeside. Discretion, precision, zero friction.",
-          "cta": "See FBO coverage",
-          "mechanism": "narrative_transportation",
-          "daily_budget": 68.56,
-          "campaign_id": "PA-T1"
-        },
-        {
-          "touch": 2,
-          "opt_goal": "conversions",
-          "headline": "The ground transport your charter broker recommends",
-          "body": "Private aviation demands private ground. 99.7% on-time rate. Background-checked chauffeurs who understand executive terminals, tail numbers, and discretion. Trusted by charter brokers nationwide.",
-          "cta": "Book your next arrival",
-          "mechanism": "evidence_proof",
-          "daily_budget": 34.28,
-          "campaign_id": "PA-T2"
-        }
-      ],
-      "daily_budget": 102.84,
-      "weekly_budget": 719.88
-    },
-    {
-      "id": "cf",
-      "name": "CFO / T&E Policy Owners",
-      "prefix": "CF",
-      "allocation_pct": 2,
-      "archetypes": [
-        "careful_truster",
-        "dependable_loyalist"
-      ],
-      "touches": 2,
-      "frequency_cap": "1/day, 4/week",
-      "dayparting": "+20% 9-11am weekday",
-      "domains_file": "stackadapt_whitelist_careful_truster.csv",
-      "creatives": [
-        {
-          "touch": 1,
-          "opt_goal": "clicks",
-          "headline": "Reduce unmanaged ground transport leakage by 34%",
-          "body": "34% of ground transport spend is unmanaged. Trip-level data shows the average company leaks $47K annually. LUXY: real-time spend dashboards, policy compliance at booking, Concur captures every ride.",
-          "cta": "See the savings",
-          "mechanism": "evidence_proof",
-          "daily_budget": 45.71,
-          "campaign_id": "CF-T1"
-        },
-        {
-          "touch": 2,
-          "opt_goal": "conversions",
-          "headline": "Your T&E policy, enforced at booking",
-          "body": "Corporate rates locked in. Vehicle class restrictions built in. Real-time dashboards for finance. Audit-ready ride logs. The ground transport line item, controlled.",
-          "cta": "Request pricing",
-          "mechanism": "implementation_intention",
-          "daily_budget": 22.85,
-          "campaign_id": "CF-T2"
-        }
-      ],
-      "daily_budget": 68.56,
-      "weekly_budget": 479.92
-    },
-    {
-      "id": "ht",
-      "name": "Hotel Industry (B2B Channel)",
-      "prefix": "HT",
-      "allocation_pct": 2,
-      "archetypes": [
-        "dependable_loyalist"
-      ],
-      "touches": 2,
-      "frequency_cap": "1/day, 4/week",
-      "dayparting": "+15% 9am-12pm weekday",
-      "domains_file": "stackadapt_whitelist_dependable_loyalist.csv",
-      "creatives": [
-        {
-          "touch": 1,
-          "opt_goal": "clicks",
-          "headline": "Your concierge desk, our global fleet",
-          "body": "400+ companies already trust LUXY for ground transport. Add us to your preferred vendor list \u2014 free. Professional chauffeurs in 100+ cities. Guest satisfaction scores that reflect on your property.",
-          "cta": "Learn about partnership",
-          "mechanism": "evidence_proof",
-          "daily_budget": 45.71,
-          "campaign_id": "HT-T1"
-        },
-        {
-          "touch": 2,
-          "opt_goal": "conversions",
-          "headline": "Every guest arrival, elevated",
-          "body": "Airport pickup coordinated with check-in. Flight monitoring. Driver in your lobby or at curbside. The ground transport your guests expect from a property like yours.",
-          "cta": "Set up property account",
-          "mechanism": "implementation_intention",
-          "daily_budget": 22.85,
-          "campaign_id": "HT-T2"
-        }
-      ],
-      "daily_budget": 68.56,
-      "weekly_budget": 479.92
     }
   ]
 }

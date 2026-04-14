@@ -1,0 +1,760 @@
+{
+  "generated_at": "2026-04-13",
+  "model": "goal_activation_v1",
+  "min_crossover_threshold": 0.05,
+  "archetype_domain_lists": {
+    "trusting_loyalist": [
+      {
+        "domain": "hbr.org",
+        "crossover_score": 0.178,
+        "dominant_goal": "affiliation_safety"
+      },
+      {
+        "domain": "nytimes.com",
+        "crossover_score": 0.143,
+        "dominant_goal": "affiliation_safety"
+      },
+      {
+        "domain": "espn.com",
+        "crossover_score": 0.131,
+        "dominant_goal": "social_alignment"
+      },
+      {
+        "domain": "linkedin.com",
+        "crossover_score": 0.121,
+        "dominant_goal": "status_signaling"
+      },
+      {
+        "domain": "wsj.com",
+        "crossover_score": 0.104,
+        "dominant_goal": "affiliation_safety"
+      },
+      {
+        "domain": "people.com",
+        "crossover_score": 0.102,
+        "dominant_goal": "social_alignment"
+      },
+      {
+        "domain": "tsa.gov",
+        "crossover_score": 0.093,
+        "dominant_goal": "threat_reduction"
+      },
+      {
+        "domain": "tripadvisor.com",
+        "crossover_score": 0.09,
+        "dominant_goal": "competence_verification"
+      },
+      {
+        "domain": "usatoday.com",
+        "crossover_score": 0.077,
+        "dominant_goal": "social_alignment"
+      },
+      {
+        "domain": "forbes.com",
+        "crossover_score": 0.07,
+        "dominant_goal": "status_signaling"
+      },
+      {
+        "domain": "ft.com",
+        "crossover_score": 0.07,
+        "dominant_goal": "affiliation_safety"
+      },
+      {
+        "domain": "inc.com",
+        "crossover_score": 0.07,
+        "dominant_goal": "status_signaling"
+      },
+      {
+        "domain": "seatguru.com",
+        "crossover_score": 0.059,
+        "dominant_goal": "competence_verification"
+      },
+      {
+        "domain": "economist.com",
+        "crossover_score": 0.054,
+        "dominant_goal": "competence_verification"
+      }
+    ],
+    "reliable_cooperator": [
+      {
+        "domain": "expedia.com",
+        "crossover_score": 0.232,
+        "dominant_goal": "planning_completion"
+      },
+      {
+        "domain": "kayak.com",
+        "crossover_score": 0.232,
+        "dominant_goal": "planning_completion"
+      },
+      {
+        "domain": "booking.com",
+        "crossover_score": 0.202,
+        "dominant_goal": "planning_completion"
+      },
+      {
+        "domain": "opentable.com",
+        "crossover_score": 0.171,
+        "dominant_goal": "planning_completion"
+      },
+      {
+        "domain": "weddingwire.com",
+        "crossover_score": 0.156,
+        "dominant_goal": "competence_verification"
+      },
+      {
+        "domain": "seatguru.com",
+        "crossover_score": 0.141,
+        "dominant_goal": "competence_verification"
+      },
+      {
+        "domain": "theknot.com",
+        "crossover_score": 0.139,
+        "dominant_goal": "planning_completion"
+      },
+      {
+        "domain": "hbr.org",
+        "crossover_score": 0.129,
+        "dominant_goal": "affiliation_safety"
+      },
+      {
+        "domain": "nytimes.com",
+        "crossover_score": 0.113,
+        "dominant_goal": "affiliation_safety"
+      },
+      {
+        "domain": "tsa.gov",
+        "crossover_score": 0.112,
+        "dominant_goal": "threat_reduction"
+      },
+      {
+        "domain": "thepointsguy.com",
+        "crossover_score": 0.109,
+        "dominant_goal": "planning_completion"
+      },
+      {
+        "domain": "flightaware.com",
+        "crossover_score": 0.093,
+        "dominant_goal": "threat_reduction"
+      },
+      {
+        "domain": "flightradar24.com",
+        "crossover_score": 0.093,
+        "dominant_goal": "threat_reduction"
+      },
+      {
+        "domain": "hoteltonight.com",
+        "crossover_score": 0.093,
+        "dominant_goal": "planning_completion"
+      },
+      {
+        "domain": "weather.com",
+        "crossover_score": 0.093,
+        "dominant_goal": "threat_reduction"
+      },
+      {
+        "domain": "marthastewart.com",
+        "crossover_score": 0.063,
+        "dominant_goal": "competence_verification"
+      },
+      {
+        "domain": "tripadvisor.com",
+        "crossover_score": 0.063,
+        "dominant_goal": "competence_verification"
+      }
+    ],
+    "careful_truster": [
+      {
+        "domain": "tsa.gov",
+        "crossover_score": 0.22,
+        "dominant_goal": "threat_reduction"
+      },
+      {
+        "domain": "hbr.org",
+        "crossover_score": 0.173,
+        "dominant_goal": "affiliation_safety"
+      },
+      {
+        "domain": "miserymap.com",
+        "crossover_score": 0.156,
+        "dominant_goal": "threat_reduction"
+      },
+      {
+        "domain": "nytimes.com",
+        "crossover_score": 0.146,
+        "dominant_goal": "affiliation_safety"
+      },
+      {
+        "domain": "seatguru.com",
+        "crossover_score": 0.1,
+        "dominant_goal": "competence_verification"
+      },
+      {
+        "domain": "wsj.com",
+        "crossover_score": 0.08,
+        "dominant_goal": "affiliation_safety"
+      },
+      {
+        "domain": "booking.com",
+        "crossover_score": 0.067,
+        "dominant_goal": "planning_completion"
+      },
+      {
+        "domain": "marthastewart.com",
+        "crossover_score": 0.067,
+        "dominant_goal": "competence_verification"
+      },
+      {
+        "domain": "tripadvisor.com",
+        "crossover_score": 0.067,
+        "dominant_goal": "competence_verification"
+      },
+      {
+        "domain": "weddingwire.com",
+        "crossover_score": 0.067,
+        "dominant_goal": "competence_verification"
+      },
+      {
+        "domain": "opentable.com",
+        "crossover_score": 0.065,
+        "dominant_goal": "planning_completion"
+      },
+      {
+        "domain": "cnn.com",
+        "crossover_score": 0.062,
+        "dominant_goal": "threat_reduction"
+      },
+      {
+        "domain": "flightaware.com",
+        "crossover_score": 0.062,
+        "dominant_goal": "threat_reduction"
+      },
+      {
+        "domain": "flightradar24.com",
+        "crossover_score": 0.062,
+        "dominant_goal": "threat_reduction"
+      },
+      {
+        "domain": "weather.com",
+        "crossover_score": 0.062,
+        "dominant_goal": "threat_reduction"
+      },
+      {
+        "domain": "economist.com",
+        "crossover_score": 0.06,
+        "dominant_goal": "competence_verification"
+      },
+      {
+        "domain": "espn.com",
+        "crossover_score": 0.06,
+        "dominant_goal": "social_alignment"
+      },
+      {
+        "domain": "forbes.com",
+        "crossover_score": 0.053,
+        "dominant_goal": "status_signaling"
+      },
+      {
+        "domain": "ft.com",
+        "crossover_score": 0.053,
+        "dominant_goal": "affiliation_safety"
+      },
+      {
+        "domain": "inc.com",
+        "crossover_score": 0.053,
+        "dominant_goal": "status_signaling"
+      },
+      {
+        "domain": "linkedin.com",
+        "crossover_score": 0.053,
+        "dominant_goal": "status_signaling"
+      }
+    ],
+    "explorer": [
+      {
+        "domain": "cntraveler.com",
+        "crossover_score": 0.275,
+        "dominant_goal": "novelty_exploration"
+      },
+      {
+        "domain": "fastcompany.com",
+        "crossover_score": 0.183,
+        "dominant_goal": "novelty_exploration"
+      },
+      {
+        "domain": "fortune.com",
+        "crossover_score": 0.177,
+        "dominant_goal": "status_signaling"
+      },
+      {
+        "domain": "forbes.com",
+        "crossover_score": 0.162,
+        "dominant_goal": "status_signaling"
+      },
+      {
+        "domain": "townandcountrymag.com",
+        "crossover_score": 0.138,
+        "dominant_goal": "status_signaling"
+      },
+      {
+        "domain": "vogue.com",
+        "crossover_score": 0.138,
+        "dominant_goal": "status_signaling"
+      },
+      {
+        "domain": "pinterest.com",
+        "crossover_score": 0.11,
+        "dominant_goal": "novelty_exploration"
+      },
+      {
+        "domain": "inc.com",
+        "crossover_score": 0.092,
+        "dominant_goal": "status_signaling"
+      },
+      {
+        "domain": "wsj.com",
+        "crossover_score": 0.083,
+        "dominant_goal": "affiliation_safety"
+      },
+      {
+        "domain": "linkedin.com",
+        "crossover_score": 0.069,
+        "dominant_goal": "status_signaling"
+      },
+      {
+        "domain": "bloomberg.com",
+        "crossover_score": 0.067,
+        "dominant_goal": "status_signaling"
+      },
+      {
+        "domain": "cnbc.com",
+        "crossover_score": 0.067,
+        "dominant_goal": "status_signaling"
+      },
+      {
+        "domain": "brides.com",
+        "crossover_score": 0.062,
+        "dominant_goal": "indulgence_permission"
+      },
+      {
+        "domain": "nytimes.com",
+        "crossover_score": 0.052,
+        "dominant_goal": "affiliation_safety"
+      },
+      {
+        "domain": "politico.com",
+        "crossover_score": 0.052,
+        "dominant_goal": "affiliation_safety"
+      }
+    ],
+    "prevention_planner": [
+      {
+        "domain": "tsa.gov",
+        "crossover_score": 0.23,
+        "dominant_goal": "threat_reduction"
+      },
+      {
+        "domain": "miserymap.com",
+        "crossover_score": 0.221,
+        "dominant_goal": "threat_reduction"
+      },
+      {
+        "domain": "opentable.com",
+        "crossover_score": 0.147,
+        "dominant_goal": "planning_completion"
+      },
+      {
+        "domain": "booking.com",
+        "crossover_score": 0.135,
+        "dominant_goal": "planning_completion"
+      },
+      {
+        "domain": "flightaware.com",
+        "crossover_score": 0.135,
+        "dominant_goal": "threat_reduction"
+      },
+      {
+        "domain": "flightradar24.com",
+        "crossover_score": 0.135,
+        "dominant_goal": "threat_reduction"
+      },
+      {
+        "domain": "weather.com",
+        "crossover_score": 0.135,
+        "dominant_goal": "threat_reduction"
+      },
+      {
+        "domain": "seatguru.com",
+        "crossover_score": 0.121,
+        "dominant_goal": "competence_verification"
+      },
+      {
+        "domain": "expedia.com",
+        "crossover_score": 0.116,
+        "dominant_goal": "planning_completion"
+      },
+      {
+        "domain": "kayak.com",
+        "crossover_score": 0.116,
+        "dominant_goal": "planning_completion"
+      },
+      {
+        "domain": "weddingwire.com",
+        "crossover_score": 0.112,
+        "dominant_goal": "competence_verification"
+      },
+      {
+        "domain": "cnn.com",
+        "crossover_score": 0.088,
+        "dominant_goal": "threat_reduction"
+      },
+      {
+        "domain": "theknot.com",
+        "crossover_score": 0.07,
+        "dominant_goal": "planning_completion"
+      },
+      {
+        "domain": "hbr.org",
+        "crossover_score": 0.065,
+        "dominant_goal": "affiliation_safety"
+      },
+      {
+        "domain": "marthastewart.com",
+        "crossover_score": 0.065,
+        "dominant_goal": "competence_verification"
+      },
+      {
+        "domain": "nytimes.com",
+        "crossover_score": 0.065,
+        "dominant_goal": "affiliation_safety"
+      },
+      {
+        "domain": "tripadvisor.com",
+        "crossover_score": 0.065,
+        "dominant_goal": "competence_verification"
+      }
+    ],
+    "dependable_loyalist": [
+      {
+        "domain": "hbr.org",
+        "crossover_score": 0.188,
+        "dominant_goal": "affiliation_safety"
+      },
+      {
+        "domain": "nytimes.com",
+        "crossover_score": 0.162,
+        "dominant_goal": "affiliation_safety"
+      },
+      {
+        "domain": "booking.com",
+        "crossover_score": 0.153,
+        "dominant_goal": "planning_completion"
+      },
+      {
+        "domain": "tsa.gov",
+        "crossover_score": 0.152,
+        "dominant_goal": "threat_reduction"
+      },
+      {
+        "domain": "seatguru.com",
+        "crossover_score": 0.149,
+        "dominant_goal": "competence_verification"
+      },
+      {
+        "domain": "weddingwire.com",
+        "crossover_score": 0.13,
+        "dominant_goal": "competence_verification"
+      },
+      {
+        "domain": "expedia.com",
+        "crossover_score": 0.116,
+        "dominant_goal": "planning_completion"
+      },
+      {
+        "domain": "kayak.com",
+        "crossover_score": 0.116,
+        "dominant_goal": "planning_completion"
+      },
+      {
+        "domain": "opentable.com",
+        "crossover_score": 0.112,
+        "dominant_goal": "planning_completion"
+      },
+      {
+        "domain": "marthastewart.com",
+        "crossover_score": 0.084,
+        "dominant_goal": "competence_verification"
+      },
+      {
+        "domain": "tripadvisor.com",
+        "crossover_score": 0.084,
+        "dominant_goal": "competence_verification"
+      },
+      {
+        "domain": "wsj.com",
+        "crossover_score": 0.078,
+        "dominant_goal": "affiliation_safety"
+      },
+      {
+        "domain": "thepointsguy.com",
+        "crossover_score": 0.073,
+        "dominant_goal": "planning_completion"
+      },
+      {
+        "domain": "theknot.com",
+        "crossover_score": 0.07,
+        "dominant_goal": "planning_completion"
+      },
+      {
+        "domain": "economist.com",
+        "crossover_score": 0.068,
+        "dominant_goal": "competence_verification"
+      },
+      {
+        "domain": "espn.com",
+        "crossover_score": 0.068,
+        "dominant_goal": "social_alignment"
+      },
+      {
+        "domain": "forbes.com",
+        "crossover_score": 0.052,
+        "dominant_goal": "status_signaling"
+      },
+      {
+        "domain": "ft.com",
+        "crossover_score": 0.052,
+        "dominant_goal": "affiliation_safety"
+      },
+      {
+        "domain": "inc.com",
+        "crossover_score": 0.052,
+        "dominant_goal": "status_signaling"
+      },
+      {
+        "domain": "linkedin.com",
+        "crossover_score": 0.052,
+        "dominant_goal": "status_signaling"
+      }
+    ],
+    "consensus_seeker": [
+      {
+        "domain": "people.com",
+        "crossover_score": 0.184,
+        "dominant_goal": "social_alignment"
+      },
+      {
+        "domain": "espn.com",
+        "crossover_score": 0.167,
+        "dominant_goal": "social_alignment"
+      },
+      {
+        "domain": "linkedin.com",
+        "crossover_score": 0.15,
+        "dominant_goal": "status_signaling"
+      },
+      {
+        "domain": "usatoday.com",
+        "crossover_score": 0.138,
+        "dominant_goal": "social_alignment"
+      },
+      {
+        "domain": "hbr.org",
+        "crossover_score": 0.116,
+        "dominant_goal": "affiliation_safety"
+      },
+      {
+        "domain": "tripadvisor.com",
+        "crossover_score": 0.092,
+        "dominant_goal": "competence_verification"
+      },
+      {
+        "domain": "nytimes.com",
+        "crossover_score": 0.087,
+        "dominant_goal": "affiliation_safety"
+      },
+      {
+        "domain": "wsj.com",
+        "crossover_score": 0.087,
+        "dominant_goal": "affiliation_safety"
+      },
+      {
+        "domain": "forbes.com",
+        "crossover_score": 0.058,
+        "dominant_goal": "status_signaling"
+      },
+      {
+        "domain": "ft.com",
+        "crossover_score": 0.058,
+        "dominant_goal": "affiliation_safety"
+      },
+      {
+        "domain": "inc.com",
+        "crossover_score": 0.058,
+        "dominant_goal": "status_signaling"
+      }
+    ],
+    "status_seeker": [
+      {
+        "domain": "fortune.com",
+        "crossover_score": 0.359,
+        "dominant_goal": "status_signaling"
+      },
+      {
+        "domain": "forbes.com",
+        "crossover_score": 0.304,
+        "dominant_goal": "status_signaling"
+      },
+      {
+        "domain": "townandcountrymag.com",
+        "crossover_score": 0.276,
+        "dominant_goal": "status_signaling"
+      },
+      {
+        "domain": "vogue.com",
+        "crossover_score": 0.276,
+        "dominant_goal": "status_signaling"
+      },
+      {
+        "domain": "cntraveler.com",
+        "crossover_score": 0.247,
+        "dominant_goal": "novelty_exploration"
+      },
+      {
+        "domain": "inc.com",
+        "crossover_score": 0.155,
+        "dominant_goal": "status_signaling"
+      },
+      {
+        "domain": "linkedin.com",
+        "crossover_score": 0.127,
+        "dominant_goal": "status_signaling"
+      },
+      {
+        "domain": "wsj.com",
+        "crossover_score": 0.113,
+        "dominant_goal": "affiliation_safety"
+      },
+      {
+        "domain": "brides.com",
+        "crossover_score": 0.089,
+        "dominant_goal": "indulgence_permission"
+      },
+      {
+        "domain": "bloomberg.com",
+        "crossover_score": 0.08,
+        "dominant_goal": "status_signaling"
+      },
+      {
+        "domain": "cnbc.com",
+        "crossover_score": 0.08,
+        "dominant_goal": "status_signaling"
+      },
+      {
+        "domain": "fastcompany.com",
+        "crossover_score": 0.07,
+        "dominant_goal": "novelty_exploration"
+      },
+      {
+        "domain": "hbr.org",
+        "crossover_score": 0.066,
+        "dominant_goal": "affiliation_safety"
+      },
+      {
+        "domain": "marthastewart.com",
+        "crossover_score": 0.061,
+        "dominant_goal": "competence_verification"
+      }
+    ],
+    "easy_decider": [
+      {
+        "domain": "expedia.com",
+        "crossover_score": 0.15,
+        "dominant_goal": "planning_completion"
+      },
+      {
+        "domain": "kayak.com",
+        "crossover_score": 0.15,
+        "dominant_goal": "planning_completion"
+      },
+      {
+        "domain": "theknot.com",
+        "crossover_score": 0.124,
+        "dominant_goal": "planning_completion"
+      },
+      {
+        "domain": "opentable.com",
+        "crossover_score": 0.109,
+        "dominant_goal": "planning_completion"
+      },
+      {
+        "domain": "brides.com",
+        "crossover_score": 0.098,
+        "dominant_goal": "indulgence_permission"
+      },
+      {
+        "domain": "thepointsguy.com",
+        "crossover_score": 0.094,
+        "dominant_goal": "planning_completion"
+      },
+      {
+        "domain": "booking.com",
+        "crossover_score": 0.09,
+        "dominant_goal": "planning_completion"
+      },
+      {
+        "domain": "people.com",
+        "crossover_score": 0.075,
+        "dominant_goal": "social_alignment"
+      },
+      {
+        "domain": "linkedin.com",
+        "crossover_score": 0.071,
+        "dominant_goal": "status_signaling"
+      },
+      {
+        "domain": "forbes.com",
+        "crossover_score": 0.068,
+        "dominant_goal": "status_signaling"
+      },
+      {
+        "domain": "inc.com",
+        "crossover_score": 0.068,
+        "dominant_goal": "status_signaling"
+      },
+      {
+        "domain": "flightaware.com",
+        "crossover_score": 0.06,
+        "dominant_goal": "threat_reduction"
+      },
+      {
+        "domain": "flightradar24.com",
+        "crossover_score": 0.06,
+        "dominant_goal": "threat_reduction"
+      },
+      {
+        "domain": "hoteltonight.com",
+        "crossover_score": 0.06,
+        "dominant_goal": "planning_completion"
+      },
+      {
+        "domain": "weather.com",
+        "crossover_score": 0.06,
+        "dominant_goal": "threat_reduction"
+      },
+      {
+        "domain": "weddingwire.com",
+        "crossover_score": 0.06,
+        "dominant_goal": "competence_verification"
+      },
+      {
+        "domain": "espn.com",
+        "crossover_score": 0.056,
+        "dominant_goal": "social_alignment"
+      },
+      {
+        "domain": "usatoday.com",
+        "crossover_score": 0.056,
+        "dominant_goal": "social_alignment"
+      }
+    ]
+  }
+}
