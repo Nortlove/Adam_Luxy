@@ -1,195 +1,88 @@
-# INFORMATIV × LUXY Ride — Complete Agency Handoff
+# INFORMATIV × LUXY Ride — Agency Handoff
 ## For: Zero Gravity Marketing (Becca Matyasovsky)
-## Date: April 13, 2026
+## Date: April 14, 2026
 
 ---
 
-## CAMPAIGN SUMMARY
+## SUMMARY
 
 | Item | Value |
 |------|-------|
-| Archetypes (targeting) | 7 |
-| Archetypes (suppression) | 3 |
-| Campaign groups | 7 |
+| Audiences | 11 (10 demand-side + 1 supply-side) |
+| Campaign groups | 11 |
 | Total campaigns | 28 |
-| Total creatives | 28 (1 per campaign, NO rotation) |
-| Daily budget | $240.75 |
-| Monthly budget (30 days) | $7,222.50 |
-| Domain targeting | Per-archetype whitelists (7 CSV files) |
-| Blacklist | 21 domains (1 shared CSV) |
-
----
-
-## FILES PROVIDED
-
-| File | Purpose |
-|------|---------|
-| `AGENCY_BRIEF.md` | Full campaign strategy, creative copy, setup instructions |
-| `luxy_ride_complete_creatives.json` | All 28 campaign specs (machine-readable) |
-| `luxy_ride_site_profiles_v2.json` | 41 domains scored by goal activation per archetype |
-| `domain_archetype_mapping.json` | Per-archetype domain rankings with crossover scores |
-| `stackadapt_whitelist_trusting_loyalist.csv` | Domain whitelist for Trusting Loyalist (14 domains) |
-| `stackadapt_whitelist_reliable_cooperator.csv` | Domain whitelist for Reliable Cooperator (17 domains) |
-| `stackadapt_whitelist_careful_truster.csv` | Domain whitelist for Careful Truster (21 domains) |
-| `stackadapt_whitelist_explorer.csv` | Domain whitelist for Explorer (15 domains) |
-| `stackadapt_whitelist_prevention_planner.csv` | Domain whitelist for Prevention Planner (17 domains) |
-| `stackadapt_whitelist_dependable_loyalist.csv` | Domain whitelist for Dependable Loyalist (20 domains) |
-| `stackadapt_whitelist_consensus_seeker.csv` | Domain whitelist for Consensus Seeker (11 domains) |
-| `stackadapt_blacklist_upload.csv` | Shared exclusion list (21 domains) |
+| Weekly budget | $24,000 |
+| Daily budget | $3,428 |
+| Optimization cadence | Every 48 hours |
 
 ---
 
 ## STEP-BY-STEP SETUP
 
-### 1. Install Tags on luxyride.com (via GTM)
+### 1. Install two GTM tags on luxyride.com
+See AGENCY_BRIEF.md for exact tag code. Both fire on All Pages.
 
-**Tag A: StackAdapt Universal Pixel** — All Pages trigger
-```html
-<script>
-  !function(s,a,e,v,n,t,z){if(s.saq)return;n=s.saq=function(){
-  n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-  if(!s._saq)s._saq=n;n.push=n;n.loaded=!0;n.version='1.0';n.queue=[];
-  t=a.createElement(e);t.async=!0;t.src=v;z=a.getElementsByTagName(e)[0];
-  z.parentNode.insertBefore(t,z)}(window,document,'script',
-  'https://tags.srv.stackadapt.com/events.js');
-  saq('ts', 'YOUR_UNIVERSAL_PIXEL_ID');
-</script>
-```
+### 2. Create 6 conversion events
+See AGENCY_BRIEF.md for exact names and configuration.
 
-**Tag B: INFORMATIV Behavioral Intelligence** — All Pages trigger
-```html
-<script src="https://focused-encouragement-production.up.railway.app/static/telemetry/informativ.js"
-        data-endpoint="https://focused-encouragement-production.up.railway.app/api/v1/signals/session"
-        defer></script>
-```
+### 3. Create 5 audiences
+See AGENCY_BRIEF.md. CRITICAL: Apply `luxy_converted_exclude` to ALL 28 campaigns.
 
-### 2. Create 4 Conversion Events
+### 4. Upload domain lists
+Each audience group gets its own Site Inclusion List. See AGENCY_BRIEF.md for the mapping table. Upload shared blacklist to all campaigns.
 
-| Name (exact) | Method | Rule | Attribution | Primary |
-|---|---|---|---|---|
-| `luxy_site_visit` | Page Load | URL contains `luxyride.com` | 30 days | No |
-| `luxy_booking_page` | Page Load | URL contains `/programs/book` | 14 days | No |
-| `luxy_booking_start` | Page Load | Booking trigger | 7 days | No |
-| `luxy_booking_complete` | Custom Event / Page Load | Confirmation page | 7 days | **YES** |
+### 5. Create 11 campaign groups
 
-### 3. Create 5 Audiences
+| # | Name | Daily Budget |
+|---|------|---|
+| 1 | LUXY — Travel Arrangers (EA) | $754 |
+| 2 | LUXY — Travel Managers | $686 |
+| 3 | LUXY — Home Market (CT/NYC) | $514 |
+| 4 | LUXY — Event Planners | $343 |
+| 5 | LUXY — Legal | $274 |
+| 6 | LUXY — Life Sciences | $240 |
+| 7 | LUXY — Financial Dealmakers | $206 |
+| 8 | LUXY — Supply Partners * | $171 |
+| 9 | LUXY — Private Aviation | $103 |
+| 10 | LUXY — CFO / T&E | $69 |
+| 11 | LUXY — Hotel B2B | $69 |
 
-| Name (exact) | Type | Rule | Lookback |
-|---|---|---|---|
-| `luxy_all_visitors` | Retargeting | URL contains luxyride.com | 30 days |
-| `luxy_booking_visitors` | Retargeting | URL contains `/programs/book` | 14 days |
-| `luxy_high_intent` | Retargeting | Visit frequency >= 3 | 14 days |
-| `luxy_converted_exclude` | Exclusion | Event: luxy_booking_complete | 90 days |
-| `luxy_booking_abandoned` | Retargeting | luxy_booking_start AND NOT complete | 7 days |
+\* Supply Partners: SEPARATE line item, different landing page, different conversion events.
 
-**CRITICAL**: Apply `luxy_converted_exclude` as exclusion to ALL 28 campaigns.
+### 6. Create 28 campaigns
+See AGENCY_BRIEF.md for complete copy per campaign. Campaign IDs:
+- EA-T1 through EA-T3
+- TM-T1 through TM-T3
+- HM-T1 through HM-T3
+- EV-T1 through EV-T3
+- LG-T1 through LG-T3
+- LS-T1 through LS-T3
+- FI-T1 through FI-T2
+- SP-T1 through SP-T2
+- PA-T1 through PA-T2
+- CF-T1 through CF-T2
+- HT-T1 through HT-T2
 
-### 4. Upload Domain Lists
-
-**Per-archetype whitelists** — each campaign group gets its own Site Inclusion List:
-
-| Campaign Group | Whitelist File | Domains |
-|---|---|---|
-| Trusting Loyalist | `stackadapt_whitelist_trusting_loyalist.csv` | 7 |
-| Reliable Cooperator | `stackadapt_whitelist_reliable_cooperator.csv` | 17 |
-| Careful Truster | `stackadapt_whitelist_careful_truster.csv` | 18 |
-| Explorer | `stackadapt_whitelist_explorer.csv` | 0 (shares dependable_loyalist domains) |
-| Prevention Planner | `stackadapt_whitelist_prevention_planner.csv` | 4 |
-| Dependable Loyalist | `stackadapt_whitelist_dependable_loyalist.csv` | 27 |
-| Consensus Seeker | `stackadapt_whitelist_consensus_seeker.csv` | 0 (shares reliable_cooperator domains) |
-
-**Shared blacklist** — apply `stackadapt_blacklist_upload.csv` (21 domains) to ALL campaigns.
-
-**Why per-archetype whitelists?** Each domain was scored by the psychological goals its content activates. A Forbes article primes authority/competence goals — ideal for Dependable Loyalist ads, counterproductive for Prevention Planner ads. Matching the domain to the archetype ensures the page content is already priming the goal that our ad fulfills.
-
-### 5. Create 7 Campaign Groups
-
-| # | Name | Daily Budget | Whitelist |
-|---|------|---|---|
-| 1 | `LUXY — Trusting Loyalist` | $78.75 | trusting_loyalist CSV |
-| 2 | `LUXY — Reliable Cooperator` | $49.50 | reliable_cooperator CSV |
-| 3 | `LUXY — Careful Truster` | $40.50 | careful_truster CSV |
-| 4 | `LUXY — Explorer` | $27.00 | explorer CSV |
-| 5 | `LUXY — Prevention Planner` | $18.00 | prevention_planner CSV |
-| 6 | `LUXY — Dependable Loyalist` | $15.75 | dependable_loyalist CSV |
-| 7 | `LUXY — Consensus Seeker` | $11.25 | consensus_seeker CSV |
-
-### 6. Create 28 Campaigns
-
-**Click URL for ALL campaigns:**
+Click URL for ALL campaigns:
 ```
 https://luxyride.com/?sapid={SA_POSTBACK_ID}&cid={CAMPAIGN_ID}&crid={CREATIVE_ID}&domain={DOMAIN}&device={DEVICE_TYPE}&ts={TIMESTAMP}
 ```
 
-See `AGENCY_BRIEF.md` for complete creative copy per campaign and `luxy_ride_complete_creatives.json` for machine-readable specs.
-
-**Campaign IDs follow the pattern: [PREFIX]-T[TOUCH_NUMBER]**
-- TL-T1 through TL-T5 (Trusting Loyalist)
-- RC-T1 through RC-T5 (Reliable Cooperator)
-- CT-T1 through CT-T4 (Careful Truster)
-- EX-T1 through EX-T4 (Explorer)
-- PP-T1 through PP-T4 (Prevention Planner)
-- DL-T1 through DL-T3 (Dependable Loyalist)
-- CS-T1 through CS-T3 (Consensus Seeker)
-
-### 7. Frequency Caps and Dayparting
-
-| Archetype | Freq Cap | Dayparting Notes |
-|---|---|---|
-| Trusting Loyalist | 2/day, 8/week | +20% 6-9am, +15% 5-10pm |
-| Reliable Cooperator | 2/day, 7/week | +30% 6-9am, +15% 5-8pm, -20% weekend |
-| Careful Truster | 3/day, 12/week | +30% 5-8am, +20% 5-10pm, +40% 10pm-5am |
-| Explorer | 2/day, 6/week | +10% 9am-5pm, +20% 7-10pm |
-| Prevention Planner | 2/day, 8/week | +30% 5-8am, +20% 8-10pm |
-| Dependable Loyalist | 2/day, 7/week | +20% 6-9am, +15% 5-8pm |
-| Consensus Seeker | 2/day, 7/week | +15% 5-10pm |
+### 7. Set frequency caps and dayparting
+See AGENCY_BRIEF.md for per-audience settings.
 
 ---
 
-## INTELLIGENCE REPORTS
+## OPTIMIZATION
 
-INFORMATIV provides weekly intelligence reports analyzing:
-- Which archetype-domain combinations produced highest conversion rates
-- Budget reallocation recommendations between archetypes
-- Creative refresh suggestions based on mechanism effectiveness trends
-- New domain recommendations from our active learning system
-- Suppression list updates (users identified as Defensive Skeptic, Anxious Economist, or Vocal Resistor)
+Every 48 hours, INFORMATIV delivers a report with specific actions:
+- Budget shifts between audiences (with dollar amounts)
+- Domain additions/removals (with performance data)
+- Creative refresh recommendations
+- User suppression lists
 
-**Delivery**: Every Wednesday via email.
-**What we need**: Weekly StackAdapt campaign-level export (impressions, clicks, conversions, spend by campaign) every Monday.
+Agency implements within 24 hours.
 
 ---
 
-## BEFORE LAUNCH CHECKLIST
-
-### Agency:
-- [ ] Both GTM tags installed and published
-- [ ] StackAdapt pixel firing confirmed
-- [ ] 4 conversion events created with exact names
-- [ ] 5 audiences created with exact names
-- [ ] `luxy_converted_exclude` applied to ALL 28 campaigns
-- [ ] 7 per-archetype whitelists uploaded (one per campaign group)
-- [ ] 1 shared blacklist uploaded to all campaigns
-- [ ] 7 campaign groups created with correct budgets
-- [ ] 28 campaigns created with correct copy, audiences, and click URLs
-- [ ] Frequency caps set per archetype
-- [ ] Dayparting bid adjustments set per archetype
-- [ ] 28 image creatives produced and uploaded
-- [ ] All campaigns in DRAFT for joint review
-
-### INFORMATIV:
-- [ ] Server deployed and healthy on Railway
-- [ ] Neo4j seeded with bilateral edges + cross-category validation data
-- [ ] Goal Activation Model deployed and operational
-- [ ] Telemetry endpoint accepting data
-- [ ] CORS configured for luxyride.com
-
-### Joint:
-- [ ] Review all 28 campaigns together
-- [ ] Test click from each campaign group (verify URL params flow)
-- [ ] Confirm reporting cadence
-- [ ] Set all campaigns to ACTIVE
-
----
-
-*Powered by INFORMATIV bilateral psycholinguistic intelligence — 16,883 bilateral edges, 10 validated archetypes, nonconscious goal activation targeting.*
+*11 audiences. 28 campaigns. Every domain verified. Every creative matched to context.*

@@ -2,95 +2,55 @@
 
 Hi Becca,
 
-This folder contains everything you need to set up and launch the LUXY Ride pilot campaign in StackAdapt. Here's what each file is and when you'll need it.
+This folder contains everything you need to set up the LUXY Ride campaign in StackAdapt. **11 audiences, 28 campaigns, $24K/week.**
 
 ---
 
 ## Step 1: Read the Brief
-
-**`AGENCY_BRIEF.md`** — This is the master document. It explains:
-- The 10 psychological archetypes (7 to target, 3 to suppress)
-- All 28 campaigns with complete ad copy (headlines, body, CTAs)
-- How to install the two GTM tags (StackAdapt pixel + INFORMATIV telemetry)
-- How to create conversion events and audiences in StackAdapt
-- Budget allocation, frequency caps, dayparting, and bidding guidance
-- Image art direction for each archetype
-- The before-launch checklist
-
-**Read this first. Everything else supports it.**
-
----
+**`AGENCY_BRIEF.md`** — The master document. All 11 audiences, all 28 campaigns with copy, all setup instructions. Read this first.
 
 ## Step 2: Follow the Setup Guide
-
-**`AGENCY_HANDOFF_COMPLETE.md`** — Step-by-step StackAdapt setup instructions. Use this alongside the brief as you build the campaigns. It walks through:
-1. Tag installation
-2. Conversion events
-3. Audiences
-4. Domain list uploads
-5. Campaign group creation
-6. Campaign creation
-7. Frequency caps and dayparting
-
----
+**`AGENCY_HANDOFF_COMPLETE.md`** — Step-by-step StackAdapt setup.
 
 ## Step 3: Upload Domain Lists
+Each audience gets its own whitelist:
 
-Each of the 7 campaign groups gets its own Site Inclusion List. Upload the matching CSV:
-
-| Campaign Group | File to Upload |
+| Audience | File |
 |---|---|
-| LUXY — Trusting Loyalist | `stackadapt_whitelist_trusting_loyalist.csv` |
-| LUXY — Reliable Cooperator | `stackadapt_whitelist_reliable_cooperator.csv` |
-| LUXY — Careful Truster | `stackadapt_whitelist_careful_truster.csv` |
-| LUXY — Explorer | `stackadapt_whitelist_explorer.csv` |
-| LUXY — Prevention Planner | `stackadapt_whitelist_prevention_planner.csv` |
-| LUXY — Dependable Loyalist | `stackadapt_whitelist_dependable_loyalist.csv` |
-| LUXY — Consensus Seeker | `stackadapt_whitelist_consensus_seeker.csv` |
+| Travel Arrangers | `stackadapt_whitelist_reliable_cooperator.csv` |
+| Travel Managers | `stackadapt_whitelist_dependable_loyalist.csv` |
+| Home Market | `stackadapt_whitelist_home_market.csv` |
+| Event Planners | `stackadapt_whitelist_prevention_planner.csv` |
+| Legal + Life Sci + CFO | `stackadapt_whitelist_careful_truster.csv` |
+| Financial Dealmakers | `stackadapt_whitelist_financial_dealmaker.csv` |
+| Supply Partners | `stackadapt_whitelist_supply_side.csv` |
+| Private Aviation | `stackadapt_whitelist_trusting_loyalist.csv` |
+| Hotel B2B | `stackadapt_whitelist_dependable_loyalist.csv` |
 
-**Shared blacklist** — upload to ALL campaigns:
-- `stackadapt_blacklist_upload.csv`
+Blacklist (ALL campaigns): `stackadapt_blacklist_upload.csv`
 
----
+## Step 4: Create Campaigns
+Copy is in the brief. Machine-readable specs: `luxy_ride_complete_creatives.json`
 
-## Step 4: Create Campaigns + Creatives
-
-The ad copy for all 28 campaigns is in the brief (Section 6). For a machine-readable version:
-
-**`luxy_ride_complete_creatives.json`** — All 28 campaigns with headline, body, CTA, mechanism, archetype, budget, and optimization goal per campaign.
-
----
-
-## Step 5: Produce Image Creatives
-
-**`IMAGE_CREATIVE_BRIEFS.md`** — Art direction for each archetype: visual style, color palette, mood, and required sizes (1200x627, 600x600, 800x600).
-
----
-
-## Reference Files (not needed for setup)
-
-- `domain_archetype_mapping.json` — Technical reference showing why each domain was assigned to each archetype (crossover scores). Not needed for StackAdapt setup.
-
----
-
-## Questions?
-
-Reach out to the INFORMATIV team. We'll provide:
-- The exact INFORMATIV server URL for the telemetry tag (before GTM publish)
-- Weekly intelligence reports every Wednesday
-- Recommendations for budget shifts, creative changes, and targeting adjustments
+## Step 5: Image Creatives
+Art direction per audience: `IMAGE_CREATIVE_BRIEFS.md`
 
 ---
 
 ## Quick Reference
 
 | Item | Value |
-|---|---|
-| Campaign groups | 7 |
-| Total campaigns | 28 |
-| Total creatives needed | 28 (one per campaign) |
-| Daily budget | $240.75 |
-| Monthly budget | $7,222.50 |
-| Whitelist files | 7 (one per group) |
-| Blacklist file | 1 (shared) |
+|------|-------|
+| Audiences | 11 |
+| Campaigns | 28 |
+| Daily budget | $3,428 |
+| Weekly budget | $24,000 |
+| Monthly budget | ~$96,000 |
 | Image sizes | 1200x627, 600x600, 800x600 |
+| Optimization | Every 48 hours from INFORMATIV |
+
+## Important Notes
+
+1. **Supply Partners (SP-T1, SP-T2)** is a SEPARATE campaign — different landing page, different conversion events
+2. **`luxy_converted_exclude`** must be on ALL 28 campaigns
+3. **Click URL must include StackAdapt macros** — copy the template exactly from the brief
