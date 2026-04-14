@@ -48,63 +48,113 @@ OUTPUT_DIR = Path("data")
 CAMPAIGN_DIR = Path("campaigns/ridelux_v6")
 
 # =============================================================================
-# DOMAIN UNIVERSE — Add/remove domains here
+# URL-PATH DISQUALIFIERS (from Chris's research, Section 10)
+# Pages matching these patterns are EXCLUDED even if domain is whitelisted.
+# Catches "right domain, wrong content" — the single biggest quality lever.
+# =============================================================================
+
+URL_DISQUALIFIERS = [
+    # Leisure/vacation content on business sites
+    r"/leisure/", r"/vacation/", r"/getaway/", r"/romance/", r"/honeymoon/",
+    r"/personal-trip/", r"/family-vacation/", r"/road-trip/",
+    # Opinion/controversy on trade press
+    r"/opinion/", r"/rant/", r"/controversy/", r"/hot-take/",
+    # Tragedy/accident on safety sites (wrong affect valence)
+    r"/crash/", r"/fatal/", r"/tragedy/", r"/accident-report/",
+    # Budget/discount content (wrong price positioning)
+    r"/budget/", r"/cheap/", r"/save-money/", r"/coupon/", r"/deal/",
+    # Generic non-business content
+    r"/celebrity/", r"/entertainment/", r"/sports-scores/", r"/recipe/",
+    r"/horoscope/", r"/quiz/", r"/games/",
+    # Login/account pages
+    r"/login", r"/signup", r"/subscribe", r"/account/", r"/cart/",
+    r"/privacy", r"/terms", r"/cookie", r"/advertise",
+]
+
+# =============================================================================
+# ON-BEHALF-OF VOICE TOKENS (Chris's key finding)
+# The cleanest single feature for separating corporate travel arranger
+# content from consumer content. If these tokens appear, the page is
+# addressing someone booking FOR someone else — reliable_cooperator.
+# =============================================================================
+
+ON_BEHALF_TOKENS = [
+    "your traveler", "your travelers", "your executive", "your executives",
+    "your client", "your clients", "your guests", "your attendees",
+    "your boss", "your team", "the traveler", "help travelers",
+    "business travelers", "booking travelers", "for the executive",
+    "your hcp", "your hcps", "your attendee",
+    "travel arranger", "executive assistant", "office manager",
+    "on behalf of", "book for", "booking on behalf",
+]
+
+# =============================================================================
+# DOMAIN UNIVERSE — Rebuilt from Chris's 3-pass article-level research
 # =============================================================================
 
 DOMAIN_UNIVERSE = {
-    "business_finance": [
-        "forbes.com", "fortune.com", "bloomberg.com", "wsj.com", "ft.com",
-        "cnbc.com", "barrons.com", "economist.com", "hbr.org", "inc.com",
-        "fastcompany.com", "businessinsider.com", "reuters.com", "marketwatch.com",
-        "seekingalpha.com", "investopedia.com", "kiplinger.com", "thestreet.com",
-        "fool.com", "morningstar.com", "crunchbase.com", "pitchbook.com",
+    # From luxyride_whitelist_master.md — article-level verified
+    "corporate_travel_trade": [
+        "businesstravelnews.com", "bcdtravel.com", "amexglobalbusinesstravel.com",
+        "gbta.org", "cwt.com", "skift.com", "travelperk.com", "itilite.com",
+        "navan.com", "corporatetraveler.us", "businesstraveller.com",
+        "frequentbusinesstraveler.com",
     ],
-    "travel_luxury": [
-        "cntraveler.com", "travelandleisure.com", "afar.com", "departures.com",
-        "robbreport.com", "elitetraveler.com", "luxurytravelmagazine.com",
-        "pursuitist.com", "jamesedition.com", "bespokemagazine.com",
-        "townandcountrymag.com", "architecturaldigest.com", "dwell.com",
-        "vogue.com", "gq.com", "esquire.com", "vanityfair.com",
-        "thecut.com", "manofmany.com", "uncrate.com",
+    "ea_travel_arranger": [
+        "eahowto.com", "practicallyperfectpa.com", "executivesupportmagazine.com",
     ],
-    "travel_planning": [
-        "booking.com", "expedia.com", "kayak.com", "tripadvisor.com",
-        "hotels.com", "priceline.com", "travelocity.com", "orbitz.com",
-        "google.com/travel", "skyscanner.com", "momondo.com",
-        "flightaware.com", "flightradar24.com", "seatguru.com",
-        "thepointsguy.com", "onemileatatime.com", "upgradedpoints.com",
-        "nerdwallet.com/travel", "theinfatuation.com", "opentable.com",
+    "event_meetings": [
+        "bizbash.com", "meetings.skift.com", "incentivemag.com", "theirf.org",
+        "meetingsnet.com", "northstarmeetingsgroup.com", "biworldwide.com",
     ],
-    "news_current": [
-        "nytimes.com", "washingtonpost.com", "cnn.com", "bbc.com",
-        "npr.org", "apnews.com", "axios.com", "politico.com",
-        "theatlantic.com", "newyorker.com", "slate.com", "vox.com",
-        "usatoday.com", "time.com", "newsweek.com",
+    "legal_vertical": [
+        "abovethelaw.com", "law360.com", "corporatecounsel.com", "acc.com",
     ],
-    "professional": [
-        "linkedin.com", "glassdoor.com", "indeed.com",
-        "medium.com", "substack.com", "techcrunch.com",
-        "wired.com", "theverge.com", "arstechnica.com",
+    "life_sciences": [
+        "policymed.com", "biopharmadive.com", "fiercepharma.com",
+        "pharmexec.com", "cvent.com", "phrma.org",
     ],
-    "lifestyle_events": [
-        "brides.com", "theknot.com", "weddingwire.com", "zola.com",
-        "marthastewart.com", "people.com", "ew.com",
-        "eater.com", "timeout.com", "eventbrite.com",
+    "financial_dealmakers": [
+        "pitchbook.com", "institutionalinvestor.com",
+        "privateequityinternational.com",
     ],
-    "safety_official": [
-        "tsa.gov", "weather.com", "miserymap.com",
-        "consumerreports.com", "bbb.org", "nhtsa.gov",
+    "cfo_procurement": [
+        "cfodive.com", "spendmatters.com", "ramp.com", "rippling.com",
+        "procuredesk.com", "fylehq.com", "riskandinsurance.com",
     ],
-    "sports_entertainment": [
-        "espn.com", "bleacherreport.com", "si.com",
-        "golfdigest.com", "tennis.com", "skimagazine.com",
+    "supply_side": [
+        "chauffeurdriven.com", "blackcarnews.com", "nlaride.com",
+    ],
+    "private_aviation": [
+        "ainonline.com", "bjtonline.com", "nbaa.org",
+        "corporatejetinvestor.com",
+    ],
+    "hotel_b2b": [
+        "hotelmanagement.net", "hospitalitynet.org", "hotelsmag.com",
+        "lodgingmagazine.com",
+    ],
+    "home_market": [
+        "crainsnewyork.com", "bizjournals.com", "therealdeal.com",
+        "commercialobserver.com", "hartfordbusiness.com", "ctinsider.com",
+        "njbiz.com",
+    ],
+    "safety_risk": [
+        "controlrisks.com", "internationalsos.com", "asisonline.org",
+    ],
+    "esg_sustainability": [
+        "greenbiz.com", "esgtoday.com",
+    ],
+    "travel_agent": [
+        "travelweekly.com", "travelpulse.com", "asta.org",
     ],
 }
 
 TARGET_ARCHETYPES = [
-    "trusting_loyalist", "reliable_cooperator", "careful_truster",
-    "explorer", "prevention_planner", "dependable_loyalist",
-    "consensus_seeker",
+    "reliable_cooperator",     # EA / Travel Arrangers
+    "dependable_loyalist",     # Travel Managers + Home Market + Hotel B2B
+    "careful_truster",         # Legal + Life Sciences + CFO
+    "prevention_planner",      # Event Planners
+    "trusting_loyalist",       # Private Aviation
 ]
 
 
@@ -179,8 +229,28 @@ def fetch(url, timeout=FETCH_TIMEOUT):
         return None
 
 
+def is_disqualified_url(url):
+    """Check if a URL matches any disqualifier pattern."""
+    url_lower = url.lower()
+    for pattern in URL_DISQUALIFIERS:
+        if re.search(pattern, url_lower):
+            return True
+    return False
+
+
+def count_on_behalf_tokens(text):
+    """Count on-behalf-of voice tokens in text.
+
+    This is the single strongest signal for separating corporate travel
+    content (reliable_cooperator) from consumer content.
+    Returns count of distinct tokens found.
+    """
+    text_lower = text.lower()
+    return sum(1 for token in ON_BEHALF_TOKENS if token in text_lower)
+
+
 def find_article_urls(domain, html):
-    """Extract article-like URLs from a page's HTML."""
+    """Extract article-like URLs from a page's HTML, applying disqualifiers."""
     urls = set()
     clean_domain = domain.replace("www.", "")
     for match in re.findall(r'href=["\']?(https?://(?:www\.)?[^"\'>\s]+)', html):
@@ -189,15 +259,13 @@ def find_article_urls(domain, html):
             segments = [s for s in path.split("/") if s and s != "#"]
             skip_patterns = [
                 ".css", ".js", ".png", ".jpg", ".gif", ".svg",
-                "login", "signup", "subscribe", "account", "cart",
-                "privacy", "terms", "cookie", "advertise", "about-us",
-                "contact", "sitemap", "rss", "feed", "tag/", "category/",
-                "author/", "page/", "wp-content", "wp-admin",
+                "wp-content", "wp-admin",
             ]
             if (
                 len(segments) >= 2
                 and "?" not in match
                 and not any(x in path.lower() for x in skip_patterns)
+                and not is_disqualified_url(match)  # Apply URL-path disqualifiers
             ):
                 urls.add(match)
     return list(urls)

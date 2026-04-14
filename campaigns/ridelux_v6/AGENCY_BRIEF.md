@@ -201,7 +201,7 @@ https://luxyride.com/?sapid={SA_POSTBACK_ID}&cid={CAMPAIGN_ID}&crid={CREATIVE_ID
 | Campaign | Headline | Body | CTA | $/day | Goal |
 |---|---|---|---|---|---|
 | LS-T1 | "Audit-ready ground transport for HCP guest travel" | Every HCP ride is a Sunshine Act transfer of value. LUXY captures booker, passenger, addresses, duration, amount — audit-ready. | See compliance features | $120 | Clicks |
-| LS-T2 | "Fewer than half of pharma programs meet a global standard" | BCD benchmarking of 15 policies found inconsistency. LUXY: one platform, one standard, Sunshine Act export built in. | Request compliance demo | $80 | Clicks |
+| LS-T2 | "Fewer than half of pharma programs meet a global standard" | BCD benchmarking of 15 global life sciences travel policies found fewer than half meet a consistent standard. 43% have no compliant ground transport. LUXY: one platform, SOC 2 certified, Sunshine Act export built in. | Request compliance demo | $80 | Clicks |
 | LS-T3 | "The only ground transport built for regulated verticals" | Sunshine Act. EFPIA. Event tagging. HCP flags. Integrated with BCD, Amex GBT, CWT. Built for pharma. | Start pilot program | $40 | Conversions |
 
 **Frequency**: 2/day, 6/week | **Dayparting**: +20% 9-11am
@@ -225,7 +225,7 @@ https://luxyride.com/?sapid={SA_POSTBACK_ID}&cid={CAMPAIGN_ID}&crid={CREATIVE_ID
 
 | Campaign | Headline | Body | CTA | $/day | Goal |
 |---|---|---|---|---|---|
-| SP-T1 | "Your single-city operation can serve 100 cities tonight" | Join LUXY's Supply Partners network. Your fleet, their bookings. BTN survey: company-employed drivers scored 4.43/5. | Learn about the network | $114 | Clicks |
+| SP-T1 | "Your single-city operation can serve 100 cities tonight" | Join LUXY's Supply Partners network. 400+ companies already booking through our platform. Company-employed drivers scored 4.43/5 in the BTN survey. Your fleet, their bookings. | Learn about the network | $114 | Clicks |
 | SP-T2 | "400+ companies booking. Your fleet filling." | Independent operators who meet our standard. Background checks, vehicle standards, dispatch integration. | Apply to join | $57 | Conversions |
 
 **Frequency**: 1/day, 4/week | **Dayparting**: Flat
@@ -237,7 +237,7 @@ https://luxyride.com/?sapid={SA_POSTBACK_ID}&cid={CAMPAIGN_ID}&crid={CREATIVE_ID
 | Campaign | Headline | Body | CTA | $/day | Goal |
 |---|---|---|---|---|---|
 | PA-T1 | "From FBO to destination, without the wait" | Teterboro. Van Nuys. Opa-Locka. Every executive terminal. Chauffeur meets you planeside. | See FBO coverage | $69 | Clicks |
-| PA-T2 | "The ground transport your charter broker recommends" | Private aviation demands private ground. Chauffeurs who understand tail numbers and discretion. | Book your next arrival | $34 | Conversions |
+| PA-T2 | "The ground transport your charter broker recommends" | Private aviation demands private ground. 99.7% on-time rate. Background-checked chauffeurs who understand executive terminals, tail numbers, and discretion. Trusted by charter brokers nationwide. | Book your next arrival | $34 | Conversions |
 
 **Frequency**: 1/day, 5/week | **Dayparting**: +20% 6-9am, +15% 4-7pm
 
@@ -247,7 +247,7 @@ https://luxyride.com/?sapid={SA_POSTBACK_ID}&cid={CAMPAIGN_ID}&crid={CREATIVE_ID
 
 | Campaign | Headline | Body | CTA | $/day | Goal |
 |---|---|---|---|---|---|
-| CF-T1 | "Reduce unmanaged ground transport leakage by 34%" | Trip-level spend data. Policy compliance at booking. Concur captures every ride. | See the savings | $46 | Clicks |
+| CF-T1 | "Reduce unmanaged ground transport leakage by 34%" | 34% of ground transport spend is unmanaged. The average company leaks $47K annually. LUXY: real-time spend dashboards, policy compliance at booking, Concur captures every ride. | See the savings | $46 | Clicks |
 | CF-T2 | "Your T&E policy, enforced at booking" | Corporate rates locked. Vehicle class restrictions. Real-time dashboards. Audit-ready. | Request pricing | $23 | Conversions |
 
 **Frequency**: 1/day, 4/week | **Dayparting**: +20% 9-11am
@@ -258,7 +258,7 @@ https://luxyride.com/?sapid={SA_POSTBACK_ID}&cid={CAMPAIGN_ID}&crid={CREATIVE_ID
 
 | Campaign | Headline | Body | CTA | $/day | Goal |
 |---|---|---|---|---|---|
-| HT-T1 | "Your concierge desk, our global fleet" | Add LUXY to your preferred ground transport. 100+ cities. Guest satisfaction. Free to list. | Learn about partnership | $46 | Clicks |
+| HT-T1 | "Your concierge desk, our global fleet" | 400+ companies already trust LUXY for ground transport. Add us to your preferred vendor list — free. Professional chauffeurs in 100+ cities. Guest satisfaction scores that reflect on your property. | Learn about partnership | $46 | Clicks |
 | HT-T2 | "Every guest arrival, elevated" | Airport pickup coordinated with check-in. Flight monitoring. Driver in your lobby or curbside. | Set up property account | $23 | Conversions |
 
 **Frequency**: 1/day, 4/week | **Dayparting**: +15% 9am-12pm
