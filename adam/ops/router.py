@@ -340,6 +340,54 @@ async def get_daily_report():
         return {"error": str(e)}
 
 
+@router.get("/intelligence-report")
+async def get_intelligence_report(period_hours: int = 48):
+    """Generate the every-other-day intelligence report.
+
+    Returns prioritized StackAdapt actions based on observed data.
+    Each action is a specific instruction: what to change, in which
+    campaign, why, and what we expect to happen.
+
+    Args:
+        period_hours: Lookback window (default 48 = every other day)
+    """
+    try:
+        from adam.core.dependencies import Infrastructure
+        from adam.ops.intelligence_report import (
+            generate_intelligence_report,
+            format_report_markdown,
+        )
+        infra = Infrastructure.get_instance()
+        report = await generate_intelligence_report(infra.redis, period_hours)
+        markdown = format_report_markdown(report)
+
+        return {
+            "report_id": report.report_id,
+            "period": report.period_label,
+            "total_impressions": report.total_impressions,
+            "total_conversions": report.total_conversions,
+            "actions_count": len(report.actions),
+            "actions": [
+                {
+                    "priority": a.priority,
+                    "category": a.category,
+                    "campaign": a.campaign,
+                    "action": a.action,
+                    "rationale": a.rationale,
+                    "expected_impact": a.expected_impact,
+                    "confidence": a.confidence,
+                }
+                for a in report.actions
+            ],
+            "domain_performance": report.domain_performance,
+            "archetype_performance": report.archetype_performance,
+            "suppression_candidates_count": len(report.suppression_candidates),
+            "markdown_report": markdown,
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+
 @router.get("/puzzle/{user_id}")
 async def get_user_puzzle(user_id: str):
     """Get unified puzzle inference for a specific user.
