@@ -264,172 +264,244 @@ GOAL_TAXONOMY: Dict[str, NonconsciousGoal] = {
 # Applied to PAGE CONTENT (not reviews) to detect priming.
 
 GOAL_ACTIVATION_MARKERS: Dict[str, Dict] = {
+    #
+    # REBUILT 2026-04-14 from Chris's article-level research.
+    # Validated against 7 test cases. Previous version scored 0/7.
+    #
+    # Key insight from validation: LUXY's customer is a corporate travel
+    # arranger/manager/planner, NOT a consumer. The vocabulary is B2B trade,
+    # not consumer psychology. The strongest signal is the ON-BEHALF-OF VOICE
+    # ("your travelers", "your executives") which no consumer content uses.
+    #
 
-    "affiliation_safety": {
+    "reliable_cooperator_context": {
+        # The EA/travel arranger reading content about booking for others.
+        # Chris's #1 audience by inventory allocation (22%).
+        # KEY SIGNAL: on-behalf-of voice + corporate integration language
         "keywords": [
-            "trusted", "reliable", "dependable", "consistent", "proven",
-            "established", "reputation", "track record", "years of experience",
-            "certified", "accredited", "endorsed", "recommended", "preferred",
-            "loyalty", "commitment", "dedicated", "faithful", "steady",
-            "professional", "expert", "specialist", "authority", "leader",
-            "recognized", "awarded", "rated", "reviewed", "verified",
+            # On-behalf-of voice (Chris's strongest signal)
+            "your traveler", "your travelers", "your executive", "your executives",
+            "your client", "your clients", "your guests", "your attendees",
+            "your boss", "your team", "booking travelers", "help travelers",
+            "for the executive", "on behalf of", "travel arranger",
+            "executive assistant", "office manager",
+            # Corporate integration
+            "concur", "tripactions", "navan", "amex gbt", "cwt", "bcd travel",
+            "ctm", "fcm", "travel management company", "tmc",
+            "corporate travel", "business travel", "managed travel",
+            "travel policy", "t&e", "travel and expense",
+            "preferred vendor", "preferred supplier", "approved provider",
+            # Booking/coordination
+            "ground transportation", "chauffeured", "black car", "car service",
+            "airport transfer", "airport pickup", "curbside",
+            "booking hub", "booking platform", "booking agent",
         ],
         "regex_patterns": [
-            r"(?:trusted|relied upon|depended on)\s+by\s+(?:thousands|millions|professionals)",
-            r"(?:\d+)\s+(?:years|decades)\s+(?:of|in)\s+(?:service|business|experience)",
-            r"(?:rated|reviewed|recommended)\s+(?:\d+(?:\.\d+)?)\s+(?:stars|out of)",
-            r"(?:industry|market|sector)\s+(?:leader|standard|benchmark)",
+            r"(?:your|the)\s+(?:traveler|executive|client|guest)(?:s|'s)?(?:\s+(?:need|prefer|expect|arrive|depart))",
+            r"(?:book|arrange|coordinate|schedule)\s+(?:for|on behalf)",
+            r"(?:travel\s+(?:arranger|coordinator|manager|agent|desk))",
+            r"(?:ground\s+transport(?:ation)?)\s+(?:service|provider|option|solution)",
+            r"(?:corporate|business)\s+(?:travel\s+(?:program|policy|management|tool))",
+            r"(?:concur|tripactions|navan|amex\s+gbt|cwt|bcd)\s+(?:integration|partner|connect)",
         ],
-        "negative_markers": [  # These ATTENUATE the goal
-            "scam", "fraud", "unreliable", "inconsistent", "unproven",
-            "controversial", "disputed", "questionable",
+        "negative_markers": [
+            "vacation", "honeymoon", "leisure", "getaway", "romance",
+            "personal trip", "family vacation", "road trip",
         ],
     },
 
-    "social_alignment": {
+    "dependable_loyalist_context": {
+        # The travel manager or operations person evaluating quality/reliability.
+        # Reads trade press (BTN, GBTA), vendor comparisons, survey data.
+        # Chris's #2 audience (20%).
         "keywords": [
-            "everyone", "popular", "trending", "widespread", "common",
-            "mainstream", "many people", "most people", "millions",
-            "community", "together", "shared", "collective", "group",
-            "peers", "colleagues", "professionals like you", "others",
-            "joined", "switched", "adopted", "chosen by", "preferred by",
-            "movement", "wave", "growing", "increasingly",
+            # Trade/industry vocabulary
+            "survey", "benchmark", "industry standard", "satisfaction score",
+            "service consistency", "preferred partner", "vendor evaluation",
+            "rfi", "rfp", "procurement", "supplier", "contract",
+            # Quality/reliability metrics
+            "on-time", "on time", "arrival rate", "driver tenure",
+            "background check", "safety rating", "dot rating",
+            "company employee", "company-employed", "professional chauffeur",
+            "soc 2", "iso", "compliance", "audit", "certified",
+            # Trade publications
+            "business travel news", "btn", "gbta", "corporate travel",
+            "chauffeured service", "limousine", "black car industry",
+            "travel management", "managed travel program",
+            # Supply network
+            "affiliate network", "supply partner", "operator network",
+            "multi-city", "nationwide coverage", "global fleet",
         ],
         "regex_patterns": [
-            r"(?:\d+[,.]?\d*)\s+(?:people|users|customers|professionals)\s+(?:chose|use|trust|prefer)",
-            r"(?:everyone|everybody|most people)\s+(?:is|are)\s+(?:using|choosing|switching)",
-            r"(?:join|joined)\s+(?:thousands|millions|the)\s+(?:of|who)",
-            r"(?:fastest|most)\s+(?:growing|popular|adopted)",
+            r"(?:survey|benchmark|report)\s+(?:shows|finds|reveals|indicates)",
+            r"(?:\d+(?:\.\d+)?)\s+(?:out of|\/)\s+(?:\d+|5|10)\s+(?:rating|score|satisfaction)",
+            r"(?:preferred|approved|vetted)\s+(?:vendor|supplier|partner|provider)",
+            r"(?:contract|agreement|rfp|rfi)\s+(?:for|with)\s+(?:ground|transport|chauffeured)",
+            r"(?:service\s+consistency|driver\s+quality|on-time\s+(?:rate|performance))",
         ],
         "negative_markers": [
-            "exclusive", "elite", "select few", "invitation only",
-            "contrarian", "unconventional", "against the grain",
+            "uber", "lyft", "rideshare", "gig economy", "ride-hailing",
+            "personal use", "leisure",
         ],
     },
 
-    "threat_reduction": {
+    "careful_truster_context": {
+        # Compliance-focused: legal ops, pharma compliance, risk management.
+        # Reads about Sunshine Act, duty of care, audit readiness.
+        # Chris's life sciences + legal audiences.
         "keywords": [
-            "risk", "danger", "threat", "unsafe", "hazard", "warning",
-            "failure", "problem", "issue", "concern", "worry", "anxiety",
-            "accident", "incident", "breach", "vulnerability", "exposed",
-            "protect", "prevent", "avoid", "eliminate", "safeguard",
-            "insurance", "guarantee", "safety", "security", "defense",
-            "loss", "damage", "harm", "cost", "penalty", "fine",
+            # Compliance/regulatory
+            "sunshine act", "efpia", "hcp", "healthcare professional",
+            "compliance", "audit", "reporting", "transparency",
+            "regulatory", "regulated", "phrma", "open payments",
+            "transfer of value", "disbursement", "reputational risk",
+            # Duty of care
+            "duty of care", "iso 31030", "traveler safety", "travel risk",
+            "executive protection", "security", "background check",
+            "safety pin", "gps tracking", "24/7 support",
+            # Legal
+            "billable hour", "deposition", "court appearance", "litigation",
+            "law firm", "biglaw", "associate travel", "partner travel",
+            "war room", "courthouse",
+            # Verification
+            "independently verified", "third-party audit", "soc 2",
+            "insurance", "liability", "vetting", "credentialed",
         ],
         "regex_patterns": [
-            r"(?:risk|danger|threat)\s+of\s+(?:\w+)",
-            r"(?:could|might|may)\s+(?:lose|fail|miss|damage)",
-            r"(?:protect|prevent|avoid|eliminate)\s+(?:\w+)\s+(?:risk|danger|loss)",
-            r"(?:\d+)%\s+(?:of|chance|probability)\s+(?:\w+)\s+(?:fail|break|miss)",
-            r"(?:what happens|consequences)\s+(?:when|if)\s+(?:\w+)\s+(?:fails|breaks|goes wrong)",
+            r"(?:sunshine\s+act|efpia|hcp|healthcare\s+professional)",
+            r"(?:compliance|audit|regulatory)\s+(?:requirement|framework|standard|risk)",
+            r"(?:duty\s+of\s+care|travel\s+risk|traveler\s+safety)",
+            r"(?:billable\s+hour|deposition|court\s+appear|litigation\s+travel)",
+            r"(?:law\s+firm|biglaw|legal\s+(?:team|department|ops))",
         ],
         "negative_markers": [
-            "no risk", "risk free", "completely safe", "nothing to worry about",
+            "personal injury", "ambulance chaser", "class action settlement",
         ],
     },
 
-    "novelty_exploration": {
+    "prevention_planner_context": {
+        # Event/meeting planners worried about transportation failures.
+        # Zero-failure execution mindset. Group logistics.
+        # Chris's event planner audience (10%).
         "keywords": [
-            "new", "innovative", "revolutionary", "breakthrough", "cutting-edge",
-            "discover", "explore", "adventure", "journey", "experience",
-            "unprecedented", "first-ever", "never before", "reimagine",
-            "transform", "disrupt", "evolve", "next generation", "future",
-            "surprising", "unexpected", "remarkable", "extraordinary",
-            "hidden", "secret", "untold", "beyond", "frontier",
+            # Event logistics
+            "event transportation", "guest transportation", "group transport",
+            "attendee", "delegate", "conference", "convention", "gala",
+            "incentive trip", "incentive travel", "meeting planner",
+            "event planner", "event production", "event logistics",
+            # Failure prevention
+            "backup plan", "contingency", "what if", "plan b",
+            "never leave", "stranded", "delay", "cancellation",
+            "risk mitigation", "failsafe", "redundancy",
+            "zero tolerance", "zero failure", "flawless execution",
+            # Group coordination
+            "multi-vehicle", "fleet coordination", "arrival manifest",
+            "pickup schedule", "drop-off", "shuttle", "charter",
         ],
         "regex_patterns": [
-            r"(?:never|not)\s+(?:seen|experienced|tried|imagined)\s+(?:before|anything like)",
-            r"(?:discover|explore|uncover|reveal)\s+(?:the|a|an)\s+(?:\w+)",
-            r"(?:new|novel|innovative)\s+(?:way|approach|method|experience)",
-            r"what\s+(?:if|happens when)\s+(?:you|we)\s+(?:try|explore|discover)",
+            r"(?:transport(?:ing|ation)?\s+(?:guests|attendees|delegates|group))",
+            r"(?:event|meeting|conference|convention)\s+(?:transport|logistics|coordination)",
+            r"(?:backup|contingency|plan\s+b)\s+(?:for|in case|transport)",
+            r"(?:incentive\s+(?:trip|travel|program|event))",
+            r"(?:zero[- ](?:tolerance|failure)|flawless\s+execution)",
         ],
         "negative_markers": [
-            "traditional", "conventional", "standard", "usual",
-            "tried and true", "proven method", "established practice",
+            "personal event", "birthday party", "wedding",
         ],
     },
 
-    "competence_verification": {
+    "trusting_loyalist_context": {
+        # The end-user executive or private aviation passenger.
+        # Reads about premium travel experiences, FBOs, discretion.
+        # Chris's private aviation + end-user exec audiences.
         "keywords": [
-            "quality", "standard", "benchmark", "metric", "performance",
-            "rating", "score", "evaluation", "assessment", "audit",
-            "certified", "accredited", "compliance", "regulation",
-            "testing", "verified", "validated", "inspection", "review",
-            "criteria", "specification", "requirement", "excellence",
-            "accuracy", "precision", "consistency", "reliability",
+            # Private aviation
+            "fbo", "fixed-base operator", "private aviation",
+            "business jet", "charter", "private terminal",
+            "executive terminal", "vip terminal",
+            "teterboro", "van nuys", "opa-locka",
+            # Executive travel experience
+            "discretion", "privacy", "confidential",
+            "white glove", "premium experience", "first class",
+            "chauffeur", "professional driver", "meet and greet",
+            # Self-booking context
+            "self-book", "app", "one tap", "instant confirmation",
+            "your usual driver", "saved preferences",
         ],
         "regex_patterns": [
-            r"(?:meets|exceeds|surpasses)\s+(?:\w+)\s+(?:standards|requirements|criteria)",
-            r"(?:rated|scored|ranked)\s+(?:#?\d+|top|highest|best)",
-            r"(?:independently|third-party)\s+(?:verified|tested|audited|certified)",
-            r"(?:\d+(?:\.\d+)?)\s+(?:star|rating|score|percent)\s+(?:\w+)",
+            r"(?:fbo|private\s+(?:aviation|terminal|jet)|business\s+(?:jet|aviation))",
+            r"(?:executive|vip)\s+(?:terminal|lounge|service|transport)",
+            r"(?:white[- ]glove|premium)\s+(?:service|experience|transport)",
+            r"(?:meet\s+and\s+greet|curbside\s+(?:pickup|service))",
         ],
         "negative_markers": [
-            "unverified", "self-reported", "estimated", "approximate",
-            "unaudited", "unregulated",
+            "budget airline", "economy class", "backpacker",
         ],
     },
 
-    "planning_completion": {
+    "home_market_context": {
+        # CT/NYC corridor regional business content.
+        # Chris's home market audience (15%).
         "keywords": [
-            "schedule", "plan", "organize", "coordinate", "arrange",
-            "calendar", "agenda", "itinerary", "timeline", "deadline",
-            "book", "reserve", "confirm", "set up", "prepare",
-            "upcoming", "next week", "tomorrow", "this weekend",
-            "pending", "unfinished", "remaining", "outstanding",
-            "to-do", "checklist", "step", "phase", "stage",
-            "complete", "finish", "finalize", "wrap up",
+            "connecticut", "new york", "nyc", "manhattan",
+            "tri-state", "metro area", "new jersey", "boston",
+            "stamford", "greenwich", "westport", "new haven",
+            "wall street", "midtown", "downtown",
+            "local business", "regional", "community",
+            "crain's", "bizjournals",
         ],
         "regex_patterns": [
-            r"(?:still|yet|haven't)\s+(?:need|have)\s+to\s+(?:finish|complete|book|plan)",
-            r"(?:before|by|until)\s+(?:your|the)\s+(?:trip|flight|meeting|deadline)",
-            r"(?:don't forget|remember)\s+to\s+(?:\w+)",
-            r"(?:\d+)\s+(?:things|tasks|items|steps)\s+(?:left|remaining|to do)",
+            r"(?:connecticut|new\s+york|nyc|tri-state|metro\s+(?:area|region))",
+            r"(?:stamford|greenwich|westport|new\s+haven|hartford)",
+            r"(?:wall\s+street|midtown|downtown\s+(?:manhattan|nyc))",
+        ],
+        "negative_markers": [],
+    },
+
+    "financial_dealmaker_context": {
+        # PE, M&A, IPO roadshow travel. Project-based, expense-insensitive.
+        # Chris's financial services audience (6%).
+        "keywords": [
+            "ipo", "roadshow", "management presentation",
+            "due diligence", "deal close", "signing ceremony",
+            "private equity", "venture capital", "m&a",
+            "merger", "acquisition", "spac", "buyout",
+            "investment banking", "dealmaker", "deal flow",
+            "pitch meeting", "investor meeting", "board meeting",
+            "portfolio company", "exit", "fund deployment",
+        ],
+        "regex_patterns": [
+            r"(?:ipo|roadshow|management\s+presentation)",
+            r"(?:private\s+equity|venture\s+capital|m&a|merger|acquisition)",
+            r"(?:due\s+diligence|deal\s+(?:close|flow|value))",
+            r"(?:investment\s+bank|dealmaker|board\s+meeting)",
         ],
         "negative_markers": [
-            "all done", "fully booked", "nothing left", "completed",
+            "personal finance", "savings account", "credit card rewards",
         ],
     },
 
-    "indulgence_permission": {
+    "supply_side_context": {
+        # Operators, fleet owners, limousine companies.
+        # SEPARATE campaign — different creative, different landing page.
+        # Chris identified this as requiring its own StackAdapt line item.
         "keywords": [
-            "deserve", "earned", "reward", "treat", "indulge",
-            "luxury", "premium", "splurge", "pamper", "self-care",
-            "achievement", "milestone", "celebration", "success",
-            "hard work", "dedication", "effort", "sacrifice",
-            "finally", "about time", "long overdue", "worth it",
-            "guilt-free", "no regrets", "life is short", "you only live once",
+            "operator", "fleet owner", "limousine company",
+            "chauffeur company", "car service operator",
+            "affiliate", "supply partner", "network operator",
+            "dispatch", "vehicle fleet", "livery",
+            "nla", "national limousine association",
+            "lancer insurance", "operator insurance",
+            "single-city operation", "multi-city network",
         ],
         "regex_patterns": [
-            r"(?:you|you've)\s+(?:deserve|earned|worked for)\s+(?:this|it|a treat)",
-            r"(?:after|following)\s+(?:all that|so much|years of)\s+(?:work|effort|sacrifice)",
-            r"(?:treat|reward|pamper)\s+(?:yourself|yourself to)",
-            r"(?:life is|it's)\s+(?:too short|about|time)\s+(?:to|for)\s+(?:enjoy|indulge|relax)",
+            r"(?:limousine|chauffeur|black\s+car)\s+(?:operator|company|business|fleet)",
+            r"(?:supply\s+partner|affiliate\s+(?:network|operator))",
+            r"(?:fleet\s+(?:owner|operator|management))",
+            r"(?:national\s+limousine|nla|chauffeur\s+driven)",
         ],
         "negative_markers": [
-            "budget", "save", "cheap", "discount", "frugal",
-            "cut costs", "economize", "penny-pinching",
-        ],
-    },
-
-    "status_signaling": {
-        "keywords": [
-            "exclusive", "elite", "prestigious", "premium", "luxury",
-            "top", "best", "finest", "superior", "world-class",
-            "vip", "first class", "executive", "ceo", "founder",
-            "success", "achievement", "accomplished", "distinguished",
-            "wealthy", "affluent", "high-end", "upscale", "sophisticated",
-            "influence", "power", "leadership", "authority", "recognition",
-        ],
-        "regex_patterns": [
-            r"(?:top|leading|most successful)\s+(?:\d+%?|executives|professionals|companies)",
-            r"(?:exclusive|invitation-only|members-only)\s+(?:\w+)",
-            r"(?:fortune|inc|forbes)\s+(?:\d+|500|list)",
-            r"(?:among|join)\s+the\s+(?:best|elite|top|most successful)",
-        ],
-        "negative_markers": [
-            "everyone", "common", "affordable", "budget",
-            "mass market", "average", "ordinary",
+            "book a ride", "passenger", "traveler experience",
         ],
     },
 }
@@ -553,26 +625,36 @@ def score_page_goal_activation(
     text: str,
     page_affect_valence: float = 0.5,
 ) -> GoalActivationResult:
-    """Score a page's text for nonconscious goal activation.
+    """Score a page's text for audience-context activation.
+
+    Rebuilt 2026-04-14 to use B2B corporate travel vocabulary
+    validated against Chris's article-level research (7 test cases).
+
+    The markers detect which AUDIENCE CONTEXT the page activates:
+    - reliable_cooperator_context: EA/travel arranger content (on-behalf-of voice)
+    - dependable_loyalist_context: trade press, vendor evaluation
+    - careful_truster_context: compliance, legal, audit
+    - prevention_planner_context: event logistics, failure prevention
+    - trusting_loyalist_context: private aviation, exec experience
+    - home_market_context: CT/NYC regional business
+    - financial_dealmaker_context: PE/M&A/IPO content
+    - supply_side_context: operator/fleet content (SEPARATE campaign)
 
     Args:
         text: Page content text (article body, headlines, etc.)
         page_affect_valence: Estimated emotional valence of the page [-1, 1].
-            Positive affect amplifies goal potency (Custers & Aarts, 2010).
 
     Returns:
-        GoalActivationResult with per-goal activation scores.
+        GoalActivationResult with per-context activation scores.
     """
     text_lower = text.lower()
     goal_scores = {}
     evidence = {}
 
-    for goal_id, markers in GOAL_ACTIVATION_MARKERS.items():
-        goal_def = GOAL_TAXONOMY[goal_id]
-        score = 0.0
+    for context_id, markers in GOAL_ACTIVATION_MARKERS.items():
         matched = []
 
-        # Keyword matching (each unique match adds to score)
+        # Keyword matching — each unique match adds to score
         keyword_hits = 0
         for kw in markers["keywords"]:
             if kw in text_lower:
@@ -602,22 +684,16 @@ def score_page_goal_activation(
         # Combined score
         raw_score = (keyword_score * 0.5 + regex_score * 0.5) * attenuation
 
-        # Affect modulation (Custers & Aarts, 2010)
-        if goal_def.requires_positive_affect:
-            # Positive affect amplifies; negative affect dampens
-            affect_multiplier = 0.5 + 0.5 * max(0, page_affect_valence)
-            raw_score *= affect_multiplier
+        goal_scores[context_id] = min(1.0, raw_score)
+        evidence[context_id] = matched
 
-        goal_scores[goal_id] = min(1.0, raw_score)
-        evidence[goal_id] = matched
-
-    # Determine dominant goal
+    # Determine dominant context
     if goal_scores:
         dominant = max(goal_scores, key=goal_scores.get)
         dominant_strength = goal_scores[dominant]
 
-        # Goal shielding (Shah, 2003): dominant goal suppresses competitors
-        shielded = GOAL_TAXONOMY[dominant].shields_against if dominant_strength > 0.3 else []
+        # Goal shielding: supply-side content suppresses demand-side archetypes
+        shielded = ["reliable_cooperator_context", "careful_truster_context", "trusting_loyalist_context"] if dominant == "supply_side_context" and dominant_strength > 0.3 else []
     else:
         dominant = ""
         dominant_strength = 0.0
@@ -633,48 +709,48 @@ def score_page_goal_activation(
     )
 
 
+# Context ID → archetype mapping
+# Each context marker directly serves specific archetypes
+CONTEXT_TO_ARCHETYPES: Dict[str, List[Tuple[str, float]]] = {
+    "reliable_cooperator_context": [("reliable_cooperator", 1.0), ("dependable_loyalist", 0.5)],
+    "dependable_loyalist_context": [("dependable_loyalist", 1.0), ("reliable_cooperator", 0.6), ("careful_truster", 0.4)],
+    "careful_truster_context": [("careful_truster", 1.0), ("prevention_planner", 0.7), ("dependable_loyalist", 0.4)],
+    "prevention_planner_context": [("prevention_planner", 1.0), ("reliable_cooperator", 0.5)],
+    "trusting_loyalist_context": [("trusting_loyalist", 1.0), ("status_seeker", 0.5)],
+    "home_market_context": [("dependable_loyalist", 0.8), ("reliable_cooperator", 0.6), ("trusting_loyalist", 0.5)],
+    "financial_dealmaker_context": [("dependable_loyalist", 0.9), ("status_seeker", 0.5), ("trusting_loyalist", 0.4)],
+    "supply_side_context": [("dependable_loyalist", 1.0)],  # Separate campaign
+}
+
+
 def compute_crossover_score(
     goal_activation: GoalActivationResult,
     archetype: str,
 ) -> float:
-    """Compute crossover score: how well does this page prime goals
-    that the ad for this archetype fulfills?
+    """Compute crossover score: how well does this page's context
+    match this archetype?
 
-    This is the core targeting signal. High crossover = the page has
-    activated a nonconscious goal that the LUXY ad for this archetype
-    directly fulfills. The person will nonconsciously notice and click.
+    Direct mapping from audience context activation to archetype.
+    No abstract goal layer — context markers ARE the audience signals.
 
     Args:
-        goal_activation: Page goal activation result
+        goal_activation: Page context activation result
         archetype: Target archetype id
 
     Returns:
         Crossover score [0, 1]. Higher = better page for this archetype.
     """
-    fulfillment = ARCHETYPE_GOAL_FULFILLMENT.get(archetype, {})
-    if not fulfillment:
-        return 0.0
-
     score = 0.0
-    total_weight = 0.0
 
-    for goal_id, fulfillment_strength in fulfillment.items():
-        activation = goal_activation.goal_scores.get(goal_id, 0.0)
+    for context_id, activation in goal_activation.goal_scores.items():
+        if activation < 0.05:
+            continue
 
-        # Goal shielding penalty: if this goal is suppressed by the
-        # dominant goal, the ad can't fulfill it effectively
-        if goal_id in goal_activation.goal_shielded:
-            activation *= 0.2  # Heavy penalty — goal is actively inhibited
-
-        # Crossover = activation × fulfillment
-        # Both must be present: page activates the goal AND ad fulfills it
-        crossover = activation * fulfillment_strength
-        score += crossover
-        total_weight += fulfillment_strength
-
-    # Normalize by total possible fulfillment
-    if total_weight > 0:
-        score /= total_weight
+        # Does this context serve this archetype?
+        archetype_weights = CONTEXT_TO_ARCHETYPES.get(context_id, [])
+        for arch, weight in archetype_weights:
+            if arch == archetype:
+                score += activation * weight
 
     return min(1.0, score)
 
