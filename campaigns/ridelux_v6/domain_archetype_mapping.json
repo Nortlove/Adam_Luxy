@@ -1,1771 +1,386 @@
 {
-  "generated_at": "2026-04-13",
-  "method": "deep_article_crawl_370_articles_52_domains",
-  "min_articles": 2,
-  "min_crossover": 0.08,
+  "generated_at": "2026-04-14",
+  "method": "manual_research_3_passes_article_level_verification",
+  "source": "campaigns/luxyride_whitelist_master.md",
+  "audiences": 11,
+  "total_url_patterns": 73,
+  "tier_1": 10,
+  "tier_2": 37,
+  "tier_3": 26,
   "archetype_domain_lists": {
-    "trusting_loyalist": [
-      {
-        "domain": "pursuitist.com",
-        "crossover_score": 0.2494,
-        "dominant_goal": "status_signaling",
-        "articles_analyzed": 5,
-        "category": "travel_luxury"
-      },
-      {
-        "domain": "elitetraveler.com",
-        "crossover_score": 0.2252,
-        "dominant_goal": "status_signaling",
-        "articles_analyzed": 8,
-        "category": "travel_luxury"
-      },
-      {
-        "domain": "kiplinger.com",
-        "crossover_score": 0.1993,
-        "dominant_goal": "planning_completion",
-        "articles_analyzed": 8,
-        "category": "business_finance"
-      },
-      {
-        "domain": "robbreport.com",
-        "crossover_score": 0.1648,
-        "dominant_goal": "status_signaling",
-        "articles_analyzed": 8,
-        "category": "travel_luxury"
-      },
-      {
-        "domain": "thepointsguy.com",
-        "crossover_score": 0.1527,
-        "dominant_goal": "status_signaling",
-        "articles_analyzed": 8,
-        "category": "travel_planning"
-      },
-      {
-        "domain": "cntraveler.com",
-        "crossover_score": 0.1445,
-        "dominant_goal": "novelty_exploration",
-        "articles_analyzed": 8,
-        "category": "travel_luxury"
-      },
-      {
-        "domain": "nerdwallet.com/travel",
-        "crossover_score": 0.1443,
-        "dominant_goal": "competence_verification",
-        "articles_analyzed": 8,
-        "category": "travel_planning"
-      },
-      {
-        "domain": "vox.com",
-        "crossover_score": 0.1408,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 3,
-        "category": "news_current"
-      },
-      {
-        "domain": "linkedin.com",
-        "crossover_score": 0.1293,
-        "dominant_goal": "affiliation_safety",
-        "articles_analyzed": 8,
-        "category": "professional"
-      },
-      {
-        "domain": "fool.com",
-        "crossover_score": 0.1251,
-        "dominant_goal": "competence_verification",
-        "articles_analyzed": 8,
-        "category": "business_finance"
-      },
-      {
-        "domain": "time.com",
-        "crossover_score": 0.1209,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "news_current"
-      },
-      {
-        "domain": "nytimes.com",
-        "crossover_score": 0.1202,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 2,
-        "category": "news_current"
-      },
-      {
-        "domain": "bbc.com",
-        "crossover_score": 0.1201,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "news_current"
-      },
-      {
-        "domain": "newsweek.com",
-        "crossover_score": 0.12,
-        "dominant_goal": "planning_completion",
-        "articles_analyzed": 8,
-        "category": "news_current"
-      },
-      {
-        "domain": "arstechnica.com",
-        "crossover_score": 0.1166,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "professional"
-      },
-      {
-        "domain": "timeout.com",
-        "crossover_score": 0.1161,
-        "dominant_goal": "novelty_exploration",
-        "articles_analyzed": 8,
-        "category": "lifestyle_events"
-      },
-      {
-        "domain": "techcrunch.com",
-        "crossover_score": 0.1142,
-        "dominant_goal": "planning_completion",
-        "articles_analyzed": 8,
-        "category": "professional"
-      },
-      {
-        "domain": "eventbrite.com",
-        "crossover_score": 0.113,
-        "dominant_goal": "status_signaling",
-        "articles_analyzed": 8,
-        "category": "lifestyle_events"
-      },
-      {
-        "domain": "wired.com",
-        "crossover_score": 0.1105,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "professional"
-      },
-      {
-        "domain": "cnbc.com",
-        "crossover_score": 0.1077,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "business_finance"
-      },
-      {
-        "domain": "bloomberg.com",
-        "crossover_score": 0.1049,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "business_finance"
-      },
-      {
-        "domain": "si.com",
-        "crossover_score": 0.1029,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "sports_entertainment"
-      },
-      {
-        "domain": "slate.com",
-        "crossover_score": 0.1028,
-        "dominant_goal": "planning_completion",
-        "articles_analyzed": 8,
-        "category": "news_current"
-      },
-      {
-        "domain": "weddingwire.com",
-        "crossover_score": 0.0993,
-        "dominant_goal": "planning_completion",
-        "articles_analyzed": 8,
-        "category": "lifestyle_events"
-      },
-      {
-        "domain": "esquire.com",
-        "crossover_score": 0.0989,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 6,
-        "category": "travel_luxury"
-      },
-      {
-        "domain": "thecut.com",
-        "crossover_score": 0.0978,
-        "dominant_goal": "social_alignment",
-        "articles_analyzed": 8,
-        "category": "travel_luxury"
-      },
-      {
-        "domain": "fortune.com",
-        "crossover_score": 0.0977,
-        "dominant_goal": "status_signaling",
-        "articles_analyzed": 8,
-        "category": "business_finance"
-      },
-      {
-        "domain": "vogue.com",
-        "crossover_score": 0.0939,
-        "dominant_goal": "planning_completion",
-        "articles_analyzed": 8,
-        "category": "travel_luxury"
-      },
-      {
-        "domain": "vanityfair.com",
-        "crossover_score": 0.0931,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "travel_luxury"
-      },
-      {
-        "domain": "theatlantic.com",
-        "crossover_score": 0.0925,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "news_current"
-      },
-      {
-        "domain": "crunchbase.com",
-        "crossover_score": 0.09,
-        "dominant_goal": "competence_verification",
-        "articles_analyzed": 3,
-        "category": "business_finance"
-      },
-      {
-        "domain": "manofmany.com",
-        "crossover_score": 0.0899,
-        "dominant_goal": "status_signaling",
-        "articles_analyzed": 8,
-        "category": "travel_luxury"
-      },
-      {
-        "domain": "gq.com",
-        "crossover_score": 0.0886,
-        "dominant_goal": "novelty_exploration",
-        "articles_analyzed": 8,
-        "category": "travel_luxury"
-      },
-      {
-        "domain": "architecturaldigest.com",
-        "crossover_score": 0.0871,
-        "dominant_goal": "planning_completion",
-        "articles_analyzed": 8,
-        "category": "travel_luxury"
-      },
-      {
-        "domain": "tennis.com",
-        "crossover_score": 0.0851,
-        "dominant_goal": "status_signaling",
-        "articles_analyzed": 8,
-        "category": "sports_entertainment"
-      },
-      {
-        "domain": "cnn.com",
-        "crossover_score": 0.0846,
-        "dominant_goal": "competence_verification",
-        "articles_analyzed": 8,
-        "category": "news_current"
-      },
-      {
-        "domain": "onemileatatime.com",
-        "crossover_score": 0.0806,
-        "dominant_goal": "planning_completion",
-        "articles_analyzed": 8,
-        "category": "travel_planning"
-      }
-    ],
-    "reliable_cooperator": [
-      {
-        "domain": "kiplinger.com",
-        "crossover_score": 0.2379,
-        "dominant_goal": "planning_completion",
-        "articles_analyzed": 8,
-        "category": "business_finance"
-      },
-      {
-        "domain": "nerdwallet.com/travel",
-        "crossover_score": 0.2266,
-        "dominant_goal": "competence_verification",
-        "articles_analyzed": 8,
-        "category": "travel_planning"
-      },
-      {
-        "domain": "elitetraveler.com",
-        "crossover_score": 0.2182,
-        "dominant_goal": "status_signaling",
-        "articles_analyzed": 8,
-        "category": "travel_luxury"
-      },
-      {
-        "domain": "pursuitist.com",
-        "crossover_score": 0.2064,
-        "dominant_goal": "status_signaling",
-        "articles_analyzed": 5,
-        "category": "travel_luxury"
-      },
-      {
-        "domain": "linkedin.com",
-        "crossover_score": 0.191,
-        "dominant_goal": "affiliation_safety",
-        "articles_analyzed": 8,
-        "category": "professional"
-      },
-      {
-        "domain": "fool.com",
-        "crossover_score": 0.165,
-        "dominant_goal": "competence_verification",
-        "articles_analyzed": 8,
-        "category": "business_finance"
-      },
-      {
-        "domain": "thepointsguy.com",
-        "crossover_score": 0.153,
-        "dominant_goal": "status_signaling",
-        "articles_analyzed": 8,
-        "category": "travel_planning"
-      },
-      {
-        "domain": "robbreport.com",
-        "crossover_score": 0.1448,
-        "dominant_goal": "status_signaling",
-        "articles_analyzed": 8,
-        "category": "travel_luxury"
-      },
-      {
-        "domain": "vox.com",
-        "crossover_score": 0.1434,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 3,
-        "category": "news_current"
-      },
-      {
-        "domain": "newsweek.com",
-        "crossover_score": 0.1343,
-        "dominant_goal": "planning_completion",
-        "articles_analyzed": 8,
-        "category": "news_current"
-      },
-      {
-        "domain": "crunchbase.com",
-        "crossover_score": 0.1308,
-        "dominant_goal": "competence_verification",
-        "articles_analyzed": 3,
-        "category": "business_finance"
-      },
-      {
-        "domain": "cntraveler.com",
-        "crossover_score": 0.1301,
-        "dominant_goal": "novelty_exploration",
-        "articles_analyzed": 8,
-        "category": "travel_luxury"
-      },
-      {
-        "domain": "techcrunch.com",
-        "crossover_score": 0.1249,
-        "dominant_goal": "planning_completion",
-        "articles_analyzed": 8,
-        "category": "professional"
-      },
-      {
-        "domain": "time.com",
-        "crossover_score": 0.1248,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "news_current"
-      },
-      {
-        "domain": "nytimes.com",
-        "crossover_score": 0.1231,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 2,
-        "category": "news_current"
-      },
-      {
-        "domain": "wired.com",
-        "crossover_score": 0.1175,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "professional"
-      },
-      {
-        "domain": "cnbc.com",
-        "crossover_score": 0.116,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "business_finance"
-      },
-      {
-        "domain": "eventbrite.com",
-        "crossover_score": 0.1143,
-        "dominant_goal": "status_signaling",
-        "articles_analyzed": 8,
-        "category": "lifestyle_events"
-      },
-      {
-        "domain": "arstechnica.com",
-        "crossover_score": 0.1134,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "professional"
-      },
-      {
-        "domain": "fortune.com",
-        "crossover_score": 0.1127,
-        "dominant_goal": "status_signaling",
-        "articles_analyzed": 8,
-        "category": "business_finance"
-      },
-      {
-        "domain": "bbc.com",
-        "crossover_score": 0.1117,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "news_current"
-      },
-      {
-        "domain": "si.com",
-        "crossover_score": 0.1096,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "sports_entertainment"
-      },
-      {
-        "domain": "timeout.com",
-        "crossover_score": 0.1002,
-        "dominant_goal": "novelty_exploration",
-        "articles_analyzed": 8,
-        "category": "lifestyle_events"
-      },
-      {
-        "domain": "slate.com",
-        "crossover_score": 0.0972,
-        "dominant_goal": "planning_completion",
-        "articles_analyzed": 8,
-        "category": "news_current"
-      },
-      {
-        "domain": "weddingwire.com",
-        "crossover_score": 0.0961,
-        "dominant_goal": "planning_completion",
-        "articles_analyzed": 8,
-        "category": "lifestyle_events"
-      },
-      {
-        "domain": "vogue.com",
-        "crossover_score": 0.0919,
-        "dominant_goal": "planning_completion",
-        "articles_analyzed": 8,
-        "category": "travel_luxury"
-      },
-      {
-        "domain": "thecut.com",
-        "crossover_score": 0.0912,
-        "dominant_goal": "social_alignment",
-        "articles_analyzed": 8,
-        "category": "travel_luxury"
-      },
-      {
-        "domain": "bloomberg.com",
-        "crossover_score": 0.0904,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "business_finance"
-      },
-      {
-        "domain": "seekingalpha.com",
-        "crossover_score": 0.0878,
-        "dominant_goal": "novelty_exploration",
-        "articles_analyzed": 8,
-        "category": "business_finance"
-      },
-      {
-        "domain": "manofmany.com",
-        "crossover_score": 0.0856,
-        "dominant_goal": "status_signaling",
-        "articles_analyzed": 8,
-        "category": "travel_luxury"
-      },
-      {
-        "domain": "vanityfair.com",
-        "crossover_score": 0.0848,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "travel_luxury"
-      },
-      {
-        "domain": "esquire.com",
-        "crossover_score": 0.0847,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 6,
-        "category": "travel_luxury"
-      },
-      {
-        "domain": "onemileatatime.com",
-        "crossover_score": 0.0814,
-        "dominant_goal": "planning_completion",
-        "articles_analyzed": 8,
-        "category": "travel_planning"
-      },
-      {
-        "domain": "theatlantic.com",
-        "crossover_score": 0.0814,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "news_current"
-      }
-    ],
     "careful_truster": [
       {
-        "domain": "kiplinger.com",
-        "crossover_score": 0.229,
-        "dominant_goal": "planning_completion",
-        "articles_analyzed": 8,
-        "category": "business_finance"
+        "domain": "bcdtravel.com",
+        "audience": "travel_managers_lifesci",
+        "tier": 1
       },
       {
-        "domain": "nerdwallet.com/travel",
-        "crossover_score": 0.203,
-        "dominant_goal": "competence_verification",
-        "articles_analyzed": 8,
-        "category": "travel_planning"
+        "domain": "policymed.com",
+        "audience": "life_sciences",
+        "tier": 1
       },
       {
-        "domain": "elitetraveler.com",
-        "crossover_score": 0.1894,
-        "dominant_goal": "status_signaling",
-        "articles_analyzed": 8,
-        "category": "travel_luxury"
+        "domain": "cfodive.com",
+        "audience": "cfo_procurement",
+        "tier": 2
       },
       {
-        "domain": "vox.com",
-        "crossover_score": 0.1862,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 3,
-        "category": "news_current"
+        "domain": "spendmatters.com",
+        "audience": "cfo_procurement",
+        "tier": 2
       },
       {
-        "domain": "pursuitist.com",
-        "crossover_score": 0.1838,
-        "dominant_goal": "status_signaling",
-        "articles_analyzed": 5,
-        "category": "travel_luxury"
+        "domain": "biopharmadive.com",
+        "audience": "life_sciences",
+        "tier": 2
       },
       {
-        "domain": "linkedin.com",
-        "crossover_score": 0.1689,
-        "dominant_goal": "affiliation_safety",
-        "articles_analyzed": 8,
-        "category": "professional"
+        "domain": "fiercepharma.com",
+        "audience": "life_sciences",
+        "tier": 2
       },
       {
-        "domain": "fool.com",
-        "crossover_score": 0.1587,
-        "dominant_goal": "competence_verification",
-        "articles_analyzed": 8,
-        "category": "business_finance"
+        "domain": "ramp.com",
+        "audience": "cfo_procurement",
+        "tier": 2
       },
       {
-        "domain": "robbreport.com",
-        "crossover_score": 0.1526,
-        "dominant_goal": "status_signaling",
-        "articles_analyzed": 8,
-        "category": "travel_luxury"
+        "domain": "rippling.com",
+        "audience": "cfo_procurement",
+        "tier": 2
       },
       {
-        "domain": "arstechnica.com",
-        "crossover_score": 0.1469,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "professional"
+        "domain": "cvent.com",
+        "audience": "life_sciences",
+        "tier": 3
       },
       {
-        "domain": "wired.com",
-        "crossover_score": 0.1421,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "professional"
+        "domain": "pharmexec.com",
+        "audience": "life_sciences",
+        "tier": 3
       },
       {
-        "domain": "time.com",
-        "crossover_score": 0.1418,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "news_current"
+        "domain": "phrma.org",
+        "audience": "life_sciences",
+        "tier": 3
       },
       {
-        "domain": "newsweek.com",
-        "crossover_score": 0.14,
-        "dominant_goal": "planning_completion",
-        "articles_analyzed": 8,
-        "category": "news_current"
+        "domain": "riskandinsurance.com",
+        "audience": "cfo_procurement",
+        "tier": 3
       },
       {
-        "domain": "cntraveler.com",
-        "crossover_score": 0.1389,
-        "dominant_goal": "novelty_exploration",
-        "articles_analyzed": 8,
-        "category": "travel_luxury"
+        "domain": "rmmagazine.com",
+        "audience": "cfo_procurement",
+        "tier": 3
       },
       {
-        "domain": "techcrunch.com",
-        "crossover_score": 0.138,
-        "dominant_goal": "planning_completion",
-        "articles_analyzed": 8,
-        "category": "professional"
+        "domain": "procuredesk.com",
+        "audience": "cfo_procurement",
+        "tier": 3
       },
       {
-        "domain": "bbc.com",
-        "crossover_score": 0.133,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "news_current"
+        "domain": "fylehq.com",
+        "audience": "cfo_procurement",
+        "tier": 3
       },
       {
-        "domain": "cnbc.com",
-        "crossover_score": 0.1318,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "business_finance"
+        "domain": "greenbiz.com",
+        "audience": "esg",
+        "tier": 3
       },
       {
-        "domain": "thepointsguy.com",
-        "crossover_score": 0.1288,
-        "dominant_goal": "status_signaling",
-        "articles_analyzed": 8,
-        "category": "travel_planning"
+        "domain": "esgtoday.com",
+        "audience": "esg",
+        "tier": 3
       },
       {
-        "domain": "si.com",
-        "crossover_score": 0.1287,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "sports_entertainment"
-      },
-      {
-        "domain": "fortune.com",
-        "crossover_score": 0.1228,
-        "dominant_goal": "status_signaling",
-        "articles_analyzed": 8,
-        "category": "business_finance"
-      },
-      {
-        "domain": "thecut.com",
-        "crossover_score": 0.121,
-        "dominant_goal": "social_alignment",
-        "articles_analyzed": 8,
-        "category": "travel_luxury"
-      },
-      {
-        "domain": "crunchbase.com",
-        "crossover_score": 0.1165,
-        "dominant_goal": "competence_verification",
-        "articles_analyzed": 3,
-        "category": "business_finance"
-      },
-      {
-        "domain": "nytimes.com",
-        "crossover_score": 0.1141,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 2,
-        "category": "news_current"
-      },
-      {
-        "domain": "slate.com",
-        "crossover_score": 0.1131,
-        "dominant_goal": "planning_completion",
-        "articles_analyzed": 8,
-        "category": "news_current"
-      },
-      {
-        "domain": "bloomberg.com",
-        "crossover_score": 0.113,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "business_finance"
-      },
-      {
-        "domain": "eventbrite.com",
-        "crossover_score": 0.1075,
-        "dominant_goal": "status_signaling",
-        "articles_analyzed": 8,
-        "category": "lifestyle_events"
-      },
-      {
-        "domain": "theatlantic.com",
-        "crossover_score": 0.1052,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "news_current"
-      },
-      {
-        "domain": "vogue.com",
-        "crossover_score": 0.1005,
-        "dominant_goal": "planning_completion",
-        "articles_analyzed": 8,
-        "category": "travel_luxury"
-      },
-      {
-        "domain": "washingtonpost.com",
-        "crossover_score": 0.0999,
-        "dominant_goal": "social_alignment",
-        "articles_analyzed": 8,
-        "category": "news_current"
-      },
-      {
-        "domain": "timeout.com",
-        "crossover_score": 0.0971,
-        "dominant_goal": "novelty_exploration",
-        "articles_analyzed": 8,
-        "category": "lifestyle_events"
-      },
-      {
-        "domain": "esquire.com",
-        "crossover_score": 0.0939,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 6,
-        "category": "travel_luxury"
-      },
-      {
-        "domain": "vanityfair.com",
-        "crossover_score": 0.0928,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "travel_luxury"
-      },
-      {
-        "domain": "weddingwire.com",
-        "crossover_score": 0.0907,
-        "dominant_goal": "planning_completion",
-        "articles_analyzed": 8,
-        "category": "lifestyle_events"
-      },
-      {
-        "domain": "manofmany.com",
-        "crossover_score": 0.0887,
-        "dominant_goal": "status_signaling",
-        "articles_analyzed": 8,
-        "category": "travel_luxury"
-      },
-      {
-        "domain": "seekingalpha.com",
-        "crossover_score": 0.0854,
-        "dominant_goal": "novelty_exploration",
-        "articles_analyzed": 8,
-        "category": "business_finance"
-      },
-      {
-        "domain": "onemileatatime.com",
-        "crossover_score": 0.081,
-        "dominant_goal": "planning_completion",
-        "articles_analyzed": 8,
-        "category": "travel_planning"
-      }
-    ],
-    "explorer": [
-      {
-        "domain": "nerdwallet.com/travel",
-        "crossover_score": 0.2756,
-        "dominant_goal": "competence_verification",
-        "articles_analyzed": 8,
-        "category": "travel_planning"
-      },
-      {
-        "domain": "kiplinger.com",
-        "crossover_score": 0.2493,
-        "dominant_goal": "planning_completion",
-        "articles_analyzed": 8,
-        "category": "business_finance"
-      },
-      {
-        "domain": "linkedin.com",
-        "crossover_score": 0.2257,
-        "dominant_goal": "affiliation_safety",
-        "articles_analyzed": 8,
-        "category": "professional"
-      },
-      {
-        "domain": "fool.com",
-        "crossover_score": 0.1893,
-        "dominant_goal": "competence_verification",
-        "articles_analyzed": 8,
-        "category": "business_finance"
-      },
-      {
-        "domain": "vox.com",
-        "crossover_score": 0.1786,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 3,
-        "category": "news_current"
-      },
-      {
-        "domain": "elitetraveler.com",
-        "crossover_score": 0.1708,
-        "dominant_goal": "status_signaling",
-        "articles_analyzed": 8,
-        "category": "travel_luxury"
-      },
-      {
-        "domain": "crunchbase.com",
-        "crossover_score": 0.1587,
-        "dominant_goal": "competence_verification",
-        "articles_analyzed": 3,
-        "category": "business_finance"
-      },
-      {
-        "domain": "techcrunch.com",
-        "crossover_score": 0.1471,
-        "dominant_goal": "planning_completion",
-        "articles_analyzed": 8,
-        "category": "professional"
-      },
-      {
-        "domain": "newsweek.com",
-        "crossover_score": 0.1442,
-        "dominant_goal": "planning_completion",
-        "articles_analyzed": 8,
-        "category": "news_current"
-      },
-      {
-        "domain": "time.com",
-        "crossover_score": 0.142,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "news_current"
-      },
-      {
-        "domain": "wired.com",
-        "crossover_score": 0.1398,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "professional"
-      },
-      {
-        "domain": "fortune.com",
-        "crossover_score": 0.1342,
-        "dominant_goal": "status_signaling",
-        "articles_analyzed": 8,
-        "category": "business_finance"
-      },
-      {
-        "domain": "arstechnica.com",
-        "crossover_score": 0.1329,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "professional"
-      },
-      {
-        "domain": "cnbc.com",
-        "crossover_score": 0.1298,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "business_finance"
-      },
-      {
-        "domain": "pursuitist.com",
-        "crossover_score": 0.1286,
-        "dominant_goal": "status_signaling",
-        "articles_analyzed": 5,
-        "category": "travel_luxury"
-      },
-      {
-        "domain": "robbreport.com",
-        "crossover_score": 0.1245,
-        "dominant_goal": "status_signaling",
-        "articles_analyzed": 8,
-        "category": "travel_luxury"
-      },
-      {
-        "domain": "thecut.com",
-        "crossover_score": 0.1243,
-        "dominant_goal": "social_alignment",
-        "articles_analyzed": 8,
-        "category": "travel_luxury"
-      },
-      {
-        "domain": "si.com",
-        "crossover_score": 0.1238,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "sports_entertainment"
-      },
-      {
-        "domain": "thepointsguy.com",
-        "crossover_score": 0.1207,
-        "dominant_goal": "status_signaling",
-        "articles_analyzed": 8,
-        "category": "travel_planning"
-      },
-      {
-        "domain": "bbc.com",
-        "crossover_score": 0.1148,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "news_current"
-      },
-      {
-        "domain": "cntraveler.com",
-        "crossover_score": 0.112,
-        "dominant_goal": "novelty_exploration",
-        "articles_analyzed": 8,
-        "category": "travel_luxury"
-      },
-      {
-        "domain": "nytimes.com",
-        "crossover_score": 0.1102,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 2,
-        "category": "news_current"
-      },
-      {
-        "domain": "eventbrite.com",
-        "crossover_score": 0.1094,
-        "dominant_goal": "status_signaling",
-        "articles_analyzed": 8,
-        "category": "lifestyle_events"
-      },
-      {
-        "domain": "slate.com",
-        "crossover_score": 0.1032,
-        "dominant_goal": "planning_completion",
-        "articles_analyzed": 8,
-        "category": "news_current"
-      },
-      {
-        "domain": "washingtonpost.com",
-        "crossover_score": 0.1002,
-        "dominant_goal": "social_alignment",
-        "articles_analyzed": 8,
-        "category": "news_current"
-      },
-      {
-        "domain": "vogue.com",
-        "crossover_score": 0.0948,
-        "dominant_goal": "planning_completion",
-        "articles_analyzed": 8,
-        "category": "travel_luxury"
-      },
-      {
-        "domain": "seekingalpha.com",
-        "crossover_score": 0.093,
-        "dominant_goal": "novelty_exploration",
-        "articles_analyzed": 8,
-        "category": "business_finance"
-      },
-      {
-        "domain": "theatlantic.com",
-        "crossover_score": 0.0912,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "news_current"
-      },
-      {
-        "domain": "timeout.com",
-        "crossover_score": 0.0869,
-        "dominant_goal": "novelty_exploration",
-        "articles_analyzed": 8,
-        "category": "lifestyle_events"
-      },
-      {
-        "domain": "manofmany.com",
-        "crossover_score": 0.0868,
-        "dominant_goal": "status_signaling",
-        "articles_analyzed": 8,
-        "category": "travel_luxury"
-      },
-      {
-        "domain": "bloomberg.com",
-        "crossover_score": 0.0859,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "business_finance"
-      },
-      {
-        "domain": "onemileatatime.com",
-        "crossover_score": 0.0818,
-        "dominant_goal": "planning_completion",
-        "articles_analyzed": 8,
-        "category": "travel_planning"
-      },
-      {
-        "domain": "weddingwire.com",
-        "crossover_score": 0.0802,
-        "dominant_goal": "planning_completion",
-        "articles_analyzed": 8,
-        "category": "lifestyle_events"
-      }
-    ],
-    "prevention_planner": [
-      {
-        "domain": "pursuitist.com",
-        "crossover_score": 0.2329,
-        "dominant_goal": "status_signaling",
-        "articles_analyzed": 5,
-        "category": "travel_luxury"
-      },
-      {
-        "domain": "elitetraveler.com",
-        "crossover_score": 0.2296,
-        "dominant_goal": "status_signaling",
-        "articles_analyzed": 8,
-        "category": "travel_luxury"
-      },
-      {
-        "domain": "kiplinger.com",
-        "crossover_score": 0.2052,
-        "dominant_goal": "planning_completion",
-        "articles_analyzed": 8,
-        "category": "business_finance"
-      },
-      {
-        "domain": "nerdwallet.com/travel",
-        "crossover_score": 0.2016,
-        "dominant_goal": "competence_verification",
-        "articles_analyzed": 8,
-        "category": "travel_planning"
-      },
-      {
-        "domain": "linkedin.com",
-        "crossover_score": 0.1745,
-        "dominant_goal": "affiliation_safety",
-        "articles_analyzed": 8,
-        "category": "professional"
-      },
-      {
-        "domain": "thepointsguy.com",
-        "crossover_score": 0.1645,
-        "dominant_goal": "status_signaling",
-        "articles_analyzed": 8,
-        "category": "travel_planning"
-      },
-      {
-        "domain": "fool.com",
-        "crossover_score": 0.1599,
-        "dominant_goal": "competence_verification",
-        "articles_analyzed": 8,
-        "category": "business_finance"
-      },
-      {
-        "domain": "robbreport.com",
-        "crossover_score": 0.149,
-        "dominant_goal": "status_signaling",
-        "articles_analyzed": 8,
-        "category": "travel_luxury"
-      },
-      {
-        "domain": "cntraveler.com",
-        "crossover_score": 0.139,
-        "dominant_goal": "novelty_exploration",
-        "articles_analyzed": 8,
-        "category": "travel_luxury"
-      },
-      {
-        "domain": "crunchbase.com",
-        "crossover_score": 0.1378,
-        "dominant_goal": "competence_verification",
-        "articles_analyzed": 3,
-        "category": "business_finance"
-      },
-      {
-        "domain": "eventbrite.com",
-        "crossover_score": 0.1357,
-        "dominant_goal": "status_signaling",
-        "articles_analyzed": 8,
-        "category": "lifestyle_events"
-      },
-      {
-        "domain": "newsweek.com",
-        "crossover_score": 0.1317,
-        "dominant_goal": "planning_completion",
-        "articles_analyzed": 8,
-        "category": "news_current"
-      },
-      {
-        "domain": "timeout.com",
-        "crossover_score": 0.126,
-        "dominant_goal": "novelty_exploration",
-        "articles_analyzed": 8,
-        "category": "lifestyle_events"
-      },
-      {
-        "domain": "techcrunch.com",
-        "crossover_score": 0.1256,
-        "dominant_goal": "planning_completion",
-        "articles_analyzed": 8,
-        "category": "professional"
-      },
-      {
-        "domain": "vox.com",
-        "crossover_score": 0.1227,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 3,
-        "category": "news_current"
-      },
-      {
-        "domain": "nytimes.com",
-        "crossover_score": 0.1212,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 2,
-        "category": "news_current"
-      },
-      {
-        "domain": "time.com",
-        "crossover_score": 0.1135,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "news_current"
-      },
-      {
-        "domain": "wired.com",
-        "crossover_score": 0.1118,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "professional"
-      },
-      {
-        "domain": "arstechnica.com",
-        "crossover_score": 0.1104,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "professional"
-      },
-      {
-        "domain": "thecut.com",
-        "crossover_score": 0.1065,
-        "dominant_goal": "social_alignment",
-        "articles_analyzed": 8,
-        "category": "travel_luxury"
-      },
-      {
-        "domain": "fortune.com",
-        "crossover_score": 0.1064,
-        "dominant_goal": "status_signaling",
-        "articles_analyzed": 8,
-        "category": "business_finance"
-      },
-      {
-        "domain": "bbc.com",
-        "crossover_score": 0.105,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "news_current"
-      },
-      {
-        "domain": "weddingwire.com",
-        "crossover_score": 0.103,
-        "dominant_goal": "planning_completion",
-        "articles_analyzed": 8,
-        "category": "lifestyle_events"
-      },
-      {
-        "domain": "cnbc.com",
-        "crossover_score": 0.1013,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "business_finance"
-      },
-      {
-        "domain": "slate.com",
-        "crossover_score": 0.1009,
-        "dominant_goal": "planning_completion",
-        "articles_analyzed": 8,
-        "category": "news_current"
-      },
-      {
-        "domain": "manofmany.com",
-        "crossover_score": 0.0996,
-        "dominant_goal": "status_signaling",
-        "articles_analyzed": 8,
-        "category": "travel_luxury"
-      },
-      {
-        "domain": "si.com",
-        "crossover_score": 0.0971,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "sports_entertainment"
-      },
-      {
-        "domain": "vogue.com",
-        "crossover_score": 0.0951,
-        "dominant_goal": "planning_completion",
-        "articles_analyzed": 8,
-        "category": "travel_luxury"
-      },
-      {
-        "domain": "esquire.com",
-        "crossover_score": 0.0915,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 6,
-        "category": "travel_luxury"
-      },
-      {
-        "domain": "bloomberg.com",
-        "crossover_score": 0.091,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "business_finance"
-      },
-      {
-        "domain": "onemileatatime.com",
-        "crossover_score": 0.091,
-        "dominant_goal": "planning_completion",
-        "articles_analyzed": 8,
-        "category": "travel_planning"
-      },
-      {
-        "domain": "gq.com",
-        "crossover_score": 0.0885,
-        "dominant_goal": "novelty_exploration",
-        "articles_analyzed": 8,
-        "category": "travel_luxury"
-      },
-      {
-        "domain": "vanityfair.com",
-        "crossover_score": 0.087,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "travel_luxury"
-      },
-      {
-        "domain": "cnn.com",
-        "crossover_score": 0.0864,
-        "dominant_goal": "competence_verification",
-        "articles_analyzed": 8,
-        "category": "news_current"
-      },
-      {
-        "domain": "architecturaldigest.com",
-        "crossover_score": 0.083,
-        "dominant_goal": "planning_completion",
-        "articles_analyzed": 8,
-        "category": "travel_luxury"
-      },
-      {
-        "domain": "washingtonpost.com",
-        "crossover_score": 0.0827,
-        "dominant_goal": "social_alignment",
-        "articles_analyzed": 8,
-        "category": "news_current"
-      },
-      {
-        "domain": "seekingalpha.com",
-        "crossover_score": 0.0822,
-        "dominant_goal": "novelty_exploration",
-        "articles_analyzed": 8,
-        "category": "business_finance"
-      },
-      {
-        "domain": "tennis.com",
-        "crossover_score": 0.0822,
-        "dominant_goal": "status_signaling",
-        "articles_analyzed": 8,
-        "category": "sports_entertainment"
-      },
-      {
-        "domain": "theatlantic.com",
-        "crossover_score": 0.0814,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "news_current"
+        "domain": "corporatecomplianceinsights.com",
+        "audience": "compliance",
+        "tier": 3
       }
     ],
     "dependable_loyalist": [
       {
-        "domain": "pursuitist.com",
-        "crossover_score": 0.2365,
-        "dominant_goal": "status_signaling",
-        "articles_analyzed": 5,
-        "category": "travel_luxury"
+        "domain": "businesstravelnews.com",
+        "audience": "travel_managers",
+        "tier": 1
       },
       {
-        "domain": "elitetraveler.com",
-        "crossover_score": 0.2238,
-        "dominant_goal": "status_signaling",
-        "articles_analyzed": 8,
-        "category": "travel_luxury"
+        "domain": "amexglobalbusinesstravel.com",
+        "audience": "travel_managers_legal",
+        "tier": 1
       },
       {
-        "domain": "kiplinger.com",
-        "crossover_score": 0.2046,
-        "dominant_goal": "planning_completion",
-        "articles_analyzed": 8,
-        "category": "business_finance"
+        "domain": "chauffeurdriven.com",
+        "audience": "supply_partners",
+        "tier": 1
       },
       {
-        "domain": "robbreport.com",
-        "crossover_score": 0.1587,
-        "dominant_goal": "status_signaling",
-        "articles_analyzed": 8,
-        "category": "travel_luxury"
+        "domain": "crainsnewyork.com",
+        "audience": "home_market",
+        "tier": 1
       },
       {
-        "domain": "nerdwallet.com/travel",
-        "crossover_score": 0.1583,
-        "dominant_goal": "competence_verification",
-        "articles_analyzed": 8,
-        "category": "travel_planning"
+        "domain": "pitchbook.com",
+        "audience": "financial_dealmakers",
+        "tier": 1
       },
       {
-        "domain": "thepointsguy.com",
-        "crossover_score": 0.1508,
-        "dominant_goal": "status_signaling",
-        "articles_analyzed": 8,
-        "category": "travel_planning"
+        "domain": "abovethelaw.com",
+        "audience": "legal",
+        "tier": 2
       },
       {
-        "domain": "cntraveler.com",
-        "crossover_score": 0.1477,
-        "dominant_goal": "novelty_exploration",
-        "articles_analyzed": 8,
-        "category": "travel_luxury"
+        "domain": "hotelmanagement.net",
+        "audience": "hotel_b2b",
+        "tier": 2
       },
       {
-        "domain": "vox.com",
-        "crossover_score": 0.1458,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 3,
-        "category": "news_current"
+        "domain": "hospitalitynet.org",
+        "audience": "hotel_b2b",
+        "tier": 2
       },
       {
-        "domain": "linkedin.com",
-        "crossover_score": 0.1418,
-        "dominant_goal": "affiliation_safety",
-        "articles_analyzed": 8,
-        "category": "professional"
+        "domain": "bizjournals.com",
+        "audience": "home_market",
+        "tier": 2
       },
       {
-        "domain": "fool.com",
-        "crossover_score": 0.1335,
-        "dominant_goal": "competence_verification",
-        "articles_analyzed": 8,
-        "category": "business_finance"
+        "domain": "therealdeal.com",
+        "audience": "home_market_cre",
+        "tier": 2
       },
       {
-        "domain": "time.com",
-        "crossover_score": 0.1246,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "news_current"
+        "domain": "commercialobserver.com",
+        "audience": "home_market_cre",
+        "tier": 2
       },
       {
-        "domain": "newsweek.com",
-        "crossover_score": 0.1243,
-        "dominant_goal": "planning_completion",
-        "articles_analyzed": 8,
-        "category": "news_current"
+        "domain": "gbta.org",
+        "audience": "travel_managers",
+        "tier": 2
       },
       {
-        "domain": "bbc.com",
-        "crossover_score": 0.1236,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "news_current"
+        "domain": "cwt.com",
+        "audience": "travel_managers",
+        "tier": 2
       },
       {
-        "domain": "techcrunch.com",
-        "crossover_score": 0.1219,
-        "dominant_goal": "planning_completion",
-        "articles_analyzed": 8,
-        "category": "professional"
+        "domain": "blackcarnews.com",
+        "audience": "supply_partners",
+        "tier": 2
       },
       {
-        "domain": "nytimes.com",
-        "crossover_score": 0.1195,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 2,
-        "category": "news_current"
+        "domain": "nlaride.com",
+        "audience": "supply_partners",
+        "tier": 2
       },
       {
-        "domain": "arstechnica.com",
-        "crossover_score": 0.1195,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "professional"
+        "domain": "institutionalinvestor.com",
+        "audience": "financial_dealmakers",
+        "tier": 2
       },
       {
-        "domain": "timeout.com",
-        "crossover_score": 0.1191,
-        "dominant_goal": "novelty_exploration",
-        "articles_analyzed": 8,
-        "category": "lifestyle_events"
+        "domain": "privateequityinternational.com",
+        "audience": "financial_dealmakers",
+        "tier": 2
       },
       {
-        "domain": "eventbrite.com",
-        "crossover_score": 0.1186,
-        "dominant_goal": "status_signaling",
-        "articles_analyzed": 8,
-        "category": "lifestyle_events"
+        "domain": "corporatecounsel.com",
+        "audience": "legal",
+        "tier": 2
       },
       {
-        "domain": "wired.com",
-        "crossover_score": 0.1151,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "professional"
+        "domain": "law360.com",
+        "audience": "legal",
+        "tier": 2
       },
       {
-        "domain": "cnbc.com",
-        "crossover_score": 0.1108,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "business_finance"
+        "domain": "hartfordbusiness.com",
+        "audience": "home_market",
+        "tier": 2
       },
       {
-        "domain": "slate.com",
-        "crossover_score": 0.1075,
-        "dominant_goal": "planning_completion",
-        "articles_analyzed": 8,
-        "category": "news_current"
+        "domain": "ctinsider.com",
+        "audience": "home_market",
+        "tier": 2
+      },
+      {
+        "domain": "njbiz.com",
+        "audience": "home_market",
+        "tier": 2
       },
       {
         "domain": "bloomberg.com",
-        "crossover_score": 0.1071,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "business_finance"
+        "audience": "end_user_exec_deals",
+        "tier": 3
       },
       {
-        "domain": "si.com",
-        "crossover_score": 0.1061,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "sports_entertainment"
+        "domain": "ft.com",
+        "audience": "end_user_exec_eu",
+        "tier": 3
       },
       {
-        "domain": "thecut.com",
-        "crossover_score": 0.1031,
-        "dominant_goal": "social_alignment",
-        "articles_analyzed": 8,
-        "category": "travel_luxury"
+        "domain": "acc.com",
+        "audience": "legal_inhouse",
+        "tier": 3
       },
       {
-        "domain": "fortune.com",
-        "crossover_score": 0.1023,
-        "dominant_goal": "status_signaling",
-        "articles_analyzed": 8,
-        "category": "business_finance"
+        "domain": "hotelsmag.com",
+        "audience": "hotel_b2b",
+        "tier": 3
       },
       {
-        "domain": "esquire.com",
-        "crossover_score": 0.1002,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 6,
-        "category": "travel_luxury"
-      },
-      {
-        "domain": "weddingwire.com",
-        "crossover_score": 0.0996,
-        "dominant_goal": "planning_completion",
-        "articles_analyzed": 8,
-        "category": "lifestyle_events"
-      },
-      {
-        "domain": "crunchbase.com",
-        "crossover_score": 0.0991,
-        "dominant_goal": "competence_verification",
-        "articles_analyzed": 3,
-        "category": "business_finance"
-      },
-      {
-        "domain": "vogue.com",
-        "crossover_score": 0.0978,
-        "dominant_goal": "planning_completion",
-        "articles_analyzed": 8,
-        "category": "travel_luxury"
-      },
-      {
-        "domain": "theatlantic.com",
-        "crossover_score": 0.0955,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "news_current"
-      },
-      {
-        "domain": "vanityfair.com",
-        "crossover_score": 0.0949,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "travel_luxury"
-      },
-      {
-        "domain": "manofmany.com",
-        "crossover_score": 0.093,
-        "dominant_goal": "status_signaling",
-        "articles_analyzed": 8,
-        "category": "travel_luxury"
-      },
-      {
-        "domain": "gq.com",
-        "crossover_score": 0.0898,
-        "dominant_goal": "novelty_exploration",
-        "articles_analyzed": 8,
-        "category": "travel_luxury"
-      },
-      {
-        "domain": "architecturaldigest.com",
-        "crossover_score": 0.0879,
-        "dominant_goal": "planning_completion",
-        "articles_analyzed": 8,
-        "category": "travel_luxury"
-      },
-      {
-        "domain": "cnn.com",
-        "crossover_score": 0.0868,
-        "dominant_goal": "competence_verification",
-        "articles_analyzed": 8,
-        "category": "news_current"
-      },
-      {
-        "domain": "onemileatatime.com",
-        "crossover_score": 0.0827,
-        "dominant_goal": "planning_completion",
-        "articles_analyzed": 8,
-        "category": "travel_planning"
-      },
-      {
-        "domain": "washingtonpost.com",
-        "crossover_score": 0.0827,
-        "dominant_goal": "social_alignment",
-        "articles_analyzed": 8,
-        "category": "news_current"
-      },
-      {
-        "domain": "tennis.com",
-        "crossover_score": 0.0827,
-        "dominant_goal": "status_signaling",
-        "articles_analyzed": 8,
-        "category": "sports_entertainment"
+        "domain": "lodgingmagazine.com",
+        "audience": "hotel_b2b",
+        "tier": 3
       }
     ],
-    "consensus_seeker": [
+    "prevention_planner": [
       {
-        "domain": "kiplinger.com",
-        "crossover_score": 0.2218,
-        "dominant_goal": "planning_completion",
-        "articles_analyzed": 8,
-        "category": "business_finance"
+        "domain": "bizbash.com",
+        "audience": "event_planners",
+        "tier": 2
       },
       {
-        "domain": "elitetraveler.com",
-        "crossover_score": 0.2135,
-        "dominant_goal": "status_signaling",
-        "articles_analyzed": 8,
-        "category": "travel_luxury"
+        "domain": "controlrisks.com",
+        "audience": "travel_managers_risk",
+        "tier": 2
       },
       {
-        "domain": "nerdwallet.com/travel",
-        "crossover_score": 0.2104,
-        "dominant_goal": "competence_verification",
-        "articles_analyzed": 8,
-        "category": "travel_planning"
+        "domain": "internationalsos.com",
+        "audience": "travel_managers_risk",
+        "tier": 2
       },
       {
-        "domain": "pursuitist.com",
-        "crossover_score": 0.2053,
-        "dominant_goal": "status_signaling",
-        "articles_analyzed": 5,
-        "category": "travel_luxury"
+        "domain": "asisonline.org",
+        "audience": "travel_managers_security",
+        "tier": 3
+      }
+    ],
+    "reliable_cooperator": [
+      {
+        "domain": "eahowto.com",
+        "audience": "travel_arrangers",
+        "tier": 1
       },
       {
-        "domain": "linkedin.com",
-        "crossover_score": 0.1808,
-        "dominant_goal": "affiliation_safety",
-        "articles_analyzed": 8,
-        "category": "professional"
+        "domain": "skift.com",
+        "audience": "travel_managers_hotel",
+        "tier": 1
       },
       {
-        "domain": "fool.com",
-        "crossover_score": 0.1544,
-        "dominant_goal": "competence_verification",
-        "articles_analyzed": 8,
-        "category": "business_finance"
+        "domain": "meetings.skift.com",
+        "audience": "event_planners",
+        "tier": 1
       },
       {
-        "domain": "thepointsguy.com",
-        "crossover_score": 0.1488,
-        "dominant_goal": "status_signaling",
-        "articles_analyzed": 8,
-        "category": "travel_planning"
+        "domain": "practicallyperfectpa.com",
+        "audience": "travel_arrangers",
+        "tier": 2
       },
       {
-        "domain": "robbreport.com",
-        "crossover_score": 0.1419,
-        "dominant_goal": "status_signaling",
-        "articles_analyzed": 8,
-        "category": "travel_luxury"
+        "domain": "incentivemag.com",
+        "audience": "incentive_travel",
+        "tier": 2
       },
       {
-        "domain": "vox.com",
-        "crossover_score": 0.1357,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 3,
-        "category": "news_current"
+        "domain": "theirf.org",
+        "audience": "incentive_travel",
+        "tier": 2
       },
       {
-        "domain": "crunchbase.com",
-        "crossover_score": 0.127,
-        "dominant_goal": "competence_verification",
-        "articles_analyzed": 3,
-        "category": "business_finance"
+        "domain": "executivesupportmagazine.com",
+        "audience": "travel_arrangers",
+        "tier": 2
       },
       {
-        "domain": "newsweek.com",
-        "crossover_score": 0.1262,
-        "dominant_goal": "planning_completion",
-        "articles_analyzed": 8,
-        "category": "news_current"
+        "domain": "travelperk.com",
+        "audience": "travel_managers",
+        "tier": 2
       },
       {
-        "domain": "cntraveler.com",
-        "crossover_score": 0.1252,
-        "dominant_goal": "novelty_exploration",
-        "articles_analyzed": 8,
-        "category": "travel_luxury"
+        "domain": "itilite.com",
+        "audience": "travel_managers",
+        "tier": 2
       },
       {
-        "domain": "techcrunch.com",
-        "crossover_score": 0.1227,
-        "dominant_goal": "planning_completion",
-        "articles_analyzed": 8,
-        "category": "professional"
+        "domain": "navan.com",
+        "audience": "travel_managers",
+        "tier": 2
       },
       {
-        "domain": "time.com",
-        "crossover_score": 0.1217,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "news_current"
+        "domain": "meetingsnet.com",
+        "audience": "event_planners",
+        "tier": 3
       },
       {
-        "domain": "nytimes.com",
-        "crossover_score": 0.1188,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 2,
-        "category": "news_current"
+        "domain": "northstarmeetingsgroup.com",
+        "audience": "event_planners",
+        "tier": 3
       },
       {
-        "domain": "eventbrite.com",
-        "crossover_score": 0.1157,
-        "dominant_goal": "status_signaling",
-        "articles_analyzed": 8,
-        "category": "lifestyle_events"
+        "domain": "corporatetraveler.us",
+        "audience": "travel_managers",
+        "tier": 3
       },
       {
-        "domain": "wired.com",
-        "crossover_score": 0.1103,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "professional"
+        "domain": "travelweekly.com",
+        "audience": "travel_agents",
+        "tier": 3
       },
       {
-        "domain": "fortune.com",
-        "crossover_score": 0.1083,
-        "dominant_goal": "status_signaling",
-        "articles_analyzed": 8,
-        "category": "business_finance"
+        "domain": "travelpulse.com",
+        "audience": "travel_agents",
+        "tier": 3
       },
       {
-        "domain": "cnbc.com",
-        "crossover_score": 0.1081,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "business_finance"
+        "domain": "asta.org",
+        "audience": "travel_agents",
+        "tier": 3
       },
       {
-        "domain": "timeout.com",
-        "crossover_score": 0.1069,
-        "dominant_goal": "novelty_exploration",
-        "articles_analyzed": 8,
-        "category": "lifestyle_events"
+        "domain": "biworldwide.com",
+        "audience": "incentive_travel",
+        "tier": 3
+      }
+    ],
+    "trusting_loyalist": [
+      {
+        "domain": "ainonline.com",
+        "audience": "private_aviation",
+        "tier": 2
       },
       {
-        "domain": "bbc.com",
-        "crossover_score": 0.1067,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "news_current"
+        "domain": "bjtonline.com",
+        "audience": "private_aviation",
+        "tier": 2
       },
       {
-        "domain": "arstechnica.com",
-        "crossover_score": 0.1063,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "professional"
+        "domain": "businesstraveller.com",
+        "audience": "end_user_exec",
+        "tier": 2
       },
       {
-        "domain": "si.com",
-        "crossover_score": 0.1011,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "sports_entertainment"
+        "domain": "frequentbusinesstraveler.com",
+        "audience": "end_user_exec",
+        "tier": 2
       },
       {
-        "domain": "thecut.com",
-        "crossover_score": 0.0977,
-        "dominant_goal": "social_alignment",
-        "articles_analyzed": 8,
-        "category": "travel_luxury"
+        "domain": "hbr.org",
+        "audience": "end_user_exec",
+        "tier": 3
       },
       {
-        "domain": "slate.com",
-        "crossover_score": 0.0956,
-        "dominant_goal": "planning_completion",
-        "articles_analyzed": 8,
-        "category": "news_current"
+        "domain": "corporatejetinvestor.com",
+        "audience": "private_aviation",
+        "tier": 3
       },
       {
-        "domain": "weddingwire.com",
-        "crossover_score": 0.0926,
-        "dominant_goal": "planning_completion",
-        "articles_analyzed": 8,
-        "category": "lifestyle_events"
-      },
-      {
-        "domain": "vogue.com",
-        "crossover_score": 0.0902,
-        "dominant_goal": "planning_completion",
-        "articles_analyzed": 8,
-        "category": "travel_luxury"
-      },
-      {
-        "domain": "manofmany.com",
-        "crossover_score": 0.0881,
-        "dominant_goal": "status_signaling",
-        "articles_analyzed": 8,
-        "category": "travel_luxury"
-      },
-      {
-        "domain": "bloomberg.com",
-        "crossover_score": 0.0846,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "business_finance"
-      },
-      {
-        "domain": "seekingalpha.com",
-        "crossover_score": 0.0827,
-        "dominant_goal": "novelty_exploration",
-        "articles_analyzed": 8,
-        "category": "business_finance"
-      },
-      {
-        "domain": "vanityfair.com",
-        "crossover_score": 0.082,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "travel_luxury"
-      },
-      {
-        "domain": "onemileatatime.com",
-        "crossover_score": 0.0816,
-        "dominant_goal": "planning_completion",
-        "articles_analyzed": 8,
-        "category": "travel_planning"
-      },
-      {
-        "domain": "theatlantic.com",
-        "crossover_score": 0.0809,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 8,
-        "category": "news_current"
-      },
-      {
-        "domain": "esquire.com",
-        "crossover_score": 0.0807,
-        "dominant_goal": "threat_reduction",
-        "articles_analyzed": 6,
-        "category": "travel_luxury"
+        "domain": "nbaa.org",
+        "audience": "private_aviation",
+        "tier": 3
       }
     ]
   }

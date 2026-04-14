@@ -274,13 +274,13 @@ We provide **7 per-archetype whitelists** and **1 shared blacklist**. Each campa
 
 | Campaign Group | Whitelist File | Domains |
 |---|---|---|
-| Trusting Loyalist | `stackadapt_whitelist_trusting_loyalist.csv` | 37 |
-| Reliable Cooperator | `stackadapt_whitelist_reliable_cooperator.csv` | 34 |
-| Careful Truster | `stackadapt_whitelist_careful_truster.csv` | 35 |
-| Explorer | `stackadapt_whitelist_explorer.csv` | 33 |
-| Prevention Planner | `stackadapt_whitelist_prevention_planner.csv` | 39 |
-| Dependable Loyalist | `stackadapt_whitelist_dependable_loyalist.csv` | 38 |
-| Consensus Seeker | `stackadapt_whitelist_consensus_seeker.csv` | 34 |
+| Trusting Loyalist | `stackadapt_whitelist_trusting_loyalist.csv` | 7 |
+| Reliable Cooperator | `stackadapt_whitelist_reliable_cooperator.csv` | 17 |
+| Careful Truster | `stackadapt_whitelist_careful_truster.csv` | 18 |
+| Explorer | `stackadapt_whitelist_explorer.csv` | 0 (shares dependable_loyalist domains) |
+| Prevention Planner | `stackadapt_whitelist_prevention_planner.csv` | 4 |
+| Dependable Loyalist | `stackadapt_whitelist_dependable_loyalist.csv` | 27 |
+| Consensus Seeker | `stackadapt_whitelist_consensus_seeker.csv` | 0 (shares reliable_cooperator domains) |
 
 **Shared blacklist**: `stackadapt_blacklist_upload.csv` (21 domains) → Upload as **Site Exclusion List** on ALL campaigns.
 
