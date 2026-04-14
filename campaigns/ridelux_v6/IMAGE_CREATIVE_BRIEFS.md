@@ -1,163 +1,209 @@
 # LUXY Ride — Image Creative Briefs
-## 15 Native Ad Images for StackAdapt Campaign
+## 18 Native Ad Images for StackAdapt Campaign
+## 6 Audiences × 3 Touches Each
 
-All images must be produced in 3 sizes:
-- **Hero**: 1200 x 627 px (primary native)
-- **Square**: 600 x 600 px (feed format)
-- **Landscape**: 800 x 600 px (alternative native)
+All images produced in 3 sizes:
+- **Primary**: 1200 × 627 px (native landscape)
+- **Square**: 600 × 600 px (feed format)
+- **Alternate**: 800 × 600 px (native alternate)
 
-Format: JPG or PNG, max 2MB per file
-Brand: LUXY Ride logo placement bottom-right, subtle
-
----
-
-## CAREFUL TRUSTER (5 images)
-**Visual philosophy**: Clean, professional, evidence-based. No flash. No lifestyle aspiration. These buyers are analytical — they need to SEE proof, not feel emotion. Photography over illustration. Real vehicles, real people, real situations.
-
-### CT-T1: "I swore I'd never use a car service again"
-- **Subject**: Professional woman (40s) looking at phone with slight concern, airport terminal background
-- **Mood**: Relatable tension — she's been burned before
-- **Color palette**: Cool grays, muted blues
-- **Key element**: Her expression must show skepticism, not stress
-- **Text overlay**: None — headline handles the messaging
-- **DO NOT**: Show a luxury car. This touch is about the PROBLEM, not the solution
-
-### CT-T2: "We've All Heard The Horror Stories"
-- **Subject**: Split frame — left side shows a generic rideshare car (dark, rain, slightly ominous), right side is empty/white space
-- **Mood**: Contrast between bad experience and the unknown
-- **Color palette**: Dark left → light right
-- **Key element**: The empty space on the right creates curiosity — what's the alternative?
-- **DO NOT**: Show LUXY branding prominently. This is still about the problem
-
-### CT-T3: "47,000 executives trust LUXY with their reputation"
-- **Subject**: Clean data visualization — a dashboard or stat card showing safety metrics
-- **Mood**: Authority, precision, confidence
-- **Color palette**: White/navy/gold accents
-- **Key element**: Numbers must be readable. 99.7% on-time. Zero incidents. This buyer reads details.
-- **Style**: Infographic feel, not lifestyle photography
-- **IMPORTANT**: This is where evidence_proof mechanism activates — the image must feel like PROOF
-
-### CT-T4: "I Was Wrong About Premium Car Services"
-- **Subject**: Professional executive (CFO type) stepping out of a black sedan, looking satisfied
-- **Mood**: Quiet confidence — the skeptic converted
-- **Color palette**: Black/silver/warm lighting
-- **Key element**: The person should look like someone who RESEARCHED this decision
-- **Text overlay**: Small quote attribution "— Sarah M., CFO" (matching the body copy)
-
-### CT-T5: "847,000+ rides completed. Zero security incidents."
-- **Subject**: Clean hero shot of a LUXY vehicle with subtle safety indicators (GPS icon, insurance badge)
-- **Mood**: Resolution, certainty, "you can trust this"
-- **Color palette**: Navy/white/gold
-- **Key element**: Safety badges or certifications visible but not overwhelming
-- **CTA visual**: Clear "Book Now" button treatment
+Format: JPG or PNG, max 2MB per file.
+Brand: LUXY Ride logo bottom-right, subtle (15% opacity or white).
+Text in image: MINIMAL — StackAdapt overlays the headline/body/CTA.
 
 ---
 
-## STATUS SEEKER (5 images)
-**Visual philosophy**: Aspirational but NOT flashy. These buyers reject "look at me" luxury. They want quiet competence, understated excellence. Think: The aesthetics of a well-run private office, not a nightclub VIP section. Shot on medium format for that cinematic quality feel.
+## CRITICAL CONTEXT
 
-### SS-T1: "You've earned success. Where's the service?"
-- **Subject**: Executive view from inside a regular car — traffic, generic interior, the gap between success and experience
-- **Mood**: Subtle dissatisfaction — this doesn't match who I am
-- **Color palette**: Desaturated, slightly flat
-- **Key element**: The view should feel "beneath" the viewer — they've outgrown this
-- **DO NOT**: Show a luxury car. Show the GAP.
-
-### SS-T2: "I thought luxury cars were just showing off"
-- **Subject**: Profile shot of a professional looking thoughtful, perhaps at a window
-- **Mood**: Reconsideration — challenging their own assumption
-- **Color palette**: Natural light, warm neutrals
-- **Key element**: Authenticity — not posed, not perfect. Real moment of reflection.
-
-### SS-T3: "You've built this life. You deserve this ride."
-- **Subject**: Interior of a premium vehicle — leather, quiet, a laptop open, city lights through window
-- **Mood**: This is YOUR space. Extension of your office.
-- **Color palette**: Rich blacks, warm amber interior lighting
-- **Key element**: The interior should feel like a workspace, not a party
-- **IMPORTANT**: This is narrative_transportation — the viewer should feel transported INTO this space
-
-### SS-T4: "Finally, transportation that gets me"
-- **Subject**: Executive arriving at a building entrance, stepping out of a black sedan, doorman greeting
-- **Mood**: "This is how it should be" — seamless, professional, matched to their standard
-- **Color palette**: Classic black/white/gold
-- **Key element**: The arrival moment — the transition from car to destination, handled perfectly
-
-### SS-T5: "You've Joined the Top 1% Who Choose Differently"
-- **Subject**: Aerial or elevated shot of a black sedan on a clean street, sense of purpose and direction
-- **Mood**: Decision made. Moving forward. No looking back.
-- **Color palette**: High contrast, cinematic
-- **Key element**: Movement, direction, intentionality
-- **CTA visual**: "Book Now" with executive styling
+LUXY Ride is a **corporate black car service**, not a luxury leisure brand. The customer is an EA booking for an executive, a travel manager evaluating vendors, an event planner coordinating group arrivals. Every image must reflect a **professional B2B context** — corporate offices, airports, trade conferences, business districts. No lifestyle aspiration. No champagne. No nightlife.
 
 ---
 
-## EASY DECIDER (5 images)
-**Visual philosophy**: Action-oriented, friction-free, SIMPLE. These buyers don't deliberate — they need the path of least resistance made visible. Show the OUTCOME, not the process. Bold, clean, minimal text in image. High contrast.
+## 1. CORPORATE TRAVEL ARRANGERS — EA (3 images)
 
-### ED-T1: "Another delay. Another missed opportunity."
-- **Subject**: Clock or watch close-up, blurred city background, sense of time slipping
-- **Mood**: Urgency without panic — matter-of-fact "you're losing time"
-- **Color palette**: Bold contrast — time element in focus, everything else blurred
-- **Key element**: Time is the scarce resource. Make it tangible.
-- **DO NOT**: Show a person stressed. Show the COST, not the emotion.
+**Visual philosophy**: The EA at work. Clean, competent, organized. Show the person doing the booking, not the person riding. The hero of this story is the arranger, not the executive.
 
-### ED-T2: "Your driver is waiting. You're still in line."
-- **Subject**: Split frame — left: a line of people at a taxi stand. Right: an empty, waiting black sedan.
-- **Mood**: The contrast between friction and frictionless
-- **Color palette**: Left desaturated, right in full color
-- **Key element**: The empty car is READY. The choice is obvious.
+### EA-T1: "Your executive's next trip, booked in 30 seconds"
+- **Subject**: Professional woman (30s-40s) at a desk with a laptop showing a clean booking interface. One hand on trackpad, other holding a phone. Multi-screen setup suggesting efficiency.
+- **Mood**: Competence in motion — she's handling this
+- **Palette**: Navy, white, teal accents
+- **Key element**: The laptop screen should suggest a booking dashboard (blurred is fine). Calendar or itinerary visible in background.
+- **DO NOT**: Show the executive or the car. This is about HER workflow.
 
-### ED-T3: "Your driver is already in your area"
-- **Subject**: Phone screen showing a map with a car icon nearby, minimal UI
-- **Mood**: It's already happening. Just confirm.
-- **Color palette**: Clean whites, app-style blue/green accents
-- **Key element**: The micro-commitment — just a tap away. Ultra-simple.
-- **IMPORTANT**: This is micro_commitment — the image must make the action feel TINY
+### EA-T2: "The ground transport your travelers actually deserve"
+- **Subject**: Professional black sedan arriving at a corporate office entrance. Clean, not flashy. A driver in professional attire standing at the rear door. Building entrance suggests Fortune 500.
+- **Mood**: Reliable, professional — this is what "good" looks like
+- **Palette**: Black vehicle, gray/glass building, clean lines
+- **Key element**: The driver's posture and attire signal professionalism. No tuxedo — business professional. Name badge visible.
+- **DO NOT**: Make it look like a prom or wedding car service.
 
-### ED-T4: "Your driver is already en route"
-- **Subject**: View through a car windshield — a clean road ahead, dashboard visible
-- **Mood**: Ownership — you're already IN the ride
-- **Color palette**: Warm, forward-looking
-- **Key element**: First-person perspective. YOU are in this car.
-- **IMPORTANT**: This is ownership_reactivation — make the viewer feel they HAVE this already
+### EA-T3: "Your booking hub for every airport, every city"
+- **Subject**: Clean product shot — a laptop or tablet showing a dashboard with a map of multiple cities, booking confirmations, and a sidebar of upcoming trips. Abstract, UI-focused.
+- **Mood**: Everything organized, everything visible, everything handled
+- **Palette**: White background, teal/navy UI elements
+- **Key element**: The interface should convey SCALE (multiple cities, multiple bookings) and SIMPLICITY (clean design, not cluttered).
+- **CTA visual**: Clear booking button visible on the interface
 
-### ED-T5: "50,000+ executives choose LUXY for airport runs"
-- **Subject**: Airport terminal exterior, a black sedan positioned perfectly at arrivals
-- **Mood**: This is how it works. Simple. Done.
-- **Color palette**: Clean, professional, high contrast
-- **Key element**: The car is positioned, waiting. Zero friction visible.
-- **CTA visual**: "Save Your Airport" or "Book Now" — action-oriented
+---
+
+## 2. CORPORATE TRAVEL MANAGERS (3 images)
+
+**Visual philosophy**: Data, compliance, vendor evaluation. These are decision-makers who care about metrics, not aesthetics. Show dashboards, certifications, survey data. Think: vendor assessment meeting, not car interior.
+
+### TM-T1: "43% of companies don't have a chauffeured contract"
+- **Subject**: A clean data visualization — bar chart or stat card style. Large "43%" prominent. Background suggests a professional report or trade publication format.
+- **Mood**: Authority, urgency without panic — "you should know this"
+- **Palette**: White/slate with LUXY navy accent on the stat
+- **Key element**: The number must be instantly readable. This is evidence_proof — the image IS the data.
+- **Style**: Infographic, not photography. Think BTN or GBTA report styling.
+
+### TM-T2: "SOC 2 certified. ISO-aligned. Sunshine Act ready."
+- **Subject**: Certification badges arranged professionally — SOC 2 shield, safety rating badge, compliance checkmark. Clean background. Perhaps a partial view of a vehicle with the badges overlaid.
+- **Mood**: Verification, credentials, "we meet your standard"
+- **Palette**: Navy, white, gold/green for certification badges
+- **Key element**: The badges must look legitimate and institutional, not marketing-designed. Reference real SOC 2 and ISO badge styles.
+- **DO NOT**: Make it look like a sales brochure. Make it look like a vendor evaluation document.
+
+### TM-T3: "Add LUXY to your preferred vendor list"
+- **Subject**: Two professionals in a modern office — one presenting a tablet/screen to the other. The screen shows LUXY's corporate dashboard. Handshake energy without the actual handshake.
+- **Mood**: Partnership, onboarding — "let's get this set up"
+- **Palette**: Professional blues, warm lighting, modern office
+- **Key element**: The interaction should feel like a vendor demo or procurement meeting, not a sales pitch.
+- **CTA visual**: "Start Corporate Program" prominent
+
+---
+
+## 3. HOME MARKET — CT/NYC (3 images)
+
+**Visual philosophy**: Local. Recognizable. "We're from here." NYC skyline, Connecticut suburbs, recognizable tri-state landmarks. Warm, familiar, not generic stock photos of "any city."
+
+### HM-T1: "The Connecticut-based car service trusted by 400+ companies"
+- **Subject**: A black sedan on a tree-lined Connecticut road — autumn or spring, well-maintained suburb, professional but residential feel.
+- **Mood**: "We're your neighbors. We know these roads."
+- **Palette**: Warm greens/golds (Connecticut), navy vehicle
+- **Key element**: The setting must be recognizably SUBURBAN NORTHEAST — not LA or Miami. Fall foliage or spring greenery. Stone walls or colonial architecture visible.
+- **DO NOT**: Use Manhattan skyline. This touch is about Connecticut roots.
+
+### HM-T2: "Your NYC ground transport, handled"
+- **Subject**: A black sedan in motion on a Manhattan avenue — recognizable NYC (yellow cabs nearby, tall buildings). Clean composition with the sedan in focus.
+- **Mood**: Purposeful movement through the city — professional, efficient
+- **Palette**: Classic NYC gray/silver/glass with the black sedan as focal point
+- **Key element**: NYC must be instantly recognizable — landmarks or iconic street scenes. Not generic downtown.
+
+### HM-T3: "Your neighbors already ride with us"
+- **Subject**: A professional standing beside a sedan in a corporate office park or suburban office campus. Familiar, local, community feel.
+- **Mood**: "People like you, right here, already use us"
+- **Palette**: Warm, professional, local
+- **Key element**: The setting should feel like where you'd see LUXY cars — a local office park, a train station, a country club entrance. Familiar, not aspirational.
+
+---
+
+## 4. EVENT PLANNERS (3 images)
+
+**Visual philosophy**: Scale, coordination, zero failure. Show MULTIPLE vehicles, GROUP logistics, event venues. The fear is transportation failure at a major event — the image must address that fear by showing flawless execution.
+
+### EV-T1: "Your 200-person airport arrival, handled"
+- **Subject**: Aerial or elevated view of a line of 4-6 black sedans at an airport arrivals area. Coordinated, organized, professional. Drivers standing at attention beside each vehicle.
+- **Mood**: Military precision — every detail handled
+- **Palette**: Black vehicles, gray airport infrastructure, clean lines
+- **Key element**: MULTIPLE vehicles in organized formation. This is about SCALE, not a single ride.
+- **DO NOT**: Show a single car. Show the fleet.
+
+### EV-T2: "Zero transportation failures at your next event"
+- **Subject**: A venue entrance (hotel, convention center, or gala) with a sedan arriving and a staff member with a clipboard/tablet checking off names. Organized chaos managed.
+- **Mood**: Control, coordination — everything accounted for
+- **Palette**: Event venue lighting (warm interior glow), professional exterior
+- **Key element**: The clipboard/tablet suggests a manifest — every guest tracked, every car assigned.
+
+### EV-T3: "The event planner's ground transport partner"
+- **Subject**: Wide shot of a beautiful event venue exterior (corporate conference, hotel ballroom entrance) with 2-3 sedans positioned perfectly. Clean, impressive, large-scale.
+- **Mood**: "This is what your event looks like when transportation is handled"
+- **Palette**: Elegant evening lighting, black vehicles, venue architecture
+- **Key element**: The venue should look high-end corporate — not a wedding venue. Conference center, hotel, museum gala.
+- **CTA visual**: "Get a Group Quote"
+
+---
+
+## 5. LEGAL VERTICAL (3 images)
+
+**Visual philosophy**: Professional gravity. Courthouses, downtown financial districts, power offices. The viewer is a BigLaw partner or legal ops director. The image must match the seriousness of their work.
+
+### LG-T1: "On time, every time. Your billable hour is non-negotiable."
+- **Subject**: A courthouse or downtown law office building, early morning, with a black sedan waiting at the entrance. First light, empty streets — the car is there before anyone else.
+- **Mood**: Precision, readiness — "we were here before you needed us"
+- **Palette**: Pre-dawn blue/gray, warm building lights, dark sedan
+- **Key element**: The EARLY MORNING setting communicates "on time" better than any text. The car is already there.
+
+### LG-T2: "SOC 2 data handling. Vetted for BigLaw."
+- **Subject**: Close-up of a professional driver's hand holding a door open. Suit sleeve, clean cuff, name badge visible. Background is a law firm entrance (brass nameplate, glass doors).
+- **Mood**: Service, professionalism, discretion
+- **Palette**: Black, charcoal, subtle gold (law firm brass)
+- **Key element**: The detail — clean hands, pressed suit, name badge — communicates vetting and professionalism. Not a gig worker.
+
+### LG-T3: "Depositions. Court appearances. Client visits. Covered."
+- **Subject**: A black sedan pulling away from a downtown intersection. Motion blur on the city, sedan in sharp focus. Business district architecture.
+- **Mood**: In motion, purposeful — getting the lawyer where they need to be
+- **Palette**: High contrast, urban, kinetic
+- **Key element**: Movement and purpose. Not parked, not waiting — GOING.
+- **CTA visual**: "Set Up Firm Account"
+
+---
+
+## 6. LIFE SCIENCES / PHARMA (3 images)
+
+**Visual philosophy**: Clinical precision meets corporate travel. Clean, institutional, compliance-oriented. The viewer is a pharma travel manager or compliance officer who thinks in terms of audit trails and regulatory frameworks.
+
+### LS-T1: "Audit-ready ground transport for HCP guest travel"
+- **Subject**: A professional with a tablet showing a ride log or audit report. Medical campus or conference center in background (suggesting HCP event). Clean, institutional.
+- **Mood**: Compliance, transparency — "every ride documented"
+- **Palette**: White, clinical blue, minimal
+- **Key element**: The tablet/screen should suggest structured data — ride logs, timestamps, passenger records. Sunshine Act language if text is legible.
+- **DO NOT**: Show pills, lab coats, or anything stereotypically "pharma." This is about TRAVEL compliance, not drug development.
+
+### LS-T2: "Fewer than half of pharma programs meet a global standard"
+- **Subject**: Data visualization — a pie chart or progress bar showing "fewer than 50%" with a gap highlighted. Clean, report-style design. Could reference BCD branding subtly.
+- **Mood**: "There's a problem in your industry. We solve it."
+- **Palette**: White, blue, with red/amber for the gap indicator
+- **Key element**: The data must be immediately clear — the gap between current state and required standard.
+- **Style**: Infographic/report, not photography
+
+### LS-T3: "The only ground transport built for regulated verticals"
+- **Subject**: A clean product interface showing a booking flow with visible compliance fields — "HCP flag," "Event tag," "Sunshine Act export." Modern UI design.
+- **Mood**: Purpose-built, not adapted — this was DESIGNED for pharma
+- **Palette**: Clean whites, pharma blue, green checkmarks
+- **Key element**: The compliance fields must be visible and specific — they ARE the selling point. A generic booking screen doesn't work.
+- **CTA visual**: "Start Pilot Program"
 
 ---
 
 ## PRODUCTION NOTES
 
-### Brand Guidelines
-- **Logo**: LUXY Ride wordmark, bottom-right corner, 15% opacity or white
-- **Tagline**: Not required in image (headline handles this)
-- **Typography in image**: Minimal. StackAdapt overlays the headline/body/CTA. Don't duplicate.
+### What Makes These Different from Generic Car Service Ads
 
-### Psychological Consistency
-Each image must match the MECHANISM and NARRATIVE CHAPTER:
-- **Touch 1-2** (Chapter 2-3, warm tone): Problems and early evidence. Empathy, not selling.
-- **Touch 3-4** (Chapter 3-4, authoritative): Resolution emerging. Evidence, proof, testimonials.
-- **Touch 5** (Chapter 5, authoritative): Resolution complete. Action time. CTA prominent.
+These are NOT "look at our luxury car" images. Each image targets a specific PROFESSIONAL AUDIENCE reading specific TRADE CONTENT in a specific WORK CONTEXT:
 
-### What Makes These Different
-These aren't generic luxury car ads. Each image is designed for a SPECIFIC psychological state at a SPECIFIC point in a retargeting sequence targeting a SPECIFIC barrier:
-- **Careful Trusters** see evidence and proof because bilateral data shows they're analytical (clt=0.82)
-- **Status Seekers** see identity alignment because bilateral data shows identity_misalignment is their barrier
-- **Easy Deciders** see friction removal because bilateral data shows they've decided — they just need the path cleared
+- **EA images**: Show the ARRANGER at work, not the passenger riding
+- **Travel Manager images**: Show DATA and CREDENTIALS, not vehicles
+- **Home Market images**: Show RECOGNIZABLE LOCAL places, not generic cities
+- **Event Planner images**: Show MULTIPLE vehicles and GROUP coordination
+- **Legal images**: Show COURTHOUSE/DOWNTOWN precision and gravity
+- **Life Sciences images**: Show COMPLIANCE INTERFACES and AUDIT DATA
 
-### File Naming Convention
+A travel manager reading BTN and seeing a lifestyle luxury car photo will scroll past it — it's not for them. A travel manager seeing a "43%" stat card will stop — that's their world.
+
+### File Naming
 ```
-luxy_{archetype}_t{touch}_{size}.{ext}
+luxy_{audience}_{touch}_{size}.{ext}
 ```
 Examples:
-- `luxy_careful_truster_t1_1200x627.jpg`
-- `luxy_status_seeker_t3_600x600.jpg`
-- `luxy_easy_decider_t5_800x600.png`
+- `luxy_ea_t1_1200x627.jpg`
+- `luxy_tm_t2_600x600.jpg`
+- `luxy_lg_t3_800x600.png`
 
 ### Delivery
-45 files total (15 creatives × 3 sizes)
-Place in: `campaigns/ridelux_v6/assets/`
+54 files total (18 creatives × 3 sizes)
+
+### Psychological Consistency
+- **Touch 1**: Problem/context — empathy, not selling
+- **Touch 2**: Evidence/proof — credentials, data, testimonials
+- **Touch 3**: Action — CTA prominent, resolution complete
