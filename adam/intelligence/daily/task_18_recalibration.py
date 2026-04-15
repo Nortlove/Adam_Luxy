@@ -255,13 +255,34 @@ class RecalibrationTask(DailyStrengtheningTask):
         # Cypher query: pull BRAND_CONVERTED edges with alignment
         # dimensions and an outcome label. The alignment dimensions are
         # stored as edge properties (matching COMPOSITE_DIMENSIONS in
-        # recalibration.py). Outcome label comes from the edge's
-        # `conversion_outcome` property or defaults to empty.
+        # recalibration.py).
+        #
+        # Schema facts (verified 2026-04-15 during the post-Stage-1
+        # review pass):
+        #
+        # - The edge goes (pd:ProductDescription)-[e:BRAND_CONVERTED]->
+        #   (r:AnnotatedReview). See adam/corpus/neo4j/bulk_writer.py
+        #   lines 84-93. There are NO `Buyer` or `Product` node labels
+        #   in this subgraph.
+        # - The outcome label property is `e.outcome`, not
+        #   `conversion_outcome`. The schema index is declared at
+        #   adam/corpus/neo4j/schema_extension.py line 33:
+        #   FOR ()-[e:BRAND_CONVERTED]-() ON (e.outcome).
+        # - `e.updated_at` may or may not exist on the edge. The
+        #   recalibration pipeline does not require any particular
+        #   ordering — logistic regression fits regardless. Dropping
+        #   ORDER BY avoids a reference to a potentially-missing
+        #   property.
+        #
+        # An earlier version of this query used (b:Buyer)-[e:BRAND_CONVERTED]
+        # ->(p:Product) and WHERE e.conversion_outcome IS NOT NULL, which
+        # would return zero edges on every run against the real schema.
+        # That was the shipping bug caught in the post-Stage-1 review
+        # pass (commit 2c782fa's review notes). Fixed here.
         query = (
-            "MATCH (b:Buyer)-[e:BRAND_CONVERTED]->(p:Product) "
-            "WHERE e.conversion_outcome IS NOT NULL "
+            "MATCH ()-[e:BRAND_CONVERTED]->() "
+            "WHERE e.outcome IS NOT NULL "
             "RETURN properties(e) AS edge_props "
-            "ORDER BY e.updated_at DESC "
             "LIMIT $limit"
         )
 
@@ -280,8 +301,12 @@ class RecalibrationTask(DailyStrengtheningTask):
             props = record.get("edge_props") or {}
             if not isinstance(props, dict):
                 continue
-            # Make sure the outcome label is accessible under the key
-            # the pipeline expects.
+            # Belt-and-suspenders: if a legacy edge happens to have
+            # `conversion_outcome` instead of `outcome`, normalize so
+            # the pipeline's dual-key lookup finds it either way.
+            # The authoritative property name is `outcome` per the
+            # schema index — this branch should never fire on a
+            # clean graph but costs nothing.
             if "outcome" not in props and "conversion_outcome" in props:
                 props["outcome"] = props["conversion_outcome"]
             edges.append(props)

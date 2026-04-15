@@ -353,14 +353,21 @@ class RecalibrationPipeline:
             }
 
         # Build the weighted sum expression. Each dimension contributes
-        # `coalesce(e.dim, 0.5) * weight`. The `coalesce` handles edges
-        # that are missing specific dimensions (treat as neutral 0.5).
+        # `coalesce(e.dim, 0.5) * (weight)`. The `coalesce` handles
+        # edges missing specific dimensions (treat as neutral 0.5).
+        # Weights are wrapped in explicit parentheses to remove any
+        # operator-precedence ambiguity around negative literals —
+        # `a * (-0.064)` is unambiguous, `a * -0.064` relies on
+        # Cypher's unary-minus support inside expressions which
+        # works but is harder to reason about. The parenthesized
+        # form is strictly safer and was added in the post-Stage-1
+        # review pass.
         dim_terms: List[str] = []
         for dim, weight in self.current_weights.items():
             # Format weights with enough precision to avoid rounding
             # artifacts but not so much that the expression becomes
             # unreadable in logs.
-            dim_terms.append(f"coalesce(e.`{dim}`, 0.5) * {weight:.6f}")
+            dim_terms.append(f"coalesce(e.`{dim}`, 0.5) * ({weight:.6f})")
         set_expression = " + ".join(dim_terms)
 
         # Use CALL IN TRANSACTIONS for batched updates. This avoids
