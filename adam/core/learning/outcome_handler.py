@@ -105,40 +105,123 @@ class OutcomeHandler:
         except Exception:
             pass  # Default weight=1.0 if processing depth unavailable
 
+        # ── STRUCTURAL DECISION-MODE GATE ──
+        # Reads the epistemic status of the reasoning chain that produced
+        # this decision. Non-GROUNDED chains (INCOMPLETE, REFUSED) must not
+        # update posteriors, because the outcome cannot be cleanly credited
+        # to the links that were assessed — some causal contribution came
+        # from links the system did not measure, and crediting the measured
+        # links alone is the correlational trap ADAM is built to avoid.
+        # See adam/core/decision_mode.py for the full semantics.
+        #
+        # This is a STRUCTURAL gate, not a scalar weight multiplier.
+        # Borrowed from bioinformatics quality filtering — reads below a
+        # per-link structural threshold are filtered from downstream
+        # analysis rather than down-weighted, because down-weighting still
+        # imports their error into the consensus confidence interval.
+        from adam.core.decision_mode import (
+            DecisionMode,
+            from_outcome_metadata,
+            should_update_posteriors,
+            should_record_causal_observation,
+            learning_gate_reason,
+        )
+        decision_mode, grounding_evidence = from_outcome_metadata(metadata)
+        posterior_updates_authorized = should_update_posteriors(decision_mode)
+        causal_observation_authorized = should_record_causal_observation(decision_mode)
+
         results = {
             "decision_id": decision_id,
             "outcome_type": outcome_type,
             "success": success,
             "decision_context_found": has_decision_context,
             "cascade_level": cascade_level,
+            "decision_mode": decision_mode.value,
+            "grounding_evidence": grounding_evidence.as_full_dict(),
+            "learning_gate": {
+                "posterior_updates_authorized": posterior_updates_authorized,
+                "causal_observation_authorized": causal_observation_authorized,
+                "reason": learning_gate_reason(decision_mode),
+            },
             "updates": {},
         }
 
         results["processing_depth"] = processing_depth_str
         results["processing_depth_weight"] = processing_depth_weight
 
+        # If the decision was REFUSED, there was no response served to the
+        # user, so there is no outcome to learn from. Short-circuit.
+        if decision_mode == DecisionMode.REFUSED:
+            logger.info(
+                "Outcome received for REFUSED decision_id=%s — no learning "
+                "updates applied. Missing links: %s. Reasons: %s",
+                decision_id,
+                grounding_evidence.missing_links,
+                grounding_evidence.failure_reasons,
+            )
+            self._outcomes_processed += 1
+            results["learning_gate"]["short_circuited"] = True
+            return results
+
         # =====================================================================
         # 0. RECORD CAUSAL OBSERVATION
         # Every impression is a micro-experiment. Record the full decision
         # context + outcome so the causal testing engine can discover
         # which page dimensions CAUSE which mechanisms to be effective.
+        #
+        # This runs for both GROUNDED and INCOMPLETE decisions — it does not
+        # credit any posterior online, it simply persists the record for
+        # offline analysis. Answering "do incomplete-chain decisions have
+        # any predictive value we could mine later?" requires keeping the
+        # records; it does not require crediting posteriors now.
         # =====================================================================
-        try:
-            from adam.intelligence.causal_learning import record_causal_observation
-            causal_obs = record_causal_observation(
-                decision_id=decision_id,
-                outcome_type=outcome_type,
-                outcome_value=outcome_value,
-                metadata=metadata,
+        if causal_observation_authorized:
+            try:
+                from adam.intelligence.causal_learning import record_causal_observation
+                causal_obs = record_causal_observation(
+                    decision_id=decision_id,
+                    outcome_type=outcome_type,
+                    outcome_value=outcome_value,
+                    metadata=metadata,
+                )
+                if causal_obs:
+                    results["updates"]["causal_observation"] = {
+                        "recorded": True,
+                        "has_page_dims": bool(causal_obs.page_edge_dimensions),
+                        "mechanism": causal_obs.mechanism_sent,
+                        "decision_mode": decision_mode.value,
+                    }
+            except Exception as e:
+                logger.debug("Causal observation recording failed: %s", e)
+        else:
+            results["updates"]["causal_observation"] = {
+                "skipped": True,
+                "reason": learning_gate_reason(decision_mode),
+            }
+
+        # If the decision chain was INCOMPLETE, every posterior update path
+        # below is skipped — only the causal observation above is recorded.
+        # This is the structural gate: it prevents the system from learning
+        # "authority works here" from an outcome where authority was
+        # assessed but construal level was not, because the outcome's
+        # causal contribution cannot be separated across those links.
+        if not posterior_updates_authorized:
+            logger.info(
+                "Outcome received for %s decision_id=%s — posterior updates refused. "
+                "Missing links: %s. Grounded links: %d/3.",
+                decision_mode.value,
+                decision_id,
+                grounding_evidence.missing_links,
+                grounding_evidence.grounded_count,
             )
-            if causal_obs:
-                results["updates"]["causal_observation"] = {
-                    "recorded": True,
-                    "has_page_dims": bool(causal_obs.page_edge_dimensions),
-                    "mechanism": causal_obs.mechanism_sent,
-                }
-        except Exception as e:
-            logger.debug("Causal observation recording failed: %s", e)
+            results["learning_gate"]["posterior_paths_skipped"] = [
+                "thompson", "meta_orchestrator", "neo4j_attribution",
+                "graph_rewriter", "learning_hub", "ml_ensemble",
+                "theory_learner", "dsp_learning", "cognitive_learning",
+                "page_context_learning",
+            ]
+            self._outcomes_processed += 1
+            return results
 
         # =====================================================================
         # 1. UPDATE THOMPSON SAMPLING POSTERIORS
@@ -160,7 +243,7 @@ class OutcomeHandler:
         except Exception as e:
             logger.warning(f"Thompson update failed: {e}")
             results["updates"]["thompson"] = {"error": str(e)}
-        
+
         # =====================================================================
         # 2. UPDATE META-ORCHESTRATOR (which strategy worked)
         # =====================================================================
@@ -171,7 +254,7 @@ class OutcomeHandler:
         except Exception as e:
             logger.warning(f"Meta-orchestrator update failed for {decision_id}: {e}")
             results["updates"]["meta_orchestrator"] = {"error": str(e)}
-        
+
         # =====================================================================
         # 3. UPDATE NEO4J OUTCOME ATTRIBUTION
         # =====================================================================
@@ -182,7 +265,7 @@ class OutcomeHandler:
         except Exception as e:
             logger.warning(f"Neo4j attribution update failed for {decision_id}: {e}")
             results["updates"]["neo4j"] = {"error": str(e)}
-        
+
         # =====================================================================
         # 4. UPDATE GRAPH REWRITER (which rules helped)
         # =====================================================================
@@ -193,7 +276,7 @@ class OutcomeHandler:
         except Exception as e:
             logger.warning(f"Graph rewriter update failed for {decision_id}: {e}")
             results["updates"]["graph_rewriter"] = {"error": str(e)}
-        
+
         # =====================================================================
         # 5. ROUTE TO UNIFIED LEARNING HUB (reaches all atoms)
         # =====================================================================
@@ -203,7 +286,7 @@ class OutcomeHandler:
             )
         except Exception as e:
             logger.warning(f"Learning hub routing failed: {e}")
-        
+
         # =====================================================================
         # 6. UPDATE ML ENSEMBLE WEIGHTS
         # =====================================================================
@@ -214,7 +297,7 @@ class OutcomeHandler:
         except Exception as e:
             logger.warning(f"ML ensemble update failed for {decision_id}: {e}")
             results["updates"]["ml_ensemble"] = {"error": str(e)}
-        
+
         # =====================================================================
         # 7. CONSTRUCT-LEVEL LEARNING (Theory Learner)
         #
@@ -232,7 +315,7 @@ class OutcomeHandler:
         except Exception as e:
             logger.warning(f"Theory learner update failed for {decision_id}: {e}")
             results["updates"]["theory_learner"] = {"error": str(e)}
-        
+
         # =====================================================================
         # 8. DSP IMPRESSION LEARNING
         #
@@ -250,7 +333,7 @@ class OutcomeHandler:
             except Exception as e:
                 logger.warning(f"DSP learning update failed for {decision_id}: {e}")
                 results["updates"]["dsp_learning"] = {"error": str(e)}
-        
+
         # =====================================================================
         # 9. COGNITIVE LEARNING SYSTEM (Alignment Matrix Learning)
         #

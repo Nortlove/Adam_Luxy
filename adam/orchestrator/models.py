@@ -141,16 +141,49 @@ class AtomExecutionResult(BaseModel):
 
 
 class AtomDAGResult(BaseModel):
-    """Result of executing the full AtomDAG."""
+    """Result of executing the full AtomDAG.
+
+    Carries explicit epistemic status via `mode` + `grounding_evidence`. See
+    `adam.core.decision_mode` for the semantics. Consumers that care about
+    whether this result is trustworthy for learning should read `mode` and
+    gate behavior on `DecisionMode.GROUNDED` — not on the presence of
+    `atom_results`, because the field is populated for partial chains too.
+    """
     execution_order: List[str] = Field(default_factory=list)
     total_execution_time_ms: float = 0.0
-    
+
     # Individual atom results
     atom_results: Dict[str, AtomExecutionResult] = Field(default_factory=dict)
-    
+
     # Aggregated outputs
     final_psychological_profile: Dict[str, Any] = Field(default_factory=dict)
     final_mechanism_activations: Dict[str, float] = Field(default_factory=dict)
+
+    # Epistemic status. Default is GROUNDED for backwards compatibility with
+    # call sites that have not yet been updated to populate the field, but
+    # new call sites in the orchestrator always populate this explicitly.
+    # See adam/core/decision_mode.py for the full semantics.
+    mode: str = Field(
+        default="grounded",
+        description="DecisionMode.value — grounded / incomplete / refused",
+    )
+    grounding_evidence: Dict[str, Any] = Field(
+        default_factory=lambda: {
+            "bilateral_edge_evidence_present": True,
+            "atom_run_real": True,
+            "theoretical_link_traversed": True,
+            "failure_reasons": [],
+        },
+        description="Structural per-link test results; see GroundingEvidence",
+    )
+    missing_links: List[str] = Field(
+        default_factory=list,
+        description="Names of load-bearing links not grounded (empty when GROUNDED)",
+    )
+    refusal_reason: Optional[str] = Field(
+        default=None,
+        description="Human-readable diagnostic when mode=REFUSED",
+    )
 
 
 # =============================================================================

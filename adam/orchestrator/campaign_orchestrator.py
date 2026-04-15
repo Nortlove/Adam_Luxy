@@ -726,15 +726,34 @@ class CampaignOrchestrator:
         category: Optional[str] = None,
         asin: Optional[str] = None,
     ) -> Optional[AtomDAGResult]:
-        """
-        Execute the AtomDAG for psychological reasoning.
+        """Execute the AtomDAG for psychological reasoning.
 
-        Attempts to run the REAL AtomDAG with in-memory blackboard.
-        Falls back to simulation if infrastructure isn't available.
+        Runs the real AtomDAG against Neo4j + the intelligence prefetch. On
+        infrastructure failure (Neo4j unreachable, prefetch empty, atom
+        execution raises), returns a typed INCOMPLETE or REFUSED
+        AtomDAGResult with explicit grounding evidence — NOT a fabricated
+        "simulated" response. The learning loop gates on the returned
+        mode and refuses to update posteriors from non-GROUNDED results.
+
+        Before this change, failure silently fell back to
+        `_simulate_atom_dag`, which manufactured construct values with no
+        referent in any user or context and returned them indistinguishably
+        from real results. Outcomes associated with those simulated
+        decisions contaminated the Thompson posteriors, theory-learner link
+        posteriors, and every other update path in the outcome handler.
+        See ADAM_THEORETICAL_FOUNDATION.md Section 4.6 for the rationale.
         """
+        from adam.core.decision_mode import (
+            DecisionMode,
+            GroundingEvidence,
+            derive_mode,
+            refused_evidence,
+        )
+
         start_time = time.time()
 
         # Try to run the real AtomDAG
+        failure_reasons: List[str] = []
         try:
             real_result = await self._execute_real_atom_dag(
                 brand=brand,
@@ -747,24 +766,115 @@ class CampaignOrchestrator:
                 category=category,
                 asin=asin,
             )
-            if real_result:
-                real_result.total_execution_time_ms = (time.time() - start_time) * 1000
-                trace.atom_dag_result = real_result
-                logger.info(f"AtomDAG executed successfully with {len(real_result.atom_results)} atoms")
-                return real_result
         except Exception as e:
-            logger.warning(f"Real AtomDAG execution failed, using simulation: {e}")
-        
-        # Fallback to simulation
-        return await self._simulate_atom_dag(
-            brand=brand,
-            product=product,
-            description=description,
-            customer_intelligence=customer_intelligence,
-            archetype=archetype,
-            trace=trace,
-            start_time=start_time,
+            logger.warning(f"Real AtomDAG execution raised: {e}")
+            real_result = None
+            failure_reasons.append(f"atom_dag_execution_raised: {type(e).__name__}: {e}")
+
+        if real_result is not None:
+            real_result.total_execution_time_ms = (time.time() - start_time) * 1000
+
+            # Grounding evidence for the successful path. The real AtomDAG
+            # ran; bilateral edge evidence is presumed present because the
+            # cascade runs upstream of this stage and its success is what
+            # triggered the real AtomDAG path; theoretical link traversal
+            # is reflected by whether the mechanism activation atom
+            # produced a non-empty recommended_mechanisms list.
+            mech_activations = (
+                real_result.final_psychological_profile.get("recommended_mechanisms", [])
+                if real_result.final_psychological_profile
+                else []
+            )
+            atom_run_real = len(real_result.atom_results) > 0
+            theoretical_link = bool(mech_activations)
+            # TODO(risk1-followup): This is a proxy, not the real signal.
+            # `bilateral_ok` should be derived from whether the upstream
+            # bilateral cascade actually produced L3 edge evidence, not
+            # from the presence of `buyer_uncertainty` or `gradient_field`
+            # in the orchestrator call site. Those two can be populated
+            # from L1/L2 priors even when no real L3 edges exist, which
+            # would falsely mark the chain as grounded. The honest fix is
+            # a platform-wide refactor that propagates typed grounding
+            # evidence from the cascade stage into the AtomDAG stage, so
+            # each producer of intelligence emits its own grounding flags
+            # and consumers compose them structurally rather than
+            # approximating them here. Tracked as part of the pervasive
+            # three-state typing rollout (see ADAM_THEORETICAL_FOUNDATION
+            # Section 4). Do not treat this proxy as permanent.
+            bilateral_ok = bool(buyer_uncertainty) or bool(gradient_field)
+
+            evidence = GroundingEvidence(
+                bilateral_edge_evidence_present=bilateral_ok,
+                atom_run_real=atom_run_real,
+                theoretical_link_traversed=theoretical_link,
+                failure_reasons=[
+                    reason for reason, present in (
+                        ("bilateral_edge_evidence_absent: no buyer_uncertainty or gradient_field at atom-dag stage", bilateral_ok),
+                        ("atom_run_empty: no atom_results produced", atom_run_real),
+                        ("theoretical_link_empty: no recommended_mechanisms from mechanism activation", theoretical_link),
+                    )
+                    if not present
+                ],
+            )
+            mode = derive_mode(evidence)
+
+            real_result.mode = mode.value
+            real_result.grounding_evidence = evidence.as_full_dict()
+            real_result.missing_links = evidence.missing_links
+            if mode == DecisionMode.REFUSED:
+                real_result.refusal_reason = "no_grounded_links_despite_nominally_successful_atom_dag"
+
+            trace.atom_dag_result = real_result
+            logger.info(
+                "AtomDAG executed: %d atoms, mode=%s, grounded_links=%d/3, missing=%s",
+                len(real_result.atom_results),
+                mode.value,
+                evidence.grounded_count,
+                evidence.missing_links or "[]",
+            )
+            return real_result
+
+        # Real AtomDAG did not produce a result. Construct a typed response
+        # that explicitly marks the chain as ungrounded. Consumers (mechanism
+        # selection, copy generation, learning loop) MUST gate on the mode
+        # and behave correctly for non-GROUNDED responses. The learning loop
+        # specifically MUST refuse to update posteriors from INCOMPLETE or
+        # REFUSED chains — see adam/core/decision_mode.py and the gate in
+        # adam/core/learning/outcome_handler.py.
+        if not failure_reasons:
+            # _execute_real_atom_dag returned None without raising. That
+            # path already logged the specific reason (usually Neo4j
+            # unavailable — see lines ~802-805 of this file).
+            failure_reasons.append("atom_dag_returned_none: see earlier logs for specific cause")
+
+        evidence = refused_evidence("; ".join(failure_reasons))
+        mode = derive_mode(evidence)  # REFUSED
+
+        ungrounded_result = AtomDAGResult(
+            execution_order=[],
+            total_execution_time_ms=(time.time() - start_time) * 1000,
+            mode=mode.value,
+            grounding_evidence=evidence.as_full_dict(),
+            missing_links=evidence.missing_links,
+            refusal_reason="; ".join(failure_reasons),
+            final_psychological_profile={
+                "archetype": archetype,
+                "regulatory_focus": "unknown",
+                "construal_level": "unknown",
+                "grounded": False,
+            },
         )
+
+        trace.atom_dag_result = ungrounded_result
+        logger.error(
+            "AtomDAG produced no grounded result — mode=%s, reasons=%s. "
+            "Downstream consumers will see an ungrounded chain; learning "
+            "loop will refuse posterior updates for outcomes associated "
+            "with this decision.",
+            mode.value,
+            failure_reasons,
+        )
+        return ungrounded_result
     
     async def _execute_real_atom_dag(
         self,
@@ -920,94 +1030,17 @@ class CampaignOrchestrator:
         )
         return atom_result
     
-    async def _simulate_atom_dag(
-        self,
-        brand: str,
-        product: str,
-        description: str,
-        customer_intelligence,
-        archetype: str,
-        trace: ReasoningTrace,
-        start_time: float,
-    ) -> AtomDAGResult:
-        """
-        Simulated AtomDAG execution as fallback.
-        
-        Used when real AtomDAG infrastructure isn't available.
-        """
-        logger.info("Using simulated AtomDAG (infrastructure fallback)")
-        
-        atom_result = AtomDAGResult(
-            execution_order=[
-                "UserStateAtom",
-                "RegulatoryFocusAtom",
-                "ConstrualLevelAtom",
-                "ReviewIntelligenceAtom",
-                "PersonalityExpressionAtom",
-                "MechanismActivationAtom",
-            ],
-        )
-        
-        # Simulate UserStateAtom
-        atom_result.atom_results["UserStateAtom"] = AtomExecutionResult(
-            atom_name="UserStateAtom",
-            atom_type="inference",
-            execution_time_ms=5.0,
-            primary_output={"archetype": archetype},
-            confidence=0.7,
-            reasoning="Determined user archetype from product analysis",
-        )
-        
-        # Simulate RegulatoryFocusAtom
-        reg_focus = "promotion"
-        if archetype in ["Guardian"]:
-            reg_focus = "prevention"
-        
-        atom_result.atom_results["RegulatoryFocusAtom"] = AtomExecutionResult(
-            atom_name="RegulatoryFocusAtom",
-            atom_type="inference",
-            execution_time_ms=3.0,
-            primary_output={"regulatory_focus": reg_focus, "strength": 0.65},
-            confidence=0.7,
-            reasoning=f"Archetype {archetype} typically has {reg_focus} focus",
-        )
-        
-        # Simulate ReviewIntelligenceAtom (if we have review data)
-        if customer_intelligence:
-            atom_result.atom_results["ReviewIntelligenceAtom"] = AtomExecutionResult(
-                atom_name="ReviewIntelligenceAtom",
-                atom_type="empirical",
-                execution_time_ms=2.0,
-                primary_output={
-                    "reviews_analyzed": customer_intelligence.reviews_analyzed,
-                    "dominant_archetype": customer_intelligence.dominant_archetype,
-                    "mechanism_predictions": customer_intelligence.mechanism_predictions,
-                },
-                confidence=customer_intelligence.overall_confidence or 0.5,
-                evidence_items=[
-                    EvidenceItem(
-                        source="product_reviews",
-                        construct="buyer_archetype",
-                        value=customer_intelligence.archetype_confidence or 0.5,
-                        confidence=customer_intelligence.overall_confidence or 0.5,
-                    ),
-                ],
-                reasoning=f"Analyzed {customer_intelligence.reviews_analyzed} customer reviews",
-            )
-        
-        atom_result.total_execution_time_ms = (time.time() - start_time) * 1000
-        
-        # Build final outputs
-        atom_result.final_psychological_profile = {
-            "archetype": archetype,
-            "regulatory_focus": reg_focus,
-            "construal_level": "high" if archetype in ["Achiever", "Explorer"] else "low",
-        }
-        
-        trace.atom_dag_result = atom_result
-        
-        return atom_result
-    
+    # NOTE: _simulate_atom_dag was removed from this file on 2026-04-15 as
+    # part of the Risk #1 remediation. It silently substituted fabricated
+    # construct values for real atom runs when Neo4j was unreachable or the
+    # real AtomDAG raised, and its outputs contaminated the learning loop
+    # via outcomes that could not be cleanly credited. The function lives
+    # on at `adam/testing/simulation.py` with a production import guard
+    # for legitimate test / load-test / dev use only. The correct production
+    # behavior on AtomDAG failure is to return a typed INCOMPLETE or
+    # REFUSED AtomDAGResult — see `_execute_atom_dag` above and
+    # `adam/core/decision_mode.py` for the semantics.
+
     # =========================================================================
     # STEP 5: MECHANISM SELECTION
     # =========================================================================

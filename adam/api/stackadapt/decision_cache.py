@@ -103,6 +103,21 @@ class DecisionContext:
     copy_evidence_type: str = ""
     copy_cta_style: str = ""
 
+    # Epistemic status of the reasoning chain that produced this decision.
+    # See adam/core/decision_mode.py. Default "grounded" preserves legacy
+    # behavior for decisions persisted before this field existed; new code
+    # paths MUST populate these explicitly. The outcome handler's learning
+    # gate reads these fields to decide whether to update posteriors.
+    decision_mode: str = "grounded"
+    grounding_evidence: Dict[str, Any] = field(default_factory=lambda: {
+        "bilateral_edge_evidence_present": True,
+        "atom_run_real": True,
+        "theoretical_link_traversed": True,
+        "failure_reasons": [],
+    })
+    missing_links: List[str] = field(default_factory=list)
+    refusal_reason: str = ""
+
     # Timing
     created_at: float = field(default_factory=time.time)
 
@@ -164,6 +179,13 @@ class DecisionContext:
             "copy_framing": self.copy_framing,
             "copy_evidence_type": self.copy_evidence_type,
             "copy_cta_style": self.copy_cta_style,
+            # Epistemic status — read by the outcome handler's learning gate.
+            # Key names match the constants in adam/core/decision_mode.py
+            # (DECISION_MODE_METADATA_KEY, GROUNDING_EVIDENCE_METADATA_KEY).
+            "decision_mode": self.decision_mode,
+            "grounding_evidence": dict(self.grounding_evidence),
+            "missing_links": list(self.missing_links),
+            "refusal_reason": self.refusal_reason,
         }
 
 
