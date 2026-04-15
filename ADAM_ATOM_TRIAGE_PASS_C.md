@@ -191,6 +191,103 @@ Ranked by immediate value for the campaign build:
 
 **Total estimated work before the campaign build starts: 3-4 focused sessions.** The campaign build then proceeds on a DAG running at least 20 atoms (14 existing + 6 new) with the page-shift architecture fixed.
 
+## 8a. Pass C Deep-Dive — The Second DAG Finding (added after initial Pass C)
+
+**This section was added after Chris flagged that the orphan atoms were supposed to be part of the active set and that he did not understand how they became orphaned. A defensive re-check of atom wiring mechanisms surfaced a finding that is bigger than the original Pass C scope: there is an entire stranded orchestration layer, not just stranded individual atoms.**
+
+### The two parallel DAG systems
+
+**System 1 — Simple DAG (live in production):**
+
+- `adam/atoms/dag.py` (585 lines)
+- Imports 14 atom classes directly via static Python imports
+- Called by `campaign_orchestrator.py._execute_real_atom_dag()`
+- This is what actually runs when a decision is made
+
+**System 2 — Construct-taxonomy DAG (orphaned, never wired):**
+
+- `adam/atoms/orchestration/construct_dag.py` (489 lines)
+- `adam/atoms/orchestration/dag_executor.py` (1082 lines)
+- `adam/atoms/orchestration/langgraph_feedback.py` (545 lines)
+- **Total: 2,116 lines of orchestration layer**
+- References all 28 atoms by string name via a `DOMAIN_ATOM_MAPPING` dict — NOT via Python imports, which is why the audit script classified it as "rescued only by tests/scripts"
+- Maps 35 construct-taxonomy domains (from `adam/intelligence/construct_taxonomy.py`) to primary and secondary atoms
+- Implements cross-domain dependencies via MODULATES relationships
+- Docstring claims *"28 atoms, 6-level DAG"*
+- **Only importer anywhere:** `scripts/validate_construct_architecture.py` — a validation/test script
+
+### Why the original Pass C missed this
+
+The initial Pass C read each orphan atom file's docstring and correctly identified that they were substantive stranded work. But I did not check for *non-import* references to the atoms — `construct_dag.py` refers to atoms by string name in a dict, not by `from adam.atoms.core.X import Y`, so no import-graph analysis (regex or AST) would show the reference. The atoms are orphaned at the import level AND referenced by a second orphaned DAG at the string level. Both layers are stranded.
+
+### What this finding actually means
+
+**Chris's intuition that "these atoms were supposed to be in the active set" was correct.** The design that wires all 28 atoms together exists at `adam/atoms/orchestration/`. Someone built it — in three files totaling 2,116 lines — and then never integrated it with the production path. The production path runs on the simpler `dag.py` that predates this work.
+
+**This is the same drift pattern at a much larger scale than Passes A, B, or the initial Pass C.** The pattern across all of them:
+
+- **Pass A** — 5 stranded library files
+- **Pass B** — 1 stranded architectural fix (`page_edge_bridge.py`)
+- **Pass C original** — 16 stranded atoms
+- **Pass C deep-dive** — an entire stranded orchestration layer (2,116 lines: construct_dag + dag_executor + langgraph_feedback)
+
+Someone built the full upgrade and never flipped the switch.
+
+### What `construct_dag.py` actually maps (abbreviated)
+
+Looking at `DOMAIN_ATOM_MAPPING` in `construct_dag.py`, every orphan atom from Pass C has a specific assignment to one or more construct domains:
+
+| Orphan atom | Mapped to domain(s) |
+|---|---|
+| `brand_personality` | personality (secondary), consumer_traits (secondary), self_identity (secondary), brand_personality (primary), attachment (secondary) |
+| `motivational_conflict` | motivation (secondary), implicit_motivation (primary) |
+| `regret_anticipation` | prospect_theory (primary), risk_uncertainty (primary) |
+| `mimetic_desire` | social_influence (secondary), evolutionary (secondary) |
+| `cooperative_framing` | social_influence (secondary), strategic_fairness (primary), moral_foundations (primary) |
+| `persuasion_pharmacology` | persuasion_processing (secondary), implicit_processing (secondary), nonconscious_architecture (secondary), evolutionary (secondary) |
+| `signal_credibility` | persuasion_processing (secondary), strategic_fairness (secondary), lay_theories (primary), trust_credibility (primary), peer_persuasion (secondary) |
+| `strategic_awareness` | strategic_fairness (primary) |
+| `interoceptive_style` | implicit_processing (primary), nonconscious_architecture (primary) |
+| `temporal_self` | temporal (primary) |
+| `strategic_timing` | temporal (secondary) |
+| `relationship_intelligence` | attachment (primary), brand_relationship (primary) |
+| `narrative_identity` | self_identity (primary) |
+
+Every orphan atom has an assigned role in the construct-taxonomy-driven DAG. Every one of those assignments was designed, documented, and never wired in.
+
+### The revised wiring strategy
+
+My original Pass C recommendation was *"wire the 16 atoms into `dag.py` in four stages, Stage 1 being 6 core atoms plus coherence_optimization."* That was a manual extension of the simple DAG.
+
+**The better strategy, now that the second DAG is visible, is to wire the orchestration layer itself into the production path,** replacing or complementing `dag.py`. This brings online:
+
+1. All 28 atoms (not just the 14 currently live or the 14 + 6 Stage 1)
+2. The construct-taxonomy-driven orchestration (35 domains mapped to atoms, not hardcoded level structure)
+3. The cross-domain MODULATES dependency handling (atoms influence each other based on construct relationships, not hardcoded topology)
+4. The LangGraph feedback integration (545 lines of learning-loop wiring)
+
+**The risk and effort profile:**
+
+- **Risk:** higher than the Stage 1 manual wiring. Touching the core decision path's atom execution is disruptive. `dag_executor.py` at 1082 lines is substantial and needs to be read end-to-end before any switchover.
+- **Effort:** 1-2 weeks of focused work instead of 1-2 sessions. Reading the 2,116 lines takes one session by itself; designing the switchover or dual-running strategy is another session; implementation is 2-3 sessions; testing and latency validation is another 2-3 sessions.
+- **Upside:** the entire designed architecture comes online at once, not piecemeal. The foundation doc's architectural claims become true at the runtime level. Stages 2, 3, 4 from the original Pass C plan become unnecessary because all atoms ship together.
+
+**My revised recommendation for what to do before the campaign build:**
+
+1. **Read the orchestration layer end-to-end** — one session. Output: a supplemental note in this document describing what `dag_executor.py` does, how it composes `construct_dag.py` and `langgraph_feedback.py`, and what changes would be needed to wire it into `campaign_orchestrator.py`.
+2. **Design the switchover strategy** — parallel-run the old simple DAG and the new orchestration layer during a validation window so outputs can be compared, OR do a hard cutover with a feature flag that can revert. One session. Output: a design note.
+3. **Implement the wiring** — update `campaign_orchestrator.py` to call the new orchestration layer. Probably 2-3 sessions. Output: a committable patch plus smoke tests.
+4. **Latency validation** — 28 atoms is 2x the current 14, running under the same <50ms budget. May require pushing some atoms to the reasoning path (<500ms budget). 1-2 sessions.
+5. **Campaign build** starts on top of the full architecture.
+
+**Total pre-campaign work revised up to 1-2 weeks.** Larger than the original Pass C estimate. The argument for paying it: the campaign built on top of the 28-atom DAG will perform substantially better than a campaign built on the 14-atom rump, and the difference will be visible immediately in the bilateral alignment scoring because the additional atoms contribute evidence MechanismActivation currently has no access to.
+
+**The argument against paying it up front:** if the LUXY launch timeline is tighter than 1-2 weeks, we could do Stage 1 of the original Pass C plan (6 core atoms into the simple DAG) as a bridge, launch the campaign, and do the full orchestration wiring after real traffic is flowing. That is a valid tradeoff — it is a matter of whether timeline or architectural completeness matters more for the first campaign.
+
+**This is a decision I cannot make alone.** Chris should see this finding before choosing the path. The documentation is now complete; the choice is: (a) launch on the rump with Stage 1 bridge, (b) launch on the full 28-atom orchestration layer, or (c) something in between.
+
+---
+
 ## 9. Update to the Theoretical Foundation
 
 The foundation doc currently says (quoting from memory):
