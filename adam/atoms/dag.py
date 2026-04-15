@@ -43,6 +43,16 @@ from adam.atoms.core.decision_entropy import DecisionEntropyAtom
 from adam.atoms.core.information_asymmetry import InformationAsymmetryAtom
 from adam.atoms.core.predictive_error import PredictiveErrorAtom
 from adam.atoms.core.ambiguity_attitude import AmbiguityAttitudeAtom
+# Stage 1 atom wiring (ADAM_STAGE_1_WIRING_PLAN.md items A1–A6).
+# These six atom classes were in the filesystem but imported by nothing
+# until this wiring. See ADAM_ATOM_TRIAGE_PASS_C.md for the per-atom
+# theoretical grounding and LUXY relevance.
+from adam.atoms.core.mimetic_desire_atom import MimeticDesireAtom
+from adam.atoms.core.brand_personality import BrandPersonalityAtom
+from adam.atoms.core.narrative_identity import NarrativeIdentityAtom
+from adam.atoms.core.regret_anticipation import RegretAnticipationAtom
+from adam.atoms.core.autonomy_reactance import AutonomyReactanceAtom
+from adam.atoms.core.coherence_optimization import CoherenceOptimizationAtom
 from adam.atoms.models.atom_io import (
     AtomInput,
     AtomOutput,
@@ -162,6 +172,58 @@ DEFAULT_DAG_NODES = [
         timeout_ms=500,
     ),
 
+    # Level 2.6: Stage 1 construct-level atoms (ADAM_STAGE_1_WIRING_PLAN.md).
+    # These run in parallel with the auxiliary atoms above — each depends
+    # only on atom_user_state and produces construct-level evidence that
+    # MechanismActivation fuses into mechanism scoring. All marked
+    # required=False so DAG execution is resilient if any one of them
+    # fails to initialize (the fuser handles missing upstream evidence
+    # gracefully, per the existing auxiliary-atom pattern).
+    #
+    # - MimeticDesire: model-based wanting (Girard). Load-bearing for
+    #   luxury aspiration mechanisms.
+    # - BrandPersonality: Aaker + Fournier. Feeds mechanism/copy alignment.
+    # - NarrativeIdentity: McAdams + Green-Brock. Identity-plot-device framing.
+    # - RegretAnticipation: Loomes-Sugden + Zeelenberg. Critical for
+    #   high-value decisions.
+    # - AutonomyReactance: Brehm. Backfire prevention — reactance
+    #   threshold gating.
+    AtomNode(
+        atom_id="atom_mimetic_desire",
+        atom_class="MimeticDesireAtom",
+        depends_on=["atom_user_state"],
+        required=False,
+        timeout_ms=800,
+    ),
+    AtomNode(
+        atom_id="atom_brand_personality",
+        atom_class="BrandPersonalityAtom",
+        depends_on=["atom_user_state"],
+        required=False,
+        timeout_ms=800,
+    ),
+    AtomNode(
+        atom_id="atom_narrative_identity",
+        atom_class="NarrativeIdentityAtom",
+        depends_on=["atom_user_state"],
+        required=False,
+        timeout_ms=800,
+    ),
+    AtomNode(
+        atom_id="atom_regret_anticipation",
+        atom_class="RegretAnticipationAtom",
+        depends_on=["atom_user_state"],
+        required=False,
+        timeout_ms=800,
+    ),
+    AtomNode(
+        atom_id="atom_autonomy_reactance",
+        atom_class="AutonomyReactanceAtom",
+        depends_on=["atom_user_state"],
+        required=False,
+        timeout_ms=800,
+    ),
+
     # Level 3: Mechanism Synthesis
     AtomNode(
         atom_id="atom_mechanism_activation",
@@ -177,8 +239,34 @@ DEFAULT_DAG_NODES = [
             "atom_information_asymmetry",
             "atom_predictive_error",
             "atom_ambiguity_attitude",
+            # Stage 1 construct-level atoms — optional deps. See
+            # ADAM_ATOM_TRIAGE_PASS_C.md section 5 and B2 note below.
+            "atom_mimetic_desire",
+            "atom_brand_personality",
+            "atom_narrative_identity",
+            "atom_regret_anticipation",
+            "atom_autonomy_reactance",
         ],
         required=True,
+    ),
+
+    # Level 3.5: Coherence Optimization (Stage 1 wiring).
+    # Runs after MechanismActivation, in parallel with MessageFraming.
+    # Its job is to inspect the fused mechanism recommendations and
+    # detect cross-atom conflicts (e.g., RegretAnticipation recommends
+    # urgency while AutonomyReactance warns against urgency). In this
+    # Stage 1 wiring, coherence_optimization runs ALONGSIDE MessageFraming
+    # rather than gating it — its output is advisory and will become a
+    # hard gate in Stage 2 once we verify execution behavior under load.
+    # The non-gating choice keeps MessageFraming's dependency chain
+    # intact and lets coherence_optimization fail (required=False)
+    # without breaking downstream atoms.
+    AtomNode(
+        atom_id="atom_coherence_optimization",
+        atom_class="CoherenceOptimizationAtom",
+        depends_on=["atom_mechanism_activation"],
+        required=False,
+        timeout_ms=800,
     ),
     
     # Level 4: Message Strategy
@@ -282,6 +370,15 @@ class AtomDAG:
         "InformationAsymmetryAtom": InformationAsymmetryAtom,
         "PredictiveErrorAtom": PredictiveErrorAtom,
         "AmbiguityAttitudeAtom": AmbiguityAttitudeAtom,
+        # Stage 1 construct-level atoms (ADAM_STAGE_1_WIRING_PLAN.md A1–A6).
+        # These six were orphaned until wired here. See
+        # ADAM_ATOM_TRIAGE_PASS_C.md for theoretical grounding.
+        "MimeticDesireAtom": MimeticDesireAtom,
+        "BrandPersonalityAtom": BrandPersonalityAtom,
+        "NarrativeIdentityAtom": NarrativeIdentityAtom,
+        "RegretAnticipationAtom": RegretAnticipationAtom,
+        "AutonomyReactanceAtom": AutonomyReactanceAtom,
+        "CoherenceOptimizationAtom": CoherenceOptimizationAtom,
     }
     
     def __init__(

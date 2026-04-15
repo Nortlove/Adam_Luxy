@@ -59,6 +59,21 @@ class AtomType(str, Enum):
     PREDICTIVE_ERROR = "predictive_error"
     AMBIGUITY_ATTITUDE = "ambiguity_attitude"
 
+    # Stage 1 construct-level atoms (ADAM_STAGE_1_WIRING_PLAN.md A1–A6).
+    # These enum values were referenced by the orphaned atom classes in
+    # adam/atoms/core/*.py but the AtomType enum didn't define them, so
+    # importing any of those atom classes raised AttributeError. Adding
+    # the 5 missing values here. BRAND_PERSONALITY is also added as a
+    # first-class value so brand_personality.py no longer needs to
+    # use CUSTOM as a workaround (see the TODO comment at
+    # brand_personality.py:145).
+    MIMETIC_DESIRE = "mimetic_desire"
+    BRAND_PERSONALITY = "brand_personality"
+    NARRATIVE_IDENTITY = "narrative_identity"
+    REGRET_ANTICIPATION = "regret_anticipation"
+    AUTONOMY_REACTANCE = "autonomy_reactance"
+    COHERENCE_OPTIMIZATION = "coherence_optimization"
+
     # Channel intelligence
     CHANNEL_SELECTION = "channel_selection"
     
