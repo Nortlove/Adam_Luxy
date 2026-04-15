@@ -163,12 +163,60 @@ class RecalibrationTask(DailyStrengtheningTask):
         if calibration_result.deployed:
             logger.info(
                 "RecalibrationTask: new weights deployed. AUC %.4f → %.4f "
-                "(Δ %+.4f), %d sign flips. Output in data/calibration_history.json.",
+                "(Δ %+.4f), %d sign flips. Propagating to Neo4j...",
                 calibration_result.current_auc,
                 calibration_result.new_auc,
                 calibration_result.auc_improvement,
                 calibration_result.sign_flips,
             )
+
+            # STAGE 2 OF B4: propagate the new weights to Neo4j by
+            # recomputing composite_alignment on every BRAND_CONVERTED
+            # edge. Without this step the recalibrated weights live only
+            # in data/calibration_history.json and self.current_weights
+            # without ever affecting a bid, because bid-time cascade
+            # reads composite_alignment as a stored property, not a
+            # recomputed value. The pipeline's apply_weights_to_neo4j()
+            # method runs a batched Cypher UPDATE using CALL IN
+            # TRANSACTIONS to avoid lock amplification.
+            try:
+                from adam.core.dependencies import get_infrastructure
+                infra = await get_infrastructure()
+                driver = getattr(infra, "neo4j_driver", None) or getattr(infra, "neo4j", None)
+                if driver is None:
+                    logger.warning(
+                        "RecalibrationTask: no Neo4j driver, cannot propagate "
+                        "new weights. Weights deployed to history file only."
+                    )
+                    result.details["neo4j_propagation"] = "skipped_no_driver"
+                else:
+                    propagation = await pipeline.apply_weights_to_neo4j(driver)
+                    result.details["neo4j_propagation"] = propagation
+                    if "error" in propagation:
+                        logger.error(
+                            "RecalibrationTask: Neo4j weight propagation "
+                            "failed: %s. Weights are in history file but "
+                            "will NOT affect bid-time scoring until next "
+                            "successful propagation.",
+                            propagation["error"],
+                        )
+                        result.errors += 1
+                    else:
+                        logger.info(
+                            "RecalibrationTask: propagated new weights to "
+                            "%d edges (composite_alignment recomputed)",
+                            propagation.get("edges_updated", 0),
+                        )
+                        result.items_stored += propagation.get("edges_updated", 0)
+            except Exception as exc:
+                logger.exception(
+                    "RecalibrationTask: Neo4j propagation raised"
+                )
+                result.details["neo4j_propagation"] = {
+                    "error": str(exc),
+                    "stage": "driver_or_call",
+                }
+                result.errors += 1
         else:
             logger.info(
                 "RecalibrationTask: no deployment (%s). AUC %.4f → %.4f.",

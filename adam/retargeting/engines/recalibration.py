@@ -301,6 +301,114 @@ class RecalibrationPipeline:
         """Get current calibrated weights for a category."""
         return dict(self.current_weights)
 
+    async def apply_weights_to_neo4j(
+        self,
+        neo4j_driver: Any,
+        batch_size: int = 10_000,
+    ) -> Dict[str, Any]:
+        """Propagate current weights to Neo4j by recomputing
+        `composite_alignment` on every BRAND_CONVERTED edge.
+
+        This is the missing link that makes recalibration actually take
+        effect in live scoring. The bid-time cascade reads
+        `composite_alignment` as a stored property on the BRAND_CONVERTED
+        edge — it does NOT recompute composite at bid time. Without this
+        propagation step, new weights live only in the pipeline's own
+        `self.current_weights` and `data/calibration_history.json`
+        without ever affecting a bid.
+
+        How it works:
+
+        1. Constructs a Cypher SET expression from the current weights,
+           inlining each weight as a numeric literal. This is safe
+           because weights come from scikit-learn logistic regression,
+           not from user input — no Cypher injection risk.
+        2. Runs the UPDATE in batches of `batch_size` edges at a time
+           using `CALL { ... } IN TRANSACTIONS` to avoid lock
+           amplification on 6.75M+ edges.
+        3. Returns a dict with `edges_updated` count and the Cypher
+           expression used (for audit/verification).
+
+        Called by `task_18_recalibration.py` immediately after a
+        successful `recalibrate()` run that produced `deployed=True`.
+        Not called when deployment was skipped (no improvement) — the
+        old weights are already correct on the edges.
+
+        Args:
+            neo4j_driver: Async Neo4j driver (neo4j.AsyncDriver).
+            batch_size: Edges per CALL IN TRANSACTIONS batch. 10k is a
+                safe default for edge counts in the millions.
+
+        Returns:
+            Dict with:
+              - edges_updated: int count of edges whose
+                composite_alignment property was rewritten
+              - set_expression: str Cypher expression used (for audit)
+              - error: str (only if the update failed)
+        """
+        if not self.current_weights:
+            return {
+                "edges_updated": 0,
+                "error": "no_weights_to_apply",
+            }
+
+        # Build the weighted sum expression. Each dimension contributes
+        # `coalesce(e.dim, 0.5) * weight`. The `coalesce` handles edges
+        # that are missing specific dimensions (treat as neutral 0.5).
+        dim_terms: List[str] = []
+        for dim, weight in self.current_weights.items():
+            # Format weights with enough precision to avoid rounding
+            # artifacts but not so much that the expression becomes
+            # unreadable in logs.
+            dim_terms.append(f"coalesce(e.`{dim}`, 0.5) * {weight:.6f}")
+        set_expression = " + ".join(dim_terms)
+
+        # Use CALL IN TRANSACTIONS for batched updates. This avoids
+        # holding a single giant transaction lock across 6.75M edges.
+        query = f"""
+        MATCH ()-[e:BRAND_CONVERTED]->()
+        CALL {{
+            WITH e
+            SET e.composite_alignment = {set_expression},
+                e.composite_weight_version = $weight_version,
+                e.composite_weight_deployed_at = $deployed_at
+        }} IN TRANSACTIONS OF {int(batch_size)} ROWS
+        RETURN count(e) AS edges_updated
+        """
+
+        params = {
+            "weight_version": self.history.last_calibration or "unknown",
+            "deployed_at": datetime.now(timezone.utc).isoformat(),
+        }
+
+        try:
+            async with neo4j_driver.session() as session:
+                result_cursor = await session.run(query, **params)
+                record = await result_cursor.single()
+                edges_updated = int(record["edges_updated"]) if record else 0
+        except Exception as exc:
+            logger.error(
+                "RecalibrationPipeline.apply_weights_to_neo4j failed: %s",
+                exc,
+            )
+            return {
+                "edges_updated": 0,
+                "error": str(exc),
+                "set_expression": set_expression,
+            }
+
+        logger.info(
+            "RecalibrationPipeline applied new weights to %d BRAND_CONVERTED "
+            "edges (version=%s)",
+            edges_updated,
+            params["weight_version"],
+        )
+        return {
+            "edges_updated": edges_updated,
+            "set_expression": set_expression,
+            "weight_version": params["weight_version"],
+        }
+
     def get_history_summary(self) -> Dict[str, Any]:
         """Summary for monitoring dashboard."""
         return {
