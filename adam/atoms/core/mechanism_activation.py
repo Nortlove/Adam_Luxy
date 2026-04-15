@@ -1126,11 +1126,35 @@ class MechanismActivationAtom(BaseAtom):
         # so only atoms that actually executed contribute.
         # =====================================================================
         _AUXILIARY_ATOMS = [
+            # Enhancement #35 auxiliary atoms — original 5
             "atom_cognitive_load",
             "atom_decision_entropy",
             "atom_information_asymmetry",
             "atom_predictive_error",
             "atom_ambiguity_attitude",
+            # Stage 1 construct-level atoms (A1-A5 from
+            # ADAM_STAGE_1_WIRING_PLAN.md). Wired into the DAG in
+            # commit 7503e84. Each produces
+            # secondary_assessments["mechanism_adjustments"] in the
+            # same shape as the Enhancement #35 auxiliary atoms, so
+            # adding them to this list is sufficient to route their
+            # evidence through the confidence-weighted fusion below.
+            # Verified in the post-Stage-1 investigation pass:
+            # mimetic_desire_atom.py:279-288 shows the exact output
+            # shape. See ADAM_STAGE_1_WIRING_PLAN.md item A1-A6 Stage 2.
+            "atom_mimetic_desire",
+            "atom_brand_personality",
+            "atom_narrative_identity",
+            "atom_regret_anticipation",
+            "atom_autonomy_reactance",
+            # Note: atom_coherence_optimization is NOT in this list.
+            # Coherence runs AFTER mechanism_activation (Level 3 in
+            # dag.py) — it cannot be an upstream provider for this
+            # fusion step because it depends on this step's output.
+            # Coherence's consumption path is a separate wiring that
+            # inspects the mechanism_activation output and adjusts it
+            # post-hoc (a Stage 2 task tracked in the A1-A6 commit
+            # message at 7503e84).
         ]
         auxiliary_applied = []
         for aux_id in _AUXILIARY_ATOMS:
