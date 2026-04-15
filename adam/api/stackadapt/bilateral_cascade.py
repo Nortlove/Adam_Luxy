@@ -1164,6 +1164,155 @@ def apply_context_modulation(
             if page_profile and page_profile.confidence > cfg.page_confidence_floor:
                 pp = page_profile  # shorthand
 
+                # ── BARGH-CORRECT PAGE-SHIFT (Pass B finding — B2 Stage 1) ──
+                # `compute_page_edge_shift()` implements the architectural
+                # fix the foundation doc demands: the page does not just
+                # modulate mechanism scores after the fact, it SHIFTS the
+                # buyer's position in 20-dim edge space BEFORE mechanism
+                # scoring happens. See ADAM_PAGE_INTELLIGENCE_REVIEW.md
+                # (Pass B) and adam/intelligence/page_edge_bridge.py.
+                #
+                # This commit wires the shift function into the live
+                # decision path at observability-first level: the shift
+                # vector is computed, recorded in the reasoning trace,
+                # and stashed on result.context_intelligence for
+                # inspection. It does NOT yet rewrite `mechanism_scores`
+                # using the shifted buyer position — that is Stage 2 and
+                # requires modifying `level3_bilateral_edges` to thread
+                # the shifted edge_dimensions through its scoring
+                # internals. Stage 1 unstrands the function so drift from
+                # the theoretically-correct architecture is observable in
+                # every decision, without changing current scoring
+                # behavior.
+                try:
+                    from adam.intelligence.page_edge_bridge import (
+                        compute_page_edge_shift,
+                    )
+                    # Build a best-effort 7-dim NDF dict from available
+                    # PagePsychologicalProfile fields. Fields not
+                    # available default to neutral (0.5). Where a field
+                    # is clearly absent (status_sensitivity), leaving it
+                    # neutral means compute_page_edge_shift produces zero
+                    # contribution along that axis — a safe default.
+                    #
+                    # The mapping below is pragmatic, not canonical.
+                    # When level3_bilateral_edges is modified in Stage 2
+                    # to consume the shift, the PagePsychologicalProfile
+                    # schema should be extended to expose the 7 NDF
+                    # dimensions directly (one first-class field each)
+                    # instead of being reconstructed here.
+                    _ndf_approach_avoidance = (
+                        -1.0 * float(getattr(pp, "emotional_valence", 0.0))
+                    )  # negative valence → avoidance
+                    _ndf_temporal_horizon = 0.5  # not directly available
+                    _ndf_social_calibration = min(
+                        1.0, max(0.0, float(getattr(pp, "need_urgency", 0.5)))
+                    )
+                    _ndf_uncertainty_tolerance = max(
+                        0.0, 1.0 - float(getattr(pp, "cognitive_load", 0.5))
+                    )  # high load → low tolerance
+                    _processing_mode = getattr(pp, "processing_mode", "") or ""
+                    _ndf_cognitive_engagement = (
+                        0.8 if _processing_mode == "analytical"
+                        else 0.3 if _processing_mode == "scanning"
+                        else 0.6 if _processing_mode == "immersive"
+                        else 0.5
+                    )
+                    _ndf_arousal_seeking = float(
+                        getattr(pp, "emotional_arousal", 0.5)
+                    )
+                    _ndf_status_sensitivity = 0.5  # not directly available
+
+                    _page_ndf = {
+                        "approach_avoidance": _ndf_approach_avoidance,
+                        "temporal_horizon": _ndf_temporal_horizon,
+                        "social_calibration": _ndf_social_calibration,
+                        "uncertainty_tolerance": _ndf_uncertainty_tolerance,
+                        "cognitive_engagement": _ndf_cognitive_engagement,
+                        "arousal_seeking": _ndf_arousal_seeking,
+                        "status_sensitivity": _ndf_status_sensitivity,
+                    }
+
+                    # Extended profile fields — these ARE directly
+                    # available on PagePsychologicalProfile and map
+                    # cleanly to compute_page_edge_shift's expected
+                    # extended signals.
+                    _psf_problem_frame = getattr(pp, "problem_solution_frame", "") or ""
+                    _extended_fields = {
+                        "prospect_frame": (
+                            -0.5 if _psf_problem_frame in ("problem_only", "crisis")
+                            else 0.5 if _psf_problem_frame in ("aspirational", "solution_only")
+                            else 0.0
+                        ),
+                        "publisher_authority": float(
+                            getattr(pp, "publisher_authority", 0.5)
+                        ),
+                        "remaining_bandwidth": float(
+                            getattr(pp, "remaining_bandwidth", 0.5)
+                        ),
+                        # content_freshness: "breaking" if last_crawled
+                        # is very recent AND crawl_count is low
+                        "content_freshness": (
+                            "breaking"
+                            if (
+                                float(getattr(pp, "last_crawled", 0.0)) > (time.time() - 3600)
+                                and int(getattr(pp, "crawl_count", 0)) <= 1
+                            )
+                            else "normal"
+                        ),
+                        # immersion_depth: high for video/immersive content
+                        "immersion_depth": (
+                            0.8 if _processing_mode == "immersive"
+                            else float(getattr(pp, "attention_competition", 0.0)) * 0.6
+                        ),
+                    }
+
+                    _shift_vector = compute_page_edge_shift(
+                        page_ndf=_page_ndf,
+                        page_profile_fields=_extended_fields,
+                    )
+
+                    # Stash the shift on result.context_intelligence for
+                    # inspection by tests, metrics, and (eventually) the
+                    # Stage 2 consumer in level3_bilateral_edges.
+                    if not result.context_intelligence:
+                        result.context_intelligence = {}
+                    # Only report the dimensions with non-trivial shift
+                    # magnitude to keep the reasoning trace compact.
+                    _significant_shifts = {
+                        dim: round(val, 3)
+                        for dim, val in _shift_vector.items()
+                        if abs(val) >= 0.02
+                    }
+                    result.context_intelligence["page_edge_shift"] = {
+                        "shift_vector": _shift_vector,
+                        "significant_shifts": _significant_shifts,
+                        "stage": "observability_only_stage_1",
+                        "consumed_by_scoring": False,
+                        "source": "page_edge_bridge.compute_page_edge_shift",
+                    }
+                    if _significant_shifts:
+                        # Top 3 by absolute magnitude for readability
+                        _top3 = sorted(
+                            _significant_shifts.items(),
+                            key=lambda kv: abs(kv[1]),
+                            reverse=True,
+                        )[:3]
+                        _top3_str = ", ".join(
+                            f"{dim} {val:+.2f}" for dim, val in _top3
+                        )
+                        result.reasoning.append(
+                            f"PageEdgeShift (Bargh): top 3 repositioning — {_top3_str}"
+                        )
+                except Exception as _shift_exc:
+                    # Shift computation is non-critical. Failures are
+                    # observed only in debug logs; the existing post-hoc
+                    # modulation below continues to run either way.
+                    logger.debug(
+                        "Page edge shift computation failed (non-critical): %s",
+                        _shift_exc,
+                    )
+
                 # ── EMPIRICAL: Page-conditioned graph query ──
                 # Ask the graph: "among 47M bilateral edges, which conversions
                 # happened when the buyer was in a state similar to what THIS
