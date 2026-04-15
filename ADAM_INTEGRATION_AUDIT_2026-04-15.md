@@ -289,6 +289,85 @@ Given that we want to build the campaign and also want to fix the issues this au
 
 Estimated total time for Passes 1-4: roughly one week of focused sessions. The campaign build (Pass 5) then proceeds with an honest picture of what exists and what needs to be new.
 
+## 11a. Corrections Applied 2026-04-15 (Post-Pass-A Verification)
+
+**This section was added after attempting Pass A and discovering that the audit script's orphan classification was wrong in two structural ways and that several "safe deletion" candidates were actually substantive stranded work, not dead code.**
+
+### Bug 1 — Audit script missed relative imports
+
+The reachability script used a regex that matched only absolute `from adam.X import` and `import adam.X` patterns. Files that import their siblings via relative paths (`from .sibling import X`, `from ..parent.sibling import X`) were not counted. This means the orphan classification systematically overcounts whenever the importer is in the same directory as the imported file.
+
+**False positives detected via live grep** (files marked as orphans in the audit that are actually imported by live files):
+
+| File | Audit said | Actual refs (live grep) | Importer(s) |
+|---|---|---|---|
+| `empirical_psychology_framework.py` | orphan | 3 | `customer_ad_alignment.py`, `expanded_type_integration.py`, `construct_resolver.py` (comment ref) |
+| `expanded_type_integration.py` | orphan | 3 | `historical_data_reprocessor.py`, `langgraph_alignment_integration.py`, `customer_ad_alignment.py` |
+| `langgraph_alignment_integration.py` | orphan | 1 | `cognitive_learning_system.py` |
+| `relationship/graph_builder.py` | orphan | 1 | at least one |
+| `relationship/models.py` | orphan | 4 | |
+| `relationship/patterns.py` | orphan | 2 | |
+
+**Implication:** the audit's headline "224 truly orphaned" number is overcounted. The true orphan count is smaller, though still substantial. A corrected audit pass should update the reachability script to handle relative imports correctly, or use an AST-based Python import analyzer instead of regex.
+
+### Bug 2 — `adam.coldstart.unified_learning` is LIVE, not orphaned
+
+This is more serious than the relative-imports bug because it is an absolute import that the audit script should have caught. Live grep shows **12 references**, including:
+
+- `adam/core/dependencies.py:224` — **the DI container**, which initializes cold-start learning for every request
+- `adam/learning/__init__.py:15, 22`
+- `adam/api/learning_endpoints.py:207`
+- `adam/testing/integration_test_runner.py:43`
+
+Plus duplicates in a `tender-tu/` subtree (which may be a worktree or a stale clone — investigate separately).
+
+**This is the most important finding of the post-audit verification**, not because of the script bug but because of what the refs themselves reveal: **the legacy `adam/coldstart/` directory is still live in the DI container.** The Feb 2026 migration that moved cold-start to `adam/cold_start/` did not actually finish. There are now two cold-start implementations both live in production, with a fork in the initialization chain — `adam/cold_start/*` for new code and `adam/coldstart/unified_learning` still pulled by `dependencies.py`.
+
+**Consequences:**
+
+1. The architectural claim that "cold-start lives at `adam/cold_start/`" is false in production; the production path actually uses both.
+2. Any work on cold-start priors, archetype detection, or the Thompson warm-start pathway needs to know which of the two implementations is being invoked in the live request path. Without that knowledge, changes risk being made to the unused version.
+3. The `complete_coldstart_priors.json` file (2.9GB, in `adam/coldstart/`) is probably still loaded by `adam/coldstart/unified_learning.py`, which means the legacy directory has operational state beyond just code — deleting it would break loading. This is a migration that needs to be finished properly, not a directory that can be tombstoned.
+
+**Action required:** a dedicated pass on the cold-start migration. Read `adam/coldstart/unified_learning.py`, compare to `adam/cold_start/unified_learning.py` (if that exists) and `adam/cold_start/service.py`, decide whether the new or the old is the version we want to keep, redirect the DI container accordingly, and only then delete the loser. This is Tier 2 work (architectural consolidation), not Tier 0.
+
+### Finding — "Orphaned" does not mean "deletable"
+
+The most important conceptual correction to the original audit. While attempting Pass A's Tier 0 safe deletions, I read the module docstrings of the five candidates and found that each was **substantive work that was written and never wired in**, not dead code:
+
+| File | Lines | What it actually is |
+|---|---|---|
+| `daily/task_16_page_gradients.py` | 70 | Computes `∂P(conversion)/∂(page_dimension)` for mechanism-barrier cells with ≥50 observations, feeds PlacementOptimizer. **This is the page gradient field work the strategic memory cites as platform architecture.** Built, never scheduled. |
+| `daily/task_17_copy_evolution.py` | 124 | Directed evolution of copy: bottom-20% variants get regenerated using `CopyEffectivenessLearner`'s empirically-learned parameters. **This is a live-learning copy optimization feature.** Built, never scheduled. |
+| `claude_summarizer.py` | 399 | Extracts dominant buyer archetype, purchase motivations, emotional language, Big Five, resonance phrases, objection handling from reviews via Claude. **Substantive review intelligence.** |
+| `corpus_builder.py` | 531 | Self-described as *"the MASTER ORCHESTRATOR that scrapes products, performs deep product analysis, performs deep review analysis, synthesizes purchase journeys, stores everything in Neo4j, updates Thompson Sampling, tracks coverage. The goal is to build a massive corpus of purchase journey evidence that teaches ADAM what actually drives consumer behavior."* |
+| `unified_review_aggregator.py` | 689 | Hierarchical cross-source review aggregation from Amazon, Yelp, Google Maps, Walmart, Target, Best Buy, targeting 200-500+ reviews per product. |
+
+**None of these are dead. All of them are stranded work.** The 224 "orphaned" modules in the codebase are probably not dead code that should be deleted. They are probably a graveyard of substantive work written in various sessions and never integrated. The audit's orphan classification is a *symptom* of the drift pattern, and deleting the symptoms loses the work.
+
+**New taxonomy for what "orphaned" can mean:**
+
+- **Dead** — stale, superseded, should be deleted. Confirmed by reading and finding the functionality exists elsewhere.
+- **Stranded** — substantive work, not superseded, not wired in. Should be integrated into the live system, or at minimum explicitly tombstoned with a decision about whether to resurrect it later.
+- **Tool** — CLI scripts or data-migration helpers that are invoked directly (not via imports), invisible to the import graph. Should be kept but documented as tools.
+- **Legacy-compatibility** — wrappers or shims that exist for backwards compatibility with older call sites. May be safe to delete if all old call sites are gone.
+
+The audit treated all four categories as "orphan." The taxonomy above should be used for classification going forward. Pass A should not delete a file without first confirming which category it belongs to.
+
+### Revised Pass A Scope
+
+Pass A as originally scoped ("safe deletions") is not actually safe and should not be executed. The revised Pass A is:
+
+1. **Update the audit script** to handle relative imports via AST-based analysis (not grep-based).
+2. **Re-run the corrected script** against the full codebase and regenerate the orphan list.
+3. **For each orphan that remains after the corrected run**, read its module docstring and classify as dead / stranded / tool / legacy-compatibility.
+4. **Delete only confirmed dead** entries. Stranded entries go on a "resurrect-or-retire" list for Chris to decide about. Tools get documented. Legacy-compatibility shims get deleted only if all callers are confirmed gone.
+5. **The `coldstart → DI container` finding** gets its own dedicated pass, handled as Tier 2 architectural consolidation, not as a Tier 0 deletion.
+
+Until these corrections are applied, no files should be deleted purely based on the original audit's orphan classification. This is the correct discipline under the two-pass workflow: when the tactical plan turns out to rest on a flawed premise from the expansive pass, stop and fix the premise.
+
+---
+
 ## 12. What I Did Not Do in This Pass
 
 - Read individual module contents for more than a handful of files. The audit is based on the import graph, not on understanding what each module actually does.
