@@ -289,6 +289,94 @@ Given that we want to build the campaign and also want to fix the issues this au
 
 Estimated total time for Passes 1-4: roughly one week of focused sessions. The campaign build (Pass 5) then proceeds with an honest picture of what exists and what needs to be new.
 
+## 11b. Pass X — AST-Based Re-Audit (2026-04-15, corrected tool)
+
+**After the Post-Pass-A Verification in Section 11a, I rewrote the reachability analyzer using Python's `ast` module instead of regex, so relative imports are correctly resolved. The corrected tool lives at `scripts/audit_reachability.py` and was re-run with `--with-tests`. This section reports the corrected numbers and the three most significant findings from the re-run.**
+
+### Corrected headline numbers
+
+| Metric | Original (regex) | Corrected (AST) | Delta |
+|---|---|---|---|
+| Total `.py` files in `adam/` | 857 | 857 | — |
+| Reached by at least one other file | 587 (68.5%) | 651 (76.0%) | **+64** |
+| Orphaned (after scripts/tests rescue) | 224 (26.1%) | 161 (18.8%) | **−63** |
+| Orphaned before scripts/tests rescue | 270 (31.5%) | 206 (24.0%) | **−64** |
+| Modules rescued only by tests/scripts | 46 | 45 | — |
+
+**The orphan count is smaller than the original audit reported**, but it is still substantial. One in five files in `adam/` is not imported by anything else in `adam/`. This is not normal; it is still strong evidence of the 15-parallel-solutions drift pattern. The headline story of the original audit holds; the specific numbers are corrected.
+
+### Top orphan areas — corrected
+
+| Area | Original orphans | Corrected orphans | Delta |
+|---|---|---|---|
+| `adam.intelligence` | 36 | **25** | −11 (relative imports rescued) |
+| `adam.retargeting` | 21 | **21** | 0 — real gap, Enhancement #33/#36 unwired |
+| `adam.atoms` | 20 | **20** | 0 — real gap, 16 atom core files unwired |
+| `adam.corpus` | 15 | 15 | 0 |
+| `adam.platform` | 11 | 12 | +1 |
+| `adam.api` | 10 | 10 | 0 |
+| `adam.integrations` | 8 | 8 | 0 |
+| `adam.demo` | 7 | 7 | 0 |
+
+**The `adam.intelligence` correction is the biggest delta** — 11 modules rescued from the orphan list because they were imported via relative paths the old script missed. `empirical_psychology_framework`, `expanded_type_integration`, `langgraph_alignment_integration`, and the `relationship/` subtree are all correctly classified as live by the corrected tool.
+
+**The `adam.atoms` and `adam.retargeting` findings are unchanged.** The atom gap and the Enhancement #33/#36 gap are not artifacts of the audit script's bug — they are real. 16 atom files and 21 retargeting files are genuinely not imported by anything, and this holds up after the AST-based re-run.
+
+### Finding — The Feb 2026 cold-start migration was run in the wrong direction
+
+This is new and more significant than the Section 11a finding about the DI container pointing at the legacy directory. The AST-based audit shows the full pattern:
+
+| Module | Status | Importers |
+|---|---|---|
+| `adam/coldstart/unified_learning.py` (legacy) | **LIVE** | 5 importers including `adam/core/dependencies.py` (DI container), `adam/api/learning_endpoints.py`, `adam/learning/__init__.py`, `adam/testing/integration_test_runner.py`, `scripts/adam_learning_pipeline.py` |
+| `adam/cold_start/unified_learning.py` (canonical) | **ORPHAN** | 0 importers |
+
+**Both files exist on disk.** The Feb 2026 migration was claimed to have moved cold-start from the legacy location to the new location, and strategic memory has consistently treated `adam/cold_start/` as the canonical implementation. The reachability data says the opposite — the code was copied into the new directory but no callers were ever updated to point at it. The legacy directory is what is actually running in production; the new directory contains stranded code.
+
+This is worse than "the migration did not finish." It is "the migration was never performed at the import-redirection level." A refactor that claims to consolidate an implementation is only valid if call sites are updated. Copying code into a new location without updating callers produces a *second* implementation, not a migration.
+
+**What to do about it:** a dedicated cold-start consolidation pass. Read both `adam/coldstart/unified_learning.py` and `adam/cold_start/unified_learning.py`, diff them to see whether they are identical or whether one has diverged from the other, decide which is canonical (probably the live legacy one unless the new one has genuine improvements), redirect the five call sites to the chosen version, verify the 2.9GB `complete_coldstart_priors.json` is loaded by the correct path, and only then delete the loser. This is Tier 2 architectural consolidation work — probably one focused session, possibly two.
+
+### Finding — 45 modules are "rescued only by scripts/tests"
+
+These are modules that have no importers in `adam/` itself but are imported from `scripts/`, `tests/`, or `bin/`. Three interpretations:
+
+1. **Genuine CLI tools** — `stackadapt.taxonomy_generator`, `data.amazon.enhanced_ingestion`, `data.amazon.pipeline`, `demo.partner_api`, etc. Invoked directly as scripts, not via the request path. Keep and document as tools.
+
+2. **Package __init__ artifacts** — `adam.api.decision`, `adam.cold_start`, `adam.meta_learner`, `adam.integration`, etc. The package's `__init__.py` has no adam/ importers because adam/ code always imports specific submodules directly (e.g., `from adam.meta_learner.service import Y` not `from adam.meta_learner import X`). The package itself appears orphan but its submodules are live. This is noise, not a real finding.
+
+3. **Stranded work that only tests call** — e.g., `adam.intelligence.annotation_engine`, `adam.intelligence.counterfactual_learner`, `adam.intelligence.causal_structure_learner`. These are substantive modules imported only by test files. The tests may be verifying functionality that no production path actually uses. This is the same "stranded work" pattern as Section 11a — real functionality written in some session and never integrated.
+
+**Estimated breakdown of the 161 truly-unreachable orphans** (the 206 minus the 45 rescued by tests/scripts):
+
+- ~40-50 are package `__init__.py` files that are orphan only because submodules are imported directly (noise)
+- ~16 are genuinely unwired atom core files (real gap)
+- ~21 are genuinely unwired retargeting engines and workflows (real gap)
+- ~15 are CLI-pattern files (`__main__`, shebang, large) that should be classified as tools after reading their docstrings
+- ~60-70 are stranded-work library modules that are probably valuable but unused
+
+**None of these should be blanket-deleted.** Each cluster needs its own triage strategy.
+
+### What Pass X produced
+
+1. A corrected reachability analyzer at `scripts/audit_reachability.py` that handles absolute imports, relative imports (`from .X`, `from ..Y.Z`), and bare `import adam.X` statements correctly via Python AST.
+2. The corrected numbers above, which invalidate parts of the original audit's orphan classification but confirm the overall pattern.
+3. The new cold-start finding, which supersedes the one in Section 11a — the migration was inverted, not unfinished.
+4. The rescued-by-tests/scripts categorization, which distinguishes tools from stranded work from package-init noise.
+
+### Revised Pass A scope — again
+
+Pass A cannot be "delete orphan files" because the orphan list is a mix of package-init noise, CLI tools, stranded work, and real dead code. The revised Pass A is:
+
+1. **For each of the 161 truly-unreachable orphans**, classify as: package-init-noise / CLI-tool / stranded-work / dead-code. This is a reading pass, not a deletion pass.
+2. **Delete only confirmed dead-code** entries, and only after the classification is done.
+3. **For stranded-work entries**, produce a resurrect-or-retire list for human decision.
+4. **Handle the cold-start migration as its own dedicated Tier 2 pass** — do not treat it as a Tier 0 deletion.
+
+Estimated time for the revised Pass A: probably 2-3 focused sessions given the volume. The classification is shallow (read the module docstring + a few lines to decide the bucket) but must be done for every orphan to avoid the same premise-error that happened in this session.
+
+---
+
 ## 11a. Corrections Applied 2026-04-15 (Post-Pass-A Verification)
 
 **This section was added after attempting Pass A and discovering that the audit script's orphan classification was wrong in two structural ways and that several "safe deletion" candidates were actually substantive stranded work, not dead code.**
