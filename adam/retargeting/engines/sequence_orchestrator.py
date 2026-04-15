@@ -57,6 +57,7 @@ from adam.retargeting.engines.suppression_controller import SuppressionControlle
 from adam.retargeting.engines.touch_builder import TouchBuilder
 from adam.retargeting.engines.narrative_arc import NarrativeArcBuilder
 from adam.retargeting.engines.prior_manager import HierarchicalPriorManager
+from adam.retargeting.engines.learning_loop import RetargetingLearningLoop
 from adam.retargeting.engines.options_framework import OptionsController
 
 logger = logging.getLogger(__name__)
@@ -85,6 +86,7 @@ class TherapeuticSequenceOrchestrator:
         neo4j_driver=None,
         redis_client=None,
         user_posterior_manager=None,
+        event_bus=None,
     ):
         self._prior_manager = prior_manager or HierarchicalPriorManager()
         self._mechanism_selector = BayesianMechanismSelector(self._prior_manager)
@@ -94,6 +96,21 @@ class TherapeuticSequenceOrchestrator:
         self._rupture_detector = RuptureDetector()
         self._suppression = SuppressionController()
         self._narrative = NarrativeArcBuilder()
+        self._event_bus = event_bus
+
+        # Enhancement #33 learning loop wrapper — wraps prior_manager with
+        # MechanismEffectivenessSignal generation, event publishing, and
+        # archetype reclassification detection. Previously orphaned and
+        # bypassed; now invoked from process_outcome_and_get_next.
+        # We pass user_posterior_manager=None because THIS orchestrator
+        # owns the per-user update (it needs the UserProfile result for
+        # page-cluster switch signaling). The design_effect_weight is
+        # passed into process_touch_outcome as an override instead.
+        self._learning_loop = RetargetingLearningLoop(
+            prior_manager=self._prior_manager,
+            event_bus=event_bus,
+            user_posterior_manager=None,
+        )
 
         # Placement optimizer for page mindstate prescription
         try:
@@ -333,14 +350,39 @@ class TherapeuticSequenceOrchestrator:
                     page_switch_signal = "switch_cluster"
 
             if last_touch:
-                self._prior_manager.update_all_levels(
-                    mechanism=last_touch.mechanism.value,
-                    barrier=last_touch.target_barrier.value,
-                    archetype=sequence.archetype_id,
-                    reward=reward,
+                # Route through the Enhancement #33 learning_loop wrapper.
+                # This is structurally the same as calling
+                # prior_manager.update_all_levels() directly (which is
+                # what the code used to do here), but the wrapper also:
+                # (1) generates a MechanismEffectivenessSignal for the
+                #     Gradient Bridge
+                # (2) publishes a retargeting.outcome.observed event if an
+                #     event bus is configured
+                # (3) runs the archetype reclassification check
+                #
+                # The user_posterior update happened earlier in this
+                # method (lines above) because the orchestrator needs the
+                # UserProfile result for page-cluster switch signaling,
+                # so we pass design_effect_weight as an override and the
+                # learning_loop skips its internal per-user update.
+                loop_results = await self._learning_loop.process_touch_outcome(
+                    sequence=sequence,
+                    touch=last_touch,
+                    outcome=outcome,
                     context={**ctx_with_seq, "user_id": sequence.user_id},
-                    design_effect_weight=design_effect_weight,
+                    design_effect_weight_override=design_effect_weight,
                 )
+                # The wrapper internally: calls prior_manager.update_all_levels
+                # (same as before), generates a MechanismEffectivenessSignal,
+                # publishes retargeting.outcome.observed if an event bus is
+                # configured, and runs the archetype reclassification check.
+                # The signal is logged via the wrapper's internal path; if a
+                # downstream consumer needs to read it off the sequence, add
+                # a first-class field to TherapeuticSequence in a later pass
+                # — Pydantic BaseModel does not allow arbitrary attribute
+                # assignment so stashing it on `sequence` requires a schema
+                # change which is out of Stage 1 scope.
+                _ = loop_results  # intentional: wrapper side effects are the value
 
             # --- 3. Check conversion ---
             if outcome.converted:

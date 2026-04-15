@@ -69,6 +69,7 @@ class RetargetingLearningLoop:
         outcome: BarrierResolutionOutcome,
         context: Optional[Dict[str, str]] = None,
         processing_depth_weight: float = 1.0,
+        design_effect_weight_override: Optional[float] = None,
     ) -> Dict[str, Any]:
         """Process a single touch outcome through the full learning pipeline.
 
@@ -79,6 +80,15 @@ class RetargetingLearningLoop:
             processing_depth_weight: Enhancement #34 processing depth weight
                 (0.05-1.0). Scales all posterior updates so unprocessed
                 impressions produce minimal learning signal.
+            design_effect_weight_override: Optional design-effect weight
+                precomputed by the caller (e.g., when sequence_orchestrator
+                has already updated user posteriors and computed the weight
+                itself). When provided, the internal user_posterior_manager
+                step is skipped because the caller has already done it.
+                When None, the internal update runs if a user_posterior_manager
+                is configured. This lets callers choose between "learning_loop
+                owns user posteriors" and "caller owns user posteriors,
+                learning_loop just needs the design-effect discount."
 
         Returns:
             Dict with learning results: levels_updated, signals_generated, etc.
@@ -97,8 +107,19 @@ class RetargetingLearningLoop:
         # 2. Enhancement #36: Update per-user posteriors (within-subject)
         # This must happen BEFORE population update so we can get the
         # design-effect weight for population-level discounting.
-        design_effect_weight = None
-        if self._user_posterior_manager is not None:
+        #
+        # Caller override: if `design_effect_weight_override` is provided,
+        # the caller has already done the per-user update and computed the
+        # weight. Skip the internal update and use the override. This is
+        # how sequence_orchestrator wires in — it owns the user posterior
+        # update so it can access the full UserProfile object for page-
+        # cluster switch signaling, then passes just the design-effect
+        # discount into the learning loop.
+        if design_effect_weight_override is not None:
+            design_effect_weight = design_effect_weight_override
+            results["design_effect_weight"] = design_effect_weight
+            results["design_effect_weight_source"] = "caller_override"
+        elif self._user_posterior_manager is not None:
             user_profile = self._user_posterior_manager.update_user_posterior(
                 user_id=sequence.user_id,
                 brand_id=sequence.brand_id,
@@ -114,6 +135,10 @@ class RetargetingLearningLoop:
             results["user_touches_observed"] = user_profile.total_touches_observed
             results["user_mechanisms_tried"] = user_profile.mechanisms_tried
             results["design_effect_weight"] = design_effect_weight
+            results["design_effect_weight_source"] = "learning_loop_internal"
+        else:
+            design_effect_weight = None
+            results["design_effect_weight_source"] = "unavailable"
 
         # 3. Update hierarchical posteriors (ALL 6 levels, with design-effect discount)
         # Enhancement #34: processing_depth_weight scales the base weight so
