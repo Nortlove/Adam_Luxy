@@ -586,3 +586,68 @@ class StackAdaptAPIExporter:
 
         logger.info("Exported %d files to %s", len(files), output_dir)
         return files
+
+
+# =============================================================================
+# SINGLETON ACCESSOR — Stage 1 wiring (ADAM_STAGE_1_WIRING_PLAN.md item B3)
+# =============================================================================
+#
+# Before this block existed, StackAdaptAPIExporter was instantiated by nothing
+# and imported by nothing under adam/. It was the Tier 1 Campaign Orchestrator
+# that ADAM_SESSION_RESTORE.md listed as "~1 week after Tier 0" of planned
+# work — already fully implemented but stranded (see ADAM_RETARGETING_TRIAGE_
+# PASS_D.md section 2.1). The singleton below makes the class discoverable
+# from any caller that needs to produce a StackAdapt-executable campaign
+# package.
+#
+# What this wiring does NOT do (follow-ups):
+#
+# 1. It does not register an HTTP endpoint for campaign export. Adding a
+#    POST /api/v1/campaigns/export route is a small follow-up that wraps the
+#    singleton. It was not added here because the endpoint design needs to
+#    decide on auth, request schema, and output format (stream vs. file
+#    paths), which is separate from unstranding the class.
+#
+# 2. It does not wire the exporter into any campaign-build pipeline. Chris's
+#    session-restore doc describes Tier 1 as "full lifecycle: audience →
+#    creative → campaign → line items → creative assignment → domain
+#    targeting → frequency/dayparting → bid strategy → launch." The exporter
+#    produces the payload for all of that but does not yet submit it to
+#    StackAdapt's GraphQL API. Submission requires Becca's real GraphQL key
+#    and schema verification (Tier 0). Once Tier 0 lands, a thin GraphQL
+#    client can be wired in alongside the exporter.
+#
+# 3. It does not replace adam/integrations/stackadapt/adapter.py — that
+#    file contains earlier speculative GraphQL mutations from Risk #8 of the
+#    session-restore doc. The exporter and the adapter are different layers:
+#    the exporter produces the full campaign package; the adapter (or its
+#    replacement) will be the transport layer that submits individual
+#    operations. After Tier 0, the right move is probably to keep the
+#    exporter as the payload builder and replace adapter.py's speculative
+#    mutations with verified ones that the exporter's output is fed into.
+#
+# Singleton pattern matches the rest of the codebase (module-level cached
+# instance returned by get_X() accessor). Stateless class so caching is
+# trivial; if state is added later, the accessor can be rewritten.
+# =============================================================================
+
+_exporter_instance: Optional["StackAdaptAPIExporter"] = None
+
+
+def get_stackadapt_api_exporter() -> "StackAdaptAPIExporter":
+    """Return the process-wide StackAdaptAPIExporter singleton.
+
+    The exporter is stateless, so this is effectively a lazy instantiation
+    of a stateless class — it exists to provide a discoverable import path
+    rather than to amortize construction cost.
+    """
+    global _exporter_instance
+    if _exporter_instance is None:
+        _exporter_instance = StackAdaptAPIExporter()
+    return _exporter_instance
+
+
+__all__ = [
+    "StackAdaptAPIExporter",
+    "get_stackadapt_api_exporter",
+]
