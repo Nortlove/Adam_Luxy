@@ -135,6 +135,12 @@ def _register_all_tasks() -> None:
     except Exception as e:
         logger.debug("Task 15 (self-teaching) not available: %s", e)
 
+    try:
+        from adam.intelligence.daily.task_18_recalibration import RecalibrationTask
+        tasks.append(RecalibrationTask())
+    except Exception as e:
+        logger.debug("Task 18 (composite_alignment recalibration) not available: %s", e)
+
     for task in tasks:
         _task_registry[task.name] = task
 
