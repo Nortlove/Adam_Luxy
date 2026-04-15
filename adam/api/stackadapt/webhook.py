@@ -47,25 +47,39 @@ _events_skipped = 0
 
 
 # ---------------------------------------------------------------------------
-# Event ID deduplication (bounded LRU set, max 10 000 entries)
+# Event ID deduplication — Redis-backed for production, in-memory fallback
+# for development only.
+#
+# Why Redis: duplicate events that pass the dedup check produce double
+# posterior updates in the outcome handler, which systematically biases
+# the fitness landscape toward whatever mechanism fired twice. This is
+# the same class of failure as the Risk #1 simulation fallback — it
+# corrupts the learning loop silently. In-memory dedup is per-pod and
+# has no TTL, so under horizontal scale or sustained event volume it
+# cannot catch all duplicates. Redis with TTL equal to the upstream
+# retry window is the correct structure.
+#
+# The in-memory fallback is preserved for local development ONLY. In
+# production, if Redis is unreachable, the webhook refuses requests
+# rather than silently degrading to unreliable per-pod dedup.
 # ---------------------------------------------------------------------------
-
-def _dedup_max():
-    return get_settings().cascade.dedup_max_size
 
 
 class _LRUSet:
-    """Bounded set that evicts the oldest entry when full."""
+    """Bounded set that evicts the oldest entry when full.
 
-    def __init__(self, maxsize: int = None):
-        if maxsize is None:
-            maxsize = _dedup_max()
+    In-memory dedup fallback for local development only. Per-pod state,
+    no TTL, no persistence. Must not be used in production — Redis is
+    the correct storage and `_check_duplicate_redis` is the production
+    path.
+    """
+
+    def __init__(self, maxsize: int = 10_000):
         self._store: OrderedDict[str, None] = OrderedDict()
         self._maxsize = maxsize
 
     def __contains__(self, key: str) -> bool:
         if key in self._store:
-            # Move to end (most-recently-used)
             self._store.move_to_end(key)
             return True
         return False
@@ -75,12 +89,12 @@ class _LRUSet:
             self._store.move_to_end(key)
             return
         if len(self._store) >= self._maxsize:
-            self._store.popitem(last=False)  # evict oldest
+            self._store.popitem(last=False)
         self._store[key] = None
 
 
-_DEDUP_MAX = 10_000
-_seen_event_ids = _LRUSet(_DEDUP_MAX)
+_seen_event_ids_inmem_fallback = _LRUSet(10_000)
+_warned_about_inmem_fallback = False
 
 
 # ---------------------------------------------------------------------------
@@ -94,7 +108,13 @@ def _verify_signature(body: bytes, signature: str, secret: str) -> bool:
 
 
 async def _validate_request(request: Request) -> Optional[JSONResponse]:
-    """Validate webhook signature and deduplicate by event_id.
+    """Validate webhook signature. Signature is ALWAYS required.
+
+    Refuses to process if no webhook secret is configured, in any
+    environment. An unauthenticated webhook accepts crafted outcomes
+    that can be used to manipulate the learning loop's fitness
+    function — that is a security failure, not a dev-convenience
+    feature. See ADAM_THEORETICAL_FOUNDATION Section 7 rule #11.
 
     Returns a JSONResponse if the request should be short-circuited,
     or None if processing should continue.
@@ -102,35 +122,125 @@ async def _validate_request(request: Request) -> Optional[JSONResponse]:
     settings = get_settings()
     secret = settings.stackadapt.webhook_secret
 
-    # --- Signature validation (skip when no secret is configured, for dev) ---
-    if secret:
-        signature = request.headers.get("X-Informativ-Signature", "")
-        if not signature:
-            return JSONResponse(
-                status_code=401,
-                content={"error": "Missing X-Informativ-Signature header"},
-            )
-        body = await request.body()
-        if not _verify_signature(body, signature, secret):
-            return JSONResponse(
-                status_code=401,
-                content={"error": "Invalid signature"},
-            )
+    if not secret:
+        mode = "production" if settings.is_production else "development"
+        logger.error(
+            "Webhook request refused: STACKADAPT_WEBHOOK_SECRET is not "
+            "configured (environment=%s). Unauthenticated webhook requests "
+            "would accept crafted outcomes that contaminate the learning "
+            "loop. Set STACKADAPT_WEBHOOK_SECRET in the environment to "
+            "enable the endpoint.",
+            mode,
+        )
+        return JSONResponse(
+            status_code=503,
+            content={
+                "error": "webhook_secret_not_configured",
+                "detail": (
+                    "STACKADAPT_WEBHOOK_SECRET must be set in the "
+                    "environment. The endpoint refuses requests without "
+                    "a configured secret in all environments."
+                ),
+            },
+        )
+
+    signature = request.headers.get("X-Informativ-Signature", "")
+    if not signature:
+        return JSONResponse(
+            status_code=401,
+            content={"error": "Missing X-Informativ-Signature header"},
+        )
+    body = await request.body()
+    if not _verify_signature(body, signature, secret):
+        return JSONResponse(
+            status_code=401,
+            content={"error": "Invalid signature"},
+        )
 
     return None
 
 
-def _check_duplicate(event_id: str) -> Optional[JSONResponse]:
-    """Return a 200 duplicate response if we have seen this event_id before."""
+async def _check_duplicate(event_id: str) -> Optional[JSONResponse]:
+    """Atomically check-and-mark an event_id as seen. Redis first,
+    in-memory fallback only in development.
+
+    Uses Redis `SET key value NX EX ttl` for the atomic check-and-mark.
+    If the key already existed, the SET returns falsy and the request
+    is treated as a duplicate. Otherwise the key is set with an
+    expiration equal to `webhook_dedup_ttl_seconds` (default 48 hours).
+
+    If Redis is unreachable AND the environment is development, falls
+    back to an in-memory LRU with a loud one-time warning. If Redis is
+    unreachable in production, refuses the request rather than
+    degrading silently — double-counted outcomes corrupt the learning
+    loop and are not recoverable from logs.
+    """
     if not event_id:
         return None
-    if event_id in _seen_event_ids:
-        return JSONResponse(
-            status_code=200,
-            content={"status": "duplicate", "skipped": True},
+
+    settings = get_settings()
+
+    # --- Try Redis first ---
+    try:
+        from adam.core.dependencies import get_infrastructure
+        infra = await get_infrastructure()
+        redis_client = infra.redis
+        key = f"{settings.stackadapt.webhook_dedup_key_prefix}{event_id}"
+        set_result = await redis_client.set(
+            key,
+            "1",
+            nx=True,
+            ex=settings.stackadapt.webhook_dedup_ttl_seconds,
         )
-    _seen_event_ids.add(event_id)
-    return None
+        # redis-py returns True on successful SET, None when NX prevents
+        # the set (i.e. the key already existed → duplicate).
+        if set_result is None or set_result is False:
+            return JSONResponse(
+                status_code=200,
+                content={"status": "duplicate", "skipped": True, "dedup_store": "redis"},
+            )
+        return None
+    except Exception as exc:
+        if settings.is_production:
+            logger.error(
+                "Webhook dedup refused: Redis unreachable in production "
+                "(event_id=%s, error=%s). Accepting the request without "
+                "persistent dedup would allow double posterior updates "
+                "from duplicate deliveries. Refusing instead.",
+                event_id, exc,
+            )
+            return JSONResponse(
+                status_code=503,
+                content={
+                    "error": "dedup_store_unavailable",
+                    "detail": (
+                        "Redis is not reachable and in-memory dedup is "
+                        "not safe in production. The webhook will resume "
+                        "accepting requests once Redis is healthy."
+                    ),
+                },
+            )
+
+        # Development-only fallback: warn loudly once, then use the
+        # bounded in-memory LRU. Per-pod state, no TTL — must not be
+        # used in production.
+        global _warned_about_inmem_fallback
+        if not _warned_about_inmem_fallback:
+            logger.warning(
+                "Webhook dedup falling back to in-memory LRU (per-pod, "
+                "no TTL). This mode is ONLY safe for local development. "
+                "Redis error: %s",
+                exc,
+            )
+            _warned_about_inmem_fallback = True
+
+        if event_id in _seen_event_ids_inmem_fallback:
+            return JSONResponse(
+                status_code=200,
+                content={"status": "duplicate", "skipped": True, "dedup_store": "memory"},
+            )
+        _seen_event_ids_inmem_fallback.add(event_id)
+        return None
 
 
 def _get_outcome_handler():
@@ -276,8 +386,8 @@ async def receive_conversion(request: Request, event: PixelEvent):
     if auth_response is not None:
         return auth_response
 
-    # Deduplication
-    dup_response = _check_duplicate(event.event_id)
+    # Deduplication (Redis-backed; dev-only in-memory fallback inside)
+    dup_response = await _check_duplicate(event.event_id)
     if dup_response is not None:
         return dup_response
 
@@ -397,10 +507,16 @@ async def receive_conversions_batch(request: Request, batch: BatchPixelEvents):
     all_updates: Dict[str, Any] = {}
 
     handler = _get_outcome_handler()
+    # Bug fix (2026-04-15): `decision_cache` was previously referenced
+    # inside this function without being defined, raising NameError on
+    # the first event. The single-event endpoint defines it locally on
+    # line ~304; the batch endpoint did not. The batch endpoint has
+    # never worked. Defining it here makes it work.
+    decision_cache = get_decision_cache()
 
     for event in batch.events:
-        # Per-event deduplication
-        dup_response = _check_duplicate(event.event_id)
+        # Per-event deduplication (Redis-backed; dev-only in-memory fallback inside)
+        dup_response = await _check_duplicate(event.event_id)
         if dup_response is not None:
             total_skipped += 1
             _events_skipped += 1

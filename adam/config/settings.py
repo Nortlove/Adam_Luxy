@@ -167,7 +167,26 @@ class MetricsSettings(BaseSettings):
 class StackAdaptSettings(BaseSettings):
     """StackAdapt integration configuration."""
 
+    # HMAC-SHA256 secret for webhook signature validation. REQUIRED.
+    # An empty value causes the webhook endpoint to refuse all requests,
+    # because an unauthenticated webhook is an open vector for crafted
+    # outcomes that would contaminate the learning loop's fitness
+    # function. See ADAM_THEORETICAL_FOUNDATION Section 7 rule #11.
     webhook_secret: str = Field(default="", env="STACKADAPT_WEBHOOK_SECRET")
+
+    # Deduplication TTL in seconds. Must cover the upstream webhook
+    # retry window — whatever the longest interval is that StackAdapt
+    # might retry a delivery for. Default 48 hours is a conservative
+    # upper bound until we know the actual policy. Tune down if you know
+    # the retry window is shorter.
+    webhook_dedup_ttl_seconds: int = Field(
+        default=172_800, env="STACKADAPT_WEBHOOK_DEDUP_TTL_SECONDS"
+    )
+
+    # Redis key prefix for webhook event deduplication.
+    webhook_dedup_key_prefix: str = Field(
+        default="stackadapt:dedup:", env="STACKADAPT_WEBHOOK_DEDUP_KEY_PREFIX"
+    )
 
     class Config:
         env_prefix = "STACKADAPT_"
