@@ -69,6 +69,7 @@
     <a href="#learning">Learning</a>
     <a href="#novel">Novel Methods</a>
     <a href="#compare">Differentiation</a>
+    <a href="#flow">Campaign Flow</a>
     <a href="#stackadapt">StackAdapt</a>
     <a href="#partners">Partners</a>
     <a href="#pilot">Pilot</a>
@@ -388,6 +389,212 @@
     <tr><td class="lc">Cross-brand value</td><td>Starts from zero per brand</td><td>5-level hierarchy: new brands inherit corpus-wide learnings instantly</td></tr>
     <tr><td class="lc">Explainability</td><td>"Algorithm says so"</td><td>Full psychological reasoning chain with mechanism citation</td></tr>
   </table>
+</section>
+
+<!-- ═══════════════════════════════ CAMPAIGN FLOW ═══ -->
+<section id="flow" style="max-width:1200px">
+  <div class="ch">
+    <div class="cn">The Technology in Action</div>
+    <h2>How a Live Campaign Works</h2>
+    <p class="cs">From the moment a user loads a webpage to the moment the system learns from the outcome — every step is psychologically informed, real-time, and self-improving.</p>
+  </div>
+
+  <!-- ── THE VISUAL FLOW DIAGRAM ── -->
+  <div style="position:relative;margin:2rem 0;">
+    <svg viewBox="0 0 1060 920" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;font-family:'Inter',sans-serif">
+      <defs>
+        <linearGradient id="gA" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#818cf8"/></linearGradient>
+        <linearGradient id="gG" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#22c55e"/><stop offset="100%" stop-color="#4ade80"/></linearGradient>
+        <linearGradient id="gC" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#06b6d4"/><stop offset="100%" stop-color="#22d3ee"/></linearGradient>
+        <linearGradient id="gO" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#f59e0b"/><stop offset="100%" stop-color="#fbbf24"/></linearGradient>
+        <linearGradient id="gR" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#f43f5e"/><stop offset="100%" stop-color="#fb7185"/></linearGradient>
+        <linearGradient id="gV" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#a78bfa"/><stop offset="100%" stop-color="#c4b5fd"/></linearGradient>
+        <filter id="glow"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        <marker id="arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#4a4a6a"/></marker>
+        <marker id="arrowG" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#22c55e"/></marker>
+        <marker id="arrowR" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#f43f5e"/></marker>
+        <marker id="arrowA" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#6366f1"/></marker>
+      </defs>
+
+      <!-- Background -->
+      <rect width="1060" height="920" rx="16" fill="#0d0d14" stroke="#2a2a3d" stroke-width="1"/>
+
+      <!-- ════════ STEP 1: USER VISITS PAGE ════════ -->
+      <rect x="30" y="30" width="240" height="100" rx="12" fill="#1a1a28" stroke="#2a2a3d"/>
+      <circle cx="60" cy="60" r="16" fill="url(#gA)"/>
+      <text x="60" y="65" text-anchor="middle" fill="white" font-size="13" font-weight="700">1</text>
+      <text x="90" y="58" fill="#e8e8f0" font-size="13" font-weight="600">User Visits Page</text>
+      <text x="90" y="78" fill="#8888a0" font-size="10">Reading an article about</text>
+      <text x="90" y="92" fill="#8888a0" font-size="10">executive productivity...</text>
+      <text x="50" y="118" fill="#6366f1" font-size="9" font-weight="500">TRIGGER: Page load event</text>
+
+      <!-- Arrow 1→2 -->
+      <path d="M270,80 L320,80" stroke="#4a4a6a" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
+
+      <!-- ════════ STEP 2: STACKADAPT BID REQUEST ════════ -->
+      <rect x="330" y="30" width="240" height="100" rx="12" fill="#1a1a28" stroke="#2a2a3d"/>
+      <circle cx="360" cy="60" r="16" fill="url(#gC)"/>
+      <text x="360" y="65" text-anchor="middle" fill="white" font-size="13" font-weight="700">2</text>
+      <text x="390" y="58" fill="#e8e8f0" font-size="13" font-weight="600">StackAdapt Bid Request</text>
+      <text x="390" y="78" fill="#8888a0" font-size="10">Segment: corporate_executive</text>
+      <text x="390" y="92" fill="#8888a0" font-size="10">Page URL + device + time sent</text>
+      <text x="350" y="118" fill="#06b6d4" font-size="9" font-weight="500">SENDS: segment_id, page_url, buyer_id</text>
+
+      <!-- Arrow 2→3 -->
+      <path d="M570,80 L620,80" stroke="#4a4a6a" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
+
+      <!-- ════════ STEP 3: INFORMATIV SERVER ════════ -->
+      <rect x="630" y="18" width="400" height="124" rx="12" fill="#12121f" stroke="#6366f1" stroke-width="1.5"/>
+      <rect x="630" y="18" width="400" height="28" rx="12" fill="url(#gA)" opacity="0.15"/>
+      <text x="830" y="38" text-anchor="middle" fill="#6366f1" font-size="11" font-weight="700" letter-spacing="0.1em">INFORMATIV INTELLIGENCE SERVER</text>
+      <text x="650" y="62" fill="#e8e8f0" font-size="10" font-weight="500">● Page Goal Analysis</text>
+      <text x="650" y="78" fill="#8888a0" font-size="9">Competence + Status + Efficiency goals detected</text>
+      <text x="650" y="98" fill="#e8e8f0" font-size="10" font-weight="500">● 5-Level Decision Cascade</text>
+      <text x="650" y="114" fill="#8888a0" font-size="9">L3 bilateral evidence: 283 edges, 20 dimensions</text>
+      <text x="650" y="130" fill="#8888a0" font-size="9">30 reasoning modules → authority mechanism selected</text>
+      <text x="940" y="130" fill="#22c55e" font-size="10" font-weight="600">&lt;120ms</text>
+
+      <!-- Arrow 3→4 (down) -->
+      <path d="M830,142 L830,175" stroke="#6366f1" stroke-width="1.5" marker-end="url(#arrowA)" fill="none"/>
+
+      <!-- ════════ STEP 4: CREATIVE INTELLIGENCE RETURNED ════════ -->
+      <rect x="630" y="180" width="400" height="110" rx="12" fill="#1a1a28" stroke="#2a2a3d"/>
+      <circle cx="660" cy="210" r="16" fill="url(#gG)"/>
+      <text x="660" y="215" text-anchor="middle" fill="white" font-size="13" font-weight="700">4</text>
+      <text x="690" y="208" fill="#e8e8f0" font-size="13" font-weight="600">Creative Intelligence Returned</text>
+      <text x="690" y="230" fill="#8888a0" font-size="10">Mechanism: <tspan fill="#22c55e" font-weight="500">Authority</tspan>  |  Framing: <tspan fill="#22c55e" font-weight="500">Gain</tspan></text>
+      <text x="690" y="246" fill="#8888a0" font-size="10">Construal: <tspan fill="#22c55e" font-weight="500">Abstract</tspan>  |  Tone: <tspan fill="#22c55e" font-weight="500">Authoritative</tspan></text>
+      <text x="690" y="262" fill="#8888a0" font-size="10">Copy: "The executive standard in ground transport"</text>
+      <text x="690" y="278" fill="#8888a0" font-size="10">Lift: <tspan fill="#22c55e" font-weight="500">+38% CTR</tspan>  |  Barrier: <tspan fill="#f59e0b" font-weight="500">Trust deficit</tspan></text>
+
+      <!-- Arrow 4→5 (left, back to user) -->
+      <path d="M630,235 L160,235 L160,180" stroke="#22c55e" stroke-width="1.5" stroke-dasharray="6,3" marker-end="url(#arrowG)" fill="none"/>
+
+      <!-- ════════ STEP 5: AD SERVED ════════ -->
+      <rect x="30" y="155" width="240" height="80" rx="12" fill="#1a1a28" stroke="#22c55e" stroke-width="1"/>
+      <circle cx="60" cy="182" r="16" fill="url(#gG)"/>
+      <text x="60" y="187" text-anchor="middle" fill="white" font-size="13" font-weight="700">5</text>
+      <text x="90" y="182" fill="#e8e8f0" font-size="13" font-weight="600">Psychologically-Targeted Ad</text>
+      <text x="90" y="200" fill="#8888a0" font-size="10">Authority-framed creative served</text>
+      <text x="90" y="214" fill="#8888a0" font-size="10">on a goal-aligned page context</text>
+
+      <!-- ════════ STEP 6: PROCESSING DEPTH ════════ -->
+      <rect x="30" y="270" width="240" height="80" rx="12" fill="#1a1a28" stroke="#2a2a3d"/>
+      <circle cx="60" cy="298" r="16" fill="url(#gV)"/>
+      <text x="60" y="303" text-anchor="middle" fill="white" font-size="13" font-weight="700">6</text>
+      <text x="90" y="296" fill="#e8e8f0" font-size="13" font-weight="600">Processing Depth Check</text>
+      <text x="90" y="314" fill="#8888a0" font-size="10">Viewport: 3.2s → "EVALUATED"</text>
+      <text x="90" y="328" fill="#8888a0" font-size="10">Weight: 0.80 (clean signal ✓)</text>
+
+      <!-- Arrow 5→6 -->
+      <path d="M150,235 L150,270" stroke="#4a4a6a" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
+
+      <!-- ════════ DECISION DIAMOND ════════ -->
+      <polygon points="530,400 610,360 690,400 610,440" fill="#1a1a28" stroke="#f59e0b" stroke-width="1.5"/>
+      <text x="610" y="396" text-anchor="middle" fill="#f59e0b" font-size="11" font-weight="600">User</text>
+      <text x="610" y="410" text-anchor="middle" fill="#f59e0b" font-size="11" font-weight="600">Converts?</text>
+
+      <!-- Arrow from processing depth → diamond -->
+      <path d="M270,310 L530,400" stroke="#4a4a6a" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
+
+      <!-- ════════ YES BRANCH (Conversion) ════════ -->
+      <text x="750" y="372" fill="#22c55e" font-size="12" font-weight="700">YES</text>
+      <path d="M690,400 L790,400" stroke="#22c55e" stroke-width="2" marker-end="url(#arrowG)" fill="none"/>
+
+      <!-- ════════ STEP 7A: CONVERSION WEBHOOK ════════ -->
+      <rect x="800" y="345" width="230" height="110" rx="12" fill="#12121f" stroke="#22c55e" stroke-width="1.5"/>
+      <rect x="800" y="345" width="230" height="24" rx="12" fill="url(#gG)" opacity="0.15"/>
+      <text x="915" y="363" text-anchor="middle" fill="#22c55e" font-size="10" font-weight="700" letter-spacing="0.08em">CONVERSION WEBHOOK</text>
+      <text x="820" y="388" fill="#e8e8f0" font-size="10" font-weight="500">22 systems update:</text>
+      <text x="820" y="404" fill="#8888a0" font-size="9">● Thompson posteriors refined</text>
+      <text x="820" y="418" fill="#8888a0" font-size="9">● Buyer profile deepened</text>
+      <text x="820" y="432" fill="#8888a0" font-size="9">● Counterfactual: 4 alt. mechanisms scored</text>
+      <text x="820" y="446" fill="#8888a0" font-size="9">● Cross-category knowledge absorbed</text>
+
+      <!-- ════════ NO BRANCH (No Conversion) ════════ -->
+      <text x="620" y="470" fill="#f43f5e" font-size="12" font-weight="700">NO</text>
+      <path d="M610,440 L610,500" stroke="#f43f5e" stroke-width="2" marker-end="url(#arrowR)" fill="none"/>
+
+      <!-- ════════ STEP 7B: BARRIER DIAGNOSIS ════════ -->
+      <rect x="430" y="510" width="360" height="120" rx="12" fill="#12121f" stroke="#f43f5e" stroke-width="1.5"/>
+      <rect x="430" y="510" width="360" height="24" rx="12" fill="url(#gR)" opacity="0.15"/>
+      <text x="610" y="528" text-anchor="middle" fill="#f43f5e" font-size="10" font-weight="700" letter-spacing="0.08em">BARRIER DIAGNOSIS ENGINE</text>
+      <text x="450" y="554" fill="#e8e8f0" font-size="10" font-weight="500">Diagnosed: Trust Deficit (gap: 0.18)</text>
+      <text x="450" y="572" fill="#8888a0" font-size="9">BONG correlation analysis: fixing trust propagates</text>
+      <text x="450" y="586" fill="#8888a0" font-size="9">+0.04 to emotional resonance, +0.03 to personality</text>
+      <text x="450" y="604" fill="#e8e8f0" font-size="10" font-weight="500">Rx: Evidence-proof mechanism on next touch</text>
+      <text x="450" y="618" fill="#8888a0" font-size="9">Page prescription: high-authority publisher context</text>
+
+      <!-- ════════ STEP 8: NEXT IMPRESSION (loop back) ════════ -->
+      <rect x="130" y="510" width="240" height="80" rx="12" fill="#1a1a28" stroke="#f59e0b" stroke-width="1"/>
+      <circle cx="160" cy="538" r="16" fill="url(#gO)"/>
+      <text x="160" y="543" text-anchor="middle" fill="white" font-size="13" font-weight="700">8</text>
+      <text x="190" y="535" fill="#e8e8f0" font-size="12" font-weight="600">Next Impression</text>
+      <text x="190" y="554" fill="#8888a0" font-size="10">Different mechanism deployed</text>
+      <text x="190" y="568" fill="#8888a0" font-size="10">Different page prescribed</text>
+      <text x="190" y="582" fill="#f59e0b" font-size="9" font-weight="500">System is now smarter ↑</text>
+
+      <!-- Arrow diagnosis → next impression -->
+      <path d="M430,560 L370,550" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
+
+      <!-- Loop arrow back to top -->
+      <path d="M130,550 L60,550 L60,155" stroke="#6366f1" stroke-width="1.5" stroke-dasharray="8,4" marker-end="url(#arrowA)" fill="none" opacity="0.6"/>
+      <text x="40" y="400" fill="#6366f1" font-size="9" font-weight="500" transform="rotate(-90,40,400)">LEARNING LOOP</text>
+
+      <!-- ════════ CONVERSION LOOP BACK ════════ -->
+      <path d="M915,455 L915,700 L60,700 L60,555" stroke="#22c55e" stroke-width="1.5" stroke-dasharray="8,4" marker-end="url(#arrowG)" fill="none" opacity="0.5"/>
+      <text x="500" y="718" text-anchor="middle" fill="#22c55e" font-size="9" font-weight="500">OUTCOME LEARNING → Every future decision benefits from this conversion</text>
+
+      <!-- ════════ BOTTOM SECTION: THE COMPOUNDING EFFECT ════════ -->
+      <rect x="30" y="750" width="1000" height="148" rx="12" fill="#12121f" stroke="#2a2a3d"/>
+      <text x="530" y="780" text-anchor="middle" fill="#e8e8f0" font-size="14" font-weight="700">The Compounding Effect: What Happens Over Time</text>
+
+      <rect x="60" y="800" width="180" height="80" rx="8" fill="#1a1a28" stroke="#6366f1" stroke-width="1" opacity="0.8"/>
+      <text x="150" y="822" text-anchor="middle" fill="#6366f1" font-size="10" font-weight="600">WEEK 1</text>
+      <text x="150" y="840" text-anchor="middle" fill="#8888a0" font-size="9">Mechanism selection</text>
+      <text x="150" y="854" text-anchor="middle" fill="#8888a0" font-size="9">calibrates from outcomes</text>
+      <text x="150" y="868" text-anchor="middle" fill="#e8e8f0" font-size="9" font-weight="500">4x learning speed</text>
+
+      <text x="260" y="840" fill="#4a4a6a" font-size="16">→</text>
+
+      <rect x="290" y="800" width="180" height="80" rx="8" fill="#1a1a28" stroke="#06b6d4" stroke-width="1" opacity="0.8"/>
+      <text x="380" y="822" text-anchor="middle" fill="#06b6d4" font-size="10" font-weight="600">MONTH 1-2</text>
+      <text x="380" y="840" text-anchor="middle" fill="#8888a0" font-size="9">Per-user personalization</text>
+      <text x="380" y="854" text-anchor="middle" fill="#8888a0" font-size="9">activates for returning users</text>
+      <text x="380" y="868" text-anchor="middle" fill="#e8e8f0" font-size="9" font-weight="500">Individual-level targeting</text>
+
+      <text x="490" y="840" fill="#4a4a6a" font-size="16">→</text>
+
+      <rect x="520" y="800" width="180" height="80" rx="8" fill="#1a1a28" stroke="#22c55e" stroke-width="1" opacity="0.8"/>
+      <text x="610" y="822" text-anchor="middle" fill="#22c55e" font-size="10" font-weight="600">MONTH 3-4</text>
+      <text x="610" y="840" text-anchor="middle" fill="#8888a0" font-size="9">Goal activation model</text>
+      <text x="610" y="854" text-anchor="middle" fill="#8888a0" font-size="9">predicts from page content</text>
+      <text x="610" y="868" text-anchor="middle" fill="#e8e8f0" font-size="9" font-weight="500">Predictive page matching</text>
+
+      <text x="720" y="840" fill="#4a4a6a" font-size="16">→</text>
+
+      <rect x="750" y="800" width="250" height="80" rx="8" fill="#1a1a28" stroke="#f59e0b" stroke-width="1" opacity="0.8"/>
+      <text x="875" y="822" text-anchor="middle" fill="#f59e0b" font-size="10" font-weight="600">MONTH 5-6</text>
+      <text x="875" y="840" text-anchor="middle" fill="#8888a0" font-size="9">System discovers strategies</text>
+      <text x="875" y="854" text-anchor="middle" fill="#8888a0" font-size="9">no human would have designed</text>
+      <text x="875" y="868" text-anchor="middle" fill="#e8e8f0" font-size="9" font-weight="500">Autonomous optimization</text>
+
+    </svg>
+  </div>
+
+  <div class="c" style="margin-top:1rem">
+    <h3>What Makes This Flow Different From Every Other DSP</h3>
+    <div class="cg" style="margin-top:1rem">
+      <div style="padding:1rem;border:1px solid var(--b);border-radius:8px">
+        <div style="font-size:.9rem;font-weight:600;color:var(--a);margin-bottom:.4rem">Conventional DSP</div>
+        <div style="font-size:.85rem;color:var(--td)">User visits page → bid → serve ad → did they click? → adjust bid. <strong>One signal. One optimization lever.</strong></div>
+      </div>
+      <div style="padding:1rem;border:1px solid var(--g);border-radius:8px">
+        <div style="font-size:.9rem;font-weight:600;color:var(--g);margin-bottom:.4rem">INFORMATIV + StackAdapt</div>
+        <div style="font-size:.85rem;color:var(--td)">User visits page → analyze page goals → match buyer psychology → select mechanism → prescribe creative direction → measure processing depth → learn from outcome across 22 systems → diagnose barriers → prescribe next intervention. <strong>Full psychological intelligence at every step.</strong></div>
+      </div>
+    </div>
+  </div>
 </section>
 
 <!-- ═══════════════════════════════════ STACKADAPT ═══ -->
