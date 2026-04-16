@@ -1106,6 +1106,54 @@ def level3_bilateral_edges(
         blended = edge_w * edge_score + prior_w * prior_score + interaction_adj
         base.mechanism_scores[mech] = round(max(0.0, min(1.0, blended)), 4)
 
+    # Dimension → mechanism mapping for prospect theory adjustment
+    _DIMENSION_TO_MECHANISM = {
+        "regulatory_fit": ["loss_aversion", "commitment"],
+        "emotional_resonance": ["liking", "social_proof"],
+        "value_alignment": ["unity", "commitment"],
+        "brand_relationship_depth": ["commitment", "liking"],
+        "loss_aversion_intensity": ["loss_aversion", "scarcity"],
+        "autonomy_reactance": ["cognitive_ease"],
+        "mimetic_desire": ["social_proof", "unity"],
+        "personality_alignment": ["liking", "social_proof"],
+    }
+
+    # ── Phase C: Prospect Theory adjustment ──
+    # Compute a prospect-theory-weighted composite and use it to modulate
+    # mechanism scores. Mechanisms whose target dimensions fall in the
+    # LOSS domain (below archetype reference) get amplified scores
+    # (λ=2.25 loss aversion). This makes the system prioritize mechanisms
+    # that address deficits over mechanisms that amplify surpluses.
+    try:
+        from adam.retargeting.engines.prospect_theory import prospect_weighted_composite
+        _dims_for_prospect = {
+            "regulatory_fit": reg_fit,
+            "construal_fit": construal_fit,
+            "personality_alignment": personality_align,
+            "emotional_resonance": emotional,
+            "value_alignment": value_align,
+            "evolutionary_motive": evo_motive,
+            "loss_aversion_intensity": loss_aversion_intensity,
+            "brand_relationship_depth": brand_relationship_depth,
+            "autonomy_reactance": autonomy_reactance,
+            "mimetic_desire": mimetic_desire,
+        }
+        pt_composite, pt_details = prospect_weighted_composite(_dims_for_prospect)
+        # Apply a small prospect-theory correction: mechanisms addressing
+        # loss-domain dimensions get a boost proportional to the
+        # amplification from the S-curve.
+        for dim_name, pv in pt_details.items():
+            if pv.domain == "loss" and pv.amplification > 0.02:
+                _loss_mechs = _DIMENSION_TO_MECHANISM.get(dim_name, [])
+                for mech in _loss_mechs:
+                    if mech in base.mechanism_scores:
+                        boost = min(0.08, pv.amplification * 0.3)
+                        base.mechanism_scores[mech] = round(
+                            min(1.0, base.mechanism_scores[mech] + boost), 4
+                        )
+    except Exception as exc:
+        logger.debug("Prospect theory adjustment skipped: %s", exc)
+
     # Re-rank mechanisms after edge evidence update
     ranked_after_edges = sorted(base.mechanism_scores.items(), key=lambda x: x[1], reverse=True)
 
@@ -1409,6 +1457,7 @@ def apply_context_modulation(
     iab_categories: Optional[List[str]] = None,
     # Segment ID for goal activation crossover scoring
     segment_id: str = "",
+    buyer_id: Optional[str] = None,
 ) -> CreativeIntelligence:
     """Apply contextual adjustments to the cascade result.
 
@@ -1977,6 +2026,52 @@ def apply_context_modulation(
     except Exception as e:
         logger.debug("Goal activation layer skipped: %s", e)
 
+    # ── Phase C: Competitive Displacement Detection ──
+    # Adjusts mechanism scores based on competitive ad saturation on
+    # this domain. When competitors flood a domain with social_proof,
+    # its effectiveness drops (fatigue) and open channels (mechanisms
+    # no competitor uses) become opportunities for differentiation.
+    if domain and result.mechanism_scores:
+        try:
+            from adam.retargeting.resonance.competitive_displacement import (
+                get_competitive_detector,
+            )
+            detector = get_competitive_detector()
+            for mech in list(result.mechanism_scores.keys()):
+                adj = detector.get_mechanism_adjustment(domain, mech)
+                if abs(adj - 1.0) > 0.01:
+                    result.mechanism_scores[mech] = round(
+                        min(1.0, max(0.0, result.mechanism_scores[mech] * adj)), 4
+                    )
+            open_channels = detector.get_open_channels(domain)
+            if open_channels and result.context_intelligence is not None:
+                result.context_intelligence["competitive_open_channels"] = open_channels
+        except Exception as e:
+            logger.debug("Competitive displacement skipped: %s", e)
+
+    # ── Phase C: Browsing Momentum ──
+    # Tracks session-level browsing momentum per buyer. High momentum
+    # (many pages, consistent mindstate) signals deep engagement and
+    # should boost mechanism confidence. Low momentum (single page,
+    # bouncing) signals noise and should dampen confidence.
+    if buyer_id:
+        try:
+            from adam.retargeting.resonance.browsing_momentum import (
+                get_browsing_momentum_tracker,
+            )
+            tracker = get_browsing_momentum_tracker()
+            momentum = tracker.get_momentum(buyer_id)
+            if momentum and momentum.confidence > 0.3:
+                if result.context_intelligence is None:
+                    result.context_intelligence = {}
+                result.context_intelligence["browsing_momentum"] = {
+                    "score": round(momentum.score, 3),
+                    "pages_in_session": momentum.pages_in_session,
+                    "confidence": round(momentum.confidence, 3),
+                }
+        except Exception as e:
+            logger.debug("Browsing momentum skipped: %s", e)
+
     return result
 
 
@@ -2222,6 +2317,7 @@ def run_bilateral_cascade(
         page_title=page_title, referrer=referrer,
         keywords=keywords, iab_categories=iab_categories,
         segment_id=segment_id,
+        buyer_id=buyer_id,
     )
 
     # Synergy check

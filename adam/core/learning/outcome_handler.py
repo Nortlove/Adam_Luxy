@@ -693,6 +693,90 @@ class OutcomeHandler:
                 logger.debug("Intervention record emission skipped: %s", e)
 
         # =====================================================================
+        # 13.7 COUNTERFACTUAL LEARNING (Learning Amplification)
+        #
+        # For each impression where mechanism A was deployed, estimate what
+        # non-deployed mechanisms B, C, D... WOULD have produced via
+        # propensity-weighted imputation. Feed those imputed observations
+        # into BONG with discounted precision so every impression teaches
+        # about ALL candidate mechanisms, not just the deployed one.
+        #
+        # This multiplies learning convergence: instead of N impressions
+        # teaching about N mechanisms, N impressions teach about N * K
+        # mechanism-outcome pairs (K = avg candidates per decision).
+        #
+        # Non-critical: failures here must not break the outcome path.
+        # =====================================================================
+        mechanism_scores = metadata.get("mechanism_scores", {})
+        mechanisms_considered = metadata.get("mechanisms_considered", [])
+        if mechanism_sent and mechanism_scores and len(mechanisms_considered) >= 2:
+            try:
+                from adam.intelligence.counterfactual_learner import get_counterfactual_learner
+                from adam.intelligence.bong import get_bong_updater
+                from adam.retargeting.engines.mechanism_observation_models import DIMENSION_NAMES
+
+                # Construct deployed_outcome_shift from alignment scores.
+                # Use the 20 bilateral edge dimensions centered around 0.5
+                # (0.5 = neutral/no shift, >0.5 = positive alignment).
+                alignment = metadata.get("alignment_scores", {})
+                if alignment:
+                    import numpy as np
+                    outcome_shift = np.zeros(len(DIMENSION_NAMES), dtype=np.float64)
+                    for i, dim_name in enumerate(DIMENSION_NAMES):
+                        # Try full name first, then without _score/_match suffixes
+                        val = alignment.get(dim_name)
+                        if val is None:
+                            # Try short-form keys (e.g. "regulatory_fit" for "regulatory_fit_score")
+                            short = dim_name.replace("_score", "").replace("_match", "")
+                            val = alignment.get(short) or alignment.get(f"avg_{short}")
+                        if val is not None:
+                            outcome_shift[i] = float(val) - 0.5  # Center around 0
+                        # Dimensions without data stay at 0.0 (no shift)
+
+                    cf_learner = get_counterfactual_learner()
+                    counterfactuals = cf_learner.compute_counterfactual_observations(
+                        deployed_mechanism=mechanism_sent,
+                        deployed_outcome_shift=outcome_shift,
+                        mechanism_probabilities=mechanism_scores,
+                        candidate_mechanisms=mechanisms_considered,
+                    )
+
+                    cf_result = {
+                        "counterfactuals_generated": len(counterfactuals),
+                        "fed_to_bong": 0,
+                        "mechanisms_imputed": [cf["mechanism_id"] for cf in counterfactuals],
+                    }
+
+                    # Feed counterfactuals into BONG if we have a buyer posterior
+                    if counterfactuals and buyer_id:
+                        try:
+                            from adam.api.stackadapt.graph_cache import get_graph_cache
+                            _gc = get_graph_cache()
+                            buyer_profile = _gc.get_buyer_profile(buyer_id) if hasattr(_gc, "get_buyer_profile") else None
+                            if buyer_profile is not None and hasattr(buyer_profile, "bong_posterior") and buyer_profile.bong_posterior is not None:
+                                bong_updater = get_bong_updater()
+                                cf_learner.feed_counterfactuals_to_bong(
+                                    bong_updater=bong_updater,
+                                    individual_posterior=buyer_profile.bong_posterior,
+                                    counterfactuals=counterfactuals,
+                                )
+                                cf_result["fed_to_bong"] = len(counterfactuals)
+                        except Exception as bong_err:
+                            logger.debug("Counterfactual BONG feed skipped: %s", bong_err)
+                            cf_result["bong_feed_skipped"] = str(bong_err)
+
+                    cf_result["learner_stats"] = cf_learner.stats
+                    results["updates"]["counterfactual_learning"] = cf_result
+                else:
+                    results["updates"]["counterfactual_learning"] = {
+                        "skipped": True,
+                        "reason": "no alignment_scores in metadata",
+                    }
+            except Exception as e:
+                logger.debug("Counterfactual learning skipped: %s", e)
+                results["updates"]["counterfactual_learning"] = {"skipped": True, "reason": str(e)}
+
+        # =====================================================================
         # 14. RESONANCE ENGINE LEARNING (Trilateral Resonance)
         #
         # Routes outcomes to the ResonanceLearner which updates the

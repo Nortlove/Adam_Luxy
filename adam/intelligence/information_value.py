@@ -522,6 +522,12 @@ class BuyerUncertaintyProfile:
                     noise_precision=weight,
                     observed_mask=mask if mask.sum() < len(mask) else None,
                 )
+                # Track BONG update for promotion criteria (Phase B wiring)
+                try:
+                    from adam.intelligence.bong_promotion import get_promotion_tracker
+                    get_promotion_tracker().record_update(self.buyer_id)
+                except Exception:
+                    pass
             except Exception:
                 pass  # BONG update failed — legacy Betas still updated above
 

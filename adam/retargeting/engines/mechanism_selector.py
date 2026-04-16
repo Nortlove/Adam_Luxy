@@ -379,6 +379,21 @@ class BayesianMechanismSelector:
         # Store probabilities on the instance for downstream access
         self._last_mechanism_probabilities = mechanism_probabilities
 
+        # Phase B: BONG promotion tracking. Compare Thompson (Beta) choice
+        # with what BONG would have chosen. Over time, when BONG's
+        # disagreements result in better outcomes, BONG gets promoted
+        # to authoritative (replacing Beta posteriors in live decisions).
+        try:
+            from adam.intelligence.bong_promotion import get_promotion_tracker
+            tracker = get_promotion_tracker()
+            tracker.record_selection(
+                bong_selected=best_mechanism.value,
+                beta_selected=thompson_choice.value,
+                deployed=best_mechanism.value,
+            )
+        except Exception:
+            pass
+
         # Generate rationale
         rationale = self._generate_rationale(
             best_mechanism, barrier, archetype_id, confidence,
