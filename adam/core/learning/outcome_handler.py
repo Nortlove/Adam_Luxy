@@ -651,6 +651,48 @@ class OutcomeHandler:
                 logger.debug("User posterior update skipped: %s", e)
 
         # =====================================================================
+        # 13.6 ENRICHED INTERVENTION RECORD (Phase A wiring)
+        #
+        # Captures the full inferential content of this outcome as an
+        # EnrichedInterventionRecord: reasoning → deployment → observation
+        # → inference → plan. This is the foundation for CounterfactualLearner
+        # and CausalStructureLearner — both consume these records to learn
+        # about non-deployed mechanisms and discover causal structure.
+        #
+        # Records are buffered and flushed to storage periodically
+        # (pilot: JSONL file, production: Postgres/Kafka).
+        # =====================================================================
+        if mechanism_sent and archetype:
+            try:
+                from adam.retargeting.engines.intervention_emitter import get_intervention_emitter
+                from adam.retargeting.models.intervention_record import EnrichedInterventionRecord
+
+                emitter = get_intervention_emitter()
+                record = EnrichedInterventionRecord(
+                    user_id=metadata.get("user_id", metadata.get("buyer_id", "")),
+                    sequence_id=metadata.get("sequence_id", ""),
+                    touch_number=metadata.get("touch_position", 0),
+                    campaign_id=metadata.get("segment_id", ""),
+                    barrier_diagnosed=barrier,
+                    mechanism_id=mechanism_sent,
+                    mechanism_probabilities=metadata.get("mechanism_scores", {}),
+                    outcome=outcome_type,
+                    converted=success and outcome_type == "conversion",
+                    processing_depth=processing_depth_str,
+                    processing_depth_weight=processing_depth_weight,
+                    viewability_seconds=metadata.get("viewability_seconds", 0.0),
+                    diagnostic_hypotheses=metadata.get("diagnostic_hypotheses", {}),
+                    primary_hypothesis=metadata.get("primary_hypothesis", ""),
+                    predicted_resonance=metadata.get("predicted_resonance", 0.0),
+                    actual_engagement=outcome_value,
+                    resonance_error=metadata.get("predicted_resonance", 0.0) - outcome_value,
+                )
+                emitter.emit(record)
+                results["updates"]["intervention_record"] = {"emitted": True}
+            except Exception as e:
+                logger.debug("Intervention record emission skipped: %s", e)
+
+        # =====================================================================
         # 14. RESONANCE ENGINE LEARNING (Trilateral Resonance)
         #
         # Routes outcomes to the ResonanceLearner which updates the
