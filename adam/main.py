@@ -148,6 +148,16 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
     except Exception as e:
         logger.debug("Archetype mechanism priors: using hardcoded fallback (%s)", e)
 
+    # Warm-start Thompson Sampler from Neo4j RESPONDS_TO evidence
+    # (Phase D wiring — thompson_warmstart was built but never called)
+    try:
+        from adam.core.learning.thompson_warmstart import initialize_system_sampler
+        ts_stats = initialize_system_sampler()
+        if ts_stats:
+            logger.info("Thompson Sampler warm-started: %s", ts_stats)
+    except Exception as e:
+        logger.debug("Thompson warmstart skipped: %s", e)
+
     try:
         from adam.intelligence.information_value import load_graph_dimension_priors
         if await load_graph_dimension_priors():

@@ -141,6 +141,18 @@ def _register_all_tasks() -> None:
     except Exception as e:
         logger.debug("Task 18 (composite_alignment recalibration) not available: %s", e)
 
+    try:
+        from adam.intelligence.daily.task_19_resonance_evolution import ResonanceEvolutionTask
+        tasks.append(ResonanceEvolutionTask())
+    except Exception as e:
+        logger.debug("Task 19 (resonance evolution) not available: %s", e)
+
+    try:
+        from adam.intelligence.daily.task_20_quality_audit import LearningQualityAuditTask
+        tasks.append(LearningQualityAuditTask())
+    except Exception as e:
+        logger.debug("Task 20 (quality audit) not available: %s", e)
+
     for task in tasks:
         _task_registry[task.name] = task
 
