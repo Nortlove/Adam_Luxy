@@ -777,6 +777,43 @@ class OutcomeHandler:
                 results["updates"]["counterfactual_learning"] = {"skipped": True, "reason": str(e)}
 
         # =====================================================================
+        # 13.8 CONSTRUCT-LEVEL LEARNING (Phase B wiring)
+        #
+        # The Compounding Flywheel: learns at the psychological construct
+        # level. Each outcome updates Bayesian posteriors for every construct
+        # pair involved in the decision. This is what makes the system's
+        # core data asset self-improving — over 6 months, construct priors
+        # become increasingly precise, benefiting ALL campaigns.
+        # =====================================================================
+        alignment_scores = metadata.get("alignment_scores", {})
+        if mechanism_sent and alignment_scores:
+            try:
+                from adam.core.learning.construct_learning_loop import (
+                    ConstructLearningLoop,
+                    ConstructLearningSignal,
+                )
+                signal = ConstructLearningSignal(
+                    decision_id=decision_id,
+                    request_id=decision_id,
+                    user_id=metadata.get("user_id", metadata.get("buyer_id", "")),
+                    outcome_type=outcome_type,
+                    outcome_value=outcome_value,
+                    mechanism_used=mechanism_sent,
+                    user_construct_scores=alignment_scores,
+                    ad_construct_scores=metadata.get("ad_construct_scores", {}),
+                    asin=metadata.get("asin", ""),
+                    product_category=category,
+                )
+                loop = ConstructLearningLoop()
+                construct_results = loop.process_construct_learning(signal)
+                results["updates"]["construct_learning"] = {
+                    "edges_updated": len(construct_results),
+                    "total_processed": loop._total_signals_processed,
+                }
+            except Exception as e:
+                logger.debug("Construct learning skipped: %s", e)
+
+        # =====================================================================
         # 14. RESONANCE ENGINE LEARNING (Trilateral Resonance)
         #
         # Routes outcomes to the ResonanceLearner which updates the

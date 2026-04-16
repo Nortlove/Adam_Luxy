@@ -153,6 +153,18 @@ def _register_all_tasks() -> None:
     except Exception as e:
         logger.debug("Task 20 (quality audit) not available: %s", e)
 
+    try:
+        from adam.intelligence.daily.task_21_tensor_archetypes import TensorArchetypeTask
+        tasks.append(TensorArchetypeTask())
+    except Exception as e:
+        logger.debug("Task 21 (tensor archetypes) not available: %s", e)
+
+    try:
+        from adam.intelligence.daily.task_22_causal_mediation import CausalMediationTask
+        tasks.append(CausalMediationTask())
+    except Exception as e:
+        logger.debug("Task 22 (causal mediation) not available: %s", e)
+
     for task in tasks:
         _task_registry[task.name] = task
 
