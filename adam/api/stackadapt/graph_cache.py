@@ -684,15 +684,28 @@ class GraphIntelligenceCache:
                 "avg(bc.self_monitoring_fit) AS avg_social_proof_sensitivity, "
                 "avg(bc.anchor_susceptibility_match) AS avg_persuasion_susceptibility, "
                 "avg(bc.brand_trust_fit) AS avg_brand_relationship_depth, "
-                # 2 additional extended dims with strong theoretical mapping
+                # 5 additional extended dims completing the full 20-dim coverage
                 # appeal_resonance → interoceptive_awareness: Damasio somatic
                 #   marker — affective appeal activates body-level resonance
                 # lay_theory_alignment → information_seeking: Furnham naive
                 #   psychology — when lay causal model aligns, buyer seeks
-                #   less corrective information (inverted: high alignment →
-                #   low information seeking, so we invert in the cascade)
+                #   less corrective information
+                # optimal_distinctiveness_fit → cooperative_framing_fit:
+                #   Brewer ODT — group identification sweet spot → receptive
+                #   to cooperative/fair exchange framing
+                # negativity_bias_match → temporal_discounting: Baumeister
+                #   "bad is stronger than good" — negativity bias amplifies
+                #   present-moment reactions → present-focus → higher
+                #   temporal discounting
+                # disgust_contamination_fit → decision_entropy: Rozin
+                #   contamination sensitivity adds decision criteria beyond
+                #   utility (purity, provenance, moral acceptability) →
+                #   more dimensions to evaluate → higher decision entropy
                 "avg(bc.appeal_resonance) AS avg_interoceptive_awareness, "
-                "avg(bc.lay_theory_alignment) AS avg_information_seeking"
+                "avg(bc.lay_theory_alignment) AS avg_information_seeking, "
+                "avg(bc.optimal_distinctiveness_fit) AS avg_cooperative_framing_fit, "
+                "avg(bc.negativity_bias_match) AS avg_temporal_discounting, "
+                "avg(bc.disgust_contamination_fit) AS avg_decision_entropy"
             )
 
             with driver.session() as session:
