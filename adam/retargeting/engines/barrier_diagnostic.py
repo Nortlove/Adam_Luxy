@@ -337,6 +337,86 @@ class ConversionBarrierDiagnosticEngine:
             bilateral_edge, thresholds, archetype_id
         )
 
+        # Step 3.5: BONG correlation-aware re-ranking (Phase A wiring)
+        #
+        # Simple gap ranking (step 3) selects the largest deficit. BONG
+        # propagated_barrier_impact selects the deficit whose resolution
+        # propagates the most TOTAL lift through the correlation structure.
+        # Example: brand_trust_fit gap=0.08 might propagate +0.04 to
+        # emotional_resonance and +0.03 to personality_alignment via
+        # covariance, producing more total lift than a regulatory_fit
+        # gap=0.12 that doesn't propagate. This changes which barrier
+        # the retargeting engine targets, which changes which mechanism
+        # it selects, which changes everything downstream.
+        #
+        # Falls back to simple ranking when BONG unavailable or not
+        # initialized with enough data.
+        try:
+            from adam.intelligence.bong import get_bong_updater
+            bong = get_bong_updater()
+            if bong.U is not None and alignment_gaps:
+                # Use population posterior for barrier ranking (individual
+                # posteriors require prior BONG updates which may not exist
+                # yet for this user). Population covariance captures the
+                # structural correlations that drive propagation.
+                from adam.intelligence.bong import BONGPosterior
+                if bong.prior_eta is not None and bong.prior_D is not None:
+                    individual = BONGPosterior(
+                        eta=bong.prior_eta.copy(),
+                        D=bong.prior_D.copy(),
+                    )
+                else:
+                    individual = bong.create_individual()
+                gradient_field = None
+                try:
+                    from adam.api.stackadapt.graph_cache import get_graph_cache
+                    cache = get_graph_cache()
+                    category = context.get("category", "")
+                    grad = cache.get_gradient_field(resolved_archetype, category)
+                    if grad and grad.is_valid:
+                        gradient_field = {
+                            p.dimension: p.gradient
+                            for p in grad.gradient_components
+                        }
+                except Exception:
+                    pass
+
+                propagated = bong.propagated_barrier_impact(
+                    individual=individual,
+                    alignment_scores=bilateral_edge,
+                    thresholds=thresholds,
+                    gradient_field=gradient_field,
+                )
+                if propagated:
+                    # Re-rank alignment_gaps by propagated total lift
+                    propagated_order = [p["barrier_dimension"] for p in propagated]
+                    gap_by_dim = {g.dimension: g for g in alignment_gaps}
+                    reranked = []
+                    for dim in propagated_order:
+                        if dim in gap_by_dim:
+                            reranked.append(gap_by_dim[dim])
+                    # Append any gaps not in propagated ranking (BONG
+                    # may not cover all dimensions)
+                    seen = set(propagated_order)
+                    for g in alignment_gaps:
+                        if g.dimension not in seen:
+                            reranked.append(g)
+                    if reranked:
+                        alignment_gaps = reranked
+                        for i, g in enumerate(alignment_gaps):
+                            g.rank_in_archetype = i + 1
+                        logger.debug(
+                            "BONG re-ranked barriers: %s (was: %s)",
+                            [g.dimension for g in alignment_gaps[:3]],
+                            [g.dimension for g in sorted(
+                                alignment_gaps,
+                                key=lambda x: x.gap_magnitude,
+                                reverse=True,
+                            )[:3]],
+                        )
+        except Exception as e:
+            logger.debug("BONG barrier re-ranking skipped: %s", e)
+
         # Step 4: Identify primary barrier
         primary_barrier, primary_gaps = self._identify_primary_barrier(
             alignment_gaps, stage
