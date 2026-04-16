@@ -1147,6 +1147,19 @@ class MechanismActivationAtom(BaseAtom):
             "atom_narrative_identity",
             "atom_regret_anticipation",
             "atom_autonomy_reactance",
+            # Phase A: 10 additional construct-level atoms. Same fusion
+            # pattern — each produces mechanism_adjustments in
+            # secondary_assessments, consumed confidence-weighted here.
+            "atom_cooperative_framing",
+            "atom_interoceptive_style",
+            "atom_motivational_conflict",
+            "atom_persuasion_pharmacology",
+            "atom_query_order",
+            "atom_relationship_intelligence",
+            "atom_signal_credibility",
+            "atom_strategic_awareness",
+            "atom_strategic_timing",
+            "atom_temporal_self",
             # Note: atom_coherence_optimization is NOT in this list.
             # Coherence runs AFTER mechanism_activation (Level 3 in
             # dag.py) — it cannot be an upstream provider for this

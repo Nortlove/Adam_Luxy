@@ -587,35 +587,44 @@ class TestStage1DAGWiring:
         "atom_autonomy_reactance",
     ]
 
-    def test_dag_topology_has_20_atoms_and_expected_levels(
+    PHASE_A_CONSTRUCT_ATOMS = [
+        "atom_cooperative_framing",
+        "atom_interoceptive_style",
+        "atom_motivational_conflict",
+        "atom_persuasion_pharmacology",
+        "atom_query_order",
+        "atom_relationship_intelligence",
+        "atom_signal_credibility",
+        "atom_strategic_awareness",
+        "atom_strategic_timing",
+        "atom_temporal_self",
+    ]
+
+    def test_dag_topology_has_30_atoms_and_expected_levels(
         self, blackboard, interaction_bridge
     ):
-        """Pin the Stage 1 DAG shape: 20 atoms, 6 levels (post-Coherence-gate).
+        """Pin the Phase A DAG shape: 30 atoms, 6 levels.
 
-        After Stage 2's Coherence promotion, MessageFraming gates on
-        CoherenceOptimization, adding one sequential level to the
-        reasoning path:
-            L0 user_state → L1 [14 parallel] → L2 mechanism_activation
+        After Phase A wiring of 10 additional construct-level atoms:
+            L0 user_state → L1 [24 parallel] → L2 mechanism_activation
             → L3 [coherence, channel_selection] → L4 message_framing
             → L5 ad_selection
         """
         from adam.atoms.dag import AtomDAG, DEFAULT_DAG_NODES
 
-        assert len(DEFAULT_DAG_NODES) == 20, (
-            f"Expected 20 atoms in DEFAULT_DAG_NODES, got {len(DEFAULT_DAG_NODES)}. "
-            "Stage 1 wiring (commit 7503e84) must not regress."
+        assert len(DEFAULT_DAG_NODES) == 30, (
+            f"Expected 30 atoms in DEFAULT_DAG_NODES, got {len(DEFAULT_DAG_NODES)}."
         )
 
         dag = AtomDAG(blackboard=blackboard, bridge=interaction_bridge)
         levels = dag._topological_sort()
 
         assert len(levels) == 6, (
-            f"Expected 6 topological levels after Stage 2 Coherence "
-            f"promotion, got {len(levels)}"
+            f"Expected 6 topological levels, got {len(levels)}"
         )
         assert levels[0] == ["atom_user_state"]
-        assert len(levels[1]) == 14, (
-            f"Level 1 (parallel atoms after user_state) should have 14 atoms, "
+        assert len(levels[1]) == 24, (
+            f"Level 1 (parallel atoms after user_state) should have 24 atoms, "
             f"got {len(levels[1])}: {sorted(levels[1])}"
         )
         for atom_id in self.STAGE1_CONSTRUCT_ATOMS:
@@ -719,8 +728,8 @@ class TestStage1DAGWiring:
         assert result is not None
         # atoms_executed + atoms_failed covers everything the DAG tried.
         attempted = result.atoms_executed + result.atoms_failed
-        assert attempted >= 20, (
-            f"Stage 1 DAG should attempt all 20 atoms; attempted={attempted}, "
+        assert attempted >= 30, (
+            f"Phase A DAG should attempt all 30 atoms; attempted={attempted}, "
             f"executed={result.atoms_executed}, failed={result.atoms_failed}, "
             f"errors={result.errors[:5]}"
         )

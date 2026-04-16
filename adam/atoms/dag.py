@@ -53,6 +53,19 @@ from adam.atoms.core.narrative_identity import NarrativeIdentityAtom
 from adam.atoms.core.regret_anticipation import RegretAnticipationAtom
 from adam.atoms.core.autonomy_reactance import AutonomyReactanceAtom
 from adam.atoms.core.coherence_optimization import CoherenceOptimizationAtom
+# Phase A wiring: 10 additional construct-level atoms. Same stranded-work
+# pattern as A1-A6. CoherenceOptimization._collect_upstream_adjustments
+# already lists 9 of these as expected upstream providers.
+from adam.atoms.core.cooperative_framing import CooperativeFramingAtom
+from adam.atoms.core.interoceptive_style import InteroceptiveStyleAtom
+from adam.atoms.core.motivational_conflict import MotivationalConflictAtom
+from adam.atoms.core.persuasion_pharmacology import PersuasionPharmacologyAtom
+from adam.atoms.core.query_order import QueryOrderAtom
+from adam.atoms.core.relationship_intelligence import RelationshipIntelligenceAtom
+from adam.atoms.core.signal_credibility import SignalCredibilityAtom
+from adam.atoms.core.strategic_awareness import StrategicAwarenessAtom
+from adam.atoms.core.strategic_timing import StrategicTimingAtom
+from adam.atoms.core.temporal_self import TemporalSelfAtom
 from adam.atoms.models.atom_io import (
     AtomInput,
     AtomOutput,
@@ -224,6 +237,83 @@ DEFAULT_DAG_NODES = [
         timeout_ms=800,
     ),
 
+    # Level 2.7: Phase A construct-level atoms (10 additional orphans wired).
+    # Same parallel pattern as the Stage 1 atoms above — each depends only
+    # on atom_user_state and produces mechanism_adjustments in
+    # secondary_assessments for the MechanismActivation fusion loop.
+    # CoherenceOptimization._collect_upstream_adjustments already lists
+    # 9 of these as expected upstream providers.
+    AtomNode(
+        atom_id="atom_cooperative_framing",
+        atom_class="CooperativeFramingAtom",
+        depends_on=["atom_user_state"],
+        required=False,
+        timeout_ms=800,
+    ),
+    AtomNode(
+        atom_id="atom_interoceptive_style",
+        atom_class="InteroceptiveStyleAtom",
+        depends_on=["atom_user_state"],
+        required=False,
+        timeout_ms=800,
+    ),
+    AtomNode(
+        atom_id="atom_motivational_conflict",
+        atom_class="MotivationalConflictAtom",
+        depends_on=["atom_user_state"],
+        required=False,
+        timeout_ms=800,
+    ),
+    AtomNode(
+        atom_id="atom_persuasion_pharmacology",
+        atom_class="PersuasionPharmacologyAtom",
+        depends_on=["atom_user_state"],
+        required=False,
+        timeout_ms=800,
+    ),
+    AtomNode(
+        atom_id="atom_query_order",
+        atom_class="QueryOrderAtom",
+        depends_on=["atom_user_state"],
+        required=False,
+        timeout_ms=800,
+    ),
+    AtomNode(
+        atom_id="atom_relationship_intelligence",
+        atom_class="RelationshipIntelligenceAtom",
+        depends_on=["atom_user_state"],
+        required=False,
+        timeout_ms=1000,
+    ),
+    AtomNode(
+        atom_id="atom_signal_credibility",
+        atom_class="SignalCredibilityAtom",
+        depends_on=["atom_user_state"],
+        required=False,
+        timeout_ms=800,
+    ),
+    AtomNode(
+        atom_id="atom_strategic_awareness",
+        atom_class="StrategicAwarenessAtom",
+        depends_on=["atom_user_state"],
+        required=False,
+        timeout_ms=800,
+    ),
+    AtomNode(
+        atom_id="atom_strategic_timing",
+        atom_class="StrategicTimingAtom",
+        depends_on=["atom_user_state"],
+        required=False,
+        timeout_ms=800,
+    ),
+    AtomNode(
+        atom_id="atom_temporal_self",
+        atom_class="TemporalSelfAtom",
+        depends_on=["atom_user_state"],
+        required=False,
+        timeout_ms=800,
+    ),
+
     # Level 3: Mechanism Synthesis
     AtomNode(
         atom_id="atom_mechanism_activation",
@@ -246,6 +336,17 @@ DEFAULT_DAG_NODES = [
             "atom_narrative_identity",
             "atom_regret_anticipation",
             "atom_autonomy_reactance",
+            # Phase A: 10 additional construct-level atoms
+            "atom_cooperative_framing",
+            "atom_interoceptive_style",
+            "atom_motivational_conflict",
+            "atom_persuasion_pharmacology",
+            "atom_query_order",
+            "atom_relationship_intelligence",
+            "atom_signal_credibility",
+            "atom_strategic_awareness",
+            "atom_strategic_timing",
+            "atom_temporal_self",
         ],
         required=True,
     ),
@@ -393,6 +494,17 @@ class AtomDAG:
         "RegretAnticipationAtom": RegretAnticipationAtom,
         "AutonomyReactanceAtom": AutonomyReactanceAtom,
         "CoherenceOptimizationAtom": CoherenceOptimizationAtom,
+        # Phase A: 10 additional construct-level atoms
+        "CooperativeFramingAtom": CooperativeFramingAtom,
+        "InteroceptiveStyleAtom": InteroceptiveStyleAtom,
+        "MotivationalConflictAtom": MotivationalConflictAtom,
+        "PersuasionPharmacologyAtom": PersuasionPharmacologyAtom,
+        "QueryOrderAtom": QueryOrderAtom,
+        "RelationshipIntelligenceAtom": RelationshipIntelligenceAtom,
+        "SignalCredibilityAtom": SignalCredibilityAtom,
+        "StrategicAwarenessAtom": StrategicAwarenessAtom,
+        "StrategicTimingAtom": StrategicTimingAtom,
+        "TemporalSelfAtom": TemporalSelfAtom,
     }
     
     def __init__(

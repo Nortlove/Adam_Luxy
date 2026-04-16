@@ -74,12 +74,28 @@ class AtomType(str, Enum):
     AUTONOMY_REACTANCE = "autonomy_reactance"
     COHERENCE_OPTIMIZATION = "coherence_optimization"
 
+    # Phase A wiring: 10 additional construct-level atoms that were
+    # built and referenced by their classes but never added to the enum.
+    # Same pattern as the Stage 1 A1-A6 fix above. CoherenceOptimization
+    # already lists 9 of these as expected upstream providers in
+    # _collect_upstream_adjustments.
+    COOPERATIVE_FRAMING = "cooperative_framing"
+    INTEROCEPTIVE_STYLE = "interoceptive_style"
+    MOTIVATIONAL_CONFLICT = "motivational_conflict"
+    PERSUASION_PHARMACOLOGY = "persuasion_pharmacology"
+    QUERY_ORDER = "query_order"
+    SIGNAL_CREDIBILITY = "signal_credibility"
+    STRATEGIC_AWARENESS = "strategic_awareness"
+    STRATEGIC_TIMING = "strategic_timing"
+    TEMPORAL_SELF = "temporal_self"
+    RELATIONSHIP_INTELLIGENCE = "relationship_intelligence"
+
     # Channel intelligence
     CHANNEL_SELECTION = "channel_selection"
-    
+
     # Verification
     VERIFICATION = "verification"
-    
+
     # Custom
     CUSTOM = "custom"
 

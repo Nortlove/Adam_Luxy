@@ -166,7 +166,7 @@ class RelationshipIntelligenceAtom(BaseAtom):
     - BANDIT_POSTERIORS (learned relationship-mechanism effectiveness)
     """
     
-    ATOM_TYPE = AtomType.CUSTOM
+    ATOM_TYPE = AtomType.RELATIONSHIP_INTELLIGENCE
     ATOM_NAME = "relationship_intelligence"
     TARGET_CONSTRUCT = "consumer_brand_relationship"
     
