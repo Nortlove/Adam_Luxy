@@ -153,22 +153,76 @@ async def main():
         check("Bilateral cascade", False)
 
     try:
-        from adam.intelligence.causal_decomposition import get_causal_decomposition_engine
-        check("Causal decomposition", True, "importable")
+        from adam.atoms.dag import DEFAULT_DAG_NODES
+        check(f"DAG atoms ({len(DEFAULT_DAG_NODES)})", len(DEFAULT_DAG_NODES) >= 30)
     except:
-        check("Causal decomposition", False)
+        check("DAG topology", False)
 
     try:
-        from adam.intelligence.inferential_hypothesis_engine import get_inferential_hypothesis_engine
-        check("Hypothesis engine", True, "importable")
+        from adam.intelligence.bong import get_bong_updater
+        b = get_bong_updater()
+        check(f"BONG (d={b.d}, init={b.U is not None})", b.U is not None)
     except:
-        check("Hypothesis engine", False)
+        check("BONG updater", False)
 
     try:
-        from adam.intelligence.daily_intelligence_brief import generate_daily_brief
-        check("Daily brief", True, "importable")
+        from adam.intelligence.counterfactual_learner import get_counterfactual_learner
+        check("CounterfactualLearner", True, "importable")
     except:
-        check("Daily brief", False)
+        check("CounterfactualLearner", False)
+
+    try:
+        from adam.intelligence.bong_promotion import get_promotion_tracker
+        check("BONG PromotionTracker", True, "importable")
+    except:
+        check("BONG PromotionTracker", False)
+
+    try:
+        from adam.retargeting.engines.intervention_emitter import get_intervention_emitter
+        check("InterventionEmitter", True, "importable")
+    except:
+        check("InterventionEmitter", False)
+
+    try:
+        from adam.retargeting.engines.prospect_theory import prospect_weighted_composite
+        check("Prospect Theory", True, "importable")
+    except:
+        check("Prospect Theory", False)
+
+    try:
+        from adam.core.learning.outcome_handler import OutcomeHandler
+        check("OutcomeHandler", True, "importable")
+    except:
+        check("OutcomeHandler", False)
+
+    # 7b. Scheduled tasks
+    print("\n── SCHEDULED TASKS ──")
+    try:
+        from adam.intelligence.daily.scheduler import get_task_registry
+        registry = get_task_registry()
+        check(f"Tasks registered ({len(registry)})", len(registry) >= 18)
+        for name in sorted(registry):
+            check(f"  {name}", True)
+    except Exception as e:
+        check("Task registry", False, str(e)[:50])
+
+    # 7c. Bilateral cascade end-to-end
+    print("\n── CASCADE SMOKE TEST ──")
+    try:
+        from adam.api.stackadapt.graph_cache import get_graph_cache
+        cache = get_graph_cache()
+        result = run_bilateral_cascade(
+            segment_id="informativ_careful_truster_authority_luxury_transportation_t1",
+            graph_cache=cache, asin="lux_luxy_ride",
+            device_type="desktop", time_of_day=14,
+        )
+        check(f"Cascade level ({result.cascade_level})", result.cascade_level >= 3)
+        dims = sum(1 for v in result.edge_dimensions.values() if abs(v - 0.5) > 0.01)
+        check(f"Real dimensions ({dims}/20)", dims >= 15)
+        check(f"Mechanism scores ({len(result.mechanism_scores)})", len(result.mechanism_scores) >= 5)
+        check(f"Primary mechanism: {result.primary_mechanism}", True)
+    except Exception as e:
+        check("Cascade smoke test", False, str(e)[:80])
 
     # 8. Supporting docs
     print("\n── DOCUMENTATION ──")
@@ -200,4 +254,15 @@ async def main():
 
 
 if __name__ == "__main__":
+    # Ensure project root is on sys.path
+    import pathlib
+    project_root = str(pathlib.Path(__file__).resolve().parent.parent)
+    if project_root not in sys.path:
+        sys.path.insert(0, project_root)
+    # Load .env
+    try:
+        from dotenv import load_dotenv
+        load_dotenv(os.path.join(project_root, ".env"))
+    except ImportError:
+        pass
     asyncio.run(main())

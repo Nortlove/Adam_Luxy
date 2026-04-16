@@ -43,10 +43,12 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
 EXPOSE 8000
 
 # Start with uvicorn — Railway sets $PORT; fallback to 8000
-# 2 workers sufficient for pilot (<100 rps)
+# CRITICAL: workers MUST be 1. Process-local singletons (Thompson,
+# GraphCache, ArchetypePriors) don't share state across workers.
+# Multi-worker silently breaks learning. See main.py guardrail.
 CMD uvicorn adam.main:create_app \
     --host 0.0.0.0 \
     --port ${PORT:-8000} \
-    --workers 2 \
+    --workers 1 \
     --timeout-keep-alive 30 \
     --access-log
