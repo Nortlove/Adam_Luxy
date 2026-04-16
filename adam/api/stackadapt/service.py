@@ -283,6 +283,7 @@ class CreativeIntelligenceService:
             counterfactual=counterfactual,
             arbitrage_result=arbitrage_result,
             session_state=session_state,
+            archetype=archetype,
         )
 
         # Enrich response with the decision engine output
@@ -326,6 +327,7 @@ class CreativeIntelligenceService:
         counterfactual: Optional[Any] = None,
         arbitrage_result: Optional[Any] = None,
         session_state: Optional[Any] = None,
+        archetype: str = "",
     ) -> Dict[str, Any]:
         """Convert CreativeIntelligence dataclass to API response dict."""
 
