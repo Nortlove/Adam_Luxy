@@ -234,6 +234,20 @@ class OutcomeHandler:
         # CRITICAL FIX: This is the ONLY place Thompson Sampling is updated.
         # The UnifiedLearningHub's _update_thompson_sampler handler is
         # excluded from OUTCOME_SUCCESS signals to prevent double-counting.
+        #
+        # KNOWN GAP (Audit #1, 2026-04-15): The Thompson Sampler is an
+        # in-memory singleton that is NOT read by the StackAdapt/bilateral
+        # cascade decision path. The cascade reads mechanism priors from
+        # _ARCHETYPE_MECHANISM_PRIORS (Neo4j RESPONDS_TO, refreshed hourly)
+        # and mechanism scores from BRAND_CONVERTED edge aggregates. This
+        # Thompson update is consumed only by the synergy_orchestrator and
+        # cold_start.service paths, which are not on the LUXY pilot's
+        # decision path. It is retained because (a) the posteriors are
+        # correct and may be useful for future paths that read them, and
+        # (b) removing it risks silencing a learning channel that a
+        # downstream consumer might wire into. But for LUXY pilot purposes,
+        # the effective learning loop is _update_bilateral_edge_evidence
+        # (below), not this Thompson update.
         # =====================================================================
         try:
             results["updates"]["thompson"] = await self._update_thompson(
@@ -2018,6 +2032,16 @@ class OutcomeHandler:
                 cache_invalidated = True
             except Exception as inv_err:
                 logger.debug("Graph cache invalidation failed: %s", inv_err)
+
+            # Invalidate Level 1 archetype mechanism priors so the next
+            # cascade picks up the RESPONDS_TO effectiveness update above.
+            # Without this, _ARCHETYPE_MECHANISM_PRIORS stays frozen at
+            # startup values for the entire process lifetime (Audit #1).
+            try:
+                from adam.api.stackadapt.bilateral_cascade import invalidate_archetype_priors
+                invalidate_archetype_priors()
+            except Exception:
+                pass
 
             return {
                 "archetype": archetype,

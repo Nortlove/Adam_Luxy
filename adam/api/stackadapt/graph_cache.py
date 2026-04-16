@@ -643,11 +643,28 @@ class GraphIntelligenceCache:
                 archetype_filter = "WHERE ar.user_archetype = $archetype "
                 params["archetype"] = archetype
 
+            # Aggregate ALL psychologically-meaningful edge dimensions.
+            # The 7 core dims were always queried; the 8 extended construct
+            # dims below were present on the graph but never aggregated —
+            # causing level3_bilateral_edges to default them to 0.5 neutral,
+            # hiding real signal (Audit #3, 2026-04-15). Mapping from edge
+            # property names to cascade dimension names:
+            #
+            # Edge property                → Cascade name              Theory
+            # reactance_fit               → autonomy_reactance        Brehm reactance
+            # spending_pain_match         → loss_aversion_intensity   Prelec pain-of-paying
+            # mental_simulation_resonance → narrative_transport       Green-Brock transportation
+            # processing_route_match      → cognitive_load_tolerance  Petty-Cacioppo ELM
+            # identity_signaling_match    → mimetic_desire            Girard mimesis via signaling
+            # self_monitoring_fit         → social_proof_sensitivity  Snyder self-monitoring
+            # anchor_susceptibility_match → persuasion_susceptibility Tversky-Kahneman anchoring
+            # brand_trust_fit             → brand_relationship_depth  Fournier brand relationships
             query = (
                 "MATCH (pd:ProductDescription {asin: $asin})"
                 "-[bc:BRAND_CONVERTED]->(ar:AnnotatedReview) "
                 + archetype_filter +
                 "RETURN count(bc) AS edge_count, "
+                # 7 core alignment dimensions
                 "avg(bc.regulatory_fit_score) AS avg_reg_fit, "
                 "avg(bc.construal_fit_score) AS avg_construal_fit, "
                 "avg(bc.personality_brand_alignment) AS avg_personality_align, "
@@ -657,7 +674,16 @@ class GraphIntelligenceCache:
                 "avg(bc.composite_alignment) AS avg_composite, "
                 "stDev(bc.composite_alignment) AS std_composite, "
                 "avg(bc.linguistic_style_matching) AS avg_linguistic, "
-                "avg(bc.persuasion_confidence_multiplier) AS avg_confidence"
+                "avg(bc.persuasion_confidence_multiplier) AS avg_confidence, "
+                # 8 extended construct dimensions (Audit #3 fix)
+                "avg(bc.reactance_fit) AS avg_autonomy_reactance, "
+                "avg(bc.spending_pain_match) AS avg_loss_aversion_intensity, "
+                "avg(bc.mental_simulation_resonance) AS avg_narrative_transport, "
+                "avg(bc.processing_route_match) AS avg_cognitive_load_tolerance, "
+                "avg(bc.identity_signaling_match) AS avg_mimetic_desire, "
+                "avg(bc.self_monitoring_fit) AS avg_social_proof_sensitivity, "
+                "avg(bc.anchor_susceptibility_match) AS avg_persuasion_susceptibility, "
+                "avg(bc.brand_trust_fit) AS avg_brand_relationship_depth"
             )
 
             with driver.session() as session:

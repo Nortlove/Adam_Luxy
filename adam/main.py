@@ -11,6 +11,7 @@ This module configures and runs the ADAM platform API server.
 """
 
 import logging
+import os
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator, Dict
 
@@ -43,6 +44,26 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
     Handles startup and shutdown of infrastructure and components.
     """
     
+    # ── Multi-worker guardrail ──────────────────────────────────
+    # ThompsonSampler, GraphIntelligenceCache, _ARCHETYPE_MECHANISM_PRIORS,
+    # and RateLimitMiddleware._requests are all process-local singletons.
+    # Multiple workers = silently divergent posteriors and lost cache
+    # invalidations.  This MUST stay at 1 until shared-state infra
+    # (Redis posteriors or sticky routing) is in place.
+    _uvicorn_workers = int(os.environ.get("UVICORN_WORKERS", "0"))
+    _web_concurrency = int(os.environ.get("WEB_CONCURRENCY", "0"))
+    if _uvicorn_workers > 1 or _web_concurrency > 1:
+        logger.critical(
+            "MULTI-WORKER DETECTED (UVICORN_WORKERS=%s, WEB_CONCURRENCY=%s). "
+            "Learning loop singletons (ThompsonSampler, graph_cache, "
+            "_ARCHETYPE_MECHANISM_PRIORS) are process-local — posterior updates "
+            "and cache invalidations will NOT propagate across workers. "
+            "Set workers=1 or implement shared-state backend before scaling.",
+            _uvicorn_workers,
+            _web_concurrency,
+        )
+    # ─────────────────────────────────────────────────────────────
+
     logger.info("=" * 60)
     logger.info("ADAM Platform Starting...")
     logger.info(f"Environment: {settings.environment}")
