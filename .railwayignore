@@ -1,0 +1,39 @@
+# Large data directories — NOT needed at runtime (data lives in Neo4j Aura)
+amazon/
+data/
+reviews/
+reviews_other/
+Neo4j/
+docs/
+scrapy-tags-2.14.0/
+Music Listening/
+Cognitive Biases/
+
+# Python artifacts
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+
+# IDE
+.idea/
+.vscode/
+.cursor/
+
+# OS
+.DS_Store
+
+# Test data
+tests/
+
+# Git
+.git/
+
+# Large untracked files
+*.zip
+*.gz
+*.tar
+*.npz
+Cognitive Biases/
+Music Listening/

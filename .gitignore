@@ -59,3 +59,8 @@ adam-platform/
 # OpenMemory - IDE/Assistant specific rules
 .cursor/rules/openmemory.mdc
 CLAUDE.md
+
+# Large data directories (not needed in deployment)
+reviews_other/
+Music Listening/
+Cognitive Biases/
