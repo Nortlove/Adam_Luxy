@@ -265,7 +265,7 @@ async def _lookup_decision_context_neo4j(decision_id: str):
         from adam.api.stackadapt.decision_cache import DecisionContext
         import json
 
-        infra = get_infrastructure()
+        infra = await get_infrastructure()
         driver = getattr(infra, "neo4j_driver", None) if infra else None
         if not driver:
             return None

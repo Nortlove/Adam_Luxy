@@ -245,7 +245,7 @@ class DecisionCache:
             from adam.core.dependencies import get_infrastructure
             import json
 
-            infra = get_infrastructure()
+            infra = await get_infrastructure()
             driver = getattr(infra, "neo4j_driver", None) if infra else None
             if not driver:
                 return

@@ -683,7 +683,16 @@ class GraphIntelligenceCache:
                 "avg(bc.identity_signaling_match) AS avg_mimetic_desire, "
                 "avg(bc.self_monitoring_fit) AS avg_social_proof_sensitivity, "
                 "avg(bc.anchor_susceptibility_match) AS avg_persuasion_susceptibility, "
-                "avg(bc.brand_trust_fit) AS avg_brand_relationship_depth"
+                "avg(bc.brand_trust_fit) AS avg_brand_relationship_depth, "
+                # 2 additional extended dims with strong theoretical mapping
+                # appeal_resonance → interoceptive_awareness: Damasio somatic
+                #   marker — affective appeal activates body-level resonance
+                # lay_theory_alignment → information_seeking: Furnham naive
+                #   psychology — when lay causal model aligns, buyer seeks
+                #   less corrective information (inverted: high alignment →
+                #   low information seeking, so we invert in the cascade)
+                "avg(bc.appeal_resonance) AS avg_interoceptive_awareness, "
+                "avg(bc.lay_theory_alignment) AS avg_information_seeking"
             )
 
             with driver.session() as session:

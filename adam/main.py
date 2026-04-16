@@ -92,6 +92,53 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
         logger.warning(f"Learning components partially initialized: {e}")
         logger.warning("API endpoints will function. Learning loop may be limited.")
     
+    # Ensure CustomerArchetype and CognitiveMechanism schema nodes exist
+    # in Neo4j. Without these, the outcome learning loop's RESPONDS_TO
+    # update silently matches zero rows (Audit #4, 2026-04-15). MERGE is
+    # idempotent — safe to run on every startup.
+    try:
+        _all_archetypes = [
+            "achiever", "guardian", "explorer", "connector", "analyst", "creator",
+            "corporate_executive", "airport_anxiety", "special_occasion",
+            "first_timer", "repeat_loyal", "status_seeker", "easy_decider",
+            "careful_truster", "skeptical_analyst", "disillusioned",
+            "trusting_loyalist", "reliable_cooperator", "prevention_planner",
+            "dependable_loyalist", "consensus_seeker", "luxury_transportation",
+            "anxious_economist", "vocal_resistor",
+        ]
+        _all_mechanisms = [
+            "social_proof", "authority", "scarcity", "loss_aversion",
+            "reciprocity", "commitment", "liking", "unity",
+            "cognitive_ease", "curiosity", "storytelling",
+        ]
+        neo4j_driver = getattr(infra, "neo4j_driver", None) or getattr(infra, "neo4j", None)
+        if neo4j_driver:
+            async with neo4j_driver.session() as _schema_session:
+                for _arch in _all_archetypes:
+                    await _schema_session.run(
+                        "MERGE (:CustomerArchetype {name: $name})",
+                        name=_arch,
+                    )
+                for _mech in _all_mechanisms:
+                    await _schema_session.run(
+                        "MERGE (:CognitiveMechanism {name: $name})",
+                        name=_mech,
+                    )
+                # Ensure RESPONDS_TO edges exist (neutral prior) so the
+                # learning loop's MATCH has something to UPDATE.
+                await _schema_session.run(
+                    "MATCH (a:CustomerArchetype), (m:CognitiveMechanism) "
+                    "MERGE (a)-[r:RESPONDS_TO]->(m) "
+                    "ON CREATE SET r.effectiveness = 0.5, r.sample_size = 1, "
+                    "r.confidence = 0.3, r.created_at = datetime()"
+                )
+            logger.info(
+                "Schema nodes ensured: %d archetypes × %d mechanisms",
+                len(_all_archetypes), len(_all_mechanisms),
+            )
+    except Exception as e:
+        logger.debug("Schema node creation skipped: %s", e)
+
     # Load graph-backed priors (replaces hardcoded with empirical data)
     # Both loaders are async since they use the AsyncDriver.
     try:
