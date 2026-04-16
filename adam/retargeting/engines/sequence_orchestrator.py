@@ -372,17 +372,25 @@ class TherapeuticSequenceOrchestrator:
                     context={**ctx_with_seq, "user_id": sequence.user_id},
                     design_effect_weight_override=design_effect_weight,
                 )
-                # The wrapper internally: calls prior_manager.update_all_levels
-                # (same as before), generates a MechanismEffectivenessSignal,
-                # publishes retargeting.outcome.observed if an event bus is
-                # configured, and runs the archetype reclassification check.
-                # The signal is logged via the wrapper's internal path; if a
-                # downstream consumer needs to read it off the sequence, add
-                # a first-class field to TherapeuticSequence in a later pass
-                # — Pydantic BaseModel does not allow arbitrary attribute
-                # assignment so stashing it on `sequence` requires a schema
-                # change which is out of Stage 1 scope.
-                _ = loop_results  # intentional: wrapper side effects are the value
+                # B1 Stage 2: TherapeuticSequence now has first-class
+                # fields for the learning signal produced by the wrapper
+                # (last_mechanism_effectiveness_signal + capped history).
+                # Stash the signal so downstream telemetry, Gradient
+                # Bridge consumers, and pilot retrospection can read it
+                # without subscribing to the event bus.
+                learning_signal = (
+                    loop_results.get("learning_signal") if loop_results else None
+                )
+                if learning_signal is not None:
+                    sequence.last_mechanism_effectiveness_signal = learning_signal
+                    sequence.mechanism_effectiveness_signals.append(learning_signal)
+                    # Cap history at 32 — bounded to keep serialized sequence
+                    # state small; 32 > max_touches (default 7) gives comfortable
+                    # headroom for reclassified sequences that exceed the cap.
+                    if len(sequence.mechanism_effectiveness_signals) > 32:
+                        sequence.mechanism_effectiveness_signals = (
+                            sequence.mechanism_effectiveness_signals[-32:]
+                        )
 
             # --- 3. Check conversion ---
             if outcome.converted:

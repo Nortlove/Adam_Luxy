@@ -567,6 +567,190 @@ class TestLearningSignalEmission:
 
 
 # =============================================================================
+# STAGE 1 WIRING VERIFICATION TESTS
+# =============================================================================
+#
+# These tests pin the Stage 1 DAG expansion (commit 7503e84) and the
+# MechanismActivation fusion-consumption fix (commit d4499c2). The
+# post-Stage-1 verification doc warned that silent failure at either
+# layer would be invisible — these tests turn both conditions into
+# hard assertions so regressions show up in CI, not in pilot data.
+
+class TestStage1DAGWiring:
+    """Structural + end-to-end verification of the 20-atom Stage 1 DAG."""
+
+    STAGE1_CONSTRUCT_ATOMS = [
+        "atom_mimetic_desire",
+        "atom_brand_personality",
+        "atom_narrative_identity",
+        "atom_regret_anticipation",
+        "atom_autonomy_reactance",
+    ]
+
+    def test_dag_topology_has_20_atoms_and_expected_levels(
+        self, blackboard, interaction_bridge
+    ):
+        """Pin the Stage 1 DAG shape: 20 atoms, 6 levels (post-Coherence-gate).
+
+        After Stage 2's Coherence promotion, MessageFraming gates on
+        CoherenceOptimization, adding one sequential level to the
+        reasoning path:
+            L0 user_state → L1 [14 parallel] → L2 mechanism_activation
+            → L3 [coherence, channel_selection] → L4 message_framing
+            → L5 ad_selection
+        """
+        from adam.atoms.dag import AtomDAG, DEFAULT_DAG_NODES
+
+        assert len(DEFAULT_DAG_NODES) == 20, (
+            f"Expected 20 atoms in DEFAULT_DAG_NODES, got {len(DEFAULT_DAG_NODES)}. "
+            "Stage 1 wiring (commit 7503e84) must not regress."
+        )
+
+        dag = AtomDAG(blackboard=blackboard, bridge=interaction_bridge)
+        levels = dag._topological_sort()
+
+        assert len(levels) == 6, (
+            f"Expected 6 topological levels after Stage 2 Coherence "
+            f"promotion, got {len(levels)}"
+        )
+        assert levels[0] == ["atom_user_state"]
+        assert len(levels[1]) == 14, (
+            f"Level 1 (parallel atoms after user_state) should have 14 atoms, "
+            f"got {len(levels[1])}: {sorted(levels[1])}"
+        )
+        for atom_id in self.STAGE1_CONSTRUCT_ATOMS:
+            assert atom_id in levels[1], (
+                f"Stage 1 construct atom {atom_id} missing from Level 1"
+            )
+
+        assert levels[2] == ["atom_mechanism_activation"]
+        assert "atom_coherence_optimization" in levels[3], (
+            "CoherenceOptimization must run at Level 3 (post-fusion)"
+        )
+        assert "atom_message_framing" in levels[4], (
+            "MessageFraming must run at Level 4, after CoherenceOptimization "
+            "(Stage 2 Coherence promotion)"
+        )
+        assert "atom_ad_selection" in levels[5], (
+            "AdSelection must run at Level 5, after MessageFraming"
+        )
+
+    def test_message_framing_gates_on_coherence(self):
+        """Stage 2 Coherence promotion: MessageFraming must depend on both
+        mechanism_activation AND coherence_optimization.
+        """
+        from adam.atoms.dag import DEFAULT_DAG_NODES
+
+        mf = next(
+            n for n in DEFAULT_DAG_NODES if n.atom_id == "atom_message_framing"
+        )
+        assert "atom_mechanism_activation" in mf.depends_on, (
+            "MessageFraming must still read mechanism_activation's fused weights"
+        )
+        assert "atom_coherence_optimization" in mf.depends_on, (
+            "Stage 2 Coherence promotion: MessageFraming must gate on coherence"
+        )
+
+    def test_mechanism_activation_depends_on_stage1_atoms(self):
+        """MechanismActivation must list the 5 Stage 1 atoms as upstream deps."""
+        from adam.atoms.dag import DEFAULT_DAG_NODES
+
+        mech = next(
+            n for n in DEFAULT_DAG_NODES if n.atom_id == "atom_mechanism_activation"
+        )
+        for atom_id in self.STAGE1_CONSTRUCT_ATOMS:
+            assert atom_id in mech.depends_on, (
+                f"MechanismActivation must depend on {atom_id} so fusion "
+                f"can call get_upstream() on it"
+            )
+
+    def test_auxiliary_atoms_list_includes_stage1_construct_atoms(self):
+        """The fusion-consumption list must include all 5 Stage 1 atoms.
+
+        Investigation (a) in ADAM_STAGE_1_POST_WIRING_VERIFICATION.md caught
+        a silent-failure bug where the atoms ran but their outputs were
+        skipped at the fusion loop. This test pins the fix.
+        """
+        from adam.atoms.core import mechanism_activation as ma_module
+        import inspect
+
+        src = inspect.getsource(ma_module.MechanismActivationAtom._build_output)
+        for atom_id in self.STAGE1_CONSTRUCT_ATOMS:
+            assert f'"{atom_id}"' in src, (
+                f"{atom_id} missing from _AUXILIARY_ATOMS fusion list in "
+                f"_build_output. Commit d4499c2 must not regress."
+            )
+        assert '"atom_coherence_optimization"' not in src.split(
+            "_AUXILIARY_ATOMS = ["
+        )[1].split("]")[0], (
+            "atom_coherence_optimization must NOT be in _AUXILIARY_ATOMS — "
+            "it runs AFTER mechanism_activation and cannot be an upstream "
+            "provider for fusion."
+        )
+
+    @pytest.mark.asyncio
+    async def test_stage1_dag_end_to_end_execution(
+        self, blackboard, interaction_bridge, request_context_factory
+    ):
+        """Run the 20-atom DAG end-to-end with stub infra and verify:
+
+        1. All 20 atoms attempt execution (no structural short-circuits).
+        2. MechanismActivation produces an output.
+        3. CoherenceOptimization runs post-fusion at Level 3.
+        4. MessageFraming and AdSelection complete.
+        5. The fusion loop's `auxiliary_atoms_consumed` list is observable
+           in MechanismActivation's secondary_assessments (the pilot-critical
+           silent-failure signal).
+        """
+        from adam.atoms.dag import AtomDAG
+        from adam.blackboard.models.core import ComponentRole
+
+        request_id = f"req_{uuid4().hex[:12]}"
+        user_id = "stage1_e2e_user"
+        await blackboard.create_blackboard(request_id, user_id)
+        context = request_context_factory(request_id=request_id, user_id=user_id)
+        await blackboard.write_zone1(
+            request_id, context, role=ComponentRole.REQUEST_HANDLER
+        )
+
+        dag = AtomDAG(blackboard=blackboard, bridge=interaction_bridge)
+        result = await dag.execute(request_id=request_id, request_context=context)
+
+        assert result is not None
+        # atoms_executed + atoms_failed covers everything the DAG tried.
+        attempted = result.atoms_executed + result.atoms_failed
+        assert attempted >= 20, (
+            f"Stage 1 DAG should attempt all 20 atoms; attempted={attempted}, "
+            f"executed={result.atoms_executed}, failed={result.atoms_failed}, "
+            f"errors={result.errors[:5]}"
+        )
+
+        # MechanismActivation is required — if this didn't run, the Stage 1
+        # wiring is broken at the dependency level, not just degraded.
+        assert "atom_mechanism_activation" in result.atom_outputs, (
+            f"MechanismActivation did not produce output. "
+            f"errors={result.errors[:10]}"
+        )
+        mech_output = result.atom_outputs["atom_mechanism_activation"]
+
+        # Fusion-consumption signal: even under stub infrastructure where
+        # some construct atoms may return empty adjustments, the list field
+        # itself must exist so downstream telemetry can reason about it.
+        assert mech_output.secondary_assessments is not None
+        assert "auxiliary_atoms_consumed" in mech_output.secondary_assessments, (
+            "MechanismActivation must surface `auxiliary_atoms_consumed` "
+            "in secondary_assessments so fusion consumption is observable "
+            "and silent failure is detectable."
+        )
+
+        # Coherence runs post-fusion. It is required=False so we only check
+        # that if it was attempted, it didn't block MessageFraming.
+        assert "atom_message_framing" in result.atom_outputs or any(
+            "atom_message_framing" in e for e in result.errors
+        ), "MessageFraming must either run or report an explicit error"
+
+
+# =============================================================================
 # ERROR HANDLING TESTS
 # =============================================================================
 

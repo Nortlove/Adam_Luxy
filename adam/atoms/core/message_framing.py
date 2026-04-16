@@ -236,9 +236,34 @@ class MessageFramingAtom(BaseAtom):
         """
         # Get activated mechanisms from upstream
         mech_atom = atom_input.get_upstream("atom_mechanism_activation")
-        
+
         if mech_atom and mech_atom.mechanism_weights:
-            weights = mech_atom.mechanism_weights
+            # Stage 2 Coherence promotion: apply CoherenceOptimization's
+            # conflict-resolved cluster as a bias on top of the raw
+            # mechanism_activation weights. Coherence is required=False
+            # in the DAG, so the atom may be missing — in that case this
+            # block is a no-op and framing falls back to pre-promotion
+            # behavior. When coherence IS present, its recommended
+            # mechanisms get a multiplicative boost so the conflict
+            # resolution actually shapes the framing outcome instead of
+            # running in parallel and being ignored.
+            weights = dict(mech_atom.mechanism_weights)
+            _coherence_consumed = False
+            _coherence_recommended: List[str] = []
+            _coh_atom = atom_input.get_upstream("atom_coherence_optimization")
+            if _coh_atom and _coh_atom.recommended_mechanisms:
+                _coherence_recommended = list(_coh_atom.recommended_mechanisms)
+                _coherence_consumed = True
+                # Boost coherence-endorsed mechanisms by 25%. Clamped to
+                # [0, 1] so the boost cannot push scores out of range.
+                # Mechanisms the coherent cluster does NOT include are
+                # left untouched rather than suppressed — coherence's job
+                # is resolution, not censorship, and the absent mechanisms
+                # already earned their mechanism_activation weight from
+                # fused upstream evidence.
+                for _mech in _coherence_recommended:
+                    if _mech in weights:
+                        weights[_mech] = min(1.0, weights[_mech] * 1.25)
             
             # Determine framing from mechanism weights
             gain_weight = 0.5
@@ -304,6 +329,12 @@ class MessageFramingAtom(BaseAtom):
                     "emotional_appeal": emotional_weight,
                     "social_emphasis": social_weight,
                     "urgency": urgency_weight,
+                    # Stage 2 Coherence promotion: observability signal
+                    # so tests and telemetry can tell whether coherence
+                    # influenced framing on this request. Consumed_flag
+                    # is False when coherence failed or was absent.
+                    "coherence_consumed": _coherence_consumed,
+                    "coherence_recommended_mechanisms": _coherence_recommended,
                 },
             )
         

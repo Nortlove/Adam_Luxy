@@ -270,10 +270,24 @@ DEFAULT_DAG_NODES = [
     ),
     
     # Level 4: Message Strategy
+    # Stage 2 Coherence promotion (ADAM_STAGE_1_POST_WIRING_VERIFICATION.md
+    # follow-up 4): MessageFraming now gates on CoherenceOptimization in
+    # addition to MechanismActivation. This makes coherence a real
+    # consumer of conflict resolution rather than a parallel advisory
+    # atom. CoherenceOptimization is still required=False, so if it
+    # fails, MessageFraming still runs — it defensively reads
+    # mechanism_activation as the base and applies coherence's
+    # recommended_mechanisms as a bias only when coherence is present.
+    # The extra sequential level adds coherence's latency (800ms cap)
+    # to the reasoning path critical path; this is acceptable because
+    # coherence only runs on the reasoning path, not the fast path.
     AtomNode(
         atom_id="atom_message_framing",
         atom_class="MessageFramingAtom",
-        depends_on=["atom_mechanism_activation"],
+        depends_on=[
+            "atom_mechanism_activation",
+            "atom_coherence_optimization",
+        ],
         required=True,
     ),
     

@@ -18,6 +18,7 @@ from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
+from adam.retargeting.models.learning import MechanismEffectivenessSignal
 from adam.retargeting.models.enums import (
     BarrierCategory,
     ConversionStage,
@@ -207,6 +208,26 @@ class TherapeuticSequence(BaseModel):
     mechanism_effectiveness_log: Dict[str, List[float]] = Field(
         default_factory=dict,
         description="mechanism_name -> [outcome_scores] for Bayesian updating",
+    )
+
+    # Enhancement #33 / B1 Stage 2: stash the learning signal produced by
+    # the RetargetingLearningLoop wrapper on every touch outcome. The
+    # wrapper was generating these since c1ca185 but discarding them at
+    # the orchestrator boundary because Pydantic BaseModel rejects
+    # arbitrary attribute assignment. This pair of fields closes that
+    # loop so downstream telemetry, pilot retrospection, and the Gradient
+    # Bridge integration can read per-touch mechanism effectiveness
+    # without needing to subscribe to the outcome.observed event stream.
+    last_mechanism_effectiveness_signal: Optional[MechanismEffectivenessSignal] = Field(
+        default=None,
+        description="Most recent learning signal from process_touch_outcome",
+    )
+    mechanism_effectiveness_signals: List[MechanismEffectivenessSignal] = Field(
+        default_factory=list,
+        description=(
+            "Capped history of learning signals from process_touch_outcome. "
+            "Bounded at 32 to keep sequence state small."
+        ),
     )
 
     # Cross-archetype reclassification

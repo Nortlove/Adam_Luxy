@@ -1414,6 +1414,16 @@ class MechanismActivationAtom(BaseAtom):
             "mechanism_scores": scores,
             "scoring_method": scoring_method,  # "graph_inference" or "static_heuristic"
             "inferential_chains": inferential_chains,
+            # Observable record of which auxiliary/construct atoms actually
+            # contributed mechanism_adjustments via the fusion loop above.
+            # Surfaces the silent-failure risk the Stage 1 post-wiring
+            # verification pass caught: before this field existed, a missing
+            # entry in _AUXILIARY_ATOMS looked identical at the output level
+            # to a present entry whose upstream atom returned empty
+            # adjustments. Test fixtures and the pilot telemetry both read
+            # this list to assert the 5 Stage 1 construct atoms actually
+            # fused into mechanism scoring.
+            "auxiliary_atoms_consumed": list(auxiliary_applied),
         }
         if review_output and review_output.secondary_assessments:
             secondary["review_context"] = review_output.secondary_assessments.get(

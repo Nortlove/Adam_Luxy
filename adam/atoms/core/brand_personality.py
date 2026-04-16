@@ -142,7 +142,7 @@ class BrandPersonalityAtom(BaseAtom):
     - BANDIT_POSTERIORS (learned brand-archetype effectiveness)
     """
     
-    ATOM_TYPE = AtomType.CUSTOM  # Could add BRAND_PERSONALITY to AtomType enum
+    ATOM_TYPE = AtomType.BRAND_PERSONALITY
     ATOM_NAME = "brand_personality"
     TARGET_CONSTRUCT = "brand_personality"
     

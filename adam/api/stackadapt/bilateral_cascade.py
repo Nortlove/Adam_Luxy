@@ -297,8 +297,115 @@ _ARCHETYPE_MECHANISM_PRIORS_FALLBACK: Dict[str, Dict[str, float]] = {
 }
 
 # Mutable reference — replaced by load_graph_archetype_priors() at startup
+# and refreshed periodically by _refresh_priors_if_stale() after outcomes
+# update RESPONDS_TO edges. See Audit #1 finding: frozen priors caused
+# Level 1 cascade to serve stale data for the entire process lifetime.
 _ARCHETYPE_MECHANISM_PRIORS: Dict[str, Dict[str, float]] = dict(_ARCHETYPE_MECHANISM_PRIORS_FALLBACK)
 _PRIORS_SOURCE: str = "hardcoded_fallback"
+_PRIORS_LOADED_AT: float = 0.0  # monotonic timestamp of last refresh
+_PRIORS_REFRESH_INTERVAL: float = 3600.0  # 1 hour max staleness
+_PRIORS_REFRESH_IN_PROGRESS: bool = False  # prevent concurrent refreshes
+
+
+def invalidate_archetype_priors() -> None:
+    """Mark archetype mechanism priors as stale so the next decision
+    triggers a background refresh from Neo4j RESPONDS_TO edges.
+
+    Called by outcome_handler._update_bilateral_edge_evidence after
+    updating RESPONDS_TO edge effectiveness values. Without this,
+    Level 1 cascade reads startup-time priors for the entire process
+    lifetime even though outcomes continually update the source edges.
+    """
+    global _PRIORS_LOADED_AT
+    _PRIORS_LOADED_AT = 0.0
+
+
+def _refresh_priors_if_stale() -> None:
+    """Refresh _ARCHETYPE_MECHANISM_PRIORS from Neo4j if stale.
+
+    Uses the sync Neo4j driver (same pattern as GraphIntelligenceCache)
+    so it can be called from the synchronous run_bilateral_cascade path.
+    Non-blocking on concurrent calls: if a refresh is already in progress,
+    returns immediately and the current request uses slightly stale data.
+    """
+    global _ARCHETYPE_MECHANISM_PRIORS, _PRIORS_SOURCE
+    global _PRIORS_LOADED_AT, _PRIORS_REFRESH_IN_PROGRESS
+
+    import time as _time
+    now = _time.monotonic()
+    if (now - _PRIORS_LOADED_AT) < _PRIORS_REFRESH_INTERVAL:
+        return
+    if _PRIORS_REFRESH_IN_PROGRESS:
+        return
+
+    _PRIORS_REFRESH_IN_PROGRESS = True
+    try:
+        driver = None
+        try:
+            from adam.api.stackadapt.graph_cache import get_graph_cache
+            cache = get_graph_cache()
+            driver = cache._get_driver()
+        except Exception:
+            pass
+
+        if driver is None:
+            try:
+                from adam.infrastructure.neo4j.client import get_neo4j_client
+                client = get_neo4j_client()
+                if client.is_connected:
+                    driver = client.driver
+            except Exception:
+                pass
+
+        if driver is None:
+            return
+
+        min_samples = _cascade_cfg().graph_prior_min_sample_size
+        with driver.session() as session:
+            records = session.run(
+                "MATCH (a:CustomerArchetype)-[r:RESPONDS_TO]->"
+                "(m:CognitiveMechanism) "
+                "WHERE r.effectiveness IS NOT NULL "
+                "AND r.sample_size > $min_samples "
+                "RETURN a.name AS archetype, m.name AS mechanism, "
+                "r.effectiveness AS effectiveness",
+                min_samples=min_samples,
+            ).data()
+
+        if not records:
+            _PRIORS_LOADED_AT = now
+            return
+
+        graph_priors: Dict[str, Dict[str, float]] = {}
+        for rec in records:
+            arch = rec["archetype"]
+            mech = rec["mechanism"]
+            eff = rec["effectiveness"]
+            if arch not in graph_priors:
+                graph_priors[arch] = {}
+            graph_priors[arch][mech] = float(eff)
+
+        if graph_priors:
+            for arch, fallback_mechs in _ARCHETYPE_MECHANISM_PRIORS_FALLBACK.items():
+                if arch not in graph_priors:
+                    graph_priors[arch] = dict(fallback_mechs)
+                else:
+                    for mech, val in fallback_mechs.items():
+                        if mech not in graph_priors[arch]:
+                            graph_priors[arch][mech] = val
+
+            _ARCHETYPE_MECHANISM_PRIORS = graph_priors
+            _PRIORS_SOURCE = "neo4j_responds_to"
+            logger.debug(
+                "Refreshed archetype priors from Neo4j: %d archetypes",
+                len(graph_priors),
+            )
+        _PRIORS_LOADED_AT = now
+    except Exception as e:
+        logger.debug("Archetype priors refresh failed (non-critical): %s", e)
+        _PRIORS_LOADED_AT = now  # back off for one interval on failure
+    finally:
+        _PRIORS_REFRESH_IN_PROGRESS = False
 
 
 async def load_graph_archetype_priors(neo4j_driver=None) -> bool:
@@ -312,7 +419,7 @@ async def load_graph_archetype_priors(neo4j_driver=None) -> bool:
     Uses async Neo4j driver (AsyncDriver) since that's what the
     infrastructure provides.
     """
-    global _ARCHETYPE_MECHANISM_PRIORS, _PRIORS_SOURCE
+    global _ARCHETYPE_MECHANISM_PRIORS, _PRIORS_SOURCE, _PRIORS_LOADED_AT
 
     driver = neo4j_driver
     if driver is None:
@@ -365,6 +472,8 @@ async def load_graph_archetype_priors(neo4j_driver=None) -> bool:
 
             _ARCHETYPE_MECHANISM_PRIORS = graph_priors
             _PRIORS_SOURCE = "neo4j_responds_to"
+            import time as _time
+            _PRIORS_LOADED_AT = _time.monotonic()
             logger.info(
                 "Loaded graph-backed archetype priors: %d archetypes, %d total mechanism scores",
                 len(graph_priors),
@@ -567,6 +676,111 @@ def level2_category_posterior(
 
 
 # ---------------------------------------------------------------------------
+# Page edge shift — Bargh-correct page repositioning (B2 Stage 2)
+# ---------------------------------------------------------------------------
+def _compute_page_shift_for_cascade(
+    page_url: Optional[str],
+) -> Tuple[Dict[str, float], float, Optional[Any]]:
+    """Compute the page edge-space shift vector used by Level 3 scoring.
+
+    This is the Bargh-correct wiring: the page repositions the buyer in
+    20-dim edge space BEFORE mechanism scoring runs, rather than modulating
+    scores post-hoc. See ADAM_PAGE_INTELLIGENCE_REVIEW.md (Pass B) and
+    adam/intelligence/page_edge_bridge.py for the theoretical grounding.
+
+    Called by run_bilateral_cascade before level3_bilateral_edges so the
+    shift can be threaded into L3's scoring internals. Failures are silent
+    — missing page intelligence falls back to no shift, which is
+    behaviorally identical to the pre-B2 path.
+
+    Returns:
+        (shift_vector, page_confidence, page_profile)
+            - shift_vector: Dict[edge_dim → float], empty dict if no page
+            - page_confidence: 0.0 if no page profile available
+            - page_profile: the raw PagePsychologicalProfile for downstream
+              reuse by apply_context_modulation (avoids a double lookup)
+    """
+    if not page_url:
+        return {}, 0.0, None
+
+    try:
+        from adam.intelligence.page_intelligence import get_page_intelligence_cache
+        page_cache = get_page_intelligence_cache()
+        page_profile = page_cache.lookup(page_url)
+    except Exception as exc:
+        logger.debug("Page intelligence lookup failed: %s", exc)
+        return {}, 0.0, None
+
+    if not page_profile:
+        return {}, 0.0, None
+
+    cfg = _cascade_cfg()
+    if page_profile.confidence <= cfg.page_confidence_floor:
+        return {}, 0.0, page_profile
+
+    pp = page_profile
+    try:
+        from adam.intelligence.page_edge_bridge import compute_page_edge_shift
+
+        # Best-effort 7-dim NDF from PagePsychologicalProfile fields.
+        # Fields that aren't directly exposed default to neutral (0.5)
+        # so they contribute zero shift along that axis — a safe default.
+        # When this goes to first-class fields in a later pass, the
+        # mapping collapses to direct reads.
+        _processing_mode = getattr(pp, "processing_mode", "") or ""
+        page_ndf = {
+            "approach_avoidance": -1.0 * float(getattr(pp, "emotional_valence", 0.0)),
+            "temporal_horizon": 0.5,
+            "social_calibration": min(
+                1.0, max(0.0, float(getattr(pp, "need_urgency", 0.5)))
+            ),
+            "uncertainty_tolerance": max(
+                0.0, 1.0 - float(getattr(pp, "cognitive_load", 0.5))
+            ),
+            "cognitive_engagement": (
+                0.8 if _processing_mode == "analytical"
+                else 0.3 if _processing_mode == "scanning"
+                else 0.6 if _processing_mode == "immersive"
+                else 0.5
+            ),
+            "arousal_seeking": float(getattr(pp, "emotional_arousal", 0.5)),
+            "status_sensitivity": 0.5,
+        }
+
+        _psf_problem_frame = getattr(pp, "problem_solution_frame", "") or ""
+        extended_fields = {
+            "prospect_frame": (
+                -0.5 if _psf_problem_frame in ("problem_only", "crisis")
+                else 0.5 if _psf_problem_frame in ("aspirational", "solution_only")
+                else 0.0
+            ),
+            "publisher_authority": float(getattr(pp, "publisher_authority", 0.5)),
+            "remaining_bandwidth": float(getattr(pp, "remaining_bandwidth", 0.5)),
+            "content_freshness": (
+                "breaking"
+                if (
+                    float(getattr(pp, "last_crawled", 0.0)) > (time.time() - 3600)
+                    and int(getattr(pp, "crawl_count", 0)) <= 1
+                )
+                else "normal"
+            ),
+            "immersion_depth": (
+                0.8 if _processing_mode == "immersive"
+                else float(getattr(pp, "attention_competition", 0.0)) * 0.6
+            ),
+        }
+
+        shift_vector = compute_page_edge_shift(
+            page_ndf=page_ndf,
+            page_profile_fields=extended_fields,
+        )
+        return shift_vector, float(pp.confidence), page_profile
+    except Exception as exc:
+        logger.debug("Page edge shift computation failed: %s", exc)
+        return {}, 0.0, page_profile
+
+
+# ---------------------------------------------------------------------------
 # Level 3: Bilateral Edge Intelligence — the core innovation
 # ---------------------------------------------------------------------------
 def level3_bilateral_edges(
@@ -575,6 +789,8 @@ def level3_bilateral_edges(
     graph_cache: Any,
     base: CreativeIntelligence,
     buyer_id: Optional[str] = None,
+    page_shift: Optional[Dict[str, float]] = None,
+    page_confidence: float = 0.0,
 ) -> CreativeIntelligence:
     """Level 3: Derive creative parameters DIRECTLY from BRAND_CONVERTED edges.
 
@@ -632,6 +848,90 @@ def level3_bilateral_edges(
     interoceptive_awareness = edge_agg.get("avg_interoceptive_awareness", 0.5)
     cooperative_framing_fit = edge_agg.get("avg_cooperative_framing_fit", 0.5)
     decision_entropy = edge_agg.get("avg_decision_entropy", 0.5)
+
+    # ── B2 Stage 2: Apply page edge shift BEFORE scoring ──
+    # If a page shift vector was computed upstream (run_bilateral_cascade
+    # calls _compute_page_shift_for_cascade before L3), reposition the
+    # raw edge dimensions in 20-dim space BEFORE the mechanism scoring
+    # formulas read them. This is the Bargh-correct architecture: page
+    # context shifts the buyer's psychological state FIRST, and scoring
+    # then operates on the shifted state — not the other way around.
+    #
+    # Post-hoc modulation (see apply_context_modulation) is retained for
+    # effects that are not edge-dimension repositioning (tone, channels,
+    # etc.), but the mechanism_scores themselves are now derived from
+    # page-shifted edge evidence.
+    shift_applied: Dict[str, float] = {}
+    shift_was_consumed = False
+    if page_shift:
+        try:
+            from adam.intelligence.page_edge_bridge import apply_page_shift_to_edges
+
+            raw_dims = {
+                "regulatory_fit": reg_fit,
+                "construal_fit": construal_fit,
+                "personality_alignment": personality_align,
+                "emotional_resonance": emotional,
+                "value_alignment": value_align,
+                "evolutionary_motive": evo_motive,
+                "persuasion_susceptibility": persuasion_susceptibility,
+                "cognitive_load_tolerance": cognitive_load_tolerance,
+                "narrative_transport": narrative_transport,
+                "social_proof_sensitivity": social_proof_sensitivity,
+                "loss_aversion_intensity": loss_aversion_intensity,
+                "temporal_discounting": temporal_discounting,
+                "brand_relationship_depth": brand_relationship_depth,
+                "autonomy_reactance": autonomy_reactance,
+                "information_seeking": information_seeking,
+                "mimetic_desire": mimetic_desire,
+                "interoceptive_awareness": interoceptive_awareness,
+                "cooperative_framing_fit": cooperative_framing_fit,
+                "decision_entropy": decision_entropy,
+            }
+            shifted = apply_page_shift_to_edges(
+                raw_edge_dimensions=raw_dims,
+                page_shift=page_shift,
+                page_confidence=page_confidence,
+            )
+            # Rebind the local scoring variables to the shifted values.
+            # apply_page_shift_to_edges preserves keys and clamps to [0,1].
+            reg_fit = shifted.get("regulatory_fit", reg_fit)
+            construal_fit = shifted.get("construal_fit", construal_fit)
+            personality_align = shifted.get("personality_alignment", personality_align)
+            emotional = shifted.get("emotional_resonance", emotional)
+            value_align = shifted.get("value_alignment", value_align)
+            evo_motive = shifted.get("evolutionary_motive", evo_motive)
+            persuasion_susceptibility = shifted.get(
+                "persuasion_susceptibility", persuasion_susceptibility
+            )
+            cognitive_load_tolerance = shifted.get(
+                "cognitive_load_tolerance", cognitive_load_tolerance
+            )
+            narrative_transport = shifted.get("narrative_transport", narrative_transport)
+            social_proof_sensitivity = shifted.get(
+                "social_proof_sensitivity", social_proof_sensitivity
+            )
+            loss_aversion_intensity = shifted.get(
+                "loss_aversion_intensity", loss_aversion_intensity
+            )
+            temporal_discounting = shifted.get("temporal_discounting", temporal_discounting)
+            brand_relationship_depth = shifted.get(
+                "brand_relationship_depth", brand_relationship_depth
+            )
+            autonomy_reactance = shifted.get("autonomy_reactance", autonomy_reactance)
+            information_seeking = shifted.get("information_seeking", information_seeking)
+            mimetic_desire = shifted.get("mimetic_desire", mimetic_desire)
+            interoceptive_awareness = shifted.get(
+                "interoceptive_awareness", interoceptive_awareness
+            )
+            cooperative_framing_fit = shifted.get(
+                "cooperative_framing_fit", cooperative_framing_fit
+            )
+            decision_entropy = shifted.get("decision_entropy", decision_entropy)
+            shift_applied = shifted
+            shift_was_consumed = True
+        except Exception as exc:
+            logger.debug("Page edge shift application failed (non-critical): %s", exc)
 
     # --- Derive creative parameters from edge evidence ---
     # Categorical params (retained for backward compatibility with StackAdapt)
@@ -926,6 +1226,36 @@ def level3_bilateral_edges(
         "decision_entropy": decision_entropy,
     }
 
+    # Record page-shift consumption for downstream inspection. The B2
+    # Stage 1 stash was advisory-only; now that the shift is threaded
+    # through scoring, we mark consumed_by_scoring=True so telemetry,
+    # tests, and apply_context_modulation can tell which architectural
+    # path ran.
+    if page_shift:
+        if base.context_intelligence is None:
+            base.context_intelligence = {}
+        _significant = {
+            dim: round(val, 3)
+            for dim, val in page_shift.items()
+            if abs(val) >= 0.02
+        }
+        base.context_intelligence["page_edge_shift"] = {
+            "shift_vector": dict(page_shift),
+            "significant_shifts": _significant,
+            "page_confidence": page_confidence,
+            "consumed_by_scoring": shift_was_consumed,
+            "stage": "level3_scoring",
+            "source": "page_edge_bridge.compute_page_edge_shift",
+        }
+        if shift_was_consumed and _significant:
+            _top3 = sorted(
+                _significant.items(), key=lambda kv: abs(kv[1]), reverse=True
+            )[:3]
+            _top3_str = ", ".join(f"{dim} {val:+.2f}" for dim, val in _top3)
+            base.reasoning.append(
+                f"PageEdgeShift (Bargh, L3-consumed): top 3 — {_top3_str}"
+            )
+
     # Update metadata
     base.cascade_level = 3
     base.evidence_source = "bilateral_edges"
@@ -1164,154 +1494,16 @@ def apply_context_modulation(
             if page_profile and page_profile.confidence > cfg.page_confidence_floor:
                 pp = page_profile  # shorthand
 
-                # ── BARGH-CORRECT PAGE-SHIFT (Pass B finding — B2 Stage 1) ──
-                # `compute_page_edge_shift()` implements the architectural
-                # fix the foundation doc demands: the page does not just
-                # modulate mechanism scores after the fact, it SHIFTS the
-                # buyer's position in 20-dim edge space BEFORE mechanism
-                # scoring happens. See ADAM_PAGE_INTELLIGENCE_REVIEW.md
-                # (Pass B) and adam/intelligence/page_edge_bridge.py.
-                #
-                # This commit wires the shift function into the live
-                # decision path at observability-first level: the shift
-                # vector is computed, recorded in the reasoning trace,
-                # and stashed on result.context_intelligence for
-                # inspection. It does NOT yet rewrite `mechanism_scores`
-                # using the shifted buyer position — that is Stage 2 and
-                # requires modifying `level3_bilateral_edges` to thread
-                # the shifted edge_dimensions through its scoring
-                # internals. Stage 1 unstrands the function so drift from
-                # the theoretically-correct architecture is observable in
-                # every decision, without changing current scoring
-                # behavior.
-                try:
-                    from adam.intelligence.page_edge_bridge import (
-                        compute_page_edge_shift,
-                    )
-                    # Build a best-effort 7-dim NDF dict from available
-                    # PagePsychologicalProfile fields. Fields not
-                    # available default to neutral (0.5). Where a field
-                    # is clearly absent (status_sensitivity), leaving it
-                    # neutral means compute_page_edge_shift produces zero
-                    # contribution along that axis — a safe default.
-                    #
-                    # The mapping below is pragmatic, not canonical.
-                    # When level3_bilateral_edges is modified in Stage 2
-                    # to consume the shift, the PagePsychologicalProfile
-                    # schema should be extended to expose the 7 NDF
-                    # dimensions directly (one first-class field each)
-                    # instead of being reconstructed here.
-                    _ndf_approach_avoidance = (
-                        -1.0 * float(getattr(pp, "emotional_valence", 0.0))
-                    )  # negative valence → avoidance
-                    _ndf_temporal_horizon = 0.5  # not directly available
-                    _ndf_social_calibration = min(
-                        1.0, max(0.0, float(getattr(pp, "need_urgency", 0.5)))
-                    )
-                    _ndf_uncertainty_tolerance = max(
-                        0.0, 1.0 - float(getattr(pp, "cognitive_load", 0.5))
-                    )  # high load → low tolerance
-                    _processing_mode = getattr(pp, "processing_mode", "") or ""
-                    _ndf_cognitive_engagement = (
-                        0.8 if _processing_mode == "analytical"
-                        else 0.3 if _processing_mode == "scanning"
-                        else 0.6 if _processing_mode == "immersive"
-                        else 0.5
-                    )
-                    _ndf_arousal_seeking = float(
-                        getattr(pp, "emotional_arousal", 0.5)
-                    )
-                    _ndf_status_sensitivity = 0.5  # not directly available
-
-                    _page_ndf = {
-                        "approach_avoidance": _ndf_approach_avoidance,
-                        "temporal_horizon": _ndf_temporal_horizon,
-                        "social_calibration": _ndf_social_calibration,
-                        "uncertainty_tolerance": _ndf_uncertainty_tolerance,
-                        "cognitive_engagement": _ndf_cognitive_engagement,
-                        "arousal_seeking": _ndf_arousal_seeking,
-                        "status_sensitivity": _ndf_status_sensitivity,
-                    }
-
-                    # Extended profile fields — these ARE directly
-                    # available on PagePsychologicalProfile and map
-                    # cleanly to compute_page_edge_shift's expected
-                    # extended signals.
-                    _psf_problem_frame = getattr(pp, "problem_solution_frame", "") or ""
-                    _extended_fields = {
-                        "prospect_frame": (
-                            -0.5 if _psf_problem_frame in ("problem_only", "crisis")
-                            else 0.5 if _psf_problem_frame in ("aspirational", "solution_only")
-                            else 0.0
-                        ),
-                        "publisher_authority": float(
-                            getattr(pp, "publisher_authority", 0.5)
-                        ),
-                        "remaining_bandwidth": float(
-                            getattr(pp, "remaining_bandwidth", 0.5)
-                        ),
-                        # content_freshness: "breaking" if last_crawled
-                        # is very recent AND crawl_count is low
-                        "content_freshness": (
-                            "breaking"
-                            if (
-                                float(getattr(pp, "last_crawled", 0.0)) > (time.time() - 3600)
-                                and int(getattr(pp, "crawl_count", 0)) <= 1
-                            )
-                            else "normal"
-                        ),
-                        # immersion_depth: high for video/immersive content
-                        "immersion_depth": (
-                            0.8 if _processing_mode == "immersive"
-                            else float(getattr(pp, "attention_competition", 0.0)) * 0.6
-                        ),
-                    }
-
-                    _shift_vector = compute_page_edge_shift(
-                        page_ndf=_page_ndf,
-                        page_profile_fields=_extended_fields,
-                    )
-
-                    # Stash the shift on result.context_intelligence for
-                    # inspection by tests, metrics, and (eventually) the
-                    # Stage 2 consumer in level3_bilateral_edges.
-                    if not result.context_intelligence:
-                        result.context_intelligence = {}
-                    # Only report the dimensions with non-trivial shift
-                    # magnitude to keep the reasoning trace compact.
-                    _significant_shifts = {
-                        dim: round(val, 3)
-                        for dim, val in _shift_vector.items()
-                        if abs(val) >= 0.02
-                    }
-                    result.context_intelligence["page_edge_shift"] = {
-                        "shift_vector": _shift_vector,
-                        "significant_shifts": _significant_shifts,
-                        "stage": "observability_only_stage_1",
-                        "consumed_by_scoring": False,
-                        "source": "page_edge_bridge.compute_page_edge_shift",
-                    }
-                    if _significant_shifts:
-                        # Top 3 by absolute magnitude for readability
-                        _top3 = sorted(
-                            _significant_shifts.items(),
-                            key=lambda kv: abs(kv[1]),
-                            reverse=True,
-                        )[:3]
-                        _top3_str = ", ".join(
-                            f"{dim} {val:+.2f}" for dim, val in _top3
-                        )
-                        result.reasoning.append(
-                            f"PageEdgeShift (Bargh): top 3 repositioning — {_top3_str}"
-                        )
-                except Exception as _shift_exc:
-                    # Shift computation is non-critical. Failures are
-                    # observed only in debug logs; the existing post-hoc
-                    # modulation below continues to run either way.
-                    logger.debug(
-                        "Page edge shift computation failed (non-critical): %s",
-                        _shift_exc,
-                    )
+                # ── B2 Stage 2: Page edge shift is now computed upstream
+                # in run_bilateral_cascade and consumed inside
+                # level3_bilateral_edges BEFORE mechanism scoring. The
+                # shift vector is stashed on result.context_intelligence
+                # by L3 with consumed_by_scoring=True. The duplicate
+                # post-hoc computation that lived here in Stage 1 has
+                # been removed; the page-profile-dependent modulation
+                # below (channels, tone, activated needs, etc.) still
+                # runs because those effects are NOT edge-dimension
+                # repositioning and require the full profile.
 
                 # ── EMPIRICAL: Page-conditioned graph query ──
                 # Ask the graph: "among 47M bilateral edges, which conversions
@@ -1959,6 +2151,10 @@ def run_bilateral_cascade(
     """
     t0 = time.monotonic()
 
+    # Refresh archetype priors if stale (Audit #1 fix: priors were
+    # previously frozen at startup for the entire process lifetime).
+    _refresh_priors_if_stale()
+
     # Parse segment
     archetype, mechanism_hint, category = _parse_segment_id(segment_id)
     archetype = resolve_archetype(archetype)
@@ -1984,9 +2180,25 @@ def run_bilateral_cascade(
         pass
 
     if asin and graph_cache and budget_ok and neo4j_circuit_ok:
+        # B2 Stage 2: compute the page edge shift BEFORE L3 so that L3's
+        # mechanism scoring formulas operate on page-shifted buyer position
+        # in 20-dim edge space. Returns ({}, 0.0, None) when no page is
+        # available — L3 then runs identically to the pre-B2 path.
+        _page_shift, _page_conf, _page_profile_prefetch = _compute_page_shift_for_cascade(
+            page_url
+        )
+
         # Try Level 3 first (bilateral edges)
         pre_level = result.cascade_level
-        result = level3_bilateral_edges(asin, archetype, graph_cache, result, buyer_id=buyer_id)
+        result = level3_bilateral_edges(
+            asin,
+            archetype,
+            graph_cache,
+            result,
+            buyer_id=buyer_id,
+            page_shift=_page_shift,
+            page_confidence=_page_conf,
+        )
 
         budget_ok = latency_budget is None or latency_budget.has_budget
         if result.cascade_level == pre_level and budget_ok:
