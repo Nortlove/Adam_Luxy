@@ -146,6 +146,13 @@ class CreativeIntelligenceService:
         """
         start = time.perf_counter()
 
+        # Parse archetype from segment_id using the same regex the cascade
+        # uses. Must be set early because both _persist_decision and the
+        # response formatting need the correctly-resolved archetype.
+        from adam.api.stackadapt.bilateral_cascade import _parse_segment_id
+        _parsed_arch, _, _parsed_cat = _parse_segment_id(segment_id)
+        archetype = resolve_archetype(_parsed_arch)
+
         # Track placement URL for inventory learning (offline crawler uses this)
         if page_url:
             try:
@@ -376,7 +383,7 @@ class CreativeIntelligenceService:
             "reasoning_trace": ci.reasoning,
             "decision_id": decision_id,
             "segment_metadata": {
-                "archetype": resolve_archetype(segment_id.replace("informativ_", "").split("_")[0]),
+                "archetype": archetype,  # From _parse_segment_id, resolved
                 "segment_id": segment_id,
                 "cascade_level": ci.cascade_level,
                 "evidence_source": ci.evidence_source,
@@ -574,7 +581,15 @@ class CreativeIntelligenceService:
         not an inference from the webhook event.
         """
         ci = cascade_result
-        archetype = resolve_archetype(segment_id.replace("informativ_", "").split("_")[0])
+        # Use the same regex-based parser the cascade uses. The previous
+        # code (.split("_")[0]) truncated multi-word archetypes like
+        # "corporate_executive" to "corporate" — a non-existent archetype.
+        # Every LUXY decision context was stored with a wrong archetype,
+        # causing the outcome handler to credit the wrong BayesianPrior
+        # and RESPONDS_TO cells.
+        from adam.api.stackadapt.bilateral_cascade import _parse_segment_id
+        parsed_archetype, _, _ = _parse_segment_id(segment_id)
+        archetype = resolve_archetype(parsed_archetype)
 
         # Extract gradient priorities if available
         gradient_priorities = []

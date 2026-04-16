@@ -134,29 +134,20 @@ def _derive_decision_id(segment_id: str, event: Dict[str, Any]) -> str:
 
 
 def _parse_segment_id(segment_id: str) -> tuple:
-    """Extract archetype, mechanism, category from segment_id."""
-    parts = segment_id.replace("informativ_", "").split("_")
+    """Extract archetype, mechanism, category from segment_id.
 
-    known_archetypes = {
-        "explorer", "achiever", "connector", "guardian",
-        "analyst", "creator", "nurturer", "pragmatist",
-    }
-    known_mechanisms = {
-        "social_proof", "authority", "scarcity", "reciprocity",
-        "commitment", "liking", "fomo", "unity",
-    }
-
-    archetype = ""
-    mechanism = ""
-    category_parts = []
-
-    for part in parts:
-        if part in known_archetypes:
-            archetype = part
-        elif part in known_mechanisms:
-            mechanism = part
-        else:
-            category_parts.append(part)
-
-    category = "_".join(category_parts) if category_parts else ""
-    return archetype or "unknown", mechanism, category
+    Delegates to the canonical regex-based parser in bilateral_cascade
+    which handles multi-word archetypes (corporate_executive, etc.)
+    and the full mechanism + category vocabulary. The previous version
+    had a hardcoded 6-archetype set that returned "unknown" for every
+    LUXY campaign archetype.
+    """
+    try:
+        from adam.api.stackadapt.bilateral_cascade import (
+            _parse_segment_id as _canonical_parse,
+        )
+        return _canonical_parse(segment_id)
+    except ImportError:
+        # Fallback if bilateral_cascade isn't importable (e.g., in tests)
+        parts = segment_id.replace("informativ_", "").split("_")
+        return parts[0] if parts else "unknown", "", ""
