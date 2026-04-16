@@ -50,19 +50,19 @@ LUXY Ride is a **corporate black car service**, not a luxury leisure brand. The 
 
 **Visual philosophy**: Data, compliance, vendor evaluation. These are decision-makers who care about metrics, not aesthetics. Show dashboards, certifications, survey data. Think: vendor assessment meeting, not car interior.
 
-### TM-T1: "43% of companies don't have a chauffeured contract"
+### TM-T1: "43% of companies don't have a chauffeured contract. Yours?"
 - **Subject**: A clean data visualization — bar chart or stat card style. Large "43%" prominent. Background suggests a professional report or trade publication format.
 - **Mood**: Authority, urgency without panic — "you should know this"
 - **Palette**: White/slate with LUXY navy accent on the stat
 - **Key element**: The number must be instantly readable. This is evidence_proof — the image IS the data.
 - **Style**: Infographic, not photography. Think BTN or GBTA report styling.
 
-### TM-T2: "SOC 2 certified. ISO-aligned. Sunshine Act ready."
-- **Subject**: Certification badges arranged professionally — SOC 2 shield, safety rating badge, compliance checkmark. Clean background. Perhaps a partial view of a vehicle with the badges overlaid.
-- **Mood**: Verification, credentials, "we meet your standard"
-- **Palette**: Navy, white, gold/green for certification badges
-- **Key element**: The badges must look legitimate and institutional, not marketing-designed. Reference real SOC 2 and ISO badge styles.
-- **DO NOT**: Make it look like a sales brochure. Make it look like a vendor evaluation document.
+### TM-T2: "Company-employed chauffeurs. Scored 4.43/5 in BTN survey."
+- **Subject**: A uniformed chauffeur beside a black sedan, framed alongside a clean BTN-style scorecard callout showing "4.43 / 5 — Business Travel News 2026". The chauffeur should read as professional staff, not gig driver.
+- **Mood**: Vendor-evaluation confidence. "Independently rated, employed not contracted."
+- **Palette**: Navy, white, with a muted gold accent for the score callout
+- **Key element**: The "4.43/5" score must be the visual anchor — legible at small sizes. Treat it like a published benchmark, not a marketing stat.
+- **DO NOT**: Use generic certification badges (SOC 2, ISO shields) — that's a different campaign's visual language. Do not make it look like a sales brochure; make it look like a vendor evaluation document.
 
 ### TM-T3: "Add LUXY to your preferred vendor list"
 - **Subject**: Two professionals in a modern office — one presenting a tablet/screen to the other. The screen shows LUXY's corporate dashboard. Handshake energy without the actual handshake.
@@ -153,7 +153,7 @@ LUXY Ride is a **corporate black car service**, not a luxury leisure brand. The 
 
 **Visual philosophy**: Clinical precision meets corporate travel. Clean, institutional, compliance-oriented. The viewer is a pharma travel manager or compliance officer who thinks in terms of audit trails and regulatory frameworks.
 
-### LS-T1: "Audit-ready ground transport for HCP guest travel"
+### LS-T1: "Ground transport built for life sciences compliance"
 - **Subject**: A professional with a tablet showing a ride log or audit report. Medical campus or conference center in background (suggesting HCP event). Clean, institutional.
 - **Mood**: Compliance, transparency — "every ride documented"
 - **Palette**: White, clinical blue, minimal
@@ -167,7 +167,7 @@ LUXY Ride is a **corporate black car service**, not a luxury leisure brand. The 
 - **Key element**: The data must be immediately clear — the gap between current state and required standard.
 - **Style**: Infographic/report, not photography
 
-### LS-T3: "The only ground transport built for regulated verticals"
+### LS-T3: "Ground transport designed for regulated industries"
 - **Subject**: A clean product interface showing a booking flow with visible compliance fields — "HCP flag," "Event tag," "Sunshine Act export." Modern UI design.
 - **Mood**: Purpose-built, not adapted — this was DESIGNED for pharma
 - **Palette**: Clean whites, pharma blue, green checkmarks

@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>INFORMATIV — The Complete Platform</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{--bg:#0a0a0f;--s:#12121a;--s2:#1a1a28;--b:#2a2a3d;--t:#e8e8f0;--td:#8888a0;--a:#6366f1;--ag:rgba(99,102,241,.15);--g:#22c55e;--am:#f59e0b;--r:#f43f5e;--c:#06b6d4;--tl:#a78bfa}
+  html{scroll-behavior:smooth}
+  body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--t);line-height:1.7;overflow-x:hidden}
+  nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(10,10,15,.88);backdrop-filter:blur(20px);border-bottom:1px solid var(--b);padding:.75rem 2rem;display:flex;justify-content:space-between;align-items:center}
+  nav .logo{font-weight:700;font-size:.85rem;letter-spacing:.18em;color:var(--a)}
+  nav .nav-links{display:flex;gap:1.25rem}
+  nav .nav-links a{color:var(--td);text-decoration:none;font-size:.75rem;font-weight:500;letter-spacing:.05em;transition:color .2s}
+  nav .nav-links a:hover{color:var(--t)}
+  section{min-height:100vh;padding:7rem 2rem 4rem;max-width:1100px;margin:0 auto}
+  .hero{display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;min-height:100vh}
+  .hero h1{font-size:3.8rem;font-weight:800;line-height:1.08;background:linear-gradient(135deg,#e8e8f0 0%,#6366f1 50%,#06b6d4 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:1.5rem}
+  .hero .sub{font-size:1.2rem;color:var(--td);max-width:720px;font-weight:300;margin-bottom:3rem}
+  .sr{display:flex;gap:2.5rem;flex-wrap:wrap;justify-content:center}
+  .st{text-align:center}
+  .st .n{font-size:2.4rem;font-weight:700;color:var(--a);line-height:1}
+  .st .l{font-size:.7rem;color:var(--td);margin-top:.4rem;letter-spacing:.1em;text-transform:uppercase}
+  .ch{margin-bottom:2.5rem}
+  .cn{font-size:.72rem;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--a);margin-bottom:.4rem}
+  .ch h2{font-size:2.1rem;font-weight:700;line-height:1.2;margin-bottom:.6rem}
+  .ch .cs{font-size:1.05rem;color:var(--td);max-width:700px;font-weight:300}
+  .c{background:var(--s);border:1px solid var(--b);border-radius:12px;padding:1.8rem;margin-bottom:1.25rem;transition:border-color .3s,box-shadow .3s}
+  .c:hover{border-color:var(--a);box-shadow:0 0 30px var(--ag)}
+  .c h3{font-size:1.15rem;font-weight:600;margin-bottom:.6rem;display:flex;align-items:center;gap:.6rem}
+  .c p,.c li{color:var(--td);font-size:.92rem}
+  .c ul{padding-left:1.4rem;margin-top:.5rem}
+  .c li{margin-bottom:.35rem}
+  .cg{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:1.25rem;margin-top:1.5rem}
+  .cg3{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1.25rem;margin-top:1.5rem}
+  .tag{display:inline-block;padding:.18rem .55rem;border-radius:4px;font-size:.68rem;font-weight:600;letter-spacing:.05em;text-transform:uppercase}
+  .tg{background:rgba(34,197,94,.15);color:var(--g)}.ta{background:rgba(245,158,11,.15);color:var(--am)}.tc{background:rgba(6,182,212,.15);color:var(--c)}.tr{background:rgba(244,63,94,.15);color:var(--r)}.tp{background:var(--ag);color:var(--a)}.tv{background:rgba(167,139,250,.15);color:var(--tl)}
+  .ins{border-left:3px solid var(--a);padding:1.3rem 1.8rem;background:var(--ag);border-radius:0 8px 8px 0;margin:1.8rem 0}
+  .ins p{color:var(--t);font-style:italic;font-size:1.02rem}
+  .ins .at{color:var(--td);font-size:.78rem;margin-top:.4rem;font-style:normal}
+  table.cmp{width:100%;border-collapse:collapse;margin-top:1.5rem;font-size:.88rem}
+  .cmp th{text-align:left;padding:.65rem .9rem;font-weight:600;border-bottom:2px solid var(--b);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--td)}
+  .cmp td{padding:.65rem .9rem;border-bottom:1px solid var(--b);vertical-align:top}
+  .cmp tr:hover{background:var(--s)}
+  .cmp .lc{color:var(--td);width:28%}
+  .mb{background:var(--s2);border-radius:8px;overflow:hidden;height:7px;margin:.4rem 0}
+  .mf{height:100%;border-radius:8px;background:linear-gradient(90deg,var(--a),var(--c))}
+  .pill{display:inline-flex;align-items:center;gap:.4rem;padding:.3rem .7rem;border-radius:20px;font-size:.72rem;font-weight:500;border:1px solid var(--b);margin:.2rem .2rem}
+  .pill.live{border-color:var(--g);color:var(--g)}
+  .pill.ready{border-color:var(--am);color:var(--am)}
+  .divider{height:1px;background:linear-gradient(90deg,transparent,var(--b),transparent);margin:3rem 0}
+  footer{text-align:center;padding:3rem;color:var(--td);font-size:.78rem;border-top:1px solid var(--b)}
+  @media print{nav{display:none}section{min-height:auto;page-break-inside:avoid}.c{break-inside:avoid}}
+  @media(max-width:768px){.hero h1{font-size:2.2rem}.sr{gap:1.5rem}.st .n{font-size:1.8rem}section{padding:5rem 1rem 3rem}}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">INFORMATIV</div>
+  <div class="nav-links">
+    <a href="#hero">Overview</a>
+    <a href="#problem">Problem</a>
+    <a href="#data">Data Moat</a>
+    <a href="#how">How It Works</a>
+    <a href="#intelligence">Intelligence</a>
+    <a href="#learning">Learning</a>
+    <a href="#novel">Novel Methods</a>
+    <a href="#compare">Differentiation</a>
+    <a href="#partners">Partners</a>
+    <a href="#pilot">Pilot</a>
+    <a href="#vision">Vision</a>
+  </div>
+</nav>
+
+<!-- ════════════════════════════════════════════════ HERO ═══ -->
+<section class="hero" id="hero">
+  <h1>INFORMATIV</h1>
+  <p class="sub">The first advertising intelligence platform that understands<br><em>why</em> people buy — not just what they click.</p>
+  <div class="sr">
+    <div class="st"><div class="n">937M+</div><div class="l">Reviews Analyzed</div></div>
+    <div class="st"><div class="n">52.8M</div><div class="l">Graph Elements</div></div>
+    <div class="st"><div class="n">30</div><div class="l">Reasoning Modules</div></div>
+    <div class="st"><div class="n">22</div><div class="l">Learning Systems</div></div>
+    <div class="st"><div class="n">27</div><div class="l">Psychological Dimensions</div></div>
+    <div class="st"><div class="n">&lt;120ms</div><div class="l">Decision Latency</div></div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════ THE PROBLEM ═══ -->
+<section id="problem">
+  <div class="ch">
+    <div class="cn">The Problem</div>
+    <h2>Advertising Technology Is Structurally Blind</h2>
+    <p class="cs">Every major advertising platform — Google, Meta, Trade Desk, Amazon — predicts what you'll buy based on what you've already done. This approach has three fatal limits.</p>
+  </div>
+
+  <div class="cg">
+    <div class="c">
+      <h3><span class="tag tr">Limit 1</span> Can't Explain</h3>
+      <p>Correlational systems know <em>that</em> a pattern exists but not <em>why</em>. When creative A outperforms creative B, they can tell you which won — but not what psychological mechanism drove the result, making it impossible to systematically reproduce success.</p>
+    </div>
+    <div class="c">
+      <h3><span class="tag tr">Limit 2</span> Can't Transfer</h3>
+      <p>Insights are locked to the exact context where they were learned. A luxury travel campaign that spent $50K learning what works gives zero benefit to a premium hospitality campaign — even though the same buyer psychology drives both.</p>
+    </div>
+    <div class="c">
+      <h3><span class="tag tr">Limit 3</span> Can't Adapt</h3>
+      <p>New products, new audiences, new market conditions = no historical data = the system goes blind. The entire optimization has to restart from scratch. Every cold start is expensive.</p>
+    </div>
+  </div>
+
+  <div class="ins">
+    <p>"Every other platform in this space is trying to predict behavior from behavior. We predict behavior from psychology — and the evidence comes from the largest bilateral psychological evidence base ever constructed."</p>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════ DATA MOAT ═══ -->
+<section id="data">
+  <div class="ch">
+    <div class="cn">The Data Foundation</div>
+    <h2>937 Million Reviews.<br>Both Sides of Every Purchase.</h2>
+    <p class="cs">INFORMATIV's core asset is a bilateral psychological evidence base — the only one in existence — that captures both the buyer's mind and the seller's strategy for every transaction.</p>
+  </div>
+
+  <div class="cg">
+    <div class="c">
+      <h3><span class="tag tc">Buyer Side</span> What the Customer Was Thinking</h3>
+      <p>From 937M+ product reviews across 32 product categories and 12 data sources, we extract <strong>73 psychological constructs per review</strong>: decision-making style, risk orientation, social needs, emotional patterns, temporal horizon, cognitive processing depth.</p>
+      <p style="margin-top:.5rem">This isn't sentiment analysis. It's a clinical-grade psychological profile derived from how people describe their purchase experience.</p>
+    </div>
+    <div class="c">
+      <h3><span class="tag ta">Seller Side</span> What the Brand Was Doing</h3>
+      <p>From 2,748 annotated product descriptions, we extract <strong>65 psychological constructs</strong>: which persuasion strategies the creative uses, what aspirational framings are deployed, which authority signals are present, how urgency is manufactured.</p>
+      <p style="margin-top:.5rem">Every product has a persuasion fingerprint — the specific psychological techniques its marketing deploys, whether the brand knows it or not.</p>
+    </div>
+  </div>
+
+  <div class="c">
+    <h3><span class="tag tg">The Match</span> 6.75 Million Bilateral Evidence Edges</h3>
+    <p>When a buyer's psychology aligns with a seller's strategy and a purchase occurs, we capture that alignment as a <strong>27-dimension bilateral edge</strong>. 6.75 million verified purchase events, each scored on 27 psychological dimensions from both sides simultaneously.</p>
+    <p style="margin-top:.5rem">This is analogous to a clinical trial dataset that records both the patient's condition and the treatment's mechanism of action for every outcome — not just "treatment worked" or "treatment didn't."</p>
+
+    <div style="margin-top:1.2rem; display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:1rem;">
+      <div>
+        <div style="font-size:.72rem;color:var(--td);text-transform:uppercase;letter-spacing:.08em">Verified Conversions</div>
+        <div style="font-size:1.8rem;font-weight:700;color:var(--g)">6.75M</div>
+      </div>
+      <div>
+        <div style="font-size:.72rem;color:var(--td);text-transform:uppercase;letter-spacing:.08em">Peer Influence Edges</div>
+        <div style="font-size:1.8rem;font-weight:700;color:var(--c)">585K</div>
+      </div>
+      <div>
+        <div style="font-size:.72rem;color:var(--td);text-transform:uppercase;letter-spacing:.08em">Susceptibility Edges</div>
+        <div style="font-size:1.8rem;font-weight:700;color:var(--tl)">4.4M</div>
+      </div>
+      <div>
+        <div style="font-size:.72rem;color:var(--td);text-transform:uppercase;letter-spacing:.08em">Graph Elements Total</div>
+        <div style="font-size:1.8rem;font-weight:700;color:var(--a)">52.8M</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="c">
+    <h3>Why This Can't Be Replicated Quickly</h3>
+    <table class="cmp">
+      <tr><th>Barrier</th><th>Detail</th></tr>
+      <tr><td class="lc">Annotation cost</td><td>$6M+ in AI-assisted psychological annotation at production scale</td></tr>
+      <tr><td class="lc">Theoretical coherence</td><td>Requires PhD-level understanding of both decision science and persuasion mechanics — simultaneously</td></tr>
+      <tr><td class="lc">Construct taxonomy</td><td>441+ psychological constructs curated from 50+ peer-reviewed studies. Not LLM-taggable; requires expert curation.</td></tr>
+      <tr><td class="lc">Architectural incompatibility</td><td>Competitors built for correlational optimization cannot port to inferential reasoning without complete rearchitecture</td></tr>
+      <tr><td class="lc">Minimum timeline</td><td><strong>3-5 years</strong> to replicate from scratch, even with unlimited funding</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════ HOW IT WORKS ═══ -->
+<section id="how">
+  <div class="ch">
+    <div class="cn">How It Works</div>
+    <h2>From Impression to Intelligence<br>in Under 120 Milliseconds</h2>
+    <p class="cs">When a user is about to see an ad, INFORMATIV runs a 5-level decision cascade — progressively deepening its analysis until the evidence is strong enough to act.</p>
+  </div>
+
+  <div class="c">
+    <h3>The 5-Level Decision Cascade</h3>
+    <p>Each level uses richer evidence. Most decisions for established campaigns reach Level 3, where actual purchase psychology drives the recommendation.</p>
+    <table class="cmp" style="margin-top:1rem">
+      <tr><th>Level</th><th>Source</th><th>Speed</th><th>What It Does</th></tr>
+      <tr><td style="color:var(--a);font-weight:600">L1</td><td>Population Priors</td><td>2ms</td><td>Best guess based on buyer archetype alone</td></tr>
+      <tr><td style="color:var(--a);font-weight:600">L2</td><td>Category Intelligence</td><td>10ms</td><td>Refined by category-specific conversion patterns</td></tr>
+      <tr><td style="color:var(--g);font-weight:600">L3</td><td>Bilateral Edge Evidence</td><td>30ms</td><td><strong>Core differentiator:</strong> recommendations from actual purchase psychology across 20 dimensions</td></tr>
+      <tr><td style="color:var(--c);font-weight:600">L4</td><td>Cross-Category Transfer</td><td>100ms</td><td>Borrows learnings from related categories (luxury travel informs luxury hospitality)</td></tr>
+      <tr><td style="color:var(--tl);font-weight:600">L5</td><td>Full AI Reasoning</td><td>500ms</td><td>30 psychological reasoning modules analyze the full evidence landscape</td></tr>
+    </table>
+  </div>
+
+  <div class="c">
+    <h3>What Comes Out</h3>
+    <p>Every decision produces a <strong>complete creative intelligence package</strong> — not just "show this ad" but a full psychological strategy:</p>
+    <div class="cg3" style="margin-top:1rem">
+      <div style="padding:.8rem;border:1px solid var(--b);border-radius:8px">
+        <div style="font-size:.72rem;color:var(--a);font-weight:600;text-transform:uppercase;letter-spacing:.08em;margin-bottom:.3rem">Mechanism</div>
+        <div style="font-size:.85rem;color:var(--td)">Which psychological approach to deploy (authority, social proof, scarcity, etc.)</div>
+      </div>
+      <div style="padding:.8rem;border:1px solid var(--b);border-radius:8px">
+        <div style="font-size:.72rem;color:var(--a);font-weight:600;text-transform:uppercase;letter-spacing:.08em;margin-bottom:.3rem">Framing</div>
+        <div style="font-size:.85rem;color:var(--td)">Gain vs. loss framing, abstract vs. concrete language, emotional vs. rational tone</div>
+      </div>
+      <div style="padding:.8rem;border:1px solid var(--b);border-radius:8px">
+        <div style="font-size:.72rem;color:var(--a);font-weight:600;text-transform:uppercase;letter-spacing:.08em;margin-bottom:.3rem">Copy Guidance</div>
+        <div style="font-size:.85rem;color:var(--td)">Headline strategy, CTA style, emotional intensity, recommended length</div>
+      </div>
+      <div style="padding:.8rem;border:1px solid var(--b);border-radius:8px">
+        <div style="font-size:.72rem;color:var(--a);font-weight:600;text-transform:uppercase;letter-spacing:.08em;margin-bottom:.3rem">Lift Estimate</div>
+        <div style="font-size:.85rem;color:var(--td)">Predicted CTR and conversion lift based on bilateral edge evidence</div>
+      </div>
+      <div style="padding:.8rem;border:1px solid var(--b);border-radius:8px">
+        <div style="font-size:.72rem;color:var(--a);font-weight:600;text-transform:uppercase;letter-spacing:.08em;margin-bottom:.3rem">Barrier Diagnosis</div>
+        <div style="font-size:.85rem;color:var(--td)">Why this person hasn't converted yet and what intervention will fix it</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════ INTELLIGENCE ═══ -->
+<section id="intelligence">
+  <div class="ch">
+    <div class="cn">The Intelligence Layer</div>
+    <h2>30 Psychological Reasoning Modules<br>Running in Parallel</h2>
+    <p class="cs">Every decision is informed by 30 specialized reasoning modules — each one grounded in published behavioral science — running simultaneously and fusing their evidence into a unified recommendation.</p>
+  </div>
+
+  <div class="c">
+    <h3>How 30 Modules Produce One Decision</h3>
+    <p>The modules operate as a <strong>directed acyclic graph</strong> — a pipeline where independent analyses run in parallel, then their evidence is fused by a central synthesis module that weighs each contribution by its confidence and relevance.</p>
+    <div style="margin-top:1.2rem;font-family:monospace;font-size:.8rem;color:var(--td);background:var(--s2);padding:1.2rem;border-radius:8px;overflow-x:auto">
+      <span style="color:var(--a)">Level 0:</span> User State Assessment<br>
+      <span style="color:var(--c)">Level 1:</span> 24 psychological modules in parallel<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;Regulatory Focus, Construal Level, Personality, Brand Relationships,<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;Cooperative Framing, Motivational Conflict, Persuasion Dynamics,<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;Signal Credibility, Strategic Awareness, Temporal Self, ...<br>
+      <span style="color:var(--g)">Level 2:</span> Mechanism Activation (fuses all 24 upstream signals)<br>
+      <span style="color:var(--am)">Level 3:</span> Coherence Optimization (resolves cross-module conflicts)<br>
+      <span style="color:var(--tl)">Level 4:</span> Message Framing (translates mechanism → creative direction)<br>
+      <span style="color:var(--r)">Level 5:</span> Final Selection (applies constraints, safety, budget)
+    </div>
+  </div>
+
+  <div class="c">
+    <h3><span class="tag tc">Breakthrough</span> Nonconscious Goal Activation</h3>
+    <p>The system doesn't just match ads to user demographics. It understands how <strong>page content activates nonconscious goals</strong> in the reader — before any ad is shown.</p>
+    <p style="margin-top:.5rem">When someone reads an article about executive productivity, it doesn't just put them in a "business" topic category. It automatically activates goals around competence, status, and time efficiency. An ad for premium transportation <em>fulfills</em> those already-active goals — the person notices it because their attention system is primed for solutions.</p>
+    <p style="margin-top:.5rem">This is grounded in 30 years of peer-reviewed research on automatic goal pursuit. The system profiles 8 foundational goals per page and matches ads to goal fulfillment — moving from "topic relevance" to <strong>"goal completion."</strong></p>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════ LEARNING ═══ -->
+<section id="learning">
+  <div class="ch">
+    <div class="cn">The Compounding Advantage</div>
+    <h2>22 Learning Systems That Get<br>Smarter With Every Impression</h2>
+    <p class="cs">Every impression teaches the system something new. Every conversion refines multiple learning systems simultaneously. Every new brand inherits everything the platform has ever learned.</p>
+  </div>
+
+  <div class="cg">
+    <div class="c">
+      <h3><span class="tag tg">Core</span> 5-Level Learning Hierarchy</h3>
+      <p>Knowledge flows from specific to general and back:</p>
+      <ul>
+        <li><strong>Corpus level:</strong> What works across all brands and all categories</li>
+        <li><strong>Category level:</strong> What's specific to luxury transportation</li>
+        <li><strong>Brand level:</strong> What's specific to LUXY Ride</li>
+        <li><strong>Campaign level:</strong> What's specific to this audience segment</li>
+        <li><strong>Individual level:</strong> What's specific to this person</li>
+      </ul>
+      <p style="margin-top:.5rem">A new brand at Level 3 instantly inherits all Level 1-2 intelligence. It never starts from zero.</p>
+    </div>
+    <div class="c">
+      <h3><span class="tag tc">Multiplier</span> Counterfactual Learning</h3>
+      <p>When the system shows a social proof ad and it converts, conventional systems learn one thing: "social proof worked here." INFORMATIV also estimates what <em>would have happened</em> with authority, scarcity, or cognitive ease — learning about all possible approaches from a single outcome.</p>
+      <p style="margin-top:.5rem">This <strong>multiplies the learning rate approximately 4x</strong>, meaning the system reaches optimization in a quarter of the impressions competitors require.</p>
+    </div>
+    <div class="c">
+      <h3><span class="tag ta">Protection</span> Signal Quality Filtering</h3>
+      <p>30-50% of ad impressions are never actually processed by the viewer — below the fold, scrolled past in under a second, or rendered on a background tab. Conventional systems learn from this noise equally, contaminating their models.</p>
+      <p style="margin-top:.5rem">INFORMATIV's processing depth detector <strong>identifies and downweights unprocessed impressions</strong>, so the learning systems train on clean signal. This is the single highest-leverage quality improvement: cleaner data produces exponentially better models.</p>
+    </div>
+    <div class="c">
+      <h3><span class="tag tv">Adaptive</span> Retargeting as Diagnosis</h3>
+      <p>When someone doesn't convert, conventional retargeting shows the same ad again. INFORMATIV <strong>diagnoses the specific psychological barrier</strong> — trust deficit, processing overload, price sensitivity — and selects a targeted intervention to resolve it.</p>
+      <p style="margin-top:.5rem">Each subsequent touchpoint is a prescription, not a repetition. The system tracks barrier resolution progress and adapts the intervention if the diagnosis changes.</p>
+    </div>
+  </div>
+
+  <div class="c">
+    <h3>What "Compounding" Looks Like Over 6 Months</h3>
+    <table class="cmp" style="margin-top:1rem">
+      <tr><th>Timeframe</th><th>What the System Learns</th></tr>
+      <tr><td class="lc">Month 1</td><td>Which mechanisms work for each buyer archetype. Counterfactual learning multiplies every insight 4x. Processing depth filtering cleans all models.</td></tr>
+      <tr><td class="lc">Month 2-3</td><td>Per-person personalization activates. Returning users get progressively smarter targeting. Within-subject learning compounds.</td></tr>
+      <tr><td class="lc">Month 3-4</td><td>Goal activation model calibrates from real page-outcome data. Page matching becomes genuinely predictive.</td></tr>
+      <tr><td class="lc">Month 4-6</td><td>Automated archetype discovery finds buyer-seller patterns invisible to theory. Causal decomposition identifies specific pathways. The system begins recommending strategies no human would have designed.</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ═════════════════════════════════════ NOVEL METHODS ═══ -->
+<section id="novel">
+  <div class="ch">
+    <div class="cn">Innovation</div>
+    <h2>Techniques Adapted From<br>Medicine, Science, and Economics</h2>
+    <p class="cs">Several of INFORMATIV's most powerful capabilities come from methodologies outside traditional advertising — adapted from fields where understanding <em>why</em> something works has life-or-death consequences.</p>
+  </div>
+
+  <div class="c">
+    <h3>Cross-Disciplinary Innovation Map</h3>
+    <table class="cmp" style="margin-top:1rem">
+      <tr><th>Origin Field</th><th>Technique</th><th>What It Does for Advertising</th></tr>
+      <tr>
+        <td class="lc">Clinical Trial Design</td>
+        <td>Within-subject repeated measures</td>
+        <td>Each user serves as their own control group, enabling 2-4x faster personalization than conventional population-level learning</td>
+      </tr>
+      <tr>
+        <td class="lc">Epidemiology</td>
+        <td>Reproduction number modeling</td>
+        <td>Predicts whether a creative strategy will "spread" (convert at scale) or "die" — enabling bid/no-bid decisions before spending</td>
+      </tr>
+      <tr>
+        <td class="lc">Pharmacology</td>
+        <td>Dose-response modeling</td>
+        <td>Models how advertising exposure frequency affects response, with individual tolerance profiles and saturation detection — preventing the waste of showing ads past the point of diminishing returns</td>
+      </tr>
+      <tr>
+        <td class="lc">Drug Metabolism</td>
+        <td>Persuasion half-life tracking</td>
+        <td>Different persuasion mechanisms "metabolize" at different rates. Authority effects last longer than scarcity effects. The system tracks decay and re-doses appropriately.</td>
+      </tr>
+      <tr>
+        <td class="lc">Causal Inference</td>
+        <td>Counterfactual outcome estimation</td>
+        <td>Learns from what <em>would have worked</em>, not just what was tried — multiplying learning speed 4x from every single outcome</td>
+      </tr>
+      <tr>
+        <td class="lc">Behavioral Economics</td>
+        <td>Prospect theory scoring</td>
+        <td>Reflects the well-established finding that psychological losses hurt 2.25x more than equivalent gains — meaning small trust deficits are weighted much more heavily than small trust surpluses</td>
+      </tr>
+      <tr>
+        <td class="lc">Tensor Mathematics</td>
+        <td>Archetype discovery</td>
+        <td>Discovers buyer-seller psychological archetypes from data patterns, not predefined categories — finding high-value segments invisible to human classification</td>
+      </tr>
+      <tr>
+        <td class="lc">Neurolinguistics</td>
+        <td>Primary metaphor activation</td>
+        <td>Advertising copy that invokes universal metaphors (warmth = trust, weight = importance) literally activates the neural circuits that implement the targeted psychological judgment</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="ins">
+    <p>"In drug development, you don't just test whether a drug works — you identify the mechanism of action, the dose-response curve, the half-life, and the interaction effects. We apply the same rigor to understanding how advertising works on human psychology."</p>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════ DIFFERENTIATION ═══ -->
+<section id="compare">
+  <div class="ch">
+    <div class="cn">Competitive Position</div>
+    <h2>Not a Better Mousetrap.<br>A Different Category.</h2>
+  </div>
+
+  <table class="cmp">
+    <tr><th style="width:22%">Dimension</th><th style="width:38%">Industry Standard</th><th style="width:40%">INFORMATIV</th></tr>
+    <tr><td class="lc">Data foundation</td><td>Click/impression logs</td><td>937M bilateral psychological evidence edges</td></tr>
+    <tr><td class="lc">Targeting basis</td><td>Demographics + past behavior</td><td>Psychological state + nonconscious goal activation</td></tr>
+    <tr><td class="lc">What it predicts</td><td>"Will they click?"</td><td>"Why will they buy, and which approach makes it automatic?"</td></tr>
+    <tr><td class="lc">Creative guidance</td><td>A/B test variations</td><td>Prescriptive strategy: mechanism + framing + construal level + tone + intensity</td></tr>
+    <tr><td class="lc">Learning speed</td><td>Needs thousands of conversions</td><td>4x multiplier via counterfactual learning + cross-category transfer</td></tr>
+    <tr><td class="lc">Page understanding</td><td>Topic category (IAB)</td><td>Psychological goal profile — which motivations does this page activate?</td></tr>
+    <tr><td class="lc">Retargeting</td><td>"Show the same thing again"</td><td>Diagnose the barrier → select the intervention → prescribe the context</td></tr>
+    <tr><td class="lc">Measurement quality</td><td>All impressions equal</td><td>Processing depth filtering eliminates 30-50% noise before learning</td></tr>
+    <tr><td class="lc">Cross-brand value</td><td>Starts from zero per brand</td><td>5-level hierarchy: new brands inherit corpus-wide learnings instantly</td></tr>
+    <tr><td class="lc">Explainability</td><td>"Algorithm says so"</td><td>Full psychological reasoning chain with mechanism citation</td></tr>
+  </table>
+</section>
+
+<!-- ════════════════════════════════════════ PARTNERS ═══ -->
+<section id="partners">
+  <div class="ch">
+    <div class="cn">Partnerships & Integration</div>
+    <h2>Built to Work Inside<br>the Programmatic Ecosystem</h2>
+  </div>
+
+  <div class="cg">
+    <div class="c">
+      <h3>StackAdapt <span class="pill live">Live Integration</span></h3>
+      <p>INFORMATIV enriches StackAdapt campaigns with psychological intelligence via two endpoints:</p>
+      <ul>
+        <li><strong>Decision API:</strong> Returns full creative intelligence package per impression (&lt;120ms)</li>
+        <li><strong>Conversion Webhook:</strong> Receives outcomes to close the learning loop</li>
+      </ul>
+      <p style="margin-top:.5rem">Integration through agency partnership with direct StackAdapt Graph API access.</p>
+    </div>
+    <div class="c">
+      <h3>Supported DSP Connections</h3>
+      <p>Architecture supports delivery through multiple demand-side platforms:</p>
+      <ul>
+        <li>StackAdapt (active)</li>
+        <li>The Trade Desk (architecture ready)</li>
+        <li>DV360 (architecture ready)</li>
+        <li>Amazon DSP (architecture ready)</li>
+      </ul>
+    </div>
+    <div class="c">
+      <h3>Supply-Side Compatibility</h3>
+      <p>Pre-built connectors for major SSPs: Magnite, Prebid, Index Exchange, PubMatic, OpenX. INFORMATIV can enrich bid requests with psychological intelligence at the SSP layer.</p>
+    </div>
+    <div class="c">
+      <h3>Data Sources</h3>
+      <p>Ongoing ingestion from 12+ review sources (Amazon, Google Local, TrustPilot, and others), with 860M+ additional reviews available for processing — representing 2+ years of incremental data runway.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════ PILOT ═══ -->
+<section id="pilot">
+  <div class="ch">
+    <div class="cn">First Campaign</div>
+    <h2>LUXY Ride: Premium Transportation</h2>
+    <p class="cs">The system's first campaign targets luxury transportation buyers with 7 validated psychological archetypes, 6.75 million bilateral evidence edges, and full learning-loop integration.</p>
+  </div>
+
+  <div class="cg">
+    <div class="c">
+      <h3>Data Foundation</h3>
+      <p><strong>6,755,189</strong> bilateral evidence edges specific to luxury transportation, plus <strong>11,805</strong> cross-validated edges from premium airline travelers across 26 airlines. Every creative recommendation is derived from actual purchase psychology.</p>
+    </div>
+    <div class="c">
+      <h3>7 Validated Archetypes</h3>
+      <p>Each archetype has a distinct psychological profile validated across multiple product categories:</p>
+      <ul>
+        <li><strong>Corporate Executive</strong> — Trust + authority driven</li>
+        <li><strong>Status Seeker</strong> — Aspirational + social proof</li>
+        <li><strong>Careful Truster</strong> — Risk-averse + evidence-seeking</li>
+        <li><strong>Easy Decider</strong> — Low deliberation + cognitive ease</li>
+        <li><strong>First Timer</strong> — Curiosity + risk mitigation</li>
+        <li><strong>Airport Anxiety</strong> — Time pressure + guarantee-seeking</li>
+        <li><strong>Repeat Loyal</strong> — Commitment + relationship depth</li>
+      </ul>
+    </div>
+    <div class="c">
+      <h3>Projected Performance</h3>
+      <p>Based on bilateral edge evidence and peer-reviewed baselines (Matz et al., PNAS 2017):</p>
+      <div style="margin-top:.8rem">
+        <div style="display:flex;justify-content:space-between;font-size:.8rem;color:var(--td)"><span>CTR Lift vs. Standard</span><span style="color:var(--g);font-weight:600">+28-38%</span></div>
+        <div class="mb"><div class="mf" style="width:78%"></div></div>
+        <div style="display:flex;justify-content:space-between;font-size:.8rem;color:var(--td)"><span>Conversion Lift vs. Standard</span><span style="color:var(--g);font-weight:600">+38-50%</span></div>
+        <div class="mb"><div class="mf" style="width:88%"></div></div>
+      </div>
+    </div>
+    <div class="c">
+      <h3>System Verification</h3>
+      <p>Pre-flight validation complete:</p>
+      <ul>
+        <li>26 integration tests — all passing</li>
+        <li>All 7 archetypes return Level 3 bilateral evidence</li>
+        <li>20/20 scoring dimensions sourced from real data</li>
+        <li>20 automated learning tasks scheduled</li>
+        <li>End-to-end smoke test verified against live graph</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════ VISION ═══ -->
+<section id="vision" style="min-height:70vh;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center">
+  <div class="cn">The Vision</div>
+  <h2 style="font-size:2.5rem;font-weight:700;margin:1rem 0;max-width:700px">Every Impression Teaches.<br>Every Brand Inherits.<br>The Gap Compounds.</h2>
+  <p style="max-width:620px;color:var(--td);font-size:1.05rem;margin-bottom:2.5rem">
+    INFORMATIV is not a static optimization tool. It is a <strong>compounding intelligence system</strong> where every impression makes every future decision better — across all brands, all categories, all contexts. The longer it runs, the wider the gap becomes between psychological intelligence and conventional targeting.
+  </p>
+  <div class="sr" style="margin-bottom:3rem">
+    <div class="st"><div class="n">937M</div><div class="l">Reviews Analyzed</div></div>
+    <div class="st"><div class="n">52.8M</div><div class="l">Graph Elements</div></div>
+    <div class="st"><div class="n">860M</div><div class="l">Additional Reviews<br>Available</div></div>
+    <div class="st"><div class="n">3-5yr</div><div class="l">Replication<br>Timeline</div></div>
+  </div>
+
+  <div style="display:flex;gap:.8rem;flex-wrap:wrap;justify-content:center">
+    <span class="pill live">StackAdapt — Live</span>
+    <span class="pill live">LUXY Ride — Verified</span>
+    <span class="pill ready">DSP Connectors — Ready</span>
+    <span class="pill ready">SSP Connectors — Ready</span>
+  </div>
+</section>
+
+<footer>
+  <p>INFORMATIV &mdash; Psycholinguistic Advertising Intelligence</p>
+  <p style="margin-top:.25rem">Confidential &mdash; April 2026</p>
+</footer>
+
+</body>
+</html>

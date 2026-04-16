@@ -23,7 +23,7 @@ This brief provides everything you need to run a year-long campaign in StackAdap
 - Day-to-day campaign optimization
 
 ### INFORMATIV Provides
-- **Campaign strategy**: 11 audiences, creative copy, domain targeting
+- **Campaign strategy**: 6 launch audiences + 5 Phase 2, creative copy, domain targeting
 - **Behavioral intelligence**: Telemetry script on luxyride.com capturing post-click behavior
 - **Every-other-day optimization**: Specific StackAdapt changes recommended based on observed data
 - **Domain targeting**: Per-audience whitelists verified at the article level
@@ -33,20 +33,34 @@ This brief provides everything you need to run a year-long campaign in StackAdap
 
 ---
 
-## THE 11 AUDIENCES
+## THE AUDIENCES
 
-| # | Audience | Budget | Weekly $ | Campaigns |
+### Phase 1 — Launch (6 audiences, 18 campaigns)
+
+Budget percentages below are INFORMATIV's starting recommendation. Final allocation is at agency discretion based on StackAdapt inventory and early performance.
+
+| # | Audience | Suggested % | Campaigns | Archetype (internal) |
 |---|---|---|---|---|
-| 1 | Corporate Travel Arrangers (EAs) | 28% | $6,719 | EA-T1, EA-T2, EA-T3 |
-| 2 | Corporate Travel Managers | 25% | $5,999 | TM-T1, TM-T2, TM-T3 |
-| 3 | Home Market (CT/NYC) | 18% | $4,319 | HM-T1, HM-T2, HM-T3 |
-| 4 | Event / Meeting / Incentive Planners | 12% | $2,880 | EV-T1, EV-T2, EV-T3 |
-| 5 | Legal Vertical (BigLaw) | 10% | $2,400 | LG-T1, LG-T2, LG-T3 |
-| 6 | Life Sciences / Pharma | 7% | $1,680 | LS-T1, LS-T2, LS-T3 |
+| 1 | Corporate Travel Arrangers (EAs) | 28% | EA-T1, EA-T2, EA-T3 | reliable_cooperator |
+| 2 | Corporate Travel Managers | 25% | TM-T1, TM-T2, TM-T3 | dependable_loyalist |
+| 3 | Home Market (CT/NYC) | 18% | HM-T1, HM-T2, HM-T3 | dependable_loyalist (geo-targeted) |
+| 4 | Event / Meeting / Incentive Planners | 12% | EV-T1, EV-T2, EV-T3 | prevention_planner |
+| 5 | Legal Vertical (BigLaw) | 10% | LG-T1, LG-T2, LG-T3 | careful_truster |
+| 6 | Life Sciences / Pharma | 7% | LS-T1, LS-T2, LS-T3 | careful_truster |
 
-**Total: $24,000/week ($3,428/day) — 18 campaigns**
+**Note on HM (Home Market):** HM shares the same psycholinguistic archetype as TM (`dependable_loyalist`) but uses a geo-specific domain whitelist (CT/NYC publications). That's why there's a separate `stackadapt_whitelist_home_market.csv` alongside `stackadapt_whitelist_dependable_loyalist.csv`. Use HM whitelist for HM campaigns, dependable_loyalist whitelist for TM campaigns.
 
-**Phase 2 audiences (weeks 5+, based on Phase 1 data):**
+### Phase 2 — Expansion (weeks 5+, activated based on Phase 1 signal)
+
+Phase 2 campaigns are held back until Phase 1 has produced enough data to inform targeting. INFORMATIV will advise when to activate.
+
+| # | Audience | Campaigns | Archetype (internal) |
+|---|---|---|---|
+| 7 | Financial Dealmakers | FI-T1, FI-T2, FI-T3 | dependable_loyalist |
+| 8 | Supply Partners (hotel/venue referrals) | SP-T1, SP-T2, SP-T3 | dependable_loyalist |
+| 9 | Private Aviation (FBO/jet charter) | PA-T1, PA-T2, PA-T3 | trusting_loyalist |
+| 10 | CFO / T&E Owners | CF-T1, CF-T2, CF-T3 | careful_truster |
+| 11 | Hotel B2B / Group Sales | HT-T1, HT-T2, HT-T3 | dependable_loyalist |
 
 ---
 

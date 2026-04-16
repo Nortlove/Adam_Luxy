@@ -237,6 +237,15 @@
         "tier": 3
       }
     ],
+    "home_market": [
+      "crainsnewyork.com",
+      "bizjournals.com",
+      "therealdeal.com",
+      "commercialobserver.com",
+      "hartfordbusiness.com",
+      "ctinsider.com",
+      "njbiz.com"
+    ],
     "prevention_planner": [
       {
         "domain": "bizbash.com",
@@ -383,5 +392,18 @@
         "tier": 3
       }
     ]
+  },
+  "phase_notes": {
+    "phase_1_launch": [
+      "careful_truster",
+      "dependable_loyalist",
+      "home_market",
+      "prevention_planner",
+      "reliable_cooperator"
+    ],
+    "phase_2_reserved": [
+      "trusting_loyalist"
+    ],
+    "home_market_note": "home_market campaigns (HM-T1/T2/T3) share the dependable_loyalist archetype but use a geo-specific CT/NYC domain list. Use home_market bucket for HM campaigns, dependable_loyalist bucket for TM campaigns."
   }
 }

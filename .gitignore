@@ -55,3 +55,7 @@ amazon_processed/
 .env.local
 .env.production.local
 adam-platform/
+
+# OpenMemory - IDE/Assistant specific rules
+.cursor/rules/openmemory.mdc
+CLAUDE.md

@@ -22,7 +22,9 @@ This folder contains everything you need to set up the LUXY Ride campaign. **6 a
 | Event Planners | `stackadapt_whitelist_prevention_planner.csv` |
 | Legal + Life Sciences | `stackadapt_whitelist_careful_truster.csv` |
 
-Blacklist (ALL campaigns): `stackadapt_blacklist_upload.csv`
+Blacklist (ALL campaigns): `stackadapt_blacklist_upload.csv` (39 domains)
+
+**CSV format note:** All whitelist and blacklist CSVs are intentionally **headerless** — one bare domain per line, no `domain`/`url` header row. StackAdapt's contextual targeting bulk upload accepts this format. **Do not add a header row** unless StackAdapt's UI rejects the file; if it does, add `domain` as the first line and re-upload.
 
 ## Step 4: Create 18 Campaigns
 Copy is in the brief. Machine-readable specs: `luxy_ride_complete_creatives.json`
