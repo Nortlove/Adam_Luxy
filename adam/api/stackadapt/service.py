@@ -859,15 +859,16 @@ class CreativeIntelligenceService:
             composite = ci.edge_dimensions.get("composite_alignment", 0.5)
             evo = ci.edge_dimensions.get("evolutionary_motive", 0.5)
 
+            _c = lambda v, lo, hi: round(max(lo, min(hi, v)), 3)
             return {
-                "approach_avoidance": round(2.0 * reg_fit - 1.0, 3),  # [0,1] → [-1,1]
-                "temporal_horizon": round(construal, 3),
-                "social_calibration": round(personality, 3),
-                "uncertainty_tolerance": round(1.0 - emotional * 0.5, 3),
-                "status_sensitivity": round(value, 3),
-                "cognitive_engagement": round(construal * 0.6 + (1.0 - emotional) * 0.4, 3),
-                "arousal_seeking": round(emotional * 0.7 + evo * 0.3, 3),
-                "cognitive_velocity": round(composite, 3),
+                "approach_avoidance": _c(2.0 * reg_fit - 1.0, -1, 1),
+                "temporal_horizon": _c(construal, 0, 1),
+                "social_calibration": _c(personality, 0, 1),
+                "uncertainty_tolerance": _c(1.0 - emotional * 0.5, 0, 1),
+                "status_sensitivity": _c(value, 0, 1),
+                "cognitive_engagement": _c(construal * 0.6 + (1.0 - emotional) * 0.4, 0, 1),
+                "arousal_seeking": _c(emotional * 0.7 + evo * 0.3, 0, 1),
+                "cognitive_velocity": _c(composite, 0, 1),
             }
 
         # Level 1-2: derive from mechanism profile (less precise)
