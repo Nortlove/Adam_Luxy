@@ -9,8 +9,8 @@
 StackAdapt (Becca)                    INFORMATIV Server
 ┌──────────────────┐                  ┌─────────────────────────────┐
 │                  │   bid request    │  FastAPI (port 8000)        │
-│  Campaign Setup  │ ───────────────► │  /api/v1/stackadapt/decide  │
-│  (Graph API)     │ ◄─────────────── │  → Bilateral Cascade        │
+│  Campaign Setup  │   GraphQL push   │  /api/v1/stackadapt/         │
+│  (Graph API)     │ ───────────────► │  creative-intelligence       │
 │                  │   creative intel  │  → 30-atom DAG              │
 │                  │                  │  → 20-dim edge scoring       │
 │  Pixel/Webhook   │   conversion    │                              │
@@ -53,7 +53,7 @@ cloudflared tunnel run --url http://localhost:8000 informativ-pilot
 ```
 
 Give Becca the tunnel URL. She configures StackAdapt to call:
-- Decision: `POST https://informativ-pilot.your-domain.com/api/v1/stackadapt/decide`
+- Decision: `POST https://informativ-pilot.your-domain.com/api/v1/stackadapt/creative-intelligence`
 - Webhook: `POST https://informativ-pilot.your-domain.com/api/v1/stackadapt/webhook/conversion`
 
 ### Option B: Railway (Recommended for Reliability — 1-2 hours)
@@ -115,7 +115,7 @@ docker compose -f deployment/docker-compose.prod.yml up -d
 
 # 5. Verify
 curl http://localhost:8000/health
-curl http://localhost:8000/api/v1/stackadapt/decide \
+curl http://localhost:8000/api/v1/stackadapt/creative-intelligence \
   -H "Content-Type: application/json" \
   -d '{"segment_id": "informativ_careful_truster_authority_luxury_transportation_t1"}'
 
@@ -175,7 +175,7 @@ direction, copy guidance, and lift estimates — all derived from 6.75M
 bilateral edges.
 
 ```
-POST /api/v1/stackadapt/decide
+POST /api/v1/stackadapt/creative-intelligence
 Content-Type: application/json
 X-API-Key: <api-key>
 
@@ -263,7 +263,7 @@ All checks must pass (green) before deploying.
 After deploying, verify the decision endpoint returns real data:
 
 ```bash
-curl -s https://your-server/api/v1/stackadapt/decide \
+curl -s https://your-server/api/v1/stackadapt/creative-intelligence \
   -H "Content-Type: application/json" \
   -H "X-API-Key: your-key" \
   -d '{"segment_id": "informativ_careful_truster_authority_luxury_transportation_t1"}' \
