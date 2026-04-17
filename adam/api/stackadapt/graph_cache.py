@@ -711,6 +711,20 @@ class GraphIntelligenceCache:
             with driver.session() as session:
                 result = session.run(query, **params).single()
 
+            # If archetype-filtered query returns 0, retry without filter.
+            # Seed data and some edge sets don't have user_archetype on
+            # AnnotatedReview nodes. The unfiltered query still returns
+            # valid bilateral evidence — just not archetype-stratified.
+            if (not result or result["edge_count"] == 0) and archetype_filter:
+                logger.debug(
+                    "Edge query with archetype=%s returned 0; retrying unfiltered",
+                    archetype,
+                )
+                unfiltered_query = query.replace(archetype_filter, "")
+                unfiltered_params = {"asin": asin}
+                with driver.session() as session:
+                    result = session.run(unfiltered_query, **unfiltered_params).single()
+
             if not result or result["edge_count"] == 0:
                 return None
 
