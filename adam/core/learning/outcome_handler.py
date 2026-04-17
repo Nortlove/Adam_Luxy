@@ -814,6 +814,40 @@ class OutcomeHandler:
                 logger.debug("Construct learning skipped: %s", e)
 
         # =====================================================================
+        # =====================================================================
+        # 13.9 KNOWLEDGE PROPAGATION (The System's Brain)
+        #
+        # After all 22 individual learning systems have updated, propagate
+        # the implications of this observation through the ENTIRE system.
+        # Each subsystem reconsiders its state in light of the new evidence.
+        # A single conversion doesn't just update one posterior — it
+        # reorganizes the system's understanding across every connected
+        # component, like Hebbian learning in a neural network.
+        # =====================================================================
+        try:
+            from adam.intelligence.knowledge_propagation import get_knowledge_network
+            network = get_knowledge_network()
+            propagation_trace = network.process_outcome(
+                archetype=archetype,
+                mechanism=mechanism_sent,
+                outcome=outcome_type,
+                outcome_value=outcome_value,
+                domain_category=metadata.get("context_domain", ""),
+                processing_depth=metadata.get("viewability_seconds", 0.0),
+                decision_id=decision_id,
+                edge_dimensions=metadata.get("alignment_scores", {}),
+                goal_activations=metadata.get("goal_activations", {}),
+                mechanism_scores=metadata.get("mechanism_scores", {}),
+            )
+            results["updates"]["knowledge_propagation"] = {
+                "nodes_reached": len(propagation_trace.get("nodes_reached", [])),
+                "max_depth": propagation_trace.get("max_depth", 0),
+                "signals_generated": propagation_trace.get("signals_generated", 0),
+            }
+        except Exception as e:
+            logger.debug("Knowledge propagation skipped: %s", e)
+
+        # =====================================================================
         # 14. RESONANCE ENGINE LEARNING (Trilateral Resonance)
         #
         # Routes outcomes to the ResonanceLearner which updates the
