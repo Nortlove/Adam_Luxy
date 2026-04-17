@@ -39,7 +39,11 @@ async def verify_api_key(
         app.include_router(router, dependencies=[Depends(verify_api_key)])
     """
     # Exempt paths that should always be accessible
-    exempt_prefixes = ("/health", "/metrics", "/docs", "/openapi.json", "/redoc")
+    exempt_prefixes = (
+        "/health", "/metrics", "/docs", "/openapi.json", "/redoc",
+        "/static",
+        "/api/v1/stackadapt/webhook",  # Webhooks use HMAC signature auth, not API key
+    )
     if any(request.url.path.startswith(p) for p in exempt_prefixes):
         return None
 
