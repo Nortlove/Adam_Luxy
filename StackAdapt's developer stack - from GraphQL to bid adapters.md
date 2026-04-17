@@ -1,0 +1,60 @@
+# StackAdapt's developer stack: from GraphQL to bid adapters
+
+StackAdapt has quietly rebuilt itself as a developer-accessible programmatic-plus-martech platform, and the most important shift is the **sunsetting of its legacy REST API in favor of a GraphQL-first architecture by the end of 2025**. That migration reshapes how every integration partner — from CDPs like Segment and Hightouch to reporting tools like Supermetrics, Funnel, Improvado, and TapClicks — authenticates, queries data, and pushes audiences. At the same time, StackAdapt has layered on a universal pixel, a Shopify app, a Prebid.js bid adapter, an MMP callback integration, a new Data Hub for email/CRM unification, and a TypeScript SDK. The result: a DSP that now behaves more like a first-class API platform, but one whose public documentation is still gated (docs.stackadapt.com is blocked from crawlers and requires a key), which forces most developers to learn through partner integrations.
+
+## GraphQL replaces REST as the single source of truth
+
+StackAdapt's **Public API is now GraphQL-native**, served at docs.stackadapt.com/graphql and authenticated via an `X-AUTHORIZATION` header containing a GraphQL key that must be obtained from an account manager — the old REST API key does not work. Supermetrics began forcing the switchover on **May 13, 2025**, Funnel is migrating all existing data sources before the REST sunset around the end of 2025, and both Improvado and TapClicks now require the GraphQL token for any new connection. The REST system is explicitly deprecated in StackAdapt's own docs, which instruct new integrations to use GraphQL exclusively.
+
+Developers interact with the schema through a published TypeScript SDK, **`@stackadapt/pa-typescript-sdk`** (v0.73.0 on npm, updated roughly weekly to track schema changes). The SDK exposes an `initStackAdaptSDK` bootstrapper with `SANDBOX`/production environments, a generic `generalEndpoint<T>()` for arbitrary queries and mutations, and typed helpers such as `createCreativeByURL` and `createCreativeByLocalFile`. A representative mutation looks like:
+
+```
+mutation createNewAdvertiser($input: AdvertiserInput!) {
+  createAdvertiser(input: $input) {
+    advertiser { id name }
+    userErrors { message path }
+  }
+}
+```
+
+The schema surfaces **advertisers, campaigns, creatives (including `UploadedCreative` and `ImageCreative` with an `s3Url`), CRM segments, IP segments, conversion trackers, and custom geo targeting (`SdkCampaignGeo`)**. All APIs are rate-limited with HTTP 429 on breach, though StackAdapt does not publish specific quotas. A separate **Pixel API** (authenticated by universal pixel ID rather than the GraphQL key) handles server-to-server event ingestion, and a Data Taxonomy API covers audience synchronization with third-party data providers. Notably, **no public webhook or SCIM documentation exists** — third-party analysis by Stitchflow confirms user-management APIs are opaque, which is a real gap for identity-graph and IT automation use cases.
+
+## The universal pixel and conversion tracker are the attribution backbone
+
+Every conversion, retargeting audience, and lookalike on StackAdapt flows through the **Universal Pixel**, identified by a string like `sqQHa3Ob1hFi__2EcYYVZg1`. Installation happens in one of four ways: hand-placed JavaScript, the official **Shopify app** (launched November 2024, auto-installs the pixel and captures events), Google Tag Manager (web and server-side — StackAdapt maintains the `stackadapt-gtm-server-side-pixel` repo on GitHub), or via a CDP using the pixel ID as a destination credential.
+
+Conversion trackers are configured with **event rules matching an `action` key and optional properties (revenue, products array, email domain, etc.) and URL rules that match page URLs**. Attribution windows for both view-through and click-through can be set up to **180 days**. For server-side ingestion — whether from Segment's backend SDKs, Tealium EventStream, Freshpaint, Hightouch, or custom Reverse ETL — **the user agent and IP address must be included in the event context**, because StackAdapt uses them to attribute the conversion back to an ad interaction. Freshpaint's guide shows the operational pattern: create a Conversion Event in StackAdapt, copy the Conversion Event Unique ID, then map it onto outgoing events as a `conversion_id` property. For view-through tracking specifically, **the impression pixel is now the recommended path** over the legacy approach of sending all potential conversions with IPs, which was deprecated for privacy reasons but still works for allowlisted IPs.
+
+Click attribution uses a macro called **`{SA_POSTBACK_ID}`**, appended to click URLs as `sapid={SA_POSTBACK_ID}`. Rockerbox and similar measurement partners rely on this plus an impression pixel applied at the ad level. For mobile apps, **Adjust has a first-class StackAdapt integration** (requires Adjust SDK v4.0.0+) that handles click URLs, impression URLs, QR codes, and in-app revenue callbacks, with granular control over which events and attribution sources get shared.
+
+## Audiences split into CRM, IP, and lookalike paths with distinct APIs
+
+StackAdapt distinguishes **CRM segments (hashed PII), IP/device-ID segments, and Custom Segments/Lookalikes**, and the activation path differs for each. CRM uploads accept address, city, email, first name, last name, phone number, state, and zip code, and Hightouch's docs confirm **SHA-1 is the only supported hashing algorithm** — a notable constraint given most ad platforms have moved to SHA-256. Match rates flow through **LiveRamp's RampID Retrieval API**, which StackAdapt integrates natively so customers don't need a separate LiveRamp account; the pipeline hashes, matches to RampID, and produces a targetable segment in roughly 30 minutes. A **Match Booster** toggle available in Hightouch further lifts match rates.
+
+An important operational limitation surfaces in GrowthLoop's and Segment's docs: **StackAdapt's API only supports adding users to a CRM audience, not removing them once added.** That makes it effectively append-only, which matters for suppression lists and GDPR deletion workflows. Audiences sync hourly or daily and appear under Programmatic Audiences → My Audiences; imported lists map to CRM segments (email-based), while behaviorally segmented audiences from a CDP map to IP segments.
+
+Lookalikes come in two flavors. **Audience Lookalike Expansion** uses first-party data or Custom Segments as seeds and needs only 1,000 unique users to activate — no prior pixel fires required. **Pixel-based Lookalike Audiences** need roughly 4,000 pixel fires before a model can build, and StackAdapt claims conversion lifts of up to 2x, with one case study showing 1.5x conversion increase when lookalike expansion was layered on top of a CRM-only campaign. For third-party data, the **Third-Party Catalogue** exposes over 150,000 pre-built segments from partners including Clickagy and 33Across, filterable by geo, audience size, provider, and CPM.
+
+## Creative pipelines span Creative Builder, DCO, and third-party VAST
+
+StackAdapt's creative tooling operates on three tiers. The **Creative Builder** generates HTML5 rich media from 50+ templates with AI-enhanced imagery, producing multiple IAB sizes simultaneously. **Creative Studio** is a paid human-design team that handles HTML5, motion design, and dynamic creative production. And **Dynamic Creative Optimization (DCO)** — historically limited to e-commerce and automotive — **expanded to B2B, finance, and education in the October 2025 GA release** of StackAdapt's martech suite.
+
+DCO requires two data inputs: pixel data capturing product interactions (view, add-to-cart, purchase keyed by SKU) and a product feed with identifiers, images, titles, prices, and URLs. StackAdapt's Academy breaks this into three courses covering pixel setup, feed curation, and campaign configuration. A published case study with **Vallo Media for Global Industrial reported a 60% CTR lift and 30% of ad-attributed revenue from just 12% of budget** after moving cart-abandonment retargeting to DCO.
+
+For third-party creative, StackAdapt accepts **VAST tags** (video) and standard third-party display tags from servers like Flashtalking, Celtra, and Campaign Manager — consistent with industry norms, though StackAdapt does not publish a formal certification matrix the way DV360 or YouTube do. Third-party macros inside tags must align with standard click and cachebuster conventions; docs for the pattern are surfaced indirectly through partner integration guides rather than a first-party spec sheet.
+
+## Supply-side presence via a Prebid adapter
+
+On the publisher side, **StackAdapt ships an official Prebid.js bid adapter** (`bidder: 'stackadapt'`) that supports banner and video ad units. Required video params are `mimes`, `protocols`, `maxduration`, `api`, and `plcmt`; bid-level params include `publisherId`, optional `placementId`, and `bidfloor`. This matters because it makes StackAdapt one of the DSPs that can participate directly in header bidding auctions rather than only buying from open exchanges downstream. StackAdapt's own blog claims the platform processes **over 2 billion auctions per day**, a scale figure worth treating as a marketing number but directionally consistent with a mid-to-large DSP.
+
+## The 2025 Data Hub pivot reframes the whole platform
+
+The most strategically significant recent change is the **May 2025 launch (GA in October 2025) of StackAdapt's Data Hub and integrated email marketing**, positioning the company as the first self-serve programmatic DSP to natively unify owned and paid media. The Data Hub ingests first-party data from CRMs and marketing platforms (**HubSpot, Braze, Klaviyo, CallRail** are the named launch integrations), segments it, and powers both email sends and programmatic campaigns from a single workflow. Clients get 1 million free emails during early access. Orchestration flows support conversion-event triggers and randomized path A/B testing — for example, a form submission fires a follow-up email *and* automatically enrolls the user in a retargeting campaign. StackAdapt also achieved **EU–U.S. Data Privacy Framework certification** to enable lawful EU-to-US data transfers under GDPR, and announced a UK partnership with **Experian** for ID resolution and Mosaic segments.
+
+This is the context that explains why the GraphQL API matters so much: the Data Hub only delivers value if customer data systems can push into StackAdapt programmatically, and a single typed schema covering advertisers, segments, conversion trackers, and creatives is the precondition for that level of automation.
+
+## What's missing, and what it means
+
+Three gaps deserve flagging for anyone evaluating StackAdapt as a technical platform. **Public API documentation is gated** — docs.stackadapt.com is disallowed by robots.txt, there's no self-serve developer account, and the schema reference is only accessible with a key, so developers learn the API by reading npm readmes and third-party integration docs. **User-management and webhook APIs are effectively undocumented publicly**, which hurts enterprise IT and event-driven architectures. And **CRM audiences are append-only**, a real issue for suppression and right-to-be-forgotten workflows.
+
+The net picture: StackAdapt in 2026 is a serious API platform for audience activation, conversion measurement, and cross-channel orchestration, but it operates on a **partner-gated developer model** more reminiscent of enterprise adtech than modern self-serve SaaS. The GraphQL migration, TypeScript SDK, Prebid adapter, Shopify app, and Data Hub together show a company building the plumbing for programmatic-plus-martech unification — while the documentation access model suggests that technical due diligence still requires a conversation with an account manager before any serious integration work can begin.
