@@ -176,6 +176,42 @@ h2.sec-title em{font-style:italic;font-weight:500}
 .con-email{display:inline-flex;align-items:center;gap:.6rem;font-size:1.2rem;font-weight:500;color:var(--teal);padding:.8rem 1.5rem;border:1px solid rgba(45,212,191,.3);border-radius:999px;transition:all .25s}
 .con-email:hover{background:var(--teal-dim);border-color:var(--teal)}
 
+/* ═══ HERO CANVAS ═══ */
+.hero-canvas{position:absolute;top:0;right:0;bottom:0;width:50%;z-index:1;opacity:.4;pointer-events:none}
+@media(max-width:880px){.hero-canvas{width:100%;opacity:.2}}
+
+/* ═══ PROCESS FLOW ═══ */
+.flow{display:flex;align-items:stretch;gap:0;margin:2.5rem 0;overflow-x:auto;padding-bottom:1rem}
+.flow-step{flex:1;min-width:140px;text-align:center;position:relative;padding:0 .5rem}
+.flow-circle{width:52px;height:52px;border-radius:50%;margin:0 auto .8rem;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1rem;position:relative;z-index:2}
+.flow-circle.teal{background:var(--teal);color:var(--navy)}
+.flow-circle.purple{background:var(--purple);color:#fff}
+.flow-circle.coral{background:var(--coral);color:#fff}
+.flow-label{font-size:.72rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.3rem}
+.flow-desc{font-size:.78rem;color:var(--muted);line-height:1.4}
+.sec.dark .flow-desc{color:rgba(255,255,255,.5)}
+.flow-connector{position:absolute;top:26px;left:calc(50% + 26px);right:calc(-50% + 26px);height:2px;z-index:1}
+.flow-connector::after{content:'';position:absolute;right:-4px;top:-4px;border:5px solid transparent;border-left:6px solid}
+.flow-connector.t{background:rgba(45,212,191,.3)}.flow-connector.t::after{border-left-color:rgba(45,212,191,.5)}
+.flow-connector.p{background:rgba(124,108,247,.3)}.flow-connector.p::after{border-left-color:rgba(124,108,247,.5)}
+.flow-connector.c{background:rgba(249,112,102,.3)}.flow-connector.c::after{border-left-color:rgba(249,112,102,.5)}
+.flow-step:last-child .flow-connector{display:none}
+
+/* ═══ DIMENSION BARS (animated) ═══ */
+.dim-bars{display:grid;grid-template-columns:1fr 1fr;gap:.6rem .8rem;margin:1.5rem 0}
+@media(max-width:700px){.dim-bars{grid-template-columns:1fr}}
+.dim-bar{display:flex;align-items:center;gap:.6rem}
+.dim-label{font-size:.7rem;font-weight:500;width:100px;text-align:right;color:rgba(255,255,255,.5);flex-shrink:0}
+.dim-track{flex:1;height:6px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden;position:relative}
+.dim-fill{height:100%;border-radius:3px;transition:width 1.2s cubic-bezier(.4,0,.2,1);width:0}
+.dim-fill.animated{width:var(--w)}
+.dim-val{font-size:.7rem;font-weight:600;width:36px;color:rgba(255,255,255,.4)}
+
+/* ═══ PULSE RING ═══ */
+@keyframes pulseRing{0%{transform:scale(1);opacity:.6}100%{transform:scale(1.8);opacity:0}}
+.pulse-dot{position:relative;display:inline-block}
+.pulse-dot::after{content:'';position:absolute;inset:-4px;border-radius:50%;border:2px solid var(--teal);animation:pulseRing 2s ease-out infinite}
+
 /* ═══ FOOTER ═══ */
 footer{padding:1.5rem 0;background:var(--navy-deep);color:rgba(255,255,255,.35);font-size:.75rem}
 footer .wrap{display:flex;justify-content:space-between;align-items:center}
@@ -194,6 +230,7 @@ footer .brand{color:var(--teal);font-weight:700;font-size:.68rem;letter-spacing:
     <div class="links">
       <a href="#problem">The Problem</a>
       <a href="#approach">Our Approach</a>
+      <a href="#process">How It Works</a>
       <a href="#intelligence">Intelligence</a>
       <a href="#learning">The Brain</a>
       <a href="#audience">Who It's For</a>
@@ -206,6 +243,7 @@ footer .brand{color:var(--teal);font-weight:700;font-size:.68rem;letter-spacing:
 <!-- ═══════════ HERO ═══════════ -->
 <header class="hero" id="top">
   <span class="accent-bar"></span>
+  <canvas class="hero-canvas" id="heroCanvas"></canvas>
   <div class="wrap">
     <div class="hero-inner">
       <span class="eyebrow rv d1">INFORMATIV</span>
@@ -219,7 +257,7 @@ footer .brand{color:var(--teal);font-weight:700;font-size:.68rem;letter-spacing:
   </div>
   <div class="hero-strip">
     <div class="wrap">
-      <span><strong>PRIVACY-NATIVE</strong> · No cookies, device IDs, or tracking pixels</span>
+      <span><strong>PRIVACY-FIRST</strong> · No third-party cookies or device fingerprinting</span>
       <span><strong>LIVE IN PRODUCTION</strong> · Powering campaigns today</span>
     </div>
   </div>
@@ -266,8 +304,60 @@ footer .brand{color:var(--teal);font-weight:700;font-size:.68rem;letter-spacing:
     <button class="deeper-toggle rv" onclick="toggleDeeper(this)">Go Deeper <span class="chevron">▼</span></button>
     <div class="deeper-panel"><div class="deeper-inner">
       <p style="color:rgba(255,255,255,.65);max-width:720px;font-size:.95rem;line-height:1.7;margin-bottom:1.5rem"><strong style="color:#fff">Why this can't be replicated quickly.</strong> Research-grade psychological annotation at scale requires expertise in both decision science and persuasion mechanics — simultaneously. The construct taxonomy spans hundreds of validated psychological dimensions curated from peer-reviewed literature. Competitors optimized for correlation cannot port to inferential reasoning without complete rearchitecture. Minimum replication timeline: <strong style="color:var(--teal)">3-5 years.</strong></p>
-      <div class="callout" style="background:rgba(45,212,191,.08);border-left-color:var(--teal);color:rgba(255,255,255,.7)"><strong style="color:var(--teal)">Privacy-native by design.</strong> The evidence base is derived from publicly available language — no cookies, no device IDs, no personal data. The system understands decision psychology without tracking individuals.</div>
+      <p style="color:rgba(255,255,255,.5);font-size:.78rem;margin:1.5rem 0 .5rem;font-weight:600;letter-spacing:.1em">SAMPLE PSYCHOLOGICAL DIMENSIONS</p>
+      <div class="dim-bars" id="dimBars">
+        <div class="dim-bar"><span class="dim-label">Trust</span><div class="dim-track"><div class="dim-fill" style="--w:46%;background:var(--teal)"></div></div><span class="dim-val">0.46</span></div>
+        <div class="dim-bar"><span class="dim-label">Reactance</span><div class="dim-track"><div class="dim-fill" style="--w:6%;background:var(--coral)"></div></div><span class="dim-val">0.04</span></div>
+        <div class="dim-bar"><span class="dim-label">Emotional</span><div class="dim-track"><div class="dim-fill" style="--w:50%;background:var(--teal)"></div></div><span class="dim-val">0.50</span></div>
+        <div class="dim-bar"><span class="dim-label">Construal</span><div class="dim-track"><div class="dim-fill" style="--w:94%;background:var(--purple)"></div></div><span class="dim-val">0.94</span></div>
+        <div class="dim-bar"><span class="dim-label">Value Align</span><div class="dim-track"><div class="dim-fill" style="--w:61%;background:var(--teal)"></div></div><span class="dim-val">0.61</span></div>
+        <div class="dim-bar"><span class="dim-label">Processing</span><div class="dim-track"><div class="dim-fill" style="--w:92%;background:var(--purple)"></div></div><span class="dim-val">0.92</span></div>
+        <div class="dim-bar"><span class="dim-label">Social Proof</span><div class="dim-track"><div class="dim-fill" style="--w:44%;background:var(--teal)"></div></div><span class="dim-val">0.44</span></div>
+        <div class="dim-bar"><span class="dim-label">Loss Aversion</span><div class="dim-track"><div class="dim-fill" style="--w:43%;background:var(--coral)"></div></div><span class="dim-val">0.43</span></div>
+      </div>
+      <div class="callout" style="background:rgba(45,212,191,.08);border-left-color:var(--teal);color:rgba(255,255,255,.7)"><strong style="color:var(--teal)">Privacy-first by design.</strong> The evidence base is derived from publicly available language. The system understands decision psychology without tracking individuals.</div>
     </div></div>
+  </div>
+</section>
+
+<!-- ═══════════ HOW IT WORKS (Process Flow) ═══════════ -->
+<section class="sec dark" id="process" style="padding:4rem 0">
+  <div class="wrap">
+    <span class="eyebrow rv" style="text-align:center;display:block">HOW IT WORKS</span>
+    <h2 class="sec-title rv d1" style="text-align:center;margin:0 auto 1rem">From evidence to intelligence <em>in five stages.</em></h2>
+    <p class="sec-sub rv d2" style="text-align:center;margin:0 auto 2rem">Each stage builds on the one before it. Together they create advertising intelligence that no amount of behavioral data can replicate.</p>
+    <div class="flow rv d2">
+      <div class="flow-step">
+        <div class="flow-connector t"></div>
+        <div class="flow-circle teal">1</div>
+        <div class="flow-label" style="color:var(--teal)">Decode</div>
+        <div class="flow-desc">Extract psychological constructs from hundreds of millions of real customer insights.</div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-connector t"></div>
+        <div class="flow-circle teal">2</div>
+        <div class="flow-label" style="color:var(--teal)">Match</div>
+        <div class="flow-desc">Score bilateral alignment between buyer psychology and brand strategy across 20+ dimensions.</div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-connector p"></div>
+        <div class="flow-circle purple">3</div>
+        <div class="flow-label" style="color:var(--purple)">Reason</div>
+        <div class="flow-desc">30 psychological modules analyze the evidence in parallel, resolving conflicts and selecting the optimal approach.</div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-connector p"></div>
+        <div class="flow-circle purple">4</div>
+        <div class="flow-label" style="color:var(--purple)">Prescribe</div>
+        <div class="flow-desc">Complete creative intelligence: mechanism, framing, copy direction, lift prediction, barrier diagnosis.</div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-connector c"></div>
+        <div class="flow-circle coral">5</div>
+        <div class="flow-label" style="color:var(--coral)">Learn</div>
+        <div class="flow-desc">Every outcome teaches 22 systems simultaneously. Knowledge propagates. Theory evolves. Performance compounds.</div>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -404,6 +494,83 @@ footer .brand{color:var(--teal);font-weight:700;font-size:.68rem;letter-spacing:
     });
   },{threshold:0.12,rootMargin:'0px 0px -40px 0px'});
   document.querySelectorAll('.rv').forEach(function(el){io.observe(el)});
+})();
+
+// ═══ Hero neural network canvas ═══
+(function(){
+  var c=document.getElementById('heroCanvas');
+  if(!c)return;
+  var ctx=c.getContext('2d');
+  var W,H,nodes=[],edges=[];
+  function resize(){W=c.offsetWidth;H=c.offsetHeight;c.width=W*2;c.height=H*2;ctx.scale(2,2);init()}
+  function init(){
+    nodes=[];edges=[];
+    for(var i=0;i<35;i++){
+      nodes.push({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.3,vy:(Math.random()-.5)*.3,r:Math.random()*2+1.5,phase:Math.random()*Math.PI*2});
+    }
+    for(var i=0;i<nodes.length;i++){
+      for(var j=i+1;j<nodes.length;j++){
+        var dx=nodes[i].x-nodes[j].x,dy=nodes[i].y-nodes[j].y;
+        if(Math.sqrt(dx*dx+dy*dy)<180){
+          edges.push({a:i,b:j,strength:Math.random()*.5+.2,phase:Math.random()*Math.PI*2});
+        }
+      }
+    }
+  }
+  function draw(t){
+    ctx.clearRect(0,0,W,H);
+    var time=t/1000;
+    // Move nodes
+    nodes.forEach(function(n){
+      n.x+=n.vx;n.y+=n.vy;
+      if(n.x<0||n.x>W)n.vx*=-1;
+      if(n.y<0||n.y>H)n.vy*=-1;
+    });
+    // Draw edges
+    edges.forEach(function(e){
+      var a=nodes[e.a],b=nodes[e.b];
+      var pulse=.3+.7*(.5+.5*Math.sin(time*1.5+e.phase));
+      ctx.beginPath();ctx.moveTo(a.x,a.y);
+      var cpx=(a.x+b.x)/2+Math.sin(time+e.phase)*12;
+      var cpy=(a.y+b.y)/2+Math.cos(time*.7+e.phase)*12;
+      ctx.quadraticCurveTo(cpx,cpy,b.x,b.y);
+      ctx.strokeStyle='rgba(45,212,191,'+(e.strength*pulse*.25)+')';
+      ctx.lineWidth=1;ctx.stroke();
+    });
+    // Draw nodes
+    nodes.forEach(function(n){
+      var glow=.5+.5*Math.sin(time*2+n.phase);
+      ctx.beginPath();ctx.arc(n.x,n.y,n.r,0,Math.PI*2);
+      ctx.fillStyle='rgba(45,212,191,'+(glow*.6)+')';ctx.fill();
+      // Pulse ring on some
+      if(n.r>2.5){
+        var ring=1+Math.sin(time*2+n.phase)*.8;
+        ctx.beginPath();ctx.arc(n.x,n.y,n.r+ring*6,0,Math.PI*2);
+        ctx.strokeStyle='rgba(45,212,191,'+((.3-ring*.15))+')';
+        ctx.lineWidth=.5;ctx.stroke();
+      }
+    });
+    requestAnimationFrame(draw);
+  }
+  resize();
+  window.addEventListener('resize',resize);
+  requestAnimationFrame(draw);
+})();
+
+// ═══ Animate dimension bars on scroll ═══
+(function(){
+  var bars=document.getElementById('dimBars');
+  if(!bars)return;
+  var animated=false;
+  var io=new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if(e.isIntersecting&&!animated){
+        animated=true;
+        bars.querySelectorAll('.dim-fill').forEach(function(f){f.classList.add('animated')});
+      }
+    });
+  },{threshold:.3});
+  io.observe(bars);
 })();
 
 // ═══ Go Deeper toggle ═══
