@@ -93,6 +93,29 @@
   var publisherDomain = getParam("domain");
   var impressionTs = getParam("ts");
 
+  // ═════════════════════════════════════════════════════════════════
+  // INFORMATIV CLICK ATTRIBUTION
+  // When an ad click URL includes ?informativ_segment=...&informativ_mechanism=...
+  // we capture which archetype and mechanism brought this visitor.
+  // Persisted in sessionStorage so it survives multi-page navigation
+  // from landing page to booking confirmation.
+  // ═════════════════════════════════════════════════════════════════
+  var informativSegment = getParam("informativ_segment") || null;
+  var informativMechanism = getParam("informativ_mechanism") || null;
+  var informativDecisionId = getParam("informativ_decision_id") || null;
+
+  // Persist to sessionStorage (survives navigation within session)
+  try {
+    if (informativSegment) sessionStorage.setItem("informativ_segment", informativSegment);
+    if (informativMechanism) sessionStorage.setItem("informativ_mechanism", informativMechanism);
+    if (informativDecisionId) sessionStorage.setItem("informativ_decision_id", informativDecisionId);
+
+    // Recover from sessionStorage on subsequent pages
+    if (!informativSegment) informativSegment = sessionStorage.getItem("informativ_segment");
+    if (!informativMechanism) informativMechanism = sessionStorage.getItem("informativ_mechanism");
+    if (!informativDecisionId) informativDecisionId = sessionStorage.getItem("informativ_decision_id");
+  } catch (e) { /* sessionStorage unavailable */ }
+
   // ═══════════════════════════════════════════════════════════════════
   // REFERRAL CLASSIFICATION
   // ═══════════════════════════════════════════════════════════════════
@@ -328,6 +351,9 @@
       campaign_id: campaignId || null,
       creative_id: creativeId || null,
       domain: publisherDomain || null,
+      informativ_segment: informativSegment || null,
+      informativ_mechanism: informativMechanism || null,
+      informativ_decision_id: informativDecisionId || null,
       device_type: classifyDevice(),
       viewport_width: window.innerWidth,
       viewport_height: window.innerHeight,
