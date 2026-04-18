@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Informativ — Advertising Intelligence That Understands Why People Buy</title>
+<meta name="description" content="Informativ predicts behavior from psychology — the first platform with bilateral psychological evidence powering every advertising decision.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy:#1B1B3A;--navy-soft:#252550;--navy-deep:#14142B;
+  --light:#F5F7FA;--paper:#FFFFFF;
+  --teal:#2DD4BF;--teal-soft:#5EEAD4;--teal-dim:rgba(45,212,191,.12);
+  --purple:#7C6CF7;--purple-soft:#A394FA;--purple-dim:rgba(124,108,247,.10);
+  --coral:#F97066;--coral-soft:#FCA5A5;
+  --ink:#1B1B3A;--muted:#6B7280;--muted-dark:#9CA3AF;
+  --divider:#E5E7EB;--mint-bg:#E6FBF6;
+  --serif:'Fraunces','Times New Roman',serif;
+  --sans:'Inter',-apple-system,system-ui,sans-serif;
+  --max-w:1280px;--gutter:clamp(1.25rem,4vw,3rem);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--sans);color:var(--ink);background:var(--paper);line-height:1.6;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+.wrap{width:100%;max-width:var(--max-w);margin:0 auto;padding:0 var(--gutter)}
+
+/* ═══ NAV ═══ */
+.topnav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.1rem 0;background:rgba(27,27,58,.92);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-bottom:1px solid rgba(255,255,255,.06);transition:padding .3s,background .3s}
+.topnav.scrolled{padding:.6rem 0;background:rgba(20,20,43,.97)}
+.topnav .wrap{display:flex;align-items:center;justify-content:space-between}
+.topnav .brand{font-weight:700;font-size:.72rem;letter-spacing:.28em;color:var(--teal)}
+.topnav .links{display:flex;gap:2rem;font-size:.82rem;color:rgba(255,255,255,.65)}
+.topnav .links a{transition:color .2s}.topnav .links a:hover{color:var(--teal)}
+.topnav .cta-sm{padding:.5rem 1.1rem;background:var(--teal);color:var(--navy);font-weight:600;font-size:.8rem;border-radius:999px;transition:all .2s}
+.topnav .cta-sm:hover{background:var(--teal-soft);transform:translateY(-1px)}
+@media(max-width:820px){.topnav .links{display:none}}
+
+/* ═══ HERO ═══ */
+.hero{background:var(--navy);color:#fff;min-height:100vh;padding:9rem 0 5rem;position:relative;overflow:hidden;display:flex;align-items:center}
+.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 15% 30%,rgba(45,212,191,.1) 0%,transparent 40%),radial-gradient(circle at 85% 70%,rgba(124,108,247,.08) 0%,transparent 45%);pointer-events:none}
+.hero::after{content:'';position:absolute;inset:0;background:linear-gradient(rgba(255,255,255,.012) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.012) 1px,transparent 1px);background-size:80px 80px;pointer-events:none;mask-image:linear-gradient(180deg,rgba(0,0,0,.5),transparent 70%);-webkit-mask-image:linear-gradient(180deg,rgba(0,0,0,.5),transparent 70%)}
+.hero .accent-bar{position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--teal)}
+.hero-inner{position:relative;z-index:2;max-width:960px}
+.eyebrow{display:inline-block;font-size:.7rem;font-weight:700;letter-spacing:.3em;color:var(--teal);margin-bottom:1.8rem;padding-bottom:.4rem;border-bottom:1px solid rgba(45,212,191,.3)}
+h1.hero-title{font-family:var(--serif);font-weight:600;font-size:clamp(2.5rem,5.5vw,4.5rem);line-height:.98;letter-spacing:-.025em;margin-bottom:1.8rem}
+h1.hero-title em{font-style:italic;font-weight:500;color:var(--teal)}
+.hero-sub{font-size:clamp(1.05rem,1.5vw,1.3rem);line-height:1.55;max-width:680px;color:rgba(255,255,255,.72);margin-bottom:2.5rem}
+.hero-sub .hl-t{color:var(--teal);font-weight:500;font-style:italic}
+.hero-sub .hl-c{color:var(--coral);font-weight:500;font-style:italic}
+.btn-row{display:flex;gap:1rem;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:.5rem;padding:.9rem 1.6rem;font-weight:600;font-size:.92rem;border-radius:999px;transition:all .25s;cursor:pointer;border:none;font-family:var(--sans)}
+.btn-primary{background:var(--teal);color:var(--navy)}
+.btn-primary:hover{background:var(--teal-soft);transform:translateY(-2px);box-shadow:0 8px 30px rgba(45,212,191,.25)}
+.btn-ghost{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.22)}
+.btn-ghost:hover{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.4)}
+.btn .arr{transition:transform .2s}.btn:hover .arr{transform:translateX(3px)}
+.hero-strip{position:absolute;left:0;right:0;bottom:0;padding:1rem 0;background:rgba(0,0,0,.22);border-top:1px solid rgba(255,255,255,.06);z-index:3}
+.hero-strip .wrap{display:flex;justify-content:center;gap:3rem;flex-wrap:wrap;font-size:.75rem;color:rgba(255,255,255,.45);letter-spacing:.08em}
+.hero-strip strong{color:var(--teal);font-weight:600}
+@media(max-width:880px){.hero{min-height:auto;padding:8rem 0 2rem;display:block}.hero-strip{position:static;margin-top:2rem}.hero-strip .wrap{flex-direction:column;align-items:flex-start;gap:.5rem}}
+
+/* ═══ SECTIONS ═══ */
+.sec{padding:5.5rem 0;position:relative}
+.sec.dark{background:var(--navy);color:#fff}
+.sec .bar{position:absolute;left:0;top:0;bottom:0;width:5px}
+h2.sec-title{font-family:var(--serif);font-weight:600;font-size:clamp(1.8rem,3.8vw,3rem);line-height:1.08;letter-spacing:-.02em;margin-bottom:1rem;max-width:880px}
+h2.sec-title em{font-style:italic;font-weight:500}
+.sec-sub{font-size:1.05rem;line-height:1.6;color:var(--muted);max-width:680px;margin-bottom:3rem}
+.sec.dark .sec-sub{color:rgba(255,255,255,.65)}
+
+/* ═══ REVEAL ═══ */
+.rv{opacity:0;transform:translateY(28px);transition:opacity .7s ease,transform .7s ease}
+.rv.in{opacity:1;transform:none}
+.rv.d1{transition-delay:.1s}.rv.d2{transition-delay:.25s}.rv.d3{transition-delay:.4s}
+
+/* ═══ GO DEEPER ═══ */
+.deeper-toggle{display:inline-flex;align-items:center;gap:.5rem;font-size:.82rem;font-weight:600;letter-spacing:.06em;color:var(--teal);cursor:pointer;padding:.5rem 1rem;border:1px solid rgba(45,212,191,.3);border-radius:999px;transition:all .25s;background:transparent;font-family:var(--sans);margin-top:1.5rem}
+.deeper-toggle:hover{background:var(--teal-dim);border-color:var(--teal)}
+.sec.dark .deeper-toggle{border-color:rgba(45,212,191,.25)}
+.deeper-toggle .chevron{transition:transform .3s;font-size:.7rem}
+.deeper-toggle.open .chevron{transform:rotate(180deg)}
+.deeper-panel{max-height:0;overflow:hidden;transition:max-height .5s cubic-bezier(.4,0,.2,1),opacity .4s;opacity:0}
+.deeper-panel.open{opacity:1}
+.deeper-inner{padding:2rem 0 1rem}
+
+/* ═══ GRID CARDS ═══ */
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem}
+@media(max-width:880px){.grid-3{grid-template-columns:1fr}}
+.card{padding:2rem;border-top:3px solid var(--teal);transition:transform .2s}
+.card:hover{transform:translateY(-3px)}
+.sec.dark .card{background:var(--navy-soft)}
+.sec:not(.dark) .card{background:var(--paper);box-shadow:0 2px 20px rgba(27,27,58,.05)}
+.card .pill{display:inline-block;font-size:.65rem;font-weight:700;letter-spacing:.12em;padding:.3rem .65rem;border-radius:6px;margin-bottom:1rem}
+.card h3{font-family:var(--serif);font-size:1.4rem;font-weight:600;margin-bottom:.75rem}
+.sec.dark .card h3{color:#fff}
+.card p{font-size:.92rem;line-height:1.6;color:var(--muted)}
+.sec.dark .card p{color:rgba(255,255,255,.65)}
+
+/* ═══ STAT ROW ═══ */
+.stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:1.25rem;margin-bottom:2rem}
+@media(max-width:900px){.stat-row{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:520px){.stat-row{grid-template-columns:1fr}}
+.stat-card{background:var(--paper);padding:1.8rem 1.2rem;border-top:3px solid var(--teal);text-align:center;transition:transform .2s;box-shadow:0 2px 16px rgba(27,27,58,.04)}
+.stat-card:hover{transform:translateY(-3px)}
+.stat-card:nth-child(2){border-top-color:var(--purple)}
+.stat-card:nth-child(3){border-top-color:var(--coral)}
+.stat-card:nth-child(4){border-top-color:var(--teal)}
+.stat-num{font-family:var(--serif);font-weight:700;font-size:clamp(1.8rem,3.5vw,2.8rem);line-height:1;margin-bottom:.75rem}
+.stat-card:nth-child(1) .stat-num{color:var(--teal)}
+.stat-card:nth-child(2) .stat-num{color:var(--purple)}
+.stat-card:nth-child(3) .stat-num{color:var(--coral)}
+.stat-card:nth-child(4) .stat-num{color:var(--teal)}
+.stat-label{font-size:.88rem;color:var(--ink);line-height:1.4;margin-bottom:.6rem}
+.stat-src{font-size:.72rem;color:var(--muted);font-style:italic}
+
+/* ═══ PILLAR ROW ═══ */
+.pillars{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem;margin-top:2rem}
+@media(max-width:880px){.pillars{grid-template-columns:1fr}}
+.pillar{padding:2rem;background:var(--navy-soft);border-top:3px solid var(--teal)}
+.pillar:nth-child(2){border-top-color:var(--purple)}
+.pillar:nth-child(3){border-top-color:var(--coral)}
+.pillar .tag{font-size:.65rem;font-weight:700;letter-spacing:.15em;color:var(--teal);margin-bottom:.75rem}
+.pillar:nth-child(2) .tag{color:var(--purple)}
+.pillar:nth-child(3) .tag{color:var(--coral)}
+.pillar h4{font-family:var(--serif);font-size:1.2rem;font-weight:600;margin-bottom:.6rem;color:#fff}
+.pillar p{font-size:.9rem;color:rgba(255,255,255,.65);line-height:1.6}
+
+/* ═══ TILES ═══ */
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:1.25rem}
+@media(max-width:880px){.tiles{grid-template-columns:1fr}}
+.tile{padding:1.5rem;border-left:3px solid var(--purple);background:var(--light)}
+.tile .tile-tag{font-size:.65rem;font-weight:700;letter-spacing:.12em;color:var(--purple);margin-bottom:.5rem}
+.tile p{font-size:.9rem;line-height:1.55;color:var(--muted)}
+
+/* ═══ AUDIENCE CARDS ═══ */
+.aud-stack{display:grid;gap:1rem}
+.aud-card{display:grid;grid-template-columns:160px 1fr;gap:1.5rem;padding:1.5rem 2rem;border:1px solid var(--divider);border-radius:4px;transition:border-color .2s,box-shadow .2s;align-items:center}
+.aud-card:hover{border-color:var(--teal);box-shadow:0 4px 20px rgba(45,212,191,.08)}
+@media(max-width:700px){.aud-card{grid-template-columns:1fr}}
+.aud-tag{font-size:.68rem;font-weight:700;letter-spacing:.15em;color:var(--teal);text-transform:uppercase}
+.aud-card h4{font-family:var(--serif);font-size:1.15rem;font-weight:600;margin-bottom:.4rem}
+.aud-card p{font-size:.9rem;color:var(--muted);line-height:1.55}
+
+/* ═══ CALLOUT ═══ */
+.callout{padding:1.2rem 1.5rem;border-left:4px solid var(--teal);background:var(--mint-bg);font-size:.95rem;line-height:1.55;margin-top:2rem}
+.callout strong{font-weight:700}
+
+/* ═══ PULL QUOTE ═══ */
+.pull{margin-top:2.5rem;padding:1.2rem 0 1.2rem 1.5rem;border-left:3px solid var(--purple);font-family:var(--serif);font-style:italic;font-size:1.1rem;line-height:1.5;max-width:860px}
+.sec.dark .pull{color:rgba(255,255,255,.82)}
+.sec:not(.dark) .pull{color:var(--ink)}
+
+/* ═══ SCIENCE BADGES ═══ */
+.badges{display:flex;gap:.6rem;flex-wrap:wrap;margin-top:1.5rem}
+.badge{padding:.4rem .8rem;background:var(--light);font-size:.78rem;font-weight:600;border-radius:4px;color:var(--ink)}
+
+/* ═══ LEARNING VISUAL ═══ */
+.learning-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:.5rem;margin:2rem 0}
+@media(max-width:880px){.learning-grid{grid-template-columns:repeat(3,1fr)}}
+.learning-node{text-align:center;padding:1rem .5rem;background:var(--navy-soft);border-radius:8px;transition:transform .2s,border-color .2s;border:1px solid transparent}
+.learning-node:hover{transform:scale(1.05);border-color:var(--teal)}
+.learning-node .ln-num{font-family:var(--serif);font-weight:700;font-size:1.3rem;color:var(--teal);line-height:1}
+.learning-node .ln-label{font-size:.65rem;color:rgba(255,255,255,.5);margin-top:.4rem;letter-spacing:.05em}
+
+/* ═══ CONTACT ═══ */
+#contact{background:var(--navy);color:#fff;padding:5rem 0;text-align:center}
+#contact h2{font-family:var(--serif);font-weight:600;font-size:clamp(1.6rem,3.5vw,2.8rem);line-height:1.1;margin-bottom:1rem}
+#contact em{font-style:italic;font-weight:500}
+#contact .teal{color:var(--teal)}
+#contact .coral{color:var(--coral)}
+#contact .purple{color:var(--purple)}
+#contact .con-sub{color:rgba(255,255,255,.6);max-width:600px;margin:0 auto 2rem;font-size:1rem}
+.con-email{display:inline-flex;align-items:center;gap:.6rem;font-size:1.2rem;font-weight:500;color:var(--teal);padding:.8rem 1.5rem;border:1px solid rgba(45,212,191,.3);border-radius:999px;transition:all .25s}
+.con-email:hover{background:var(--teal-dim);border-color:var(--teal)}
+
+/* ═══ FOOTER ═══ */
+footer{padding:1.5rem 0;background:var(--navy-deep);color:rgba(255,255,255,.35);font-size:.75rem}
+footer .wrap{display:flex;justify-content:space-between;align-items:center}
+footer .brand{color:var(--teal);font-weight:700;font-size:.68rem;letter-spacing:.2em}
+
+/* ═══ RESPONSIVE ═══ */
+@media(max-width:600px){.sec{padding:3.5rem 0}h2.sec-title{font-size:1.6rem}.tiles{grid-template-columns:1fr}.pillars{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<!-- ═══════════ NAV ═══════════ -->
+<nav class="topnav" id="topnav">
+  <div class="wrap">
+    <span class="brand">INFORMATIV</span>
+    <div class="links">
+      <a href="#problem">The Problem</a>
+      <a href="#approach">Our Approach</a>
+      <a href="#intelligence">Intelligence</a>
+      <a href="#learning">The Brain</a>
+      <a href="#audience">Who It's For</a>
+      <a href="#science">Science</a>
+    </div>
+    <a href="#contact" class="cta-sm">Get in Touch</a>
+  </div>
+</nav>
+
+<!-- ═══════════ HERO ═══════════ -->
+<header class="hero" id="top">
+  <span class="accent-bar"></span>
+  <div class="wrap">
+    <div class="hero-inner">
+      <span class="eyebrow rv d1">INFORMATIV</span>
+      <h1 class="hero-title rv d2">The first platform that understands <em>why people buy.</em></h1>
+      <p class="hero-sub rv d3">We predict behavior from <span class="hl-t">psychology</span> — not from <span class="hl-c">behavior</span>. Powered by the only bilateral psychological evidence base in existence.</p>
+      <div class="btn-row rv d3">
+        <a href="#contact" class="btn btn-primary">Start a Conversation <span class="arr">→</span></a>
+        <a href="#approach" class="btn btn-ghost">See How It Works</a>
+      </div>
+    </div>
+  </div>
+  <div class="hero-strip">
+    <div class="wrap">
+      <span><strong>PRIVACY-NATIVE</strong> · No cookies, device IDs, or tracking pixels</span>
+      <span><strong>LIVE IN PRODUCTION</strong> · Powering campaigns today</span>
+    </div>
+  </div>
+</header>
+
+<!-- ═══════════ THE PROBLEM ═══════════ -->
+<section class="sec dark" id="problem">
+  <span class="bar" style="background:var(--coral)"></span>
+  <div class="wrap">
+    <span class="eyebrow rv" style="color:var(--coral);border-bottom-color:rgba(249,112,102,.3)">THE PROBLEM</span>
+    <h2 class="sec-title rv d1">Every major ad platform predicts <em>behavior from behavior.</em></h2>
+    <p class="sec-sub rv d2">Google, Meta, The Trade Desk, Amazon — all optimize by correlation. This approach has three structural limits no amount of data can fix.</p>
+    <div class="grid-3">
+      <div class="card rv d1"><span class="pill" style="background:var(--coral);color:#fff">LIMIT 1</span><h3>Can't Explain</h3><p>Correlational systems know <em>that</em> a pattern exists, not <em>why</em>. Winning creative can't be systematically reproduced.</p></div>
+      <div class="card rv d2"><span class="pill" style="background:var(--coral);color:#fff">LIMIT 2</span><h3>Can't Transfer</h3><p>Insights are locked to the exact context where they were learned. A luxury travel campaign gives zero benefit to a related premium vertical.</p></div>
+      <div class="card rv d3"><span class="pill" style="background:var(--coral);color:#fff">LIMIT 3</span><h3>Can't Adapt</h3><p>New products or audiences mean no historical data. Every cold start restarts optimization from scratch.</p></div>
+    </div>
+    <div class="pull rv">"Every other platform in this space is trying to predict behavior from behavior. We predict behavior from psychology."</div>
+    <button class="deeper-toggle rv" onclick="toggleDeeper(this)">Go Deeper <span class="chevron">▼</span></button>
+    <div class="deeper-panel"><div class="deeper-inner">
+      <p style="color:rgba(255,255,255,.65);max-width:700px;font-size:.95rem;line-height:1.7">The advertising industry spends over $1 trillion annually optimizing on correlational signals — click history, demographic lookups, contextual keywords. Privacy regulations have steadily eroded these signals, forcing increasingly expensive workarounds. But the deeper problem isn't signal loss — it's that these signals never measured what matters: <strong style="color:var(--teal)">the psychology of the purchase decision itself.</strong></p>
+      <div class="stat-row" style="margin-top:2rem">
+        <div class="stat-card"><div class="stat-num">80%</div><div class="stat-label">of mobile ad requests lack matching IDs</div><div class="stat-src">AppsFlyer, 2023</div></div>
+        <div class="stat-card"><div class="stat-num">97%</div><div class="stat-label">of marketers struggle to measure impact</div><div class="stat-src">Wakefield / LiveRamp, 2024</div></div>
+        <div class="stat-card"><div class="stat-num">40–60%</div><div class="stat-label">of digital ad spend reaches wrong mindsets</div><div class="stat-src">Next&amp;Co, 2024</div></div>
+        <div class="stat-card"><div class="stat-num">$240B+</div><div class="stat-label">annual spend on signal-loss remediation</div><div class="stat-src">IAB State of Data, 2024</div></div>
+      </div>
+    </div></div>
+  </div>
+</section>
+
+<!-- ═══════════ OUR APPROACH ═══════════ -->
+<section class="sec dark" id="approach">
+  <span class="bar" style="background:var(--teal)"></span>
+  <div class="wrap">
+    <span class="eyebrow rv">THE EVIDENCE BASE</span>
+    <h2 class="sec-title rv d1">The only <em>bilateral psychological evidence base</em> in existence.</h2>
+    <p class="sec-sub rv d2">Both sides of every captured purchase decision — what the buyer was thinking, what the brand was doing, and what made them match. Built on 15+ years of peer-reviewed research.</p>
+    <div class="pillars">
+      <div class="pillar rv d1"><div class="tag">BUYER SIDE</div><h4>What the customer was thinking</h4><p>Psychological constructs extracted from hundreds of millions of real customer insights. Decision-making style, risk orientation, social needs, emotional patterns.</p></div>
+      <div class="pillar rv d2"><div class="tag">SELLER SIDE</div><h4>What the brand was doing</h4><p>Persuasion strategies extracted from brand communications — which mechanisms are deployed, how authority and urgency are constructed, what framings resonate.</p></div>
+      <div class="pillar rv d3"><div class="tag">THE MATCH</div><h4>What made them buy</h4><p>Bilateral alignment scored across psychological dimensions on verified purchase events. The clinical-trial dataset of advertising.</p></div>
+    </div>
+    <button class="deeper-toggle rv" onclick="toggleDeeper(this)">Go Deeper <span class="chevron">▼</span></button>
+    <div class="deeper-panel"><div class="deeper-inner">
+      <p style="color:rgba(255,255,255,.65);max-width:720px;font-size:.95rem;line-height:1.7;margin-bottom:1.5rem"><strong style="color:#fff">Why this can't be replicated quickly.</strong> Research-grade psychological annotation at scale requires expertise in both decision science and persuasion mechanics — simultaneously. The construct taxonomy spans hundreds of validated psychological dimensions curated from peer-reviewed literature. Competitors optimized for correlation cannot port to inferential reasoning without complete rearchitecture. Minimum replication timeline: <strong style="color:var(--teal)">3-5 years.</strong></p>
+      <div class="callout" style="background:rgba(45,212,191,.08);border-left-color:var(--teal);color:rgba(255,255,255,.7)"><strong style="color:var(--teal)">Privacy-native by design.</strong> The evidence base is derived from publicly available language — no cookies, no device IDs, no personal data. The system understands decision psychology without tracking individuals.</div>
+    </div></div>
+  </div>
+</section>
+
+<!-- ═══════════ THE INTELLIGENCE ═══════════ -->
+<section class="sec" id="intelligence">
+  <span class="bar" style="background:var(--purple)"></span>
+  <div class="wrap">
+    <span class="eyebrow rv" style="color:var(--purple);border-bottom-color:rgba(124,108,247,.3)">THE INTELLIGENCE</span>
+    <h2 class="sec-title rv d1">Complete <em>creative intelligence</em> for every campaign.</h2>
+    <p class="sec-sub rv d2">Not just "who to target" — what to say, how to frame it, why it will convert, and what to do when it doesn't.</p>
+    <div class="tiles">
+      <div class="tile rv d1"><div class="tile-tag">MECHANISM</div><p>Which psychological approach to deploy — authority, social proof, cognitive ease, and more — matched to the buyer's mindset.</p></div>
+      <div class="tile rv d1"><div class="tile-tag">FRAMING</div><p>Gain vs. loss. Abstract vs. concrete. Emotional vs. rational. The frame that fits the psychology of the moment.</p></div>
+      <div class="tile rv d1"><div class="tile-tag">COPY DIRECTION</div><p>Headline strategy, call-to-action style, emotional intensity, and messaging length — grounded in evidence, not instinct.</p></div>
+      <div class="tile rv d2"><div class="tile-tag">LIFT PREDICTION</div><p>Expected CTR and conversion lift derived from bilateral purchase evidence — not past performance benchmarks.</p></div>
+      <div class="tile rv d2"><div class="tile-tag">BARRIER DIAGNOSIS</div><p>When someone doesn't convert, the system diagnoses the specific psychological barrier and prescribes the intervention to resolve it.</p></div>
+      <div class="tile rv d2"><div class="tile-tag">GOAL ACTIVATION</div><p>Pages activate nonconscious goals. The system matches ads to goal fulfillment — so the click feels like an answer, not an interruption.</p></div>
+    </div>
+    <button class="deeper-toggle rv" onclick="toggleDeeper(this)">Go Deeper <span class="chevron">▼</span></button>
+    <div class="deeper-panel"><div class="deeper-inner">
+      <p style="max-width:720px;font-size:.95rem;line-height:1.7;color:var(--muted);margin-bottom:1.5rem">The intelligence layer operates through <strong style="color:var(--ink)">30 specialized psychological reasoning modules</strong> running in parallel — each grounded in published behavioral science. The modules assess constructs from regulatory focus to brand relationship depth, from loss aversion to narrative transportation. Their evidence is fused through a synthesis layer that resolves conflicts and selects the most coherent strategy.</p>
+      <p style="max-width:720px;font-size:.95rem;line-height:1.7;color:var(--muted)">Message complexity is automatically calibrated to the advertising channel. High-attention environments (like connected TV) receive complex arguments that require deliberation. Low-attention environments (like mobile display) receive simpler signals that work through heuristic processing. This is the Elaboration Likelihood Model operationalized at scale.</p>
+    </div></div>
+  </div>
+</section>
+
+<!-- ═══════════ THE BRAIN ═══════════ -->
+<section class="sec dark" id="learning">
+  <span class="bar" style="background:var(--teal)"></span>
+  <div class="wrap">
+    <span class="eyebrow rv">THE LEARNING BRAIN</span>
+    <h2 class="sec-title rv d1">A system that doesn't just optimize. <em>It understands.</em></h2>
+    <p class="sec-sub rv d2">Machine learning finds patterns. Informativ builds theories — testable propositions about <em>why</em> advertising works, validated against data, revised when wrong, applied automatically.</p>
+
+    <div class="grid-3">
+      <div class="card rv d1" style="border-top-color:var(--teal)"><h3>Knowledge Propagation</h3><p>A single conversion doesn't update one model. It cascades through every connected subsystem — like how learning in one part of the brain reorganizes the entire network.</p></div>
+      <div class="card rv d2" style="border-top-color:var(--purple)"><h3>Theory Building</h3><p>Six levels of increasingly complex understanding. Week 1: which approach works. Month 3: why it works, under what conditions, and when to switch. Month 6: strategies no human would have designed.</p></div>
+      <div class="card rv d3" style="border-top-color:var(--coral)"><h3>Compounding Intelligence</h3><p>Every campaign makes every future campaign smarter. New brands inherit everything the platform has learned. The system never starts from zero.</p></div>
+    </div>
+
+    <div class="learning-grid rv">
+      <div class="learning-node"><div class="ln-num">22</div><div class="ln-label">LEARNING<br>SYSTEMS</div></div>
+      <div class="learning-node"><div class="ln-num">14</div><div class="ln-label">CONNECTED<br>SUBSYSTEMS</div></div>
+      <div class="learning-node"><div class="ln-num">6</div><div class="ln-label">COMPLEXITY<br>LEVELS</div></div>
+      <div class="learning-node"><div class="ln-num">4×</div><div class="ln-label">LEARNING<br>MULTIPLIER</div></div>
+      <div class="learning-node"><div class="ln-num">20</div><div class="ln-label">SCORING<br>DIMENSIONS</div></div>
+      <div class="learning-node"><div class="ln-num">30</div><div class="ln-label">REASONING<br>MODULES</div></div>
+    </div>
+
+    <button class="deeper-toggle rv" onclick="toggleDeeper(this)">Go Deeper <span class="chevron">▼</span></button>
+    <div class="deeper-panel"><div class="deeper-inner">
+      <p style="color:rgba(255,255,255,.65);max-width:720px;font-size:.95rem;line-height:1.7;margin-bottom:1.5rem">The platform borrows from fields where understanding mechanism is life-or-death: clinical trial design (each user as their own control group), pharmacokinetics (modeling how persuasion effects metabolize over time), epidemiology (detecting when an audience segment has been exhausted), and information theory (matching message complexity to channel capacity).</p>
+      <p style="color:rgba(255,255,255,.65);max-width:720px;font-size:.95rem;line-height:1.7">Every observation propagates through the system's knowledge network with appropriate damping — fast-action signals get shortcut paths for immediate response, while nuanced insights accumulate before triggering changes. The result: a system that responds to urgent signals in minutes but builds deep understanding over months.</p>
+    </div></div>
+  </div>
+</section>
+
+<!-- ═══════════ WHO IT'S FOR ═══════════ -->
+<section class="sec" id="audience">
+  <span class="bar" style="background:var(--teal)"></span>
+  <div class="wrap">
+    <span class="eyebrow rv">WHO IT'S FOR</span>
+    <h2 class="sec-title rv d1">Built for the entire <em>programmatic supply chain.</em></h2>
+    <p class="sec-sub rv d2">Each side of the ecosystem gets a differentiated value proposition — from the same core intelligence.</p>
+    <div class="aud-stack">
+      <div class="aud-card rv d1"><div><span class="aud-tag">ADVERTISERS & AGENCIES</span></div><div><h4>Know <em>why</em> your campaigns work — not just that they do.</h4><p>Prescriptive creative direction grounded in purchase psychology. No cold-start penalty. Measurable lift from day one. Performance that compounds over months.</p></div></div>
+      <div class="aud-card rv d2"><div><span class="aud-tag">DSPs & PLATFORMS</span></div><div><h4>A new intelligence layer. No rebuild required.</h4><p>Psychological intelligence delivered alongside your existing infrastructure. Differentiate your platform with a capability no incumbent can match.</p></div></div>
+      <div class="aud-card rv d3"><div><span class="aud-tag">PUBLISHERS & SSPs</span></div><div><h4>Premium CPMs on decision-ready inventory.</h4><p>Meaningful CPM lift through psychological readiness scoring. No new data infrastructure, no user tracking, no migration cost.</p></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ THE SCIENCE ═══════════ -->
+<section class="sec" id="science">
+  <span class="bar" style="background:var(--purple)"></span>
+  <div class="wrap">
+    <span class="eyebrow rv" style="color:var(--purple);border-bottom-color:rgba(124,108,247,.3)">THE SCIENCE</span>
+    <h2 class="sec-title rv d1">Language is <em>evidence</em> of decision-making.</h2>
+    <p class="sec-sub rv d2">Built on 15+ years of peer-reviewed research into how language reveals the psychology of purchase decisions. Validated effect sizes. Published in top journals.</p>
+    <div class="badges rv">
+      <span class="badge"><strong>100+</strong> Studies</span>
+      <span class="badge"><strong>1,000+</strong> Citations</span>
+      <span class="badge"><strong>10+</strong> Top Journals</span>
+      <span class="badge">Harvard & Yale Foundations</span>
+    </div>
+    <button class="deeper-toggle rv" onclick="toggleDeeper(this)" style="margin-top:2rem">Go Deeper <span class="chevron">▼</span></button>
+    <div class="deeper-panel"><div class="deeper-inner">
+      <p style="max-width:720px;font-size:.95rem;line-height:1.7;color:var(--muted);margin-bottom:1rem">The core insight: language doesn't just communicate intent — it <em>is</em> evidence of where someone sits in their decision journey. From the unaware to the committed, every content environment carries psychological signal that can be decoded and acted upon.</p>
+      <p style="max-width:720px;font-size:.95rem;line-height:1.7;color:var(--muted)">The system draws on research in automaticity and nonconscious goal pursuit, embodied cognition, primary metaphor theory, regulatory focus, construal level theory, and prospect theory — among others. These aren't references bolted onto ad tech. They are the architecture.</p>
+    </div></div>
+  </div>
+</section>
+
+<!-- ═══════════ CONTACT ═══════════ -->
+<section id="contact">
+  <div class="wrap">
+    <span class="eyebrow rv" style="border-bottom-color:rgba(45,212,191,.3)">GET IN TOUCH</span>
+    <h2 class="rv d1">Not what they <em class="coral">clicked</em>. Not what they <em class="purple">look like</em>.<br><em class="teal">Why they decided.</em></h2>
+    <p class="con-sub rv d2">We're working with advertisers, agencies, and platforms to bring decision intelligence to the programmatic ecosystem.</p>
+    <a href="mailto:hello@informativgroup.com" class="con-email rv d3">hello@informativgroup.com <span class="arr">→</span></a>
+  </div>
+</section>
+
+<!-- ═══════════ FOOTER ═══════════ -->
+<footer>
+  <div class="wrap">
+    <span class="brand">INFORMATIV</span>
+    <span>© 2026 Informativ Group Corporation. All rights reserved.</span>
+  </div>
+</footer>
+
+<script>
+// ═══ Sticky nav shrink on scroll ═══
+(function(){
+  var nav=document.getElementById('topnav');
+  var last=0;
+  window.addEventListener('scroll',function(){
+    var y=window.scrollY||window.pageYOffset;
+    if(y>80)nav.classList.add('scrolled');
+    else nav.classList.remove('scrolled');
+    last=y;
+  },{passive:true});
+})();
+
+// ═══ Scroll reveal ═══
+(function(){
+  if(typeof IntersectionObserver==='undefined'){
+    document.querySelectorAll('.rv').forEach(function(el){el.classList.add('in')});
+    return;
+  }
+  var io=new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}
+    });
+  },{threshold:0.12,rootMargin:'0px 0px -40px 0px'});
+  document.querySelectorAll('.rv').forEach(function(el){io.observe(el)});
+})();
+
+// ═══ Go Deeper toggle ═══
+function toggleDeeper(btn){
+  var panel=btn.nextElementSibling;
+  var isOpen=panel.classList.contains('open');
+  // Close all others
+  document.querySelectorAll('.deeper-panel.open').forEach(function(p){
+    p.classList.remove('open');
+    p.style.maxHeight='0';
+    p.previousElementSibling.classList.remove('open');
+  });
+  if(!isOpen){
+    panel.classList.add('open');
+    btn.classList.add('open');
+    panel.style.maxHeight=panel.scrollHeight+'px';
+    // Smooth scroll to show content
+    setTimeout(function(){
+      btn.scrollIntoView({behavior:'smooth',block:'start'});
+    },100);
+  }
+}
+
+// Close deeper panels when scrolling past them
+(function(){
+  var panels=document.querySelectorAll('.deeper-panel');
+  if(!panels.length)return;
+  var io=new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if(!e.isIntersecting&&e.target.classList.contains('open')){
+        e.target.classList.remove('open');
+        e.target.style.maxHeight='0';
+        if(e.target.previousElementSibling)e.target.previousElementSibling.classList.remove('open');
+      }
+    });
+  },{threshold:0,rootMargin:'-100px 0px -100px 0px'});
+  panels.forEach(function(p){io.observe(p)});
+})();
+</script>
+</body>
+</html>
