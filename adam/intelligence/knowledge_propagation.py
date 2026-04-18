@@ -285,6 +285,26 @@ class KnowledgePropagationNetwork:
             accumulation_threshold=20,
             damping=0.5)
 
+        # ── SMALL-WORLD SHORTCUTS (Network Science) ──
+        # High-confidence signals that need fast action bypass the
+        # detailed propagation chain. These shortcuts make the network
+        # "small-world" — maintaining nuanced multi-hop propagation
+        # while enabling rapid response on critical signals.
+
+        # Goal → budget: confirmed goal-fulfillment pair → direct bid increase
+        self._register_edge("goal_activation", "budget_allocator",
+            damping=0.8,
+            transform_fn=self._goal_to_domain)
+
+        # Processing depth → creative: low depth → directly switch to peripheral
+        self._register_edge("processing_theory", "creative_director",
+            transform_fn=self._processing_to_creative_shortcut)
+
+        # Counterfactual → budget: strong counterfactual signal → direct realloc
+        self._register_edge("counterfactual", "budget_allocator",
+            timing=PropagationTiming.BATCHED,
+            accumulation_threshold=5)
+
     def propagate(self, initial_signal: KnowledgeSignal) -> Dict[str, Any]:
         """Propagate a knowledge signal through the network.
 
@@ -713,6 +733,20 @@ class KnowledgePropagationNetwork:
             signal.content["reason"] = (
                 f"Trust={trust:.2f} (loss domain) and/or reactance={reactance:.2f} "
                 f"(amplified) → prospect theory scoring should emphasize loss aversion"
+            )
+            return signal
+        return None
+
+    def _processing_to_creative_shortcut(self, signal: KnowledgeSignal) -> Optional[KnowledgeSignal]:
+        """SHORTCUT: Low processing depth → directly switch creative complexity."""
+        depth = signal.content.get("processing_depth", 0)
+        if depth < 1.5:
+            signal.signal_type = SignalType.CREATIVE_SIGNAL
+            signal.content["action"] = "reduce_complexity"
+            signal.content["reason"] = (
+                f"Processing depth {depth:.1f}s too low for central-route "
+                f"mechanisms. SHORTCUT: switch to peripheral-route creative "
+                f"(cognitive ease, social proof, liking)."
             )
             return signal
         return None

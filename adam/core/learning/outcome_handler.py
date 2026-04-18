@@ -815,6 +815,28 @@ class OutcomeHandler:
 
         # =====================================================================
         # =====================================================================
+        # =====================================================================
+        # 13.85 SEGMENT DEPLETION DETECTION (Epidemiological Model)
+        #
+        # Track conversion rates per archetype × mechanism over time.
+        # When the rate declines gradually (not suddenly), it's segment
+        # depletion — the receptive buyers have been exhausted. The
+        # system recommends switching mechanisms to target the resistant
+        # remainder with a different approach.
+        # =====================================================================
+        if mechanism_sent and archetype:
+            try:
+                from adam.intelligence.segment_depletion import get_depletion_detector
+                detector = get_depletion_detector()
+                detector.record_outcome(
+                    archetype=archetype,
+                    mechanism=mechanism_sent,
+                    converted=success,
+                )
+            except Exception:
+                pass
+
+        # =====================================================================
         # 13.9 KNOWLEDGE PROPAGATION (The System's Brain)
         #
         # After all 22 individual learning systems have updated, propagate
