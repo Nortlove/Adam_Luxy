@@ -10,6 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.12/dist/gsap.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.12/dist/ScrollTrigger.min.js"></script>
+<script src="https://unpkg.com/lenis@1.1.18/dist/lenis.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
@@ -187,7 +188,43 @@ footer{padding:1.2rem 0;border-top:1px solid var(--bdr);font-size:.65rem;color:v
 footer .w{display:flex;justify-content:space-between;align-items:center}
 footer .brand{font-weight:700;font-size:.58rem;letter-spacing:.22em;color:var(--t)}
 
-@media(max-width:600px){.sec{padding:5rem 0}h2{font-size:1.6rem}}
+/* ═══ LENIS ═══ */
+html.lenis,html.lenis body{height:auto}
+.lenis.lenis-smooth{scroll-behavior:auto}
+.lenis.lenis-smooth [data-lenis-prevent]{overscroll-behavior:contain}
+
+/* ═══ INTERACTIVE EXPLORER ═══ */
+.explorer{margin:3rem 0;padding:2.5rem;border-radius:16px;background:var(--bg2);border:1px solid var(--bdr);position:relative;overflow:hidden}
+.explorer::before{content:'';position:absolute;top:-50%;right:-30%;width:400px;height:400px;border-radius:50%;background:radial-gradient(circle,rgba(45,212,191,.04),transparent 70%);pointer-events:none}
+.explorer-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:2rem;flex-wrap:wrap;gap:1rem}
+.explorer-title{font-family:var(--sr);font-size:1.3rem;font-weight:400;margin-bottom:.3rem}
+.explorer-sub{font-size:.78rem;color:var(--tx3)}
+.archetype-tabs{display:flex;gap:.4rem;flex-wrap:wrap}
+.arch-tab{font-family:var(--mn);font-size:.6rem;letter-spacing:.08em;padding:.4rem .8rem;border-radius:6px;border:1px solid var(--bdr);color:var(--tx3);cursor:none;transition:all .25s;background:transparent}
+.arch-tab:hover,.arch-tab.active{border-color:var(--t);color:var(--t);background:var(--tg);box-shadow:0 0 15px var(--tg)}
+.explorer-grid{display:grid;grid-template-columns:1fr 1fr;gap:2rem}
+@media(max-width:768px){.explorer-grid{grid-template-columns:1fr}}
+.explorer-dims{display:flex;flex-direction:column;gap:3px}
+.exp-dim{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:5px;transition:background .15s}
+.exp-dim:hover{background:rgba(255,255,255,.02)}
+.exp-dim .ed-name{font-family:var(--mn);font-size:.62rem;color:var(--tx3);width:120px;text-align:right;flex-shrink:0;transition:color .15s}
+.exp-dim:hover .ed-name{color:var(--tx2)}
+.exp-dim .ed-bar{flex:1;height:4px;background:rgba(255,255,255,.04);border-radius:2px;overflow:hidden}
+.exp-dim .ed-fill{height:100%;border-radius:2px;transition:width .8s cubic-bezier(.65,.05,0,1)}
+.exp-dim .ed-val{font-family:var(--mn);font-size:.58rem;color:var(--tx3);width:28px;text-align:right;transition:color .15s}
+.exp-dim:hover .ed-val{color:var(--t)}
+.exp-cat{font-family:var(--mn);font-size:.5rem;letter-spacing:.14em;color:var(--tx3);padding:8px 8px 2px;opacity:.4}
+.explorer-output{display:flex;flex-direction:column;gap:.6rem}
+.out-card{padding:1rem;border-radius:10px;border:1px solid var(--bdr);background:rgba(255,255,255,.015);transition:border-color .2s}
+.out-card:hover{border-color:rgba(45,212,191,.12)}
+.out-label{font-family:var(--mn);font-size:.52rem;letter-spacing:.12em;margin-bottom:4px}
+.out-value{font-size:.88rem;font-weight:400;line-height:1.4}
+.out-detail{font-size:.72rem;color:var(--tx3);margin-top:3px;line-height:1.4}
+
+/* ═══ PINNED SECTIONS ═══ */
+.pin-section{min-height:100vh;display:flex;align-items:center}
+
+@media(max-width:600px){.sec{padding:5rem 0}h2{font-size:1.6rem}.explorer{padding:1.5rem}.explorer-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -203,7 +240,7 @@ footer .brand{font-weight:700;font-size:.58rem;letter-spacing:.22em;color:var(--
 <!-- NAV -->
 <nav class="nav" id="nav"><div class="w">
   <span class="brand">INFORMATIV</span>
-  <div class="links"><a href="#iceberg">The Blind Spot</a><a href="#levels">Intelligence</a><a href="#bilateral">The Edge</a><a href="#brain">The Brain</a><a href="#science">Science</a></div>
+  <div class="links"><a href="#iceberg">The Blind Spot</a><a href="#levels">Intelligence</a><a href="#bilateral">The Edge</a><a href="#explore">Explorer</a><a href="#brain">The Brain</a><a href="#science">Science</a></div>
   <a href="#contact" class="cta">Get in Touch</a>
 </div></nav>
 
@@ -407,6 +444,37 @@ footer .brand{font-weight:700;font-size:.58rem;letter-spacing:.22em;color:var(--
   </div>
 </section>
 
+<!-- ═══════════════════════════════ INTERACTIVE EXPLORER ═══════════════════════════════ -->
+<section class="sec" id="explore">
+  <div class="w">
+    <div class="label" style="color:var(--em)">LIVE INTELLIGENCE</div>
+    <h2>See what the system sees. <em>Interact with it.</em></h2>
+    <p class="sec-sub">Select a buyer archetype. Watch the psychological dimensions shift. See how the creative intelligence adapts in real time.</p>
+
+    <div class="explorer">
+      <div class="explorer-header">
+        <div>
+          <div class="explorer-title">Psychological Intelligence Explorer</div>
+          <div class="explorer-sub">Select an archetype to see how the system adapts</div>
+        </div>
+        <div class="archetype-tabs" id="archTabs">
+          <button class="arch-tab active" data-arch="careful_truster" onclick="switchArch(this)">Careful Truster</button>
+          <button class="arch-tab" data-arch="status_seeker" onclick="switchArch(this)">Status Seeker</button>
+          <button class="arch-tab" data-arch="easy_decider" onclick="switchArch(this)">Easy Decider</button>
+          <button class="arch-tab" data-arch="first_timer" onclick="switchArch(this)">First Timer</button>
+        </div>
+      </div>
+
+      <div class="explorer-grid">
+        <div>
+          <div class="explorer-dims" id="expDims"></div>
+        </div>
+        <div class="explorer-output" id="expOutput"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- ═══════════════════════════════ RESONANCE ═══════════════════════════════ -->
 <section class="sec sec-center res-wrap">
   <div class="w">
@@ -499,6 +567,16 @@ footer .brand{font-weight:700;font-size:.58rem;letter-spacing:.22em;color:var(--
 <script>
 gsap.registerPlugin(ScrollTrigger);
 
+// ═══ LENIS SMOOTH SCROLL ═══
+var lenis=new Lenis({duration:1.2,easing:function(t){return Math.min(1,1.001-Math.pow(2,-10*t))},orientation:'vertical',smoothWheel:true});
+lenis.on('scroll',ScrollTrigger.update);
+gsap.ticker.add(function(time){lenis.raf(time*1000)});
+gsap.ticker.lagSmoothing(0);
+
+// ═══ CUSTOM EASING ═══
+var snap=function(v){return gsap.parseEase('cubic-bezier(0.65, 0.05, 0, 1)')(v)};
+
+
 // ═══ CURSOR ═══
 !function(){var c=document.getElementById('cursor'),d=document.getElementById('cursorDot'),mx=0,my=0,cx=0,cy=0,dx=0,dy=0;
 if(!c||!d||window.innerWidth<768)return;
@@ -510,10 +588,118 @@ document.querySelectorAll('a,button,.btn,.gc,.pipe-n,.metric,.ac,.dim-row').forE
 // ═══ NAV ═══
 ScrollTrigger.create({start:60,onEnter:function(){document.getElementById('nav').classList.add('solid')},onLeaveBack:function(){document.getElementById('nav').classList.remove('solid')}});
 
-// ═══ GSAP REVEALS ═══
-gsap.utils.toArray('.sec h2, .sec .sec-sub, .label, .gc, .pipe-n, .level-card, .metric, .ac, .bilateral, .badge, .iceberg-wrap').forEach(function(el){
-  gsap.from(el,{y:50,opacity:0,duration:1,ease:'power3.out',scrollTrigger:{trigger:el,start:'top 88%',toggleActions:'play none none none'}});
+// ═══ GSAP REVEALS (premium easing) ═══
+gsap.utils.toArray('.sec h2, .sec .sec-sub, .label, .gc, .pipe-n, .level-card, .metric, .ac, .bilateral, .badge, .iceberg-wrap, .explorer').forEach(function(el){
+  gsap.from(el,{y:60,opacity:0,duration:1.2,ease:'cubic-bezier(0.65, 0.05, 0, 1)',scrollTrigger:{trigger:el,start:'top 88%',toggleActions:'play none none none'}});
 });
+
+// ═══ PINNED ICEBERG ═══
+ScrollTrigger.create({trigger:'#iceberg',start:'top top',end:'+=50%',pin:true,pinSpacing:true});
+
+// ═══ INTERACTIVE EXPLORER ═══
+var archData={
+  careful_truster:{
+    dims:[
+      {cat:'BRAND FIT',items:[{n:'brand trust',v:.92},{n:'authenticity',v:.90},{n:'competence',v:.85},{n:'sincerity',v:.82}]},
+      {cat:'PERSUASION',items:[{n:'authority',v:.85},{n:'commitment',v:.80},{n:'social proof',v:.78},{n:'loss aversion',v:.72}]},
+      {cat:'VALUES',items:[{n:'reliability',v:.88},{n:'peace of mind',v:.85},{n:'safety',v:.78},{n:'punctuality',v:.75}]},
+      {cat:'PROCESSING',items:[{n:'anxiety reduction',v:.85},{n:'formality',v:.82},{n:'processing route',v:.72}]},
+    ],
+    output:{
+      frame:{label:'FRAME',value:'Anxiety Elimination / Prevention',detail:'Regulatory fit strongly below neutral = prevention focus. Frame around removing stress, not adding excitement.',color:'var(--t)'},
+      tone:{label:'TONE',value:'Professional + Competent',detail:'Brand trust (0.92) + competence (0.85) + sincerity (0.82). Calm confidence, not flashy.',color:'var(--p)'},
+      mechanism:{label:'LEAD MECHANISM',value:'Authority (0.791)',detail:'Brand trust + prevention focus + central processing converge. Lead with expert endorsement and guaranteed reliability.',color:'var(--t)'},
+      companion:{label:'COMPANION',value:'Social Proof (0.745)',detail:'Verified ratio + 400+ satisfied customers. Full-name testimonials build credibility.',color:'var(--p)'},
+      avoid:{label:'AVOID',value:'Scarcity / Price-Leading / Urgency',detail:'Prevention-focused buyers with low uncertainty tolerance react negatively to pressure tactics.',color:'var(--c)'},
+      price:{label:'PRICE STRATEGY',value:'Fixed / Guaranteed (No Hidden Fees)',detail:'Spending pain = 0.30 (low). These buyers willingly pay premium for certainty.',color:'var(--g)'},
+    }
+  },
+  status_seeker:{
+    dims:[
+      {cat:'BRAND FIT',items:[{n:'brand trust',v:.75},{n:'sophistication',v:.92},{n:'excitement',v:.80},{n:'status signaling',v:.88}]},
+      {cat:'PERSUASION',items:[{n:'social proof',v:.90},{n:'scarcity',v:.82},{n:'liking',v:.78},{n:'authority',v:.65}]},
+      {cat:'VALUES',items:[{n:'exclusivity',v:.90},{n:'professional image',v:.85},{n:'distinction',v:.82},{n:'aspiration',v:.80}]},
+      {cat:'PROCESSING',items:[{n:'emotional appeal',v:.82},{n:'visual processing',v:.78},{n:'formality',v:.70}]},
+    ],
+    output:{
+      frame:{label:'FRAME',value:'Aspirational / Status Gain',detail:'Promotion-focused, seeks distinction. Frame around what luxury says about them.',color:'var(--t)'},
+      tone:{label:'TONE',value:'Premium + Exclusive',detail:'Sophistication (0.92) + status signaling (0.88). Understated luxury, not obvious wealth.',color:'var(--p)'},
+      mechanism:{label:'LEAD MECHANISM',value:'Social Proof (0.823)',detail:'Status-conscious buyers look to aspirational peers. Show who else chooses this.',color:'var(--t)'},
+      companion:{label:'COMPANION',value:'Scarcity (0.756)',detail:'Limited availability enhances perceived exclusivity. "Curated fleet" > "available now."',color:'var(--p)'},
+      avoid:{label:'AVOID',value:'Cognitive Ease / Discounting',detail:'Making it too easy cheapens the perception. These buyers WANT the premium barrier.',color:'var(--c)'},
+      price:{label:'PRICE STRATEGY',value:'Premium Positioning (No Discounts)',detail:'Price IS the signal. Discounting destroys the status value proposition entirely.',color:'var(--g)'},
+    }
+  },
+  easy_decider:{
+    dims:[
+      {cat:'BRAND FIT',items:[{n:'competence',v:.70},{n:'ease of use',v:.92},{n:'reliability',v:.75},{n:'simplicity',v:.88}]},
+      {cat:'PERSUASION',items:[{n:'cognitive ease',v:.90},{n:'social proof',v:.72},{n:'liking',v:.68},{n:'authority',v:.55}]},
+      {cat:'VALUES',items:[{n:'convenience',v:.92},{n:'speed',v:.88},{n:'no hassle',v:.85},{n:'transparency',v:.78}]},
+      {cat:'PROCESSING',items:[{n:'peripheral route',v:.85},{n:'low complexity',v:.90},{n:'mobile-first',v:.82}]},
+    ],
+    output:{
+      frame:{label:'FRAME',value:'Friction Elimination',detail:'Low deliberation, wants the fastest path. Frame around removing every obstacle.',color:'var(--t)'},
+      tone:{label:'TONE',value:'Simple + Direct',detail:'Ease of use (0.92) + simplicity (0.88). No jargon, no complexity, no decision fatigue.',color:'var(--p)'},
+      mechanism:{label:'LEAD MECHANISM',value:'Cognitive Ease (0.872)',detail:'Peripheral processing. Works in under 2 seconds. "One tap. Done." beats any argument.',color:'var(--t)'},
+      companion:{label:'COMPANION',value:'Social Proof (0.681)',detail:'Quick social validation: "Thousands switch monthly." No testimonials, just numbers.',color:'var(--p)'},
+      avoid:{label:'AVOID',value:'Authority / Complex Arguments',detail:'Central-route mechanisms require attention these buyers won\'t give. Keep it peripheral.',color:'var(--c)'},
+      price:{label:'PRICE STRATEGY',value:'Transparent / No Surprises',detail:'Not price-sensitive but friction-sensitive. "No surge, no tips, no hidden fees."',color:'var(--g)'},
+    }
+  },
+  first_timer:{
+    dims:[
+      {cat:'BRAND FIT',items:[{n:'approachability',v:.85},{n:'trustworthiness',v:.72},{n:'warmth',v:.80},{n:'competence',v:.65}]},
+      {cat:'PERSUASION',items:[{n:'curiosity',v:.88},{n:'cognitive ease',v:.75},{n:'social proof',v:.70},{n:'liking',v:.72}]},
+      {cat:'VALUES',items:[{n:'low risk',v:.90},{n:'discovery',v:.85},{n:'no commitment',v:.82},{n:'tryability',v:.80}]},
+      {cat:'PROCESSING',items:[{n:'novelty seeking',v:.82},{n:'low barrier',v:.88},{n:'emotional appeal',v:.72}]},
+    ],
+    output:{
+      frame:{label:'FRAME',value:'Curiosity + Low Risk',detail:'Never tried luxury transport. Activate novelty-seeking while eliminating perceived risk.',color:'var(--t)'},
+      tone:{label:'TONE',value:'Inviting + Low Pressure',detail:'Approachability (0.85) + warmth (0.80). "It\'s not what you think" — challenge assumptions.',color:'var(--p)'},
+      mechanism:{label:'LEAD MECHANISM',value:'Curiosity (0.815)',detail:'Novelty-seeking + low barrier entry. "What is it actually like?" drives the first click.',color:'var(--t)'},
+      companion:{label:'COMPANION',value:'Cognitive Ease (0.712)',detail:'After curiosity hooks them, make the next step effortless. "Try free. Cancel anytime."',color:'var(--p)'},
+      avoid:{label:'AVOID',value:'Commitment / Exclusivity',detail:'First-timers flee from anything that feels binding or makes them feel like outsiders.',color:'var(--c)'},
+      price:{label:'PRICE STRATEGY',value:'Trial / First-Ride Incentive',detail:'Lower the entry barrier. "Your first ride, on us" converts curiosity into experience.',color:'var(--g)'},
+    }
+  },
+};
+
+function renderExplorer(arch){
+  var d=archData[arch];if(!d)return;
+  var dims=document.getElementById('expDims');
+  var out=document.getElementById('expOutput');
+  // Dims
+  var html='';
+  d.dims.forEach(function(cat){
+    html+='<div class="exp-cat">'+cat.cat+'</div>';
+    cat.items.forEach(function(item){
+      var color=item.v>0.75?'var(--t)':item.v>0.5?'var(--p)':'var(--c)';
+      html+='<div class="exp-dim"><span class="ed-name">'+item.n+'</span><div class="ed-bar"><div class="ed-fill" style="width:0%;background:linear-gradient(90deg,'+color+','+color+'88)"></div></div><span class="ed-val">'+item.v.toFixed(2)+'</span></div>';
+    });
+  });
+  dims.innerHTML=html;
+  // Animate bars
+  setTimeout(function(){dims.querySelectorAll('.ed-fill').forEach(function(f,i){
+    var row=f.closest('.exp-dim');
+    var val=parseFloat(row.querySelector('.ed-val').textContent);
+    setTimeout(function(){f.style.width=(val*100)+'%'},i*40);
+  })},50);
+  // Output
+  var ohtml='';
+  Object.values(d.output).forEach(function(o){
+    ohtml+='<div class="out-card"><div class="out-label" style="color:'+o.color+'">'+o.label+'</div><div class="out-value">'+o.value+'</div><div class="out-detail">'+o.detail+'</div></div>';
+  });
+  out.innerHTML=ohtml;
+}
+
+function switchArch(btn){
+  document.querySelectorAll('.arch-tab').forEach(function(t){t.classList.remove('active')});
+  btn.classList.add('active');
+  renderExplorer(btn.dataset.arch);
+}
+
+// Initialize with first archetype
+renderExplorer('careful_truster');
 
 // ═══ HERO DIM BARS ═══
 ScrollTrigger.create({trigger:'#dimGrid',start:'top 80%',onEnter:function(){
