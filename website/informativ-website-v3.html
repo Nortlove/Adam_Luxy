@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Informativ — Advertising Intelligence That Understands Why People Buy</title>
+<meta name="description" content="Informativ predicts behavior from psychology. The first platform with bilateral psychological evidence powering every advertising decision.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#1B1B3A;--navy-soft:#252550;--navy-deep:#14142B;--navy-card:#1e1e42;
+  --paper:#FFFFFF;--light:#F5F7FA;--light2:#EEF1F6;
+  --teal:#2DD4BF;--teal-soft:#5EEAD4;--teal-dim:rgba(45,212,191,.1);
+  --purple:#7C6CF7;--purple-soft:#A394FA;--purple-dim:rgba(124,108,247,.08);
+  --coral:#F97066;--coral-soft:#FCA5A5;--coral-dim:rgba(249,112,102,.08);
+  --gold:#F0C040;
+  --ink:#1B1B3A;--muted:#6B7280;--muted2:#9CA3AF;
+  --serif:'Fraunces','Georgia',serif;
+  --sans:'Inter',-apple-system,system-ui,sans-serif;
+  --max-w:1280px;--g:clamp(1.25rem,4vw,3rem);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--sans);color:var(--ink);background:var(--paper);line-height:1.6;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+.w{width:100%;max-width:var(--max-w);margin:0 auto;padding:0 var(--g)}
+
+/* ═══ NAV ═══ */
+.nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.1rem 0;background:rgba(27,27,58,.92);backdrop-filter:blur(24px);border-bottom:1px solid rgba(255,255,255,.05);transition:padding .35s}
+.nav.sm{padding:.55rem 0;background:rgba(20,20,43,.97)}
+.nav .w{display:flex;align-items:center;justify-content:space-between}
+.nav .brand{font-weight:700;font-size:.7rem;letter-spacing:.28em;color:var(--teal);transition:font-size .3s}
+.nav .lnk{display:flex;gap:1.8rem;font-size:.8rem;color:rgba(255,255,255,.6)}
+.nav .lnk a{transition:color .2s}.nav .lnk a:hover{color:var(--teal)}
+.nav .cbtn{padding:.45rem 1rem;background:var(--teal);color:var(--navy);font-weight:600;font-size:.78rem;border-radius:999px;transition:all .2s}
+.nav .cbtn:hover{background:var(--teal-soft);transform:translateY(-1px)}
+@media(max-width:860px){.nav .lnk{display:none}}
+
+/* ═══ HERO ═══ */
+.hero{background:var(--navy);color:#fff;min-height:100vh;padding:9rem 0 5rem;position:relative;overflow:hidden;display:flex;align-items:center}
+.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 12% 28%,rgba(45,212,191,.1) 0%,transparent 38%),radial-gradient(circle at 88% 72%,rgba(124,108,247,.07) 0%,transparent 42%);pointer-events:none}
+.hero::after{content:'';position:absolute;inset:0;background:linear-gradient(rgba(255,255,255,.01) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.01) 1px,transparent 1px);background-size:72px 72px;pointer-events:none;opacity:.4}
+.hero .bar{position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--teal)}
+.hero-canvas{position:absolute;top:0;right:0;bottom:0;width:55%;z-index:1;opacity:.35;pointer-events:none}
+@media(max-width:900px){.hero-canvas{width:100%;opacity:.15}}
+.hero-inner{position:relative;z-index:2;max-width:680px}
+.ey{display:inline-block;font-size:.68rem;font-weight:700;letter-spacing:.3em;color:var(--teal);margin-bottom:1.5rem;padding-bottom:.35rem;border-bottom:1px solid rgba(45,212,191,.25)}
+h1.ht{font-family:var(--serif);font-weight:600;font-size:clamp(2.4rem,5.2vw,4.2rem);line-height:.98;letter-spacing:-.02em;margin-bottom:1.6rem}
+h1.ht em{font-style:italic;font-weight:500;color:var(--teal)}
+.hsub{font-size:clamp(1rem,1.4vw,1.2rem);line-height:1.55;max-width:600px;color:rgba(255,255,255,.68);margin-bottom:1rem}
+.hsub2{font-family:var(--serif);font-style:italic;font-size:clamp(1.1rem,1.5vw,1.35rem);color:var(--teal);margin-bottom:2.5rem;opacity:.85}
+.br{display:flex;gap:1rem;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:.5rem;padding:.85rem 1.5rem;font-weight:600;font-size:.9rem;border-radius:999px;transition:all .25s;cursor:pointer;border:none;font-family:var(--sans)}
+.b1{background:var(--teal);color:var(--navy)}.b1:hover{background:var(--teal-soft);transform:translateY(-2px);box-shadow:0 8px 30px rgba(45,212,191,.22)}
+.b2{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.2)}.b2:hover{background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.4)}
+.btn .ar{transition:transform .2s}.btn:hover .ar{transform:translateX(3px)}
+.hstrip{position:absolute;left:0;right:0;bottom:0;padding:.9rem 0;background:rgba(0,0,0,.2);border-top:1px solid rgba(255,255,255,.05);z-index:3}
+.hstrip .w{display:flex;justify-content:center;gap:3rem;flex-wrap:wrap;font-size:.72rem;color:rgba(255,255,255,.4);letter-spacing:.07em}
+.hstrip b{color:var(--teal);font-weight:600}
+@media(max-width:900px){.hero{min-height:auto;padding:8rem 0 2rem;display:block}.hstrip{position:static;margin-top:2rem}.hstrip .w{flex-direction:column;align-items:flex-start;gap:.4rem}}
+
+/* ═══ SECTIONS ═══ */
+.s{padding:5.5rem 0;position:relative}
+.s.dk{background:var(--navy);color:#fff}
+.s .bar{position:absolute;left:0;top:0;bottom:0;width:5px}
+h2.st{font-family:var(--serif);font-weight:600;font-size:clamp(1.75rem,3.5vw,2.8rem);line-height:1.08;letter-spacing:-.015em;margin-bottom:1rem;max-width:860px}
+h2.st em{font-style:italic;font-weight:500}
+.sd{font-size:1.02rem;line-height:1.6;color:var(--muted);max-width:660px;margin-bottom:3rem}
+.s.dk .sd{color:rgba(255,255,255,.6)}
+
+/* ═══ REVEAL ═══ */
+.rv{opacity:0;transform:translateY(24px);transition:opacity .65s,transform .65s}.rv.in{opacity:1;transform:none}
+.rv.d1{transition-delay:.1s}.rv.d2{transition-delay:.22s}.rv.d3{transition-delay:.35s}.rv.d4{transition-delay:.48s}
+
+/* ═══ GO DEEPER ═══ */
+.dt{display:inline-flex;align-items:center;gap:.5rem;font-size:.8rem;font-weight:600;letter-spacing:.05em;color:var(--teal);cursor:pointer;padding:.45rem .9rem;border:1px solid rgba(45,212,191,.25);border-radius:999px;transition:all .25s;background:transparent;font-family:var(--sans);margin-top:1.5rem}
+.dt:hover{background:var(--teal-dim);border-color:var(--teal)}
+.dt .ch{transition:transform .3s;font-size:.65rem}.dt.op .ch{transform:rotate(180deg)}
+.dp{max-height:0;overflow:hidden;transition:max-height .5s cubic-bezier(.4,0,.2,1),opacity .35s;opacity:0}
+.dp.op{opacity:1}
+.di{padding:2rem 0 1rem}
+
+/* ═══ CARDS ═══ */
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:1.4rem}
+@media(max-width:880px){.g3{grid-template-columns:1fr}}
+.cd{padding:1.8rem;border-top:3px solid var(--teal);transition:transform .2s}
+.cd:hover{transform:translateY(-3px)}
+.s.dk .cd{background:var(--navy-soft)}
+.s:not(.dk) .cd{background:var(--paper);box-shadow:0 2px 16px rgba(27,27,58,.04)}
+.cd .pl{display:inline-block;font-size:.62rem;font-weight:700;letter-spacing:.12em;padding:.25rem .6rem;border-radius:5px;margin-bottom:.8rem}
+.cd h3{font-family:var(--serif);font-size:1.3rem;font-weight:600;margin-bottom:.6rem}
+.s.dk .cd h3{color:#fff}
+.cd p{font-size:.9rem;line-height:1.6;color:var(--muted)}
+.s.dk .cd p{color:rgba(255,255,255,.6)}
+
+/* ═══ PROCESS FLOW ═══ */
+.flow{display:flex;align-items:flex-start;gap:0;margin:2.5rem 0;overflow-x:auto;padding-bottom:.5rem}
+.fs{flex:1;min-width:135px;text-align:center;position:relative;padding:0 .4rem}
+.fc{width:50px;height:50px;border-radius:50%;margin:0 auto .7rem;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.95rem;position:relative;z-index:2;box-shadow:0 4px 20px rgba(0,0,0,.2)}
+.fl{font-size:.7rem;font-weight:600;letter-spacing:.07em;text-transform:uppercase;margin-bottom:.25rem}
+.fd{font-size:.75rem;line-height:1.4}
+.s.dk .fd{color:rgba(255,255,255,.45)}
+.fcon{position:absolute;top:25px;left:calc(50% + 25px);right:calc(-50% + 25px);height:2px;z-index:1;background:rgba(255,255,255,.08)}
+.fcon::after{content:'';position:absolute;right:-3px;top:-3px;border:4px solid transparent;border-left:5px solid rgba(255,255,255,.15)}
+.fs:last-child .fcon{display:none}
+
+/* ═══ BILATERAL VISUAL ═══ */
+.bilateral{display:grid;grid-template-columns:1fr auto 1fr;gap:0;align-items:center;margin:2.5rem 0}
+@media(max-width:700px){.bilateral{grid-template-columns:1fr;gap:1.5rem}}
+.bi-side{padding:1.5rem;border-radius:8px}
+.bi-buyer{background:rgba(45,212,191,.06);border:1px solid rgba(45,212,191,.15);text-align:right}
+.bi-seller{background:rgba(124,108,247,.06);border:1px solid rgba(124,108,247,.15)}
+.bi-side h4{font-family:var(--serif);font-size:1.1rem;font-weight:600;margin-bottom:.5rem}
+.bi-side p{font-size:.85rem;color:var(--muted);line-height:1.5}
+.bi-center{display:flex;flex-direction:column;align-items:center;padding:0 1.5rem}
+@media(max-width:700px){.bi-center{padding:0;flex-direction:row;justify-content:center;gap:1rem}.bi-buyer{text-align:left}}
+.bi-match{width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--purple));display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.85rem;color:#fff;box-shadow:0 0 30px rgba(45,212,191,.2),0 0 60px rgba(124,108,247,.1);position:relative}
+@keyframes matchPulse{0%,100%{box-shadow:0 0 20px rgba(45,212,191,.15),0 0 40px rgba(124,108,247,.08)}50%{box-shadow:0 0 30px rgba(45,212,191,.3),0 0 60px rgba(124,108,247,.15)}}
+.bi-match{animation:matchPulse 3s ease infinite}
+.bi-label{font-size:.6rem;font-weight:700;letter-spacing:.12em;margin-top:.5rem;color:var(--muted2)}
+.bi-dims{display:flex;flex-direction:column;gap:.3rem;margin-top:1rem}
+.bi-dim{display:flex;align-items:center;gap:.4rem;font-size:.7rem}
+.bi-buyer .bi-dim{justify-content:flex-end}
+.bi-dot{width:6px;height:6px;border-radius:50%}
+
+/* ═══ TILES ═══ */
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:1.2rem}
+@media(max-width:880px){.tiles{grid-template-columns:1fr}}
+.tile{padding:1.4rem;border-left:3px solid var(--purple);background:var(--light)}
+.tile .tt{font-size:.62rem;font-weight:700;letter-spacing:.11em;color:var(--purple);margin-bottom:.4rem}
+.tile p{font-size:.88rem;line-height:1.55;color:var(--muted)}
+
+/* ═══ LEARNING NODES ═══ */
+.lnodes{display:grid;grid-template-columns:repeat(6,1fr);gap:.5rem;margin:2rem 0}
+@media(max-width:880px){.lnodes{grid-template-columns:repeat(3,1fr)}}
+.ln{text-align:center;padding:.9rem .4rem;background:var(--navy-soft);border-radius:8px;transition:transform .2s,border-color .2s;border:1px solid transparent}
+.ln:hover{transform:scale(1.05);border-color:var(--teal)}
+.ln .lv{font-family:var(--serif);font-weight:700;font-size:1.2rem;color:var(--teal);line-height:1}
+.ln .ll{font-size:.6rem;color:rgba(255,255,255,.4);margin-top:.35rem;letter-spacing:.04em;line-height:1.3}
+
+/* ═══ DIMENSION BARS ═══ */
+.dbs{display:grid;grid-template-columns:1fr 1fr;gap:.5rem .7rem;margin:1.5rem 0}
+@media(max-width:700px){.dbs{grid-template-columns:1fr}}
+.db{display:flex;align-items:center;gap:.5rem}
+.db-l{font-size:.68rem;font-weight:500;width:90px;text-align:right;flex-shrink:0}
+.s.dk .db-l{color:rgba(255,255,255,.45)}
+.db-t{flex:1;height:5px;background:rgba(255,255,255,.05);border-radius:3px;overflow:hidden}
+.db-f{height:100%;border-radius:3px;transition:width 1.2s cubic-bezier(.4,0,.2,1);width:0}
+.db-f.an{width:var(--w)}
+.db-v{font-size:.68rem;font-weight:600;width:32px}
+.s.dk .db-v{color:rgba(255,255,255,.35)}
+
+/* ═══ RESONANCE VISUAL ═══ */
+.res-svg{width:100%;max-width:600px;margin:2rem auto;display:block}
+
+/* ═══ AUDIENCE ═══ */
+.aud{display:grid;gap:.8rem}
+.ac{display:grid;grid-template-columns:140px 1fr;gap:1.2rem;padding:1.3rem 1.6rem;border:1px solid var(--light2);border-radius:4px;transition:border-color .2s,box-shadow .2s;align-items:center}
+.ac:hover{border-color:var(--teal);box-shadow:0 4px 16px rgba(45,212,191,.06)}
+@media(max-width:700px){.ac{grid-template-columns:1fr}}
+.at{font-size:.65rem;font-weight:700;letter-spacing:.14em;color:var(--teal);text-transform:uppercase}
+.ac h4{font-family:var(--serif);font-size:1.1rem;font-weight:600;margin-bottom:.35rem}
+.ac p{font-size:.88rem;color:var(--muted);line-height:1.5}
+
+/* ═══ SCIENCE BADGES ═══ */
+.badges{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:1.2rem}
+.badge{padding:.35rem .7rem;background:var(--light);font-size:.75rem;font-weight:600;border-radius:4px}
+
+/* ═══ CALLOUT ═══ */
+.co{padding:1rem 1.3rem;border-left:4px solid var(--teal);font-size:.92rem;line-height:1.55;margin-top:1.5rem}
+.s:not(.dk) .co{background:rgba(45,212,191,.04)}
+.s.dk .co{background:rgba(45,212,191,.06);color:rgba(255,255,255,.65)}
+
+/* ═══ PULL ═══ */
+.pull{margin-top:2rem;padding:1rem 0 1rem 1.3rem;border-left:3px solid var(--purple);font-family:var(--serif);font-style:italic;font-size:1.05rem;line-height:1.5;max-width:800px}
+.s.dk .pull{color:rgba(255,255,255,.78)}
+
+/* ═══ CONTACT ═══ */
+#contact{background:var(--navy);color:#fff;padding:5rem 0;text-align:center}
+#contact h2{font-family:var(--serif);font-weight:600;font-size:clamp(1.5rem,3.2vw,2.6rem);line-height:1.12;margin-bottom:.8rem}
+#contact em{font-style:italic;font-weight:500}
+.tl{color:var(--teal)}.cl{color:var(--coral)}.pl{color:var(--purple)}
+#contact .csub{color:rgba(255,255,255,.55);max-width:560px;margin:0 auto 2rem;font-size:.95rem}
+.cem{display:inline-flex;align-items:center;gap:.5rem;font-size:1.1rem;font-weight:500;color:var(--teal);padding:.7rem 1.3rem;border:1px solid rgba(45,212,191,.25);border-radius:999px;transition:all .25s}
+.cem:hover{background:var(--teal-dim);border-color:var(--teal)}
+
+/* ═══ FOOTER ═══ */
+footer{padding:1.3rem 0;background:var(--navy-deep);color:rgba(255,255,255,.3);font-size:.72rem}
+footer .w{display:flex;justify-content:space-between;align-items:center}
+footer .brand{color:var(--teal);font-weight:700;font-size:.65rem;letter-spacing:.2em}
+
+/* ═══ RESPONSIVE ═══ */
+@media(max-width:600px){.s{padding:3.5rem 0}h2.st{font-size:1.5rem}.tiles{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav" id="nav"><div class="w">
+  <span class="brand">INFORMATIV</span>
+  <div class="lnk">
+    <a href="#problem">The Problem</a>
+    <a href="#approach">Our Approach</a>
+    <a href="#how">How It Works</a>
+    <a href="#intelligence">Intelligence</a>
+    <a href="#brain">The Brain</a>
+    <a href="#science">Science</a>
+  </div>
+  <a href="#contact" class="cbtn">Get in Touch</a>
+</div></nav>
+
+<!-- ═══════════════════════════════════ HERO ═══ -->
+<header class="hero" id="top">
+  <span class="bar"></span>
+  <canvas class="hero-canvas" id="hc"></canvas>
+  <div class="w"><div class="hero-inner">
+    <span class="ey rv d1">INFORMATIV</span>
+    <h1 class="ht rv d2">The first platform that understands <em>why people buy.</em></h1>
+    <p class="hsub rv d3">We predict behavior from psychology — not from behavior. Built on the only bilateral psychological evidence base in existence.</p>
+    <p class="hsub2 rv d3">"Language is the window into the mind."</p>
+    <div class="br rv d4">
+      <a href="#contact" class="btn b1">Start a Conversation <span class="ar">→</span></a>
+      <a href="#approach" class="btn b2">See How It Works</a>
+    </div>
+  </div></div>
+  <div class="hstrip"><div class="w">
+    <span><b>PRIVACY-FIRST</b> · No third-party cookies or device fingerprinting</span>
+    <span><b>LIVE IN PRODUCTION</b> · Powering campaigns today</span>
+    <span><b>THESIS-DRIVEN</b> · Built on mechanism, not correlation</span>
+  </div></div>
+</header>
+
+<!-- ═══════════════════════════════════ PROBLEM ═══ -->
+<section class="s dk" id="problem">
+  <span class="bar" style="background:var(--coral)"></span>
+  <div class="w">
+    <span class="ey rv" style="color:var(--coral);border-bottom-color:rgba(249,112,102,.25)">THE PROBLEM</span>
+    <h2 class="st rv d1">Every major ad platform predicts <em>behavior from behavior.</em></h2>
+    <p class="sd rv d2">Google, Meta, The Trade Desk, Amazon — all optimize by correlation. This approach has three structural limits no amount of data can fix.</p>
+    <div class="g3">
+      <div class="cd rv d1" style="border-top-color:var(--coral)"><span class="pl" style="background:var(--coral);color:#fff">LIMIT 1</span><h3>Can't Explain</h3><p>Correlational systems know <em>that</em> a pattern exists, not <em>why</em>. Winning creative can't be systematically reproduced.</p></div>
+      <div class="cd rv d2" style="border-top-color:var(--coral)"><span class="pl" style="background:var(--coral);color:#fff">LIMIT 2</span><h3>Can't Transfer</h3><p>Insights are locked to the exact context where they were learned. A luxury travel campaign gives zero benefit to a related premium vertical.</p></div>
+      <div class="cd rv d3" style="border-top-color:var(--coral)"><span class="pl" style="background:var(--coral);color:#fff">LIMIT 3</span><h3>Can't Adapt</h3><p>New products or audiences mean no historical data. Every cold start restarts optimization from scratch.</p></div>
+    </div>
+    <div class="pull rv">"Mechanism-driven or correlational. We chose mechanism."</div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════ BILATERAL APPROACH ═══ -->
+<section class="s" id="approach">
+  <span class="bar" style="background:var(--teal)"></span>
+  <div class="w">
+    <span class="ey rv">THE EVIDENCE BASE</span>
+    <h2 class="st rv d1">Both sides of every decision. <em>Bilateral alignment.</em></h2>
+    <p class="sd rv d2">Most systems profile the buyer. We profile the buyer, the brand, and the match between them — scored across psychological dimensions on hundreds of millions of real purchase insights.</p>
+
+    <!-- BILATERAL MIRROR VISUAL -->
+    <div class="bilateral rv d2">
+      <div class="bi-side bi-buyer">
+        <h4 style="color:var(--teal)">Buyer Psychology</h4>
+        <p>Decision-making style, risk orientation, social needs, emotional patterns, temporal horizon.</p>
+        <div class="bi-dims">
+          <div class="bi-dim"><span style="color:var(--teal);font-weight:600">Trust orientation</span> <span class="bi-dot" style="background:var(--teal)"></span></div>
+          <div class="bi-dim"><span style="color:var(--teal-soft)">Loss sensitivity</span> <span class="bi-dot" style="background:var(--teal-soft)"></span></div>
+          <div class="bi-dim"><span style="color:var(--teal)">Social calibration</span> <span class="bi-dot" style="background:var(--teal)"></span></div>
+        </div>
+      </div>
+      <div class="bi-center">
+        <div class="bi-match">⟷</div>
+        <div class="bi-label">ALIGNMENT</div>
+      </div>
+      <div class="bi-side bi-seller">
+        <h4 style="color:var(--purple)">Brand Strategy</h4>
+        <p>Persuasion mechanisms deployed, framing techniques, authority signals, urgency construction.</p>
+        <div class="bi-dims">
+          <div class="bi-dim"><span class="bi-dot" style="background:var(--purple)"></span> <span style="color:var(--purple);font-weight:600">Authority framing</span></div>
+          <div class="bi-dim"><span class="bi-dot" style="background:var(--purple-soft)"></span> <span style="color:var(--purple-soft)">Scarcity signals</span></div>
+          <div class="bi-dim"><span class="bi-dot" style="background:var(--purple)"></span> <span style="color:var(--purple)">Social proof density</span></div>
+        </div>
+      </div>
+    </div>
+
+    <button class="dt rv" onclick="tgl(this)">Go Deeper <span class="ch">▼</span></button>
+    <div class="dp"><div class="di">
+      <p style="max-width:700px;font-size:.92rem;line-height:1.7;color:var(--muted);margin-bottom:1.5rem"><strong style="color:var(--ink)">Why this can't be replicated quickly.</strong> Research-grade psychological annotation at scale requires expertise in both decision science and persuasion mechanics — simultaneously. The construct taxonomy spans hundreds of validated psychological dimensions. Minimum replication timeline: <strong style="color:var(--teal)">3-5 years.</strong></p>
+      <p style="font-size:.75rem;font-weight:600;letter-spacing:.1em;color:var(--muted2);margin-bottom:.5rem">SAMPLE ALIGNMENT DIMENSIONS</p>
+      <div class="dbs" id="dbs1">
+        <div class="db"><span class="db-l">Trust</span><div class="db-t"><div class="db-f" style="--w:46%;background:var(--teal)"></div></div><span class="db-v" style="color:var(--teal)">0.46</span></div>
+        <div class="db"><span class="db-l">Reactance</span><div class="db-t"><div class="db-f" style="--w:6%;background:var(--coral)"></div></div><span class="db-v" style="color:var(--coral)">0.04</span></div>
+        <div class="db"><span class="db-l">Emotion</span><div class="db-t"><div class="db-f" style="--w:50%;background:var(--teal)"></div></div><span class="db-v" style="color:var(--teal)">0.50</span></div>
+        <div class="db"><span class="db-l">Construal</span><div class="db-t"><div class="db-f" style="--w:94%;background:var(--purple)"></div></div><span class="db-v" style="color:var(--purple)">0.94</span></div>
+        <div class="db"><span class="db-l">Values</span><div class="db-t"><div class="db-f" style="--w:61%;background:var(--teal)"></div></div><span class="db-v" style="color:var(--teal)">0.61</span></div>
+        <div class="db"><span class="db-l">Processing</span><div class="db-t"><div class="db-f" style="--w:92%;background:var(--purple)"></div></div><span class="db-v" style="color:var(--purple)">0.92</span></div>
+      </div>
+    </div></div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════ HOW IT WORKS ═══ -->
+<section class="s dk" id="how" style="padding:4.5rem 0">
+  <div class="w">
+    <span class="ey rv" style="display:block;text-align:center">HOW IT WORKS</span>
+    <h2 class="st rv d1" style="text-align:center;margin:0 auto .8rem">From evidence to intelligence <em>in five stages.</em></h2>
+    <p class="sd rv d2" style="text-align:center;margin:0 auto 2.5rem">Each stage builds on the one before it. Together they produce advertising intelligence that no amount of behavioral data can replicate.</p>
+    <div class="flow rv d2">
+      <div class="fs"><div class="fcon"></div><div class="fc" style="background:var(--teal);color:var(--navy)">1</div><div class="fl" style="color:var(--teal)">Decode</div><div class="fd">Extract psychology from real customer insights</div></div>
+      <div class="fs"><div class="fcon"></div><div class="fc" style="background:var(--teal);color:var(--navy)">2</div><div class="fl" style="color:var(--teal)">Align</div><div class="fd">Score bilateral match across 20+ dimensions</div></div>
+      <div class="fs"><div class="fcon"></div><div class="fc" style="background:var(--purple);color:#fff">3</div><div class="fl" style="color:var(--purple)">Reason</div><div class="fd">30 modules analyze evidence in parallel</div></div>
+      <div class="fs"><div class="fcon"></div><div class="fc" style="background:var(--purple);color:#fff">4</div><div class="fl" style="color:var(--purple)">Prescribe</div><div class="fd">Mechanism, framing, copy, lift prediction</div></div>
+      <div class="fs"><div class="fc" style="background:var(--coral);color:#fff">5</div><div class="fl" style="color:var(--coral)">Learn</div><div class="fd">22 systems update. Theory evolves. Performance compounds.</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════ INTELLIGENCE ═══ -->
+<section class="s" id="intelligence">
+  <span class="bar" style="background:var(--purple)"></span>
+  <div class="w">
+    <span class="ey rv" style="color:var(--purple);border-bottom-color:rgba(124,108,247,.25)">THE INTELLIGENCE</span>
+    <h2 class="st rv d1">Complete <em>creative intelligence</em> for every campaign.</h2>
+    <p class="sd rv d2">Not just "who to target" — what to say, how to frame it, why it will convert, and what to do when it doesn't.</p>
+    <div class="tiles">
+      <div class="tile rv d1"><div class="tt">MECHANISM</div><p>Which psychological approach to deploy — authority, social proof, cognitive ease — matched to the buyer's mindset.</p></div>
+      <div class="tile rv d1"><div class="tt">FRAMING</div><p>Gain vs. loss. Abstract vs. concrete. Emotional vs. rational. The frame that fits the psychology of the moment.</p></div>
+      <div class="tile rv d2"><div class="tt">COPY DIRECTION</div><p>Headline strategy, CTA style, emotional intensity — grounded in evidence, not instinct.</p></div>
+      <div class="tile rv d2"><div class="tt">BARRIER DIAGNOSIS</div><p>When someone doesn't convert, the system identifies the specific barrier and prescribes the intervention.</p></div>
+      <div class="tile rv d3"><div class="tt">GOAL ACTIVATION</div><p>Pages activate nonconscious goals. We match ads to goal fulfillment — so the click feels like an answer.</p></div>
+      <div class="tile rv d3"><div class="tt">LIFT PREDICTION</div><p>Expected CTR and conversion lift derived from bilateral evidence — not past benchmarks.</p></div>
+    </div>
+    <button class="dt rv" onclick="tgl(this)" style="margin-top:2rem">Go Deeper <span class="ch">▼</span></button>
+    <div class="dp"><div class="di">
+      <p style="max-width:700px;font-size:.92rem;line-height:1.7;color:var(--muted);margin-bottom:1rem"><strong style="color:var(--ink)">30 psychological reasoning modules</strong> run in parallel — each grounded in published behavioral science. From regulatory focus to brand relationship depth, from loss aversion to narrative transportation. Evidence is fused through a synthesis layer that resolves conflicts and selects the most coherent strategy.</p>
+      <p style="max-width:700px;font-size:.92rem;line-height:1.7;color:var(--muted)">Message complexity is automatically calibrated to the channel. High-attention environments receive complex arguments requiring deliberation. Low-attention environments receive simpler signals working through heuristic processing. The right message at the right complexity for the right channel.</p>
+    </div></div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════ THE BRAIN ═══ -->
+<section class="s dk" id="brain">
+  <span class="bar" style="background:var(--teal)"></span>
+  <div class="w">
+    <span class="ey rv">THE LEARNING BRAIN</span>
+    <h2 class="st rv d1">A system that doesn't just optimize. <em>It understands.</em></h2>
+    <p class="sd rv d2">Machine learning finds patterns. We build theories — testable propositions about <em>why</em> advertising works, validated against data, revised when wrong.</p>
+    <div class="g3">
+      <div class="cd rv d1"><h3>Knowledge Propagation</h3><p>A single conversion cascades through every connected subsystem — like how learning in one part of the brain reorganizes the entire network.</p></div>
+      <div class="cd rv d2" style="border-top-color:var(--purple)"><h3>Theory Building</h3><p>Six levels of complexity. Week 1: which approach works. Month 3: why, under what conditions. Month 6: strategies no human would design.</p></div>
+      <div class="cd rv d3" style="border-top-color:var(--coral)"><h3>Compounding Returns</h3><p>Every campaign makes every future campaign smarter. New brands inherit the full evidence base. The system never starts from zero.</p></div>
+    </div>
+    <div class="lnodes rv d3">
+      <div class="ln"><div class="lv">22</div><div class="ll">LEARNING<br>SYSTEMS</div></div>
+      <div class="ln"><div class="lv">14</div><div class="ll">CONNECTED<br>NODES</div></div>
+      <div class="ln"><div class="lv">6</div><div class="ll">THEORY<br>LEVELS</div></div>
+      <div class="ln"><div class="lv">4×</div><div class="ll">LEARNING<br>MULTIPLIER</div></div>
+      <div class="ln"><div class="lv">20</div><div class="ll">SCORING<br>DIMENSIONS</div></div>
+      <div class="ln"><div class="lv">30</div><div class="ll">REASONING<br>MODULES</div></div>
+    </div>
+    <button class="dt rv" onclick="tgl(this)">Go Deeper <span class="ch">▼</span></button>
+    <div class="dp"><div class="di">
+      <p style="color:rgba(255,255,255,.6);max-width:700px;font-size:.92rem;line-height:1.7;margin-bottom:1rem">The platform borrows from fields where understanding mechanism matters most: <strong style="color:#fff">clinical trial design</strong> (each user as their own control), <strong style="color:#fff">pharmacokinetics</strong> (how persuasion effects metabolize over time), <strong style="color:#fff">epidemiology</strong> (detecting audience segment depletion), and <strong style="color:#fff">information theory</strong> (matching message complexity to channel capacity).</p>
+      <p style="color:rgba(255,255,255,.6);max-width:700px;font-size:.92rem;line-height:1.7">Knowledge propagates with appropriate damping — fast signals get shortcut paths for immediate response, nuanced insights accumulate before triggering. The result: responds to urgent signals in minutes, builds deep understanding over months.</p>
+
+      <!-- RESONANCE SVG -->
+      <svg class="res-svg rv" viewBox="0 0 600 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <text x="300" y="14" text-anchor="middle" fill="rgba(255,255,255,.3)" font-size="9" font-weight="600" letter-spacing="3">RESONANCE: THREE SIGNALS ALIGNING</text>
+        <!-- Wave 1: Buyer -->
+        <path d="M0,80 Q75,30 150,80 Q225,130 300,80 Q375,30 450,80 Q525,130 600,80" stroke="#2DD4BF" stroke-width="1.5" opacity=".5">
+          <animate attributeName="d" dur="4s" repeatCount="indefinite" values="M0,80 Q75,30 150,80 Q225,130 300,80 Q375,30 450,80 Q525,130 600,80;M0,80 Q75,40 150,80 Q225,120 300,80 Q375,40 450,80 Q525,120 600,80;M0,80 Q75,30 150,80 Q225,130 300,80 Q375,30 450,80 Q525,130 600,80"/>
+        </path>
+        <!-- Wave 2: Seller -->
+        <path d="M0,80 Q75,35 150,80 Q225,125 300,80 Q375,35 450,80 Q525,125 600,80" stroke="#7C6CF7" stroke-width="1.5" opacity=".5">
+          <animate attributeName="d" dur="4.5s" repeatCount="indefinite" values="M0,80 Q75,35 150,80 Q225,125 300,80 Q375,35 450,80 Q525,125 600,80;M0,80 Q75,45 150,80 Q225,115 300,80 Q375,45 450,80 Q525,115 600,80;M0,80 Q75,35 150,80 Q225,125 300,80 Q375,35 450,80 Q525,125 600,80"/>
+        </path>
+        <!-- Wave 3: Page -->
+        <path d="M0,80 Q75,38 150,80 Q225,122 300,80 Q375,38 450,80 Q525,122 600,80" stroke="#F97066" stroke-width="1.5" opacity=".4">
+          <animate attributeName="d" dur="5s" repeatCount="indefinite" values="M0,80 Q75,38 150,80 Q225,122 300,80 Q375,38 450,80 Q525,122 600,80;M0,80 Q75,50 150,80 Q225,110 300,80 Q375,50 450,80 Q525,110 600,80;M0,80 Q75,38 150,80 Q225,122 300,80 Q375,38 450,80 Q525,122 600,80"/>
+        </path>
+        <!-- Resonance peak -->
+        <circle cx="300" cy="80" r="4" fill="white" opacity=".8">
+          <animate attributeName="r" dur="2s" repeatCount="indefinite" values="3;6;3"/>
+          <animate attributeName="opacity" dur="2s" repeatCount="indefinite" values=".8;.3;.8"/>
+        </circle>
+        <!-- Labels -->
+        <text x="50" y="150" fill="#2DD4BF" font-size="8" font-weight="600" opacity=".6">BUYER</text>
+        <text x="270" y="150" fill="#7C6CF7" font-size="8" font-weight="600" opacity=".6">BRAND</text>
+        <text x="500" y="150" fill="#F97066" font-size="8" font-weight="600" opacity=".6">PAGE</text>
+        <text x="300" y="150" text-anchor="middle" fill="white" font-size="8" font-weight="600" opacity=".5">RESONANCE</text>
+      </svg>
+    </div></div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════ WHO IT'S FOR ═══ -->
+<section class="s" id="audience">
+  <span class="bar" style="background:var(--teal)"></span>
+  <div class="w">
+    <span class="ey rv">WHO IT'S FOR</span>
+    <h2 class="st rv d1">Built for the entire <em>programmatic ecosystem.</em></h2>
+    <p class="sd rv d2">Each side gets a differentiated value proposition — from the same core intelligence.</p>
+    <div class="aud">
+      <div class="ac rv d1"><div><span class="at">ADVERTISERS & AGENCIES</span></div><div><h4>Know <em>why</em> your campaigns work.</h4><p>Prescriptive creative direction grounded in purchase psychology. No cold-start penalty. Performance that compounds over months.</p></div></div>
+      <div class="ac rv d2"><div><span class="at">DSPs & PLATFORMS</span></div><div><h4>A new intelligence layer. No rebuild.</h4><p>Psychological intelligence alongside your existing infrastructure. Differentiate with a capability no incumbent can match.</p></div></div>
+      <div class="ac rv d3"><div><span class="at">PUBLISHERS & SSPs</span></div><div><h4>Premium CPMs on decision-ready inventory.</h4><p>Meaningful lift through psychological readiness scoring. No new data infrastructure, no tracking, no migration.</p></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════ SCIENCE ═══ -->
+<section class="s" id="science">
+  <span class="bar" style="background:var(--purple)"></span>
+  <div class="w">
+    <span class="ey rv" style="color:var(--purple);border-bottom-color:rgba(124,108,247,.25)">THE SCIENCE</span>
+    <h2 class="st rv d1"><em>Language is the window into the mind.</em></h2>
+    <p class="sd rv d2">Built on 15+ years of peer-reviewed research into how language reveals the psychology of purchase decisions. Grounded in published behavioral science with validated effect sizes.</p>
+    <div class="badges rv d2">
+      <span class="badge"><strong>100+</strong> Studies</span>
+      <span class="badge"><strong>1,000+</strong> Citations</span>
+      <span class="badge"><strong>10+</strong> Top Journals</span>
+      <span class="badge">Harvard & Yale Foundations</span>
+    </div>
+    <button class="dt rv" onclick="tgl(this)" style="margin-top:2rem">Go Deeper <span class="ch">▼</span></button>
+    <div class="dp"><div class="di">
+      <p style="max-width:700px;font-size:.92rem;line-height:1.7;color:var(--muted);margin-bottom:1rem">Language doesn't just communicate intent — it <em>is</em> evidence of where someone sits in their decision journey. The system draws on automaticity and nonconscious goal pursuit, embodied cognition, primary metaphor theory, regulatory focus, construal level theory, and prospect theory.</p>
+      <p style="max-width:700px;font-size:.92rem;line-height:1.7;color:var(--muted)">These aren't references bolted onto ad tech. They are the architecture. Every technical decision serves the thesis: <strong style="color:var(--ink)">psychological mechanism, not statistical correlation, is the primitive unit of advertising intelligence.</strong></p>
+    </div></div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════ CONTACT ═══ -->
+<section id="contact">
+  <div class="w">
+    <span class="ey rv" style="border-bottom-color:rgba(45,212,191,.25)">GET IN TOUCH</span>
+    <h2 class="rv d1">Not what they <em class="cl">clicked</em>. Not what they <em class="pl">look like</em>.<br><em class="tl">Why they decided.</em></h2>
+    <p class="csub rv d2">We're working with advertisers, agencies, and platforms to bring decision intelligence to the programmatic ecosystem.</p>
+    <a href="mailto:hello@informativgroup.com" class="cem rv d3">hello@informativgroup.com <span class="ar">→</span></a>
+  </div>
+</section>
+
+<footer><div class="w">
+  <span class="brand">INFORMATIV</span>
+  <span>© 2026 Informativ Group Corporation</span>
+</div></footer>
+
+<script>
+// Nav shrink
+!function(){var n=document.getElementById('nav');window.addEventListener('scroll',function(){(window.scrollY||window.pageYOffset)>80?n.classList.add('sm'):n.classList.remove('sm')},{passive:!0})}();
+// Reveal
+!function(){if(typeof IntersectionObserver==='undefined'){document.querySelectorAll('.rv').forEach(function(e){e.classList.add('in')});return}var o=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');o.unobserve(e.target)}})},{threshold:.1,rootMargin:'0px 0px -30px 0px'});document.querySelectorAll('.rv').forEach(function(e){o.observe(e)})}();
+// Go Deeper
+function tgl(b){var p=b.nextElementSibling,o=p.classList.contains('op');document.querySelectorAll('.dp.op').forEach(function(x){x.classList.remove('op');x.style.maxHeight='0';x.previousElementSibling.classList.remove('op')});if(!o){p.classList.add('op');b.classList.add('op');p.style.maxHeight=p.scrollHeight+'px';setTimeout(function(){b.scrollIntoView({behavior:'smooth',block:'start'})},80)}}
+// Close deeper on scroll away
+!function(){var ps=document.querySelectorAll('.dp');if(!ps.length)return;var o=new IntersectionObserver(function(es){es.forEach(function(e){if(!e.isIntersecting&&e.target.classList.contains('op')){e.target.classList.remove('op');e.target.style.maxHeight='0';if(e.target.previousElementSibling)e.target.previousElementSibling.classList.remove('op')}})},{threshold:0,rootMargin:'-80px 0px -80px 0px'});ps.forEach(function(p){o.observe(p)})}();
+// Dimension bars animate
+!function(){document.querySelectorAll('[id^="dbs"]').forEach(function(el){var done=false;var o=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting&&!done){done=true;el.querySelectorAll('.db-f').forEach(function(f){f.classList.add('an')})}})},{threshold:.3});o.observe(el)})}();
+// Hero canvas
+!function(){var c=document.getElementById('hc');if(!c)return;var x=c.getContext('2d'),W,H,ns=[],es=[];function rz(){W=c.offsetWidth;H=c.offsetHeight;c.width=W*2;c.height=H*2;x.scale(2,2);ns=[];es=[];for(var i=0;i<30;i++)ns.push({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.25,vy:(Math.random()-.5)*.25,r:Math.random()*2+1.2,p:Math.random()*6.28});for(var i=0;i<ns.length;i++)for(var j=i+1;j<ns.length;j++){var d=Math.hypot(ns[i].x-ns[j].x,ns[i].y-ns[j].y);if(d<160)es.push({a:i,b:j,s:Math.random()*.4+.2,p:Math.random()*6.28})}}function dr(t){x.clearRect(0,0,W,H);var T=t/1000;ns.forEach(function(n){n.x+=n.vx;n.y+=n.vy;if(n.x<0||n.x>W)n.vx*=-1;if(n.y<0||n.y>H)n.vy*=-1});es.forEach(function(e){var a=ns[e.a],b=ns[e.b],pu=.3+.7*(.5+.5*Math.sin(T*1.5+e.p));x.beginPath();x.moveTo(a.x,a.y);var cx=(a.x+b.x)/2+Math.sin(T+e.p)*10,cy=(a.y+b.y)/2+Math.cos(T*.7+e.p)*10;x.quadraticCurveTo(cx,cy,b.x,b.y);x.strokeStyle='rgba(45,212,191,'+(e.s*pu*.2)+')';x.lineWidth=.8;x.stroke()});ns.forEach(function(n){var g=.5+.5*Math.sin(T*2+n.p);x.beginPath();x.arc(n.x,n.y,n.r,0,6.28);x.fillStyle='rgba(45,212,191,'+(g*.5)+')';x.fill();if(n.r>2){var r=1+Math.sin(T*2+n.p)*.7;x.beginPath();x.arc(n.x,n.y,n.r+r*5,0,6.28);x.strokeStyle='rgba(45,212,191,'+(.25-r*.1)+')';x.lineWidth=.4;x.stroke()}});requestAnimationFrame(dr)}rz();window.addEventListener('resize',rz);requestAnimationFrame(dr)}();
+</script>
+</body>
+</html>
