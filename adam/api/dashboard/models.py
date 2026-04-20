@@ -38,17 +38,28 @@ class DashboardHealthResponse(BaseModel):
 class CampaignSummary(BaseModel):
     id: str
     name: str
-    brand: str
-    status: Literal["draft", "live", "paused", "completed"]
-    spent_usd: Optional[float] = None
+    channel_type: Optional[str] = None
+    group_name: Optional[str] = None
+    status: Optional[str] = None
+    impressions: int = 0
+    clicks: int = 0
+    conversions: int = 0
+    spend_usd: float = 0.0
+    ctr: float = 0.0
     cpa_usd: Optional[float] = None
-    archetype_count: Optional[int] = None
-    created_at: Optional[datetime] = None
+    roas: Optional[float] = None
+
+
+class StackAdaptSource(BaseModel):
+    source: Literal["live", "unavailable"]
+    reason: Optional[str] = None
+    advertiser_name: Optional[str] = None
 
 
 class CampaignListResponse(BaseModel):
     campaigns: list[CampaignSummary]
     total: int
+    stackadapt: StackAdaptSource
 
 
 # =============================================================================
@@ -135,9 +146,19 @@ class ClaimListResponse(BaseModel):
 
 
 class AnalyticsSummary(BaseModel):
+    campaigns_total: int
     campaigns_live: int
+    total_impressions: int
+    total_clicks: int
+    total_conversions: int
     total_spend_usd: float
-    average_cpa_usd: Optional[float] = None
+    overall_ctr: float
+    overall_cpa_usd: Optional[float] = None
+    overall_roas: Optional[float] = None
     active_archetypes: int
     edges_in_graph: int
+    advertiser_name: Optional[str] = None
+    stackadapt_source: Literal["live", "unavailable"]
+    stackadapt_reason: Optional[str] = None
+    graph_source: Literal["live", "unavailable"]
     last_updated: datetime

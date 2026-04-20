@@ -24,11 +24,17 @@ from adam.api.dashboard.auth import DashboardUser, require_user
 from adam.api.dashboard.models import (
     AnalyticsSummary,
     CampaignListResponse,
+    CampaignSummary,
     ClaimCreateRequest,
     ClaimListResponse,
     ClaimResponse,
     CurrentUserResponse,
     DashboardHealthResponse,
+    StackAdaptSource,
+)
+from adam.api.dashboard.service import (
+    fetch_graph_intelligence,
+    fetch_stackadapt_summary,
 )
 
 logger = logging.getLogger(__name__)
@@ -76,23 +82,41 @@ async def me(user: DashboardUser = Depends(require_user)) -> CurrentUserResponse
 async def list_campaigns(
     _user: DashboardUser = Depends(require_user),
 ) -> CampaignListResponse:
-    """List campaigns. v1 returns the single LUXY pilot as a placeholder;
-    next iteration pulls from StackAdapt + bilateral cascade in Neo4j.
+    """List campaigns pulled live from StackAdapt GraphQL.
+
+    When StackAdapt is unreachable, returns an empty list with a
+    source=unavailable annotation the dashboard can render as a
+    configuration banner rather than failing the request.
     """
-    from adam.api.dashboard.models import CampaignSummary
+    summary = await fetch_stackadapt_summary()
 
     campaigns = [
         CampaignSummary(
-            id="campaign:luxy-pilot",
-            name="LUXY Ride · Pilot",
-            brand="LUXY Ride",
-            status="live",
-            spent_usd=53_000.0,
-            cpa_usd=1_131.0,
-            archetype_count=10,
+            id=c.id,
+            name=c.name,
+            channel_type=c.channel_type,
+            group_name=c.group_name,
+            status=c.status,
+            impressions=c.impressions,
+            clicks=c.clicks,
+            conversions=c.conversions,
+            spend_usd=c.spend_usd,
+            ctr=c.ctr,
+            cpa_usd=c.cpa_usd,
+            roas=c.roas,
         )
+        for c in summary.campaigns
     ]
-    return CampaignListResponse(campaigns=campaigns, total=len(campaigns))
+
+    return CampaignListResponse(
+        campaigns=campaigns,
+        total=len(campaigns),
+        stackadapt=StackAdaptSource(
+            source=summary.source,
+            reason=summary.reason,
+            advertiser_name=summary.advertiser_name,
+        ),
+    )
 
 
 # =============================================================================
@@ -104,29 +128,32 @@ async def list_campaigns(
 async def analytics_summary(
     _user: DashboardUser = Depends(require_user),
 ) -> AnalyticsSummary:
-    """High-level KPI digest rendered at the top of the analytics page."""
-    edges = 0
-    try:
-        from adam.infrastructure.neo4j.client import get_neo4j_client
+    """High-level KPI digest — live StackAdapt totals + Neo4j graph stats."""
+    stackadapt = await fetch_stackadapt_summary()
+    graph = await fetch_graph_intelligence()
 
-        client = get_neo4j_client()
-        if client.is_connected:
-            async with await client.session() as session:
-                result = await session.run(
-                    "MATCH ()-[r:BRAND_CONVERTED]->() RETURN count(r) AS edges"
-                )
-                record = await result.single()
-                if record is not None:
-                    edges = int(record["edges"])
-    except Exception as exc:
-        logger.warning("analytics_summary: edge count failed: %s", exc)
+    live_campaigns = sum(
+        1
+        for c in stackadapt.campaigns
+        if (c.status or "").upper() in {"ACTIVE", "LIVE", "RUNNING"}
+    )
 
     return AnalyticsSummary(
-        campaigns_live=1,
-        total_spend_usd=53_000.0,
-        average_cpa_usd=1_131.0,
-        active_archetypes=10,
-        edges_in_graph=edges,
+        campaigns_total=len(stackadapt.campaigns),
+        campaigns_live=live_campaigns,
+        total_impressions=stackadapt.impressions,
+        total_clicks=stackadapt.clicks,
+        total_conversions=stackadapt.conversions,
+        total_spend_usd=stackadapt.spend_usd,
+        overall_ctr=stackadapt.ctr,
+        overall_cpa_usd=stackadapt.cpa_usd,
+        overall_roas=stackadapt.roas,
+        active_archetypes=graph.archetypes,
+        edges_in_graph=graph.brand_converted_edges,
+        advertiser_name=stackadapt.advertiser_name,
+        stackadapt_source=stackadapt.source,
+        stackadapt_reason=stackadapt.reason,
+        graph_source=graph.source,
         last_updated=datetime.now(timezone.utc),
     )
 
