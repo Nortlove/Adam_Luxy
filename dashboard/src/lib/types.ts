@@ -57,3 +57,109 @@ export type CurrentUser = {
   display_name: string;
   role: string;
 };
+
+// =============================================================================
+// Recommendations — Uncertainty Panel + plan-before-patch
+// =============================================================================
+
+export type RecommendationType =
+  | "creative_rotate"
+  | "mechanism_shift"
+  | "budget_shift"
+  | "pause_campaign"
+  | "resume_campaign"
+  | "archetype_reweight"
+  | "audience_expand"
+  | "other";
+
+export type RecommendationStatus =
+  | "pending"
+  | "accepted"
+  | "modified"
+  | "rejected"
+  | "expired";
+
+export type HorizonClass = "hours" | "days" | "weeks" | "months";
+
+export type DecisionKind = "accept" | "modify" | "reject";
+
+export type RationaleClass =
+  | "idiosyncratic"
+  | "missing_context"
+  | "model_wrong";
+
+export type RecommendationAlternative = {
+  id: string;
+  label: string;
+  description: string;
+  predicted_outcome: string | null;
+};
+
+export type ConfidentClaim = {
+  claim: string;
+  sources: string[];
+  strength: number;
+};
+
+export type UncertainClaim = {
+  claim: string;
+  missing: string;
+  would_reduce: string | null;
+};
+
+export type PossiblyWrongClaim = {
+  claim: string;
+  conflicting_signal: string;
+  alternative: string | null;
+};
+
+export type UncertaintyBreakdown = {
+  confident: ConfidentClaim[];
+  uncertain: UncertainClaim[];
+  possibly_wrong: PossiblyWrongClaim[];
+};
+
+export type RecommendationSummary = {
+  id: string;
+  type: RecommendationType;
+  title: string;
+  summary: string;
+  campaign_id: string | null;
+  campaign_name: string | null;
+  preferred_choice: string;
+  expected_horizon_class: HorizonClass;
+  status: RecommendationStatus;
+  created_at: string;
+};
+
+export type UserDecisionResponse = {
+  id: string;
+  user_id: string;
+  recommendation_id: string;
+  kind: DecisionKind;
+  chosen_alternative: string | null;
+  rationale_class: RationaleClass | null;
+  rationale_text: string | null;
+  claim_id: string | null;
+  created_at: string;
+};
+
+export type RecommendationDetail = RecommendationSummary & {
+  alternatives: RecommendationAlternative[];
+  evidence: UncertaintyBreakdown;
+  decisions: UserDecisionResponse[];
+};
+
+export type RecommendationListResponse = {
+  recommendations: RecommendationSummary[];
+  total: number;
+  source: "live" | "synthetic" | "unavailable";
+  source_note: string | null;
+};
+
+export type UserDecisionRequest = {
+  kind: DecisionKind;
+  chosen_alternative?: string | null;
+  rationale_class?: RationaleClass | null;
+  rationale_text?: string | null;
+};

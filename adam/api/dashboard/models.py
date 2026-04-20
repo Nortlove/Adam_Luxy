@@ -145,6 +145,125 @@ class ClaimListResponse(BaseModel):
 # =============================================================================
 
 
+# =============================================================================
+# Recommendations + Uncertainty Panel
+# =============================================================================
+
+
+RecommendationType = Literal[
+    "creative_rotate",
+    "mechanism_shift",
+    "budget_shift",
+    "pause_campaign",
+    "resume_campaign",
+    "archetype_reweight",
+    "audience_expand",
+    "other",
+]
+
+
+RecommendationStatus = Literal[
+    "pending",
+    "accepted",
+    "modified",
+    "rejected",
+    "expired",
+]
+
+
+HorizonClass = Literal["hours", "days", "weeks", "months"]
+
+
+DecisionKind = Literal["accept", "modify", "reject"]
+
+
+RationaleClass = Literal["idiosyncratic", "missing_context", "model_wrong"]
+
+
+class RecommendationAlternative(BaseModel):
+    id: str
+    label: str
+    description: str
+    predicted_outcome: Optional[str] = None
+
+
+class ConfidentClaim(BaseModel):
+    claim: str
+    sources: list[str] = Field(default_factory=list)
+    strength: float = Field(ge=0.0, le=1.0)
+
+
+class UncertainClaim(BaseModel):
+    claim: str
+    missing: str
+    would_reduce: Optional[str] = None
+
+
+class PossiblyWrongClaim(BaseModel):
+    claim: str
+    conflicting_signal: str
+    alternative: Optional[str] = None
+
+
+class UncertaintyBreakdown(BaseModel):
+    """The Confident / Uncertain / Possibly-Wrong decomposition required
+    on every AI recommendation per HMT Foundation §7.1."""
+
+    confident: list[ConfidentClaim] = Field(default_factory=list)
+    uncertain: list[UncertainClaim] = Field(default_factory=list)
+    possibly_wrong: list[PossiblyWrongClaim] = Field(default_factory=list)
+
+
+class UserDecisionRequest(BaseModel):
+    kind: DecisionKind
+    chosen_alternative: Optional[str] = None
+    rationale_class: Optional[RationaleClass] = None
+    rationale_text: Optional[str] = Field(default=None, max_length=4000)
+
+
+class UserDecisionResponse(BaseModel):
+    id: str
+    user_id: str
+    recommendation_id: str
+    kind: DecisionKind
+    chosen_alternative: Optional[str] = None
+    rationale_class: Optional[RationaleClass] = None
+    rationale_text: Optional[str] = None
+    claim_id: Optional[str] = None
+    created_at: datetime
+
+
+class RecommendationSummary(BaseModel):
+    id: str
+    type: RecommendationType
+    title: str
+    summary: str
+    campaign_id: Optional[str] = None
+    campaign_name: Optional[str] = None
+    preferred_choice: str
+    expected_horizon_class: HorizonClass
+    status: RecommendationStatus
+    created_at: datetime
+
+
+class RecommendationDetail(RecommendationSummary):
+    alternatives: list[RecommendationAlternative]
+    evidence: UncertaintyBreakdown
+    decisions: list[UserDecisionResponse] = Field(default_factory=list)
+
+
+class RecommendationListResponse(BaseModel):
+    recommendations: list[RecommendationSummary]
+    total: int
+    source: Literal["live", "synthetic", "unavailable"]
+    source_note: Optional[str] = None
+
+
+# =============================================================================
+# Analytics
+# =============================================================================
+
+
 class AnalyticsSummary(BaseModel):
     campaigns_total: int
     campaigns_live: int

@@ -9,6 +9,7 @@ import {
   MessagesSquare,
   Settings,
   Activity,
+  Lightbulb,
 } from "lucide-react";
 
 import {
@@ -30,6 +31,7 @@ const NAV_ITEMS: Array<{
   icon: React.ComponentType<{ className?: string }>;
 }> = [
   { href: "/campaigns", label: "Campaigns", icon: LayoutGrid },
+  { href: "/recommendations", label: "Recommendations", icon: Lightbulb },
   { href: "/discovery", label: "Discovery", icon: Compass },
   { href: "/analytics", label: "Analytics", icon: LineChart },
   { href: "/ledger", label: "Dialogue Ledger", icon: MessagesSquare },

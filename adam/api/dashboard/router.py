@@ -30,11 +30,18 @@ from adam.api.dashboard.models import (
     ClaimResponse,
     CurrentUserResponse,
     DashboardHealthResponse,
+    RecommendationDetail,
+    RecommendationListResponse,
+    RecommendationSummary,
     StackAdaptSource,
+    UserDecisionRequest,
+    UserDecisionResponse,
 )
 from adam.api.dashboard.service import (
     fetch_graph_intelligence,
     fetch_stackadapt_summary,
+    generate_recommendations,
+    get_recommendation_by_id,
 )
 
 logger = logging.getLogger(__name__)
@@ -156,6 +163,333 @@ async def analytics_summary(
         graph_source=graph.source,
         last_updated=datetime.now(timezone.utc),
     )
+
+
+# =============================================================================
+# Recommendations — Uncertainty Panel + plan-before-patch + deviation capture
+# =============================================================================
+
+
+def _summary_from_detail(detail: RecommendationDetail) -> RecommendationSummary:
+    return RecommendationSummary(
+        id=detail.id,
+        type=detail.type,
+        title=detail.title,
+        summary=detail.summary,
+        campaign_id=detail.campaign_id,
+        campaign_name=detail.campaign_name,
+        preferred_choice=detail.preferred_choice,
+        expected_horizon_class=detail.expected_horizon_class,
+        status=detail.status,
+        created_at=detail.created_at,
+    )
+
+
+@router.get("/recommendations", response_model=RecommendationListResponse)
+async def list_recommendations(
+    user: DashboardUser = Depends(require_user),
+) -> RecommendationListResponse:
+    """List pending recommendations for the current user.
+
+    Recommendations are generated dynamically from live StackAdapt
+    data. They carry structured Confident/Uncertain/Possibly-Wrong
+    breakdowns per HMT Foundation §7.1.
+    """
+    recommendations, source, note = await generate_recommendations(user.id)
+    return RecommendationListResponse(
+        recommendations=[_summary_from_detail(r) for r in recommendations],
+        total=len(recommendations),
+        source=source,
+        source_note=note,
+    )
+
+
+@router.get(
+    "/recommendations/{recommendation_id}",
+    response_model=RecommendationDetail,
+)
+async def get_recommendation(
+    recommendation_id: str,
+    user: DashboardUser = Depends(require_user),
+) -> RecommendationDetail:
+    detail = await get_recommendation_by_id(user.id, recommendation_id)
+    if detail is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Recommendation not found or no longer applicable",
+        )
+
+    # Fetch any decisions already recorded against this recommendation
+    # so the UI can show the full history (not just the current state).
+    detail.decisions = await _fetch_decisions(user.id, recommendation_id)
+    return detail
+
+
+@router.post(
+    "/recommendations/{recommendation_id}/decide",
+    response_model=UserDecisionResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def decide_recommendation(
+    recommendation_id: str,
+    request: UserDecisionRequest,
+    user: DashboardUser = Depends(require_user),
+) -> UserDecisionResponse:
+    """Record the user's decision on a recommendation.
+
+    When a user rejects or modifies a recommendation, their stated
+    rationale is captured as a HYPOTHESIS — not a learning — per HMT
+    Rule 12. The Inferential Learning Agent adjudicates later at
+    horizon expiry.
+    """
+    detail = await get_recommendation_by_id(user.id, recommendation_id)
+    if detail is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Recommendation not found or no longer applicable",
+        )
+
+    if request.kind == "modify" and not request.chosen_alternative:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="chosen_alternative required when kind=modify",
+        )
+
+    decision_id = f"decision:{uuid.uuid4()}"
+    claim_id: Optional[str] = None
+    created_at = datetime.now(timezone.utc)
+
+    chosen = (
+        detail.preferred_choice
+        if request.kind == "accept"
+        else (request.chosen_alternative if request.kind == "modify" else None)
+    )
+
+    try:
+        from adam.infrastructure.neo4j.client import get_neo4j_client
+
+        client = get_neo4j_client()
+        if not client.is_connected:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Neo4j unavailable",
+            )
+
+        async with await client.session() as session:
+            # 1. Snapshot the Recommendation at decision time (audit trail).
+            await session.run(
+                """
+                MERGE (r:Recommendation {id: $rec_id})
+                  ON CREATE SET r.user_id = $user_id,
+                                r.campaign_id = $campaign_id,
+                                r.campaign_name = $campaign_name,
+                                r.type = $type,
+                                r.title = $title,
+                                r.summary = $summary,
+                                r.preferred_choice = $preferred_choice,
+                                r.expected_horizon_class = $horizon,
+                                r.status = $status,
+                                r.created_at = $created_at,
+                                r.evidence_json = $evidence_json,
+                                r.alternatives_json = $alternatives_json
+                  ON MATCH  SET r.status = $status
+                """,
+                rec_id=detail.id,
+                user_id=user.id,
+                campaign_id=detail.campaign_id,
+                campaign_name=detail.campaign_name,
+                type=detail.type,
+                title=detail.title,
+                summary=detail.summary,
+                preferred_choice=detail.preferred_choice,
+                horizon=detail.expected_horizon_class,
+                status=_status_from_decision(request.kind),
+                created_at=detail.created_at,
+                evidence_json=detail.evidence.model_dump_json(),
+                alternatives_json=_alternatives_to_json(detail.alternatives),
+            )
+
+            # 2. If the user provided a rationale, persist it as a Claim.
+            if request.rationale_text:
+                claim_id = f"claim:{uuid.uuid4()}"
+                await session.run(
+                    """
+                    MERGE (u:DialogueUser {id: $user_id})
+                    CREATE (c:Claim {
+                      id: $claim_id,
+                      user_id: $user_id,
+                      text: $text,
+                      elicitation_mode: 'freeform',
+                      domain: 'deviation_rationale',
+                      stated_confidence: null,
+                      latency_ms: null,
+                      frame: 'neutral',
+                      status: 'hypothesis',
+                      session_id: null,
+                      mood_index: null,
+                      recallability: null,
+                      created_at: $created_at
+                    })
+                    MERGE (u)-[:ASSERTED]->(c)
+                    CREATE (ls:LearningStatus {
+                      claim_id: $claim_id,
+                      current: 'captured',
+                      transitioned_at: $created_at,
+                      reason: 'rationale capture at decision time'
+                    })
+                    MERGE (c)-[:HAS_STATUS]->(ls)
+                    """,
+                    user_id=user.id,
+                    claim_id=claim_id,
+                    text=request.rationale_text,
+                    created_at=created_at,
+                )
+
+            # 3. The UserDecision node — the canonical decision record.
+            await session.run(
+                """
+                MATCH (u:DialogueUser {id: $user_id})
+                MATCH (r:Recommendation {id: $rec_id})
+                CREATE (d:UserDecision {
+                  id: $decision_id,
+                  user_id: $user_id,
+                  recommendation_id: $rec_id,
+                  kind: $kind,
+                  chosen_alternative: $chosen_alternative,
+                  rationale_class: $rationale_class,
+                  rationale_text: $rationale_text,
+                  claim_id: $claim_id,
+                  created_at: $created_at
+                })
+                MERGE (u)-[:MADE]->(d)
+                MERGE (d)-[:ON]->(r)
+                """,
+                user_id=user.id,
+                rec_id=detail.id,
+                decision_id=decision_id,
+                kind=request.kind,
+                chosen_alternative=chosen,
+                rationale_class=request.rationale_class,
+                rationale_text=request.rationale_text,
+                claim_id=claim_id,
+                created_at=created_at,
+            )
+
+            # 4. If this is a reject or modify (i.e. a deviation from
+            # preferred_choice), also create a Deviation node for the
+            # causal-adjudication pipeline per HMT §9.2.
+            if request.kind in ("reject", "modify"):
+                deviation_id = f"deviation:{uuid.uuid4()}"
+                await session.run(
+                    """
+                    MATCH (u:DialogueUser {id: $user_id})
+                    MATCH (r:Recommendation {id: $rec_id})
+                    CREATE (dev:Deviation {
+                      id: $deviation_id,
+                      user_id: $user_id,
+                      recommendation_id: $rec_id,
+                      system_choice: $system_choice,
+                      user_choice: $user_choice,
+                      stated_rationale: $rationale_text,
+                      rationale_class: $rationale_class,
+                      adjudication_status: 'pending',
+                      adjudication_outcome: null,
+                      horizon_class: $horizon,
+                      created_at: $created_at
+                    })
+                    MERGE (u)-[:DEVIATED]->(dev)
+                    MERGE (dev)-[:FROM]->(r)
+                    """,
+                    user_id=user.id,
+                    rec_id=detail.id,
+                    deviation_id=deviation_id,
+                    system_choice=detail.preferred_choice,
+                    user_choice=chosen,
+                    rationale_text=request.rationale_text,
+                    rationale_class=request.rationale_class,
+                    horizon=detail.expected_horizon_class,
+                    created_at=created_at,
+                )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("decide_recommendation failed")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to record decision: {exc}",
+        )
+
+    return UserDecisionResponse(
+        id=decision_id,
+        user_id=user.id,
+        recommendation_id=detail.id,
+        kind=request.kind,
+        chosen_alternative=chosen,
+        rationale_class=request.rationale_class,
+        rationale_text=request.rationale_text,
+        claim_id=claim_id,
+        created_at=created_at,
+    )
+
+
+def _status_from_decision(kind: str) -> str:
+    if kind == "accept":
+        return "accepted"
+    if kind == "modify":
+        return "modified"
+    return "rejected"
+
+
+def _alternatives_to_json(alternatives) -> str:
+    """Serialize alternatives to JSON for Neo4j storage."""
+    import json
+
+    return json.dumps([a.model_dump() for a in alternatives])
+
+
+async def _fetch_decisions(
+    user_id: str, recommendation_id: str,
+) -> list[UserDecisionResponse]:
+    """Load any UserDecisions already recorded against a recommendation."""
+    try:
+        from adam.infrastructure.neo4j.client import get_neo4j_client
+
+        client = get_neo4j_client()
+        if not client.is_connected:
+            return []
+        async with await client.session() as session:
+            result = await session.run(
+                """
+                MATCH (d:UserDecision {
+                  user_id: $user_id, recommendation_id: $rec_id
+                })
+                RETURN d
+                ORDER BY d.created_at DESC
+                """,
+                user_id=user_id, rec_id=recommendation_id,
+            )
+            decisions: list[UserDecisionResponse] = []
+            async for record in result:
+                node = record["d"]
+                decisions.append(
+                    UserDecisionResponse(
+                        id=node["id"],
+                        user_id=node["user_id"],
+                        recommendation_id=node["recommendation_id"],
+                        kind=node["kind"],
+                        chosen_alternative=node.get("chosen_alternative"),
+                        rationale_class=node.get("rationale_class"),
+                        rationale_text=node.get("rationale_text"),
+                        claim_id=node.get("claim_id"),
+                        created_at=node["created_at"].to_native()
+                        if hasattr(node["created_at"], "to_native")
+                        else node["created_at"],
+                    )
+                )
+            return decisions
+    except Exception as exc:
+        logger.warning("_fetch_decisions failed: %s", exc)
+        return []
 
 
 # =============================================================================
