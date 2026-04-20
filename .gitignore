@@ -47,7 +47,7 @@ htmlcov/
 
 # Large raw data directories (not needed for deployment)
 amazon/
-Neo4j/
+/Neo4j/
 amazon_processed/
 /data/learning/
 

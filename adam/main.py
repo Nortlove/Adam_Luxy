@@ -428,6 +428,14 @@ def register_routers(app: FastAPI) -> None:
     except ImportError as e:
         logger.debug("Signal intelligence routes not available: %s", e)
 
+    # Dashboard API (HMT co-pilot — single-tenant pilot)
+    try:
+        from adam.api.dashboard.router import router as dashboard_router
+        app.include_router(dashboard_router)
+        logger.info("Dashboard routes registered")
+    except ImportError as e:
+        logger.warning("Dashboard routes not available: %s", e)
+
     # Operations Intelligence (monitoring, recommendations, alerts)
     try:
         from adam.ops.router import router as ops_router
