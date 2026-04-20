@@ -35,5 +35,8 @@ tests/
 *.gz
 *.tar
 *.npz
+
+# Dashboard is a separate Railway service — backend deploy should exclude it
+dashboard/
 Cognitive Biases/
 Music Listening/
