@@ -23,6 +23,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from adam.api.dashboard.auth import DashboardUser, require_user
 from adam.api.dashboard.models import (
     AnalyticsSummary,
+    CalibrationResponse,
     CampaignListResponse,
     CampaignSummary,
     ClaimCreateRequest,
@@ -30,6 +31,9 @@ from adam.api.dashboard.models import (
     ClaimResponse,
     CurrentUserResponse,
     DashboardHealthResponse,
+    DeviationListResponse,
+    DeviationSummary,
+    DomainCalibration,
     RecommendationDetail,
     RecommendationListResponse,
     RecommendationSummary,
@@ -596,6 +600,133 @@ async def create_claim(
         status="hypothesis",
         recallability=request.recallability,
         created_at=created_at,
+    )
+
+
+@router.get("/ledger/deviations", response_model=DeviationListResponse)
+async def list_deviations(
+    limit: int = Query(100, ge=1, le=500),
+    user: DashboardUser = Depends(require_user),
+) -> DeviationListResponse:
+    """List Deviation events for the current user, most recent first."""
+    deviations: list[DeviationSummary] = []
+    try:
+        from adam.infrastructure.neo4j.client import get_neo4j_client
+
+        client = get_neo4j_client()
+        if not client.is_connected:
+            return DeviationListResponse(deviations=[], total=0)
+        async with await client.session() as session:
+            result = await session.run(
+                """
+                MATCH (u:DialogueUser {id: $user_id})-[:DEVIATED]->(d:Deviation)
+                RETURN d
+                ORDER BY d.created_at DESC
+                LIMIT $limit
+                """,
+                user_id=user.id, limit=limit,
+            )
+            async for record in result:
+                d = record["d"]
+                deviations.append(
+                    DeviationSummary(
+                        id=d["id"],
+                        user_id=d["user_id"],
+                        recommendation_id=d["recommendation_id"],
+                        system_choice=d["system_choice"],
+                        user_choice=d.get("user_choice"),
+                        stated_rationale=d.get("stated_rationale"),
+                        rationale_class=d.get("rationale_class"),
+                        adjudication_status=d.get("adjudication_status", "pending"),
+                        adjudication_outcome=d.get("adjudication_outcome"),
+                        horizon_class=d.get("horizon_class", "days"),
+                        created_at=d["created_at"].to_native()
+                        if hasattr(d["created_at"], "to_native")
+                        else d["created_at"],
+                    )
+                )
+    except Exception as exc:
+        logger.exception("list_deviations failed: %s", exc)
+        return DeviationListResponse(deviations=[], total=0)
+    return DeviationListResponse(deviations=deviations, total=len(deviations))
+
+
+@router.get("/ledger/calibration", response_model=CalibrationResponse)
+async def calibration_summary(
+    user: DashboardUser = Depends(require_user),
+) -> CalibrationResponse:
+    """Per-domain calibration snapshot from the Dialogue Ledger.
+
+    Until outcomes have been observed and causally adjudicated, the
+    Brier score is null and the surface shows activity-only metrics:
+    claim counts per domain, recallability distribution, latency
+    averages. This is still diagnostically useful — a user whose
+    confident claims mostly fail the recallability probe shouldn't be
+    trusted on that domain.
+    """
+    domains: list[DomainCalibration] = []
+    try:
+        from adam.infrastructure.neo4j.client import get_neo4j_client
+
+        client = get_neo4j_client()
+        if not client.is_connected:
+            return CalibrationResponse(
+                domains=[],
+                source="unavailable",
+                source_note="Neo4j not connected",
+            )
+
+        async with await client.session() as session:
+            result = await session.run(
+                """
+                MATCH (u:DialogueUser {id: $user_id})-[:ASSERTED]->(c:Claim)
+                WITH c.domain AS domain,
+                     count(c) AS total,
+                     count(CASE WHEN c.recallability = 'fluent' THEN 1 END) AS fluent,
+                     count(CASE WHEN c.recallability = 'hesitant' THEN 1 END) AS hesitant,
+                     count(CASE WHEN c.recallability = 'absent' THEN 1 END) AS absent,
+                     avg(c.latency_ms) AS avg_latency,
+                     count(CASE
+                       WHEN c.status IN ['validated_user_right', 'validated_system_right']
+                       THEN 1
+                     END) AS validated
+                RETURN domain, total, fluent, hesitant, absent, avg_latency, validated
+                ORDER BY total DESC
+                """,
+                user_id=user.id,
+            )
+            async for record in result:
+                domains.append(
+                    DomainCalibration(
+                        domain=record["domain"] or "uncategorized",
+                        total_claims=int(record["total"] or 0),
+                        fluent_recall_count=int(record["fluent"] or 0),
+                        hesitant_recall_count=int(record["hesitant"] or 0),
+                        absent_recall_count=int(record["absent"] or 0),
+                        avg_latency_ms=float(record["avg_latency"])
+                        if record["avg_latency"] is not None
+                        else None,
+                        validated_count=int(record["validated"] or 0),
+                        brier_score=None,  # populated once outcomes land
+                    )
+                )
+    except Exception as exc:
+        logger.exception("calibration_summary failed: %s", exc)
+        return CalibrationResponse(
+            domains=[],
+            source="unavailable",
+            source_note=str(exc),
+        )
+
+    return CalibrationResponse(
+        domains=domains,
+        source="live",
+        source_note=(
+            "Brier scores activate once claims have been adjudicated "
+            "against observed outcomes."
+            if not any(d.validated_count for d in domains)
+            else None
+        ),
     )
 
 

@@ -163,3 +163,105 @@ export type UserDecisionRequest = {
   rationale_class?: RationaleClass | null;
   rationale_text?: string | null;
 };
+
+// =============================================================================
+// Dialogue Ledger — Claims / Deviations / Calibration
+// =============================================================================
+
+export type ElicitationMode =
+  | "forced_pair"
+  | "timed_pair"
+  | "k_afc"
+  | "rank_order"
+  | "story"
+  | "counter_example"
+  | "recallability"
+  | "scenario"
+  | "spies"
+  | "four_point"
+  | "freeform";
+
+export type ClaimStatus =
+  | "hypothesis"
+  | "captured"
+  | "instrumented"
+  | "testing"
+  | "validated_user_right"
+  | "validated_system_right"
+  | "indeterminate"
+  | "retired";
+
+export type Frame = "gain" | "loss" | "neutral";
+
+export type Recallability = "fluent" | "hesitant" | "absent";
+
+export type ClaimCreateRequest = {
+  text: string;
+  elicitation_mode: ElicitationMode;
+  domain: string;
+  stated_confidence?: number | null;
+  latency_ms?: number | null;
+  frame?: Frame;
+  session_id?: string | null;
+  mood_index?: number | null;
+  recallability?: Recallability | null;
+};
+
+export type ClaimResponse = {
+  id: string;
+  user_id: string;
+  text: string;
+  elicitation_mode: ElicitationMode;
+  domain: string;
+  stated_confidence: number | null;
+  latency_ms: number | null;
+  frame: Frame;
+  status: ClaimStatus;
+  recallability: Recallability | null;
+  created_at: string;
+};
+
+export type ClaimListResponse = {
+  claims: ClaimResponse[];
+  total: number;
+};
+
+export type DeviationSummary = {
+  id: string;
+  user_id: string;
+  recommendation_id: string;
+  system_choice: string;
+  user_choice: string | null;
+  stated_rationale: string | null;
+  rationale_class: RationaleClass | null;
+  adjudication_status: "pending" | "testing" | "adjudicated";
+  adjudication_outcome:
+    | "user_right"
+    | "system_right"
+    | "indeterminate"
+    | null;
+  horizon_class: HorizonClass;
+  created_at: string;
+};
+
+export type DeviationListResponse = {
+  deviations: DeviationSummary[];
+  total: number;
+};
+
+export type DomainCalibration = {
+  domain: string;
+  total_claims: number;
+  fluent_recall_count: number;
+  hesitant_recall_count: number;
+  absent_recall_count: number;
+  avg_latency_ms: number | null;
+  validated_count: number;
+  brier_score: number | null;
+};
+
+export type CalibrationResponse = {
+  domains: DomainCalibration[];
+  source: "live" | "unavailable";
+  source_note: string | null;
+};

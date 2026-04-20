@@ -141,6 +141,59 @@ class ClaimListResponse(BaseModel):
 
 
 # =============================================================================
+# Dialogue Ledger — Deviations + Calibration
+# =============================================================================
+
+
+AdjudicationStatus = Literal["pending", "testing", "adjudicated"]
+AdjudicationOutcome = Literal["user_right", "system_right", "indeterminate"]
+
+
+class DeviationSummary(BaseModel):
+    id: str
+    user_id: str
+    recommendation_id: str
+    system_choice: str
+    user_choice: Optional[str] = None
+    stated_rationale: Optional[str] = None
+    rationale_class: Optional[Literal["idiosyncratic", "missing_context", "model_wrong"]] = None
+    adjudication_status: AdjudicationStatus
+    adjudication_outcome: Optional[AdjudicationOutcome] = None
+    horizon_class: Literal["hours", "days", "weeks", "months"]
+    created_at: datetime
+
+
+class DeviationListResponse(BaseModel):
+    deviations: list[DeviationSummary]
+    total: int
+
+
+class DomainCalibration(BaseModel):
+    """Per-domain summary of a user's claim activity.
+
+    Brier score is only meaningful once claims have been adjudicated
+    against outcomes — for v1 we report activity counts and
+    recallability breakdown so the UI can start surfacing the user's
+    elicitation profile even before outcomes land.
+    """
+
+    domain: str
+    total_claims: int
+    fluent_recall_count: int
+    hesitant_recall_count: int
+    absent_recall_count: int
+    avg_latency_ms: Optional[float] = None
+    validated_count: int = 0
+    brier_score: Optional[float] = None
+
+
+class CalibrationResponse(BaseModel):
+    domains: list[DomainCalibration]
+    source: Literal["live", "unavailable"]
+    source_note: Optional[str] = None
+
+
+# =============================================================================
 # Analytics (skeleton)
 # =============================================================================
 
