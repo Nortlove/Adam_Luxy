@@ -1028,6 +1028,65 @@ class CampaignOrchestrator:
             f"Real AtomDAG completed: {dag_result.atoms_executed} atoms executed, "
             f"{dag_result.atoms_failed} failed, {dag_result.total_duration_ms:.1f}ms"
         )
+
+        # =====================================================================
+        # Phase 2 — Materialise inferential chains for outcome-time learning
+        #
+        # Prior to this block, atom outputs were only held in the response
+        # trace. When an outcome arrived hours later, the OutcomeHandler's
+        # _update_theory_learner had no access to the chain that produced
+        # the decision — so it either fell through to the "synthesize from
+        # constructs" path (outcome_handler.py:1524-1552) or emitted
+        # theory_update_source="no_chain_available". The theory learner
+        # was running on reconstructed proxies, not real chains.
+        #
+        # Writing atom outputs (keyed by decision_id) to Redis closes the
+        # loop: outcome_handler reads adam:atom_outputs:{decision_id},
+        # extracts the mechanism-activation atom's inferential_chains
+        # payload, and updates link posteriors on the real chain.
+        #
+        # This is Foundation §4.3's single most important architectural
+        # gap named precisely. The Phase 10 theory_update_source metric
+        # will shift from "synthesized" / "no_chain_available" toward
+        # "real_chain" as this write takes effect.
+        # =====================================================================
+        try:
+            from adam.core.container import get_container as _get_container
+            _container = _get_container()
+            _redis = getattr(_container, "redis_cache", None)
+            if _redis is not None and dag_result.atom_outputs:
+                _cache_payload: Dict[str, Any] = {}
+                for _aid, _out in dag_result.atom_outputs.items():
+                    if hasattr(_out, "to_dict"):
+                        _cache_payload[_aid] = _out.to_dict()
+                    else:
+                        # Fall back to attribute extraction for atoms that
+                        # haven't yet defined a to_dict() serializer
+                        _cache_payload[_aid] = {
+                            "primary_output": getattr(_out, "primary_output", {}),
+                            "secondary_assessments": getattr(_out, "secondary_assessments", {}),
+                            "confidence": getattr(_out, "confidence", 0.0),
+                            "reasoning": getattr(_out, "reasoning", ""),
+                        }
+                _cache_key = f"adam:atom_outputs:{request_id}"
+                # 14-day TTL covers the common attribution horizon; long
+                # enough for 7d click / 14d view windows, short enough that
+                # the cache doesn't grow unbounded.
+                await _redis.set(_cache_key, _cache_payload, ttl_seconds=14 * 24 * 3600)
+                logger.debug(
+                    "Cached atom outputs for decision_id=%s (%d atoms)",
+                    request_id, len(_cache_payload),
+                )
+        except Exception as _e:
+            # Non-fatal: outcome_handler will fall back to synthesizing
+            # chains from constructs. The Phase 10 theory_update_source
+            # metric will show "synthesized" for these decisions so
+            # chronic cache failures surface rather than hide.
+            logger.debug(
+                "Atom output cache write failed for decision_id=%s: %s",
+                request_id, _e,
+            )
+
         return atom_result
     
     # NOTE: _simulate_atom_dag was removed from this file on 2026-04-15 as
