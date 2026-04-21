@@ -63,7 +63,47 @@ class OutcomeHandler:
         
         from adam.config.settings import get_settings
         success_threshold = get_settings().cascade.outcome_success_threshold
-        success = outcome_type in ("conversion", "click", "engagement") and outcome_value > success_threshold
+
+        # =====================================================================
+        # PHASE 1 — Fitness function ethics gate (Foundation §7 rule 11)
+        #
+        # Previous behaviour: `success = outcome_type in ("conversion","click",
+        # "engagement") and outcome_value > threshold`. This treated a silent
+        # skip identically to an explicit refund or complaint, because both
+        # evaluated to success=False. Selection pressure therefore rewarded
+        # whatever maximised immediate conversion, with no penalty for
+        # backfire, regret, or long-horizon damage. The fitness function
+        # IS the ethics — this block restores the distinction.
+        #
+        # `signed_reward` carries both direction (+/-) and magnitude
+        # (refund = 3× magnitude of a plain skip). The legacy `success`
+        # boolean is retained for the 18 update paths that still reason
+        # in boolean terms; the three critical paths (theory_learner,
+        # thompson, bilateral_edge_evidence) consume signed_reward.
+        # =====================================================================
+        from adam.core.outcome_types import (
+            compute_signed_reward,
+            is_positive_outcome,
+            is_negative_ethics_signal,
+        )
+        signed_reward = compute_signed_reward(
+            outcome_type=outcome_type,
+            outcome_value=outcome_value,
+            # processing_depth_weight is computed below; we apply it at the
+            # link-posterior level in process_chain_outcome_signed rather
+            # than folding it into signed_reward here so each consumer can
+            # decide whether to stack the weight.
+            processing_depth_weight=1.0,
+        )
+        success = is_positive_outcome(outcome_type) and outcome_value > success_threshold
+
+        if is_negative_ethics_signal(outcome_type):
+            logger.info(
+                "ETHICS-GATE negative outcome received: decision_id=%s "
+                "outcome_type=%s signed_reward=%.3f — posteriors will "
+                "receive magnitude-weighted evidence against.",
+                decision_id, outcome_type, signed_reward,
+            )
 
         # Track whether decision context was available (from decision cache)
         has_decision_context = metadata.get("decision_context_found", False)
@@ -134,6 +174,8 @@ class OutcomeHandler:
             "decision_id": decision_id,
             "outcome_type": outcome_type,
             "success": success,
+            "signed_reward": round(signed_reward, 4),
+            "is_negative_ethics_signal": is_negative_ethics_signal(outcome_type),
             "decision_context_found": has_decision_context,
             "cascade_level": cascade_level,
             "decision_mode": decision_mode.value,
@@ -324,7 +366,9 @@ class OutcomeHandler:
         # =====================================================================
         try:
             results["updates"]["theory_learner"] = await self._update_theory_learner(
-                decision_id, success, outcome_value, metadata
+                decision_id, success, outcome_value, metadata,
+                signed_reward=signed_reward,
+                processing_depth_weight=processing_depth_weight,
             )
         except Exception as e:
             logger.warning(f"Theory learner update failed for {decision_id}: {e}")
@@ -1445,17 +1489,34 @@ class OutcomeHandler:
         success: bool,
         outcome_value: float,
         metadata: Dict[str, Any],
+        signed_reward: Optional[float] = None,
+        processing_depth_weight: float = 1.0,
     ) -> Dict[str, Any]:
         """
         Update theoretical link strengths based on outcome.
-        
+
         This is construct-level learning: the system learns which causal
         theories (PsychologicalState → PsychologicalNeed → CognitiveMechanism)
         are empirically validated by real outcomes.
-        
+
         The inferential chains used for the decision are retrieved from the
         metadata (cached at decision time), and each theoretical link in
         each chain gets a Bayesian update.
+
+        Phase 1 — ethics gate:
+          When `signed_reward` is provided (non-None), the signed-reward
+          variant (`process_all_chains_for_decision_signed`) is used so
+          that negative ethics-gate outcomes (refund, complaint, regret,
+          churn) update link posteriors with magnitude proportional to
+          their severity, not just as a plain `success=False` increment.
+
+          `processing_depth_weight` is applied at the link-posterior
+          level so that unprocessed impressions (< 1s viewport) do not
+          drive theoretical-link updates as strongly as deliberate
+          engagements (Enhancement #34).
+
+          When `signed_reward` is None (legacy callers), behaviour
+          falls back to the original success/value path.
         """
         from adam.core.learning.theory_learner import get_theory_learner
         
@@ -1497,14 +1558,29 @@ class OutcomeHandler:
 
         result = {}
 
+        # Route through signed variant when signed_reward is available and
+        # non-zero — this is the Phase 1 ethics-gate path that handles
+        # refund/complaint/regret/churn with correct magnitude. When
+        # signed_reward is None (legacy caller) or 0.0 (unknown outcome
+        # type), fall back to the original boolean-success path.
+        use_signed_path = signed_reward is not None and signed_reward != 0.0
+
         if inferential_chains:
             # Best case: explicit NDF inferential chains
-            result = learner.process_all_chains_for_decision(
-                inferential_chains=inferential_chains,
-                decision_id=decision_id,
-                success=success,
-                outcome_value=outcome_value,
-            )
+            if use_signed_path:
+                result = learner.process_all_chains_for_decision_signed(
+                    inferential_chains=inferential_chains,
+                    decision_id=decision_id,
+                    signed_reward=signed_reward,
+                    weight=processing_depth_weight,
+                )
+            else:
+                result = learner.process_all_chains_for_decision(
+                    inferential_chains=inferential_chains,
+                    decision_id=decision_id,
+                    success=success,
+                    outcome_value=outcome_value,
+                )
         else:
             # Construct-level learning: update edges from active constructs
             # and mechanisms even without explicit NDF chains
@@ -1544,12 +1620,20 @@ class OutcomeHandler:
                     synthetic_chains.append(chain_dict)
 
                 if synthetic_chains:
-                    result = learner.process_all_chains_for_decision(
-                        inferential_chains=synthetic_chains,
-                        decision_id=decision_id,
-                        success=success,
-                        outcome_value=outcome_value,
-                    )
+                    if use_signed_path:
+                        result = learner.process_all_chains_for_decision_signed(
+                            inferential_chains=synthetic_chains,
+                            decision_id=decision_id,
+                            signed_reward=signed_reward,
+                            weight=processing_depth_weight,
+                        )
+                    else:
+                        result = learner.process_all_chains_for_decision(
+                            inferential_chains=synthetic_chains,
+                            decision_id=decision_id,
+                            success=success,
+                            outcome_value=outcome_value,
+                        )
                     result["chain_source"] = "synthetic_from_constructs"
             else:
                 result = {"skipped": True, "reason": "no_constructs_or_mechanisms"}
