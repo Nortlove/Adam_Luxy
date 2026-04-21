@@ -2,12 +2,15 @@ import { ApiError, api } from "@/lib/api";
 import type {
   DecayReport,
   DeviationHorizonResponse,
+  WhyLibraryResponse,
 } from "@/lib/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { PageHeader } from "@/components/page-header";
 import { DecayReportView } from "./_components/decay-report";
 import { HorizonsView } from "./_components/horizons";
+import { WhyLibraryView } from "./_components/why-library";
+import { AdjudicateButton } from "./_components/adjudicate-button";
 
 export const metadata = {
   title: "Learning · INFORMATIV",
@@ -27,11 +30,12 @@ async function fetchOrNull<T>(path: string) {
 }
 
 export default async function LearningPage() {
-  const [decay, horizons] = await Promise.all([
+  const [decay, horizons, whyLib] = await Promise.all([
     fetchOrNull<DecayReport>("/api/dashboard/decay/report"),
     fetchOrNull<DeviationHorizonResponse>(
       "/api/dashboard/deviations/horizons",
     ),
+    fetchOrNull<WhyLibraryResponse>("/api/dashboard/why-library"),
   ]);
 
   return (
@@ -52,6 +56,14 @@ export default async function LearningPage() {
               </span>
             )}
           </TabsTrigger>
+          <TabsTrigger value="why">
+            Why Library
+            {isWhy(whyLib) && whyLib.total > 0 && (
+              <span className="ml-1 rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                {whyLib.total}
+              </span>
+            )}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="decay">
@@ -67,7 +79,12 @@ export default async function LearningPage() {
           )}
         </TabsContent>
 
-        <TabsContent value="horizons">
+        <TabsContent value="horizons" className="flex flex-col gap-4">
+          <AdjudicateButton
+            readyCount={
+              isHorizons(horizons) ? horizons.ready_count : 0
+            }
+          />
           {horizons === null ? (
             <ErrorAlert
               status={0}
@@ -77,6 +94,19 @@ export default async function LearningPage() {
             <ErrorAlert status={horizons.status} message={horizons.error} />
           ) : (
             <HorizonsView data={horizons} />
+          )}
+        </TabsContent>
+
+        <TabsContent value="why">
+          {whyLib === null ? (
+            <ErrorAlert
+              status={0}
+              message="Could not reach the dashboard API."
+            />
+          ) : "error" in whyLib ? (
+            <ErrorAlert status={whyLib.status} message={whyLib.error} />
+          ) : (
+            <WhyLibraryView data={whyLib} />
           )}
         </TabsContent>
       </Tabs>
@@ -90,6 +120,15 @@ function isHorizons(x: unknown): x is DeviationHorizonResponse {
     x !== null &&
     "horizons" in x &&
     "ready_count" in (x as object)
+  );
+}
+
+function isWhy(x: unknown): x is WhyLibraryResponse {
+  return (
+    typeof x === "object" &&
+    x !== null &&
+    "entries" in x &&
+    "total" in (x as object)
   );
 }
 

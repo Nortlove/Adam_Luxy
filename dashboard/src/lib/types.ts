@@ -357,3 +357,46 @@ export type DeviationHorizonResponse = {
   total: number;
   ready_count: number;
 };
+
+// =============================================================================
+// Causal Adjudicator + Why Library
+// =============================================================================
+
+export type AdjudicationResult = {
+  deviation_id: string;
+  recommendation_id: string;
+  outcome: "user_right" | "system_right" | "indeterminate";
+  rationale: string;
+  why_library_entry_id: string | null;
+  metric_observed: string | null;
+  metric_value_before: number | null;
+  metric_value_after: number | null;
+};
+
+export type AdjudicationBatchResponse = {
+  adjudicated: AdjudicationResult[];
+  skipped_too_early: number;
+  skipped_no_data: number;
+  skipped_already_done: number;
+};
+
+export type WhyLibraryEntry = {
+  id: string;
+  trigger_pattern: string;
+  bias_class: string;
+  evidence_strength: number;
+  scope: "user" | "brand" | "category" | "platform";
+  scope_id: string | null;
+  countermeasure: string;
+  supporting_deviation_ids: string[];
+  warning_posterior_mean: number;
+  warning_posterior_observations: number;
+  created_at: string;
+  last_validated_at: string | null;
+  retired_at: string | null;
+};
+
+export type WhyLibraryResponse = {
+  entries: WhyLibraryEntry[];
+  total: number;
+};

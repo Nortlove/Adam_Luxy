@@ -22,6 +22,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from adam.api.dashboard.auth import DashboardUser, require_user
 from adam.api.dashboard.models import (
+    AdjudicationBatchResponse,
+    AdjudicationResultModel,
     AnalyticsSummary,
     AutopilotSettings,
     AutopilotUpdateRequest,
@@ -46,6 +48,8 @@ from adam.api.dashboard.models import (
     StackAdaptSource,
     UserDecisionRequest,
     UserDecisionResponse,
+    WhyLibraryEntry,
+    WhyLibraryResponse,
 )
 from adam.api.dashboard.service import (
     fetch_graph_intelligence,
@@ -511,6 +515,87 @@ async def deviation_horizons(
         total=len(horizons),
         ready_count=ready,
     )
+
+
+# =============================================================================
+# Causal Adjudicator + Why Library (Loop A → Loop B cross-pollination)
+# =============================================================================
+
+
+@router.post(
+    "/deviations/adjudicate-ready",
+    response_model=AdjudicationBatchResponse,
+)
+async def adjudicate_ready(
+    user: DashboardUser = Depends(require_user),
+) -> AdjudicationBatchResponse:
+    """Run the Inferential Adjudicator over every Deviation whose
+    horizon window has closed. Writes adjudication_status, creates
+    Outcome nodes, and on system_right outcomes generates
+    WhyLibraryEntry nodes for pre-emptive defensive reasoning.
+    """
+    from adam.intelligence.causal_adjudicator import (
+        adjudicate_ready_deviations,
+    )
+
+    batch = await adjudicate_ready_deviations(user.id)
+    return AdjudicationBatchResponse(
+        adjudicated=[
+            AdjudicationResultModel(
+                deviation_id=r.deviation_id,
+                recommendation_id=r.recommendation_id,
+                outcome=r.outcome,  # type: ignore[arg-type]
+                rationale=r.rationale,
+                why_library_entry_id=r.why_library_entry_id,
+                metric_observed=r.metric_observed,
+                metric_value_before=r.metric_value_before,
+                metric_value_after=r.metric_value_after,
+            )
+            for r in batch.adjudicated
+        ],
+        skipped_too_early=batch.skipped_too_early,
+        skipped_no_data=batch.skipped_no_data,
+        skipped_already_done=batch.skipped_already_done,
+    )
+
+
+@router.get("/why-library", response_model=WhyLibraryResponse)
+async def get_why_library(
+    user: DashboardUser = Depends(require_user),
+    limit: int = Query(100, ge=1, le=500),
+) -> WhyLibraryResponse:
+    """Read the user's WhyLibrary — validated bias patterns surfaced
+    as defensive reasoning at recommendation time.
+    """
+    from adam.intelligence.causal_adjudicator import fetch_why_library
+
+    entries_raw = await fetch_why_library(user.id, limit=limit)
+    entries: list[WhyLibraryEntry] = []
+    for e in entries_raw:
+        entries.append(
+            WhyLibraryEntry(
+                id=e.get("id", ""),
+                trigger_pattern=e.get("trigger_pattern", ""),
+                bias_class=e.get("bias_class", "unspecified"),
+                evidence_strength=float(e.get("evidence_strength", 0.0) or 0.0),
+                scope=e.get("scope", "user"),
+                scope_id=e.get("scope_id"),
+                countermeasure=e.get("countermeasure", ""),
+                supporting_deviation_ids=list(
+                    e.get("supporting_deviation_ids", []) or []
+                ),
+                warning_posterior_mean=float(
+                    e.get("warning_posterior_mean", 0.0) or 0.0
+                ),
+                warning_posterior_observations=int(
+                    e.get("warning_posterior_observations", 0) or 0
+                ),
+                created_at=e.get("created_at") or datetime.now(timezone.utc),
+                last_validated_at=e.get("last_validated_at"),
+                retired_at=e.get("retired_at"),
+            )
+        )
+    return WhyLibraryResponse(entries=entries, total=len(entries))
 
 
 # =============================================================================

@@ -308,6 +308,50 @@ class DeviationHorizonResponse(BaseModel):
 
 
 # =============================================================================
+# Causal Adjudicator + Why Library
+# =============================================================================
+
+
+class AdjudicationResultModel(BaseModel):
+    deviation_id: str
+    recommendation_id: str
+    outcome: AdjudicationOutcome
+    rationale: str
+    why_library_entry_id: Optional[str] = None
+    metric_observed: Optional[str] = None
+    metric_value_before: Optional[float] = None
+    metric_value_after: Optional[float] = None
+
+
+class AdjudicationBatchResponse(BaseModel):
+    adjudicated: list[AdjudicationResultModel]
+    skipped_too_early: int
+    skipped_no_data: int
+    skipped_already_done: int
+
+
+class WhyLibraryEntry(BaseModel):
+    id: str
+    trigger_pattern: str
+    bias_class: str
+    evidence_strength: float
+    scope: Literal["user", "brand", "category", "platform"]
+    scope_id: Optional[str] = None
+    countermeasure: str
+    supporting_deviation_ids: list[str] = Field(default_factory=list)
+    warning_posterior_mean: float
+    warning_posterior_observations: int
+    created_at: datetime
+    last_validated_at: Optional[datetime] = None
+    retired_at: Optional[datetime] = None
+
+
+class WhyLibraryResponse(BaseModel):
+    entries: list[WhyLibraryEntry]
+    total: int
+
+
+# =============================================================================
 # Analytics (skeleton)
 # =============================================================================
 
