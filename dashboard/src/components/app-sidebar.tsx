@@ -10,6 +10,7 @@ import {
   Settings,
   Activity,
   Lightbulb,
+  BrainCircuit,
 } from "lucide-react";
 
 import {
@@ -32,6 +33,7 @@ const NAV_ITEMS: Array<{
 }> = [
   { href: "/campaigns", label: "Campaigns", icon: LayoutGrid },
   { href: "/recommendations", label: "Recommendations", icon: Lightbulb },
+  { href: "/learning", label: "Learning", icon: BrainCircuit },
   { href: "/discovery", label: "Discovery", icon: Compass },
   { href: "/analytics", label: "Analytics", icon: LineChart },
   { href: "/ledger", label: "Dialogue Ledger", icon: MessagesSquare },

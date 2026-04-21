@@ -265,3 +265,95 @@ export type CalibrationResponse = {
   source: "live" | "unavailable";
   source_note: string | null;
 };
+
+// =============================================================================
+// Autopilot settings + Decay report + Horizons
+// =============================================================================
+
+export type AutopilotMode =
+  | "observer"
+  | "explain"
+  | "notify"
+  | "delegate"
+  | "autopilot";
+
+export type GateKind = "approve" | "notify" | "auto";
+
+export type AutopilotSettings = {
+  user_id: string;
+  mode: AutopilotMode;
+  creative_gate: GateKind;
+  bid_gate: GateKind;
+  audience_gate: GateKind;
+  budget_gate: GateKind;
+  kill_gate: GateKind;
+  campaigns_at_current_mode: number;
+  successful_at_current_mode: number;
+  last_graduated_at: string | null;
+  updated_at: string;
+};
+
+export type AutopilotUpdateRequest = {
+  mode: AutopilotMode;
+  creative_gate?: GateKind;
+  bid_gate?: GateKind;
+  audience_gate?: GateKind;
+  budget_gate?: GateKind;
+  kill_gate?: GateKind;
+};
+
+export type DecayAction = "continue" | "restart" | "abandon" | "monitor";
+
+export type CampaignDecayClassification = {
+  campaign_id: string;
+  campaign_name: string;
+  total_users: number;
+  continue_count: number;
+  restart_count: number;
+  abandon_count: number;
+  zero_data_count: number;
+  advertiser_avg_cpa: number | null;
+  campaign_cpa: number | null;
+  flags: string[];
+  recommended_action: DecayAction;
+  rationale: string;
+};
+
+export type DecayReport = {
+  run_id: string;
+  run_date: string;
+  task_version: string;
+  campaigns: CampaignDecayClassification[];
+  total_users_classified: number;
+  overall_abandon_rate: number;
+  source: "live" | "unavailable";
+  source_note: string | null;
+};
+
+export type HorizonStatus =
+  | "too_early"
+  | "in_progress"
+  | "ready"
+  | "adjudicated";
+
+export type DeviationHorizon = {
+  deviation_id: string;
+  recommendation_id: string;
+  horizon_class: HorizonClass;
+  created_at: string;
+  horizon_ends_at: string;
+  days_elapsed: number;
+  days_remaining: number;
+  status: HorizonStatus;
+  adjudication_outcome:
+    | "user_right"
+    | "system_right"
+    | "indeterminate"
+    | null;
+};
+
+export type DeviationHorizonResponse = {
+  horizons: DeviationHorizon[];
+  total: number;
+  ready_count: number;
+};

@@ -1,20 +1,67 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ApiError, api } from "@/lib/api";
+import type { AutopilotSettings } from "@/lib/types";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { PageHeader } from "@/components/page-header";
 import { getCurrentUser } from "@/lib/auth";
+import { AutopilotPanel } from "./_components/autopilot-panel";
 
 export const metadata = {
   title: "Settings · INFORMATIV",
 };
 
-export default function SettingsPage() {
+export const dynamic = "force-dynamic";
+
+async function loadAutopilot(): Promise<
+  AutopilotSettings | { error: string; status: number } | null
+> {
+  try {
+    return await api.get<AutopilotSettings>(
+      "/api/dashboard/settings/autopilot",
+    );
+  } catch (err) {
+    if (err instanceof ApiError) {
+      return { error: err.message, status: err.status };
+    }
+    return null;
+  }
+}
+
+export default async function SettingsPage() {
   const user = getCurrentUser();
+  const autopilot = await loadAutopilot();
 
   return (
     <div className="flex flex-col gap-6 p-6">
       <PageHeader
         title="Settings"
-        description="Account and platform configuration."
+        description="Account, autopilot trust curve, and backend connection."
       />
+
+      {autopilot === null ? (
+        <Alert variant="destructive">
+          <AlertTitle>Backend unreachable</AlertTitle>
+          <AlertDescription>
+            Could not reach the dashboard API to load autopilot settings.
+          </AlertDescription>
+        </Alert>
+      ) : "error" in autopilot ? (
+        <Alert variant="destructive">
+          <AlertTitle>API error</AlertTitle>
+          <AlertDescription>
+            {autopilot.error} (HTTP {autopilot.status})
+          </AlertDescription>
+        </Alert>
+      ) : (
+        <AutopilotPanel current={autopilot} />
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle>Account</CardTitle>
@@ -26,6 +73,7 @@ export default function SettingsPage() {
           <Row label="Role" value={user.role} />
         </CardContent>
       </Card>
+
       <Card>
         <CardHeader>
           <CardTitle>API Connection</CardTitle>

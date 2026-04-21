@@ -23,7 +23,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from adam.api.dashboard.auth import DashboardUser, require_user
 from adam.api.dashboard.models import (
     AnalyticsSummary,
+    AutopilotSettings,
+    AutopilotUpdateRequest,
     CalibrationResponse,
+    CampaignDecayClassification,
     CampaignListResponse,
     CampaignSummary,
     ClaimCreateRequest,
@@ -31,6 +34,9 @@ from adam.api.dashboard.models import (
     ClaimResponse,
     CurrentUserResponse,
     DashboardHealthResponse,
+    DecayReport,
+    DeviationHorizon,
+    DeviationHorizonResponse,
     DeviationListResponse,
     DeviationSummary,
     DomainCalibration,
@@ -166,6 +172,344 @@ async def analytics_summary(
         stackadapt_reason=stackadapt.reason,
         graph_source=graph.source,
         last_updated=datetime.now(timezone.utc),
+    )
+
+
+# =============================================================================
+# Autopilot settings (five-mode trust curve)
+# =============================================================================
+
+
+_DEFAULT_GATES: dict[str, dict[str, str]] = {
+    "observer": {
+        "creative_gate": "approve", "bid_gate": "approve",
+        "audience_gate": "approve", "budget_gate": "approve",
+        "kill_gate": "approve",
+    },
+    "explain": {
+        "creative_gate": "approve", "bid_gate": "approve",
+        "audience_gate": "notify", "budget_gate": "approve",
+        "kill_gate": "approve",
+    },
+    "notify": {
+        "creative_gate": "notify", "bid_gate": "auto",
+        "audience_gate": "notify", "budget_gate": "approve",
+        "kill_gate": "approve",
+    },
+    "delegate": {
+        "creative_gate": "notify", "bid_gate": "auto",
+        "audience_gate": "auto", "budget_gate": "notify",
+        "kill_gate": "approve",
+    },
+    "autopilot": {
+        "creative_gate": "auto", "bid_gate": "auto",
+        "audience_gate": "auto", "budget_gate": "auto",
+        "kill_gate": "approve",
+    },
+}
+
+
+@router.get("/settings/autopilot", response_model=AutopilotSettings)
+async def get_autopilot_settings(
+    user: DashboardUser = Depends(require_user),
+) -> AutopilotSettings:
+    """Read the autopilot settings for the current user. If none
+    exist, initialise with the default 'explain' mode.
+    """
+    try:
+        from adam.infrastructure.neo4j.client import get_neo4j_client
+
+        client = get_neo4j_client()
+        if not client.is_connected:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Neo4j unavailable",
+            )
+        async with await client.session() as session:
+            now = datetime.now(timezone.utc)
+            result = await session.run(
+                """
+                MERGE (u:DialogueUser {id: $user_id})
+                MERGE (a:AutopilotSetting {user_id: $user_id})
+                  ON CREATE SET a.mode = 'explain',
+                                a.creative_gate = 'approve',
+                                a.bid_gate = 'approve',
+                                a.audience_gate = 'notify',
+                                a.budget_gate = 'approve',
+                                a.kill_gate = 'approve',
+                                a.campaigns_at_current_mode = 0,
+                                a.successful_at_current_mode = 0,
+                                a.last_graduated_at = null,
+                                a.updated_at = $now
+                MERGE (u)-[:HAS_AUTOPILOT_SETTING]->(a)
+                RETURN a
+                """,
+                user_id=user.id, now=now,
+            )
+            record = await result.single()
+            if record is None:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Autopilot setting not persisted",
+                )
+            node = record["a"]
+            return _autopilot_from_node(node, user.id)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("get_autopilot_settings failed")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(exc),
+        )
+
+
+@router.put("/settings/autopilot", response_model=AutopilotSettings)
+async def update_autopilot_settings(
+    request: AutopilotUpdateRequest,
+    user: DashboardUser = Depends(require_user),
+) -> AutopilotSettings:
+    """Change the autopilot mode or per-gate overrides. Switching
+    mode resets the campaigns-at-current-mode counter so the
+    graduation signal tracks time at the *current* mode.
+    """
+    defaults = _DEFAULT_GATES[request.mode]
+    gates = {
+        "creative_gate": request.creative_gate or defaults["creative_gate"],
+        "bid_gate": request.bid_gate or defaults["bid_gate"],
+        "audience_gate": request.audience_gate or defaults["audience_gate"],
+        "budget_gate": request.budget_gate or defaults["budget_gate"],
+        # Kill is never auto; force approve unless user explicitly set notify.
+        "kill_gate": request.kill_gate
+        if request.kill_gate in ("approve", "notify")
+        else "approve",
+    }
+
+    try:
+        from adam.infrastructure.neo4j.client import get_neo4j_client
+
+        client = get_neo4j_client()
+        if not client.is_connected:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Neo4j unavailable",
+            )
+
+        now = datetime.now(timezone.utc)
+        async with await client.session() as session:
+            result = await session.run(
+                """
+                MERGE (u:DialogueUser {id: $user_id})
+                MERGE (a:AutopilotSetting {user_id: $user_id})
+                  ON CREATE SET a.campaigns_at_current_mode = 0,
+                                a.successful_at_current_mode = 0
+                SET a.mode = $mode,
+                    a.creative_gate = $creative_gate,
+                    a.bid_gate = $bid_gate,
+                    a.audience_gate = $audience_gate,
+                    a.budget_gate = $budget_gate,
+                    a.kill_gate = $kill_gate,
+                    a.campaigns_at_current_mode = 0,
+                    a.successful_at_current_mode = 0,
+                    a.updated_at = $now
+                MERGE (u)-[:HAS_AUTOPILOT_SETTING]->(a)
+                RETURN a
+                """,
+                user_id=user.id,
+                mode=request.mode,
+                creative_gate=gates["creative_gate"],
+                bid_gate=gates["bid_gate"],
+                audience_gate=gates["audience_gate"],
+                budget_gate=gates["budget_gate"],
+                kill_gate=gates["kill_gate"],
+                now=now,
+            )
+            record = await result.single()
+            if record is None:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Autopilot update failed",
+                )
+            return _autopilot_from_node(record["a"], user.id)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("update_autopilot_settings failed")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(exc),
+        )
+
+
+def _autopilot_from_node(node: Any, user_id: str) -> AutopilotSettings:
+    def _dt(key: str) -> Optional[datetime]:
+        value = node.get(key)
+        if value is None:
+            return None
+        return value.to_native() if hasattr(value, "to_native") else value
+
+    return AutopilotSettings(
+        user_id=user_id,
+        mode=node.get("mode", "explain"),
+        creative_gate=node.get("creative_gate", "approve"),
+        bid_gate=node.get("bid_gate", "approve"),
+        audience_gate=node.get("audience_gate", "notify"),
+        budget_gate=node.get("budget_gate", "approve"),
+        kill_gate=node.get("kill_gate", "approve"),
+        campaigns_at_current_mode=int(
+            node.get("campaigns_at_current_mode", 0)
+        ),
+        successful_at_current_mode=int(
+            node.get("successful_at_current_mode", 0)
+        ),
+        last_graduated_at=_dt("last_graduated_at"),
+        updated_at=_dt("updated_at") or datetime.now(timezone.utc),
+    )
+
+
+# =============================================================================
+# Decay Adjudicator (Task 33)
+# =============================================================================
+
+
+@router.get("/decay/report", response_model=DecayReport)
+async def decay_report(
+    _user: DashboardUser = Depends(require_user),
+) -> DecayReport:
+    """Run Task 33 and return the latest DecayCohortReport.
+
+    v1 runs the task on every GET since the cohort is fully
+    deterministic from current StackAdapt state. Once the scheduler
+    is wired this becomes a read-only fetch of the most recent
+    persisted DecayCohort.
+    """
+    from adam.intelligence.daily.task_33_decay_adjudicator import (
+        run_decay_adjudicator,
+    )
+
+    report = await run_decay_adjudicator()
+    return DecayReport(
+        run_id=report.run_id,
+        run_date=report.run_date,
+        task_version=report.task_version,
+        campaigns=[
+            CampaignDecayClassification(
+                campaign_id=c.campaign_id,
+                campaign_name=c.campaign_name,
+                total_users=c.total_users,
+                continue_count=c.continue_count,
+                restart_count=c.restart_count,
+                abandon_count=c.abandon_count,
+                zero_data_count=c.zero_data_count,
+                advertiser_avg_cpa=c.advertiser_avg_cpa,
+                campaign_cpa=c.campaign_cpa,
+                flags=c.flags,
+                recommended_action=c.recommended_action,
+                rationale=c.rationale,
+            )
+            for c in report.campaigns
+        ],
+        total_users_classified=report.total_users_classified,
+        overall_abandon_rate=report.overall_abandon_rate,
+        source=report.source,
+        source_note=report.source_note,
+    )
+
+
+# =============================================================================
+# Multi-horizon adjudication view
+# =============================================================================
+
+
+_HORIZON_TO_DAYS: dict[str, float] = {
+    "hours": 1.0,
+    "days": 7.0,
+    "weeks": 14.0,
+    "months": 60.0,
+}
+
+
+@router.get(
+    "/deviations/horizons",
+    response_model=DeviationHorizonResponse,
+)
+async def deviation_horizons(
+    user: DashboardUser = Depends(require_user),
+) -> DeviationHorizonResponse:
+    """Horizon progress per Deviation.
+
+    For each deviation we compute when the causal-adjudication
+    window closes (horizon_class → expected days) and compare to the
+    current time. Deviations with an elapsed window become
+    'ready' — the Inferential Learning Agent can adjudicate them.
+    """
+    horizons: list[DeviationHorizon] = []
+    ready = 0
+    try:
+        from adam.infrastructure.neo4j.client import get_neo4j_client
+
+        client = get_neo4j_client()
+        if not client.is_connected:
+            return DeviationHorizonResponse(
+                horizons=[], total=0, ready_count=0,
+            )
+        async with await client.session() as session:
+            result = await session.run(
+                """
+                MATCH (u:DialogueUser {id: $user_id})-[:DEVIATED]->(d:Deviation)
+                RETURN d
+                ORDER BY d.created_at DESC
+                """,
+                user_id=user.id,
+            )
+            now = datetime.now(timezone.utc)
+            async for record in result:
+                d = record["d"]
+                created_at = (
+                    d["created_at"].to_native()
+                    if hasattr(d["created_at"], "to_native")
+                    else d["created_at"]
+                )
+                horizon_class = d.get("horizon_class", "days")
+                window_days = _HORIZON_TO_DAYS.get(horizon_class, 7.0)
+                from datetime import timedelta
+
+                horizon_ends_at = created_at + timedelta(days=window_days)
+                elapsed = (now - created_at).total_seconds() / 86_400.0
+                remaining = (horizon_ends_at - now).total_seconds() / 86_400.0
+
+                outcome = d.get("adjudication_outcome")
+                adj_status = d.get("adjudication_status", "pending")
+                if adj_status == "adjudicated":
+                    h_status = "adjudicated"
+                elif remaining <= 0:
+                    h_status = "ready"
+                    ready += 1
+                elif elapsed > 0:
+                    h_status = "in_progress"
+                else:
+                    h_status = "too_early"
+
+                horizons.append(
+                    DeviationHorizon(
+                        deviation_id=d["id"],
+                        recommendation_id=d["recommendation_id"],
+                        horizon_class=horizon_class,
+                        created_at=created_at,
+                        horizon_ends_at=horizon_ends_at,
+                        days_elapsed=max(0.0, elapsed),
+                        days_remaining=max(0.0, remaining),
+                        status=h_status,
+                        adjudication_outcome=outcome,
+                    )
+                )
+    except Exception as exc:
+        logger.exception("deviation_horizons failed: %s", exc)
+
+    return DeviationHorizonResponse(
+        horizons=horizons,
+        total=len(horizons),
+        ready_count=ready,
     )
 
 

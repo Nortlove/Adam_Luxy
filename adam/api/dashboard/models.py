@@ -194,6 +194,120 @@ class CalibrationResponse(BaseModel):
 
 
 # =============================================================================
+# Autopilot settings (five-mode trust curve)
+# =============================================================================
+
+
+AutopilotMode = Literal[
+    "observer",
+    "explain",
+    "notify",
+    "delegate",
+    "autopilot",
+]
+
+GateKind = Literal["approve", "notify", "auto"]
+
+
+class AutopilotSettings(BaseModel):
+    """Per-decision-class gating for the five autopilot modes.
+
+    Each gate determines how ADAM handles that kind of decision:
+      approve: user must accept before ADAM acts
+      notify : ADAM acts autonomously but surfaces the action
+      auto   : ADAM acts silently (kill_switch is never "auto")
+    """
+
+    user_id: str
+    mode: AutopilotMode
+    creative_gate: GateKind
+    bid_gate: GateKind
+    audience_gate: GateKind
+    budget_gate: GateKind
+    kill_gate: GateKind  # intentionally never "auto"
+    campaigns_at_current_mode: int = 0
+    successful_at_current_mode: int = 0
+    last_graduated_at: Optional[datetime] = None
+    updated_at: datetime
+
+
+class AutopilotUpdateRequest(BaseModel):
+    mode: AutopilotMode
+    creative_gate: Optional[GateKind] = None
+    bid_gate: Optional[GateKind] = None
+    audience_gate: Optional[GateKind] = None
+    budget_gate: Optional[GateKind] = None
+    kill_gate: Optional[GateKind] = None
+
+
+# =============================================================================
+# Decay adjudicator report (Task 33)
+# =============================================================================
+
+
+DecayAction = Literal["continue", "restart", "abandon", "monitor"]
+
+
+class CampaignDecayClassification(BaseModel):
+    campaign_id: str
+    campaign_name: str
+    total_users: int = 0
+    continue_count: int = 0
+    restart_count: int = 0
+    abandon_count: int = 0
+    zero_data_count: int = 0
+    advertiser_avg_cpa: Optional[float] = None
+    campaign_cpa: Optional[float] = None
+    flags: list[str] = Field(default_factory=list)
+    recommended_action: DecayAction
+    rationale: str
+
+
+class DecayReport(BaseModel):
+    run_id: str
+    run_date: datetime
+    task_version: str
+    campaigns: list[CampaignDecayClassification]
+    total_users_classified: int
+    overall_abandon_rate: float
+    source: Literal["live", "unavailable"]
+    source_note: Optional[str] = None
+
+
+# =============================================================================
+# Multi-horizon adjudication view
+# =============================================================================
+
+
+HorizonStatus = Literal["too_early", "ready", "in_progress", "adjudicated"]
+
+
+class DeviationHorizon(BaseModel):
+    """Horizon progress for a single Deviation.
+
+    The `ready` status means the horizon_class window has elapsed but
+    the causal-adjudication has not yet run. `too_early` means the
+    horizon is still in the future.
+    """
+
+    deviation_id: str
+    recommendation_id: str
+    horizon_class: Literal["hours", "days", "weeks", "months"]
+    created_at: datetime
+    horizon_ends_at: datetime
+    days_elapsed: float
+    days_remaining: float
+    status: HorizonStatus
+    adjudication_outcome: Optional[AdjudicationOutcome] = None
+
+
+class DeviationHorizonResponse(BaseModel):
+    horizons: list[DeviationHorizon]
+    total: int
+    ready_count: int
+
+
+# =============================================================================
 # Analytics (skeleton)
 # =============================================================================
 
