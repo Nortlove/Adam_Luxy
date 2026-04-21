@@ -105,6 +105,26 @@ class OutcomeHandler:
                 decision_id, outcome_type, signed_reward,
             )
 
+        # Phase 10 observability — emit signed-reward direction and ethics-
+        # signal counters. A rising negative-direction curve means selection
+        # pressure is shifting under Phase 1's new fitness function. A rising
+        # zero-direction curve means outcomes are arriving with unknown
+        # outcome_type values, which would silently starve the learning loop.
+        # Defensive try/except: metric emission must not break outcome flow.
+        try:
+            from adam.infrastructure.prometheus.metrics import get_metrics
+            _pm = get_metrics()
+            if signed_reward > 0:
+                _pm.signed_reward_direction.labels(direction="positive").inc()
+            elif signed_reward < 0:
+                _pm.signed_reward_direction.labels(direction="negative").inc()
+            else:
+                _pm.signed_reward_direction.labels(direction="zero").inc()
+            if is_negative_ethics_signal(outcome_type):
+                _pm.outcome_ethics_signal.labels(outcome_type=outcome_type).inc()
+        except Exception as e:
+            logger.debug("Ethics-signal metric emission failed: %s", e)
+
         # Track whether decision context was available (from decision cache)
         has_decision_context = metadata.get("decision_context_found", False)
         cascade_level = metadata.get("cascade_level", 0)
@@ -190,6 +210,22 @@ class OutcomeHandler:
 
         results["processing_depth"] = processing_depth_str
         results["processing_depth_weight"] = processing_depth_weight
+
+        # Phase 10 observability — emit the decision's epistemic grounding
+        # state so operators can detect drift from GROUNDED into INCOMPLETE
+        # or REFUSED. A chronic rise in INCOMPLETE means atoms are failing
+        # to produce full chains at decision time; a chronic rise in REFUSED
+        # means the cascade is routinely giving up before serving. Both are
+        # silent degradations until this metric surfaces them. Foundation
+        # §7 rule 4 corollary: a system whose epistemic state cannot be
+        # observed cannot be trusted to reason correctly.
+        try:
+            from adam.infrastructure.prometheus.metrics import get_metrics
+            get_metrics().decision_grounding_state.labels(
+                mode=decision_mode.value,
+            ).inc()
+        except Exception as e:
+            logger.debug("Grounding-state metric emission failed: %s", e)
 
         # If the decision was REFUSED, there was no response served to the
         # user, so there is no outcome to learn from. Short-circuit.
@@ -1565,8 +1601,22 @@ class OutcomeHandler:
         # type), fall back to the original boolean-success path.
         use_signed_path = signed_reward is not None and signed_reward != 0.0
 
+        # Phase 10 observability — emit which chain source is feeding the
+        # theory-learner update. Drift toward `synthesized` indicates the
+        # upstream atoms aren't materialising chains at decision time;
+        # drift toward `no_chain_available` indicates theory learning is
+        # silently starved. Both are foundation §4.3 drift patterns that
+        # this metric makes visible.
+        def _emit_theory_source(source: str) -> None:
+            try:
+                from adam.infrastructure.prometheus.metrics import get_metrics
+                get_metrics().theory_update_source.labels(source=source).inc()
+            except Exception as e:
+                logger.debug("Theory-source metric emission failed: %s", e)
+
         if inferential_chains:
             # Best case: explicit NDF inferential chains
+            _emit_theory_source("real_chain")
             if use_signed_path:
                 result = learner.process_all_chains_for_decision_signed(
                     inferential_chains=inferential_chains,
@@ -1620,6 +1670,7 @@ class OutcomeHandler:
                     synthetic_chains.append(chain_dict)
 
                 if synthetic_chains:
+                    _emit_theory_source("synthesized")
                     if use_signed_path:
                         result = learner.process_all_chains_for_decision_signed(
                             inferential_chains=synthetic_chains,
@@ -1636,6 +1687,7 @@ class OutcomeHandler:
                         )
                     result["chain_source"] = "synthetic_from_constructs"
             else:
+                _emit_theory_source("no_chain_available")
                 result = {"skipped": True, "reason": "no_constructs_or_mechanisms"}
         
         # Periodically push updates to Neo4j (every 50 outcomes)

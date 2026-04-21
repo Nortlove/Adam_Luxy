@@ -284,6 +284,60 @@ class ADAMMetrics:
             )
 
             # -----------------------------------------------------------------
+            # EPISTEMIC STATE METRICS (Phase 10 — grounding-state observability)
+            #
+            # These metrics make the structural gates of the learning loop
+            # operationally visible. Prior to Phase 10, it was impossible to
+            # tell from production telemetry whether decisions were being made
+            # on grounded chains, partial chains, or fallbacks. The gating
+            # logic in adam.core.decision_mode was architected correctly but
+            # invisible; a systematic slide from GROUNDED into INCOMPLETE
+            # would go undetected until a downstream aggregate metric moved.
+            #
+            # Foundation §7 rule 4 (cite file:line) has a corollary: a system
+            # whose epistemic state cannot be observed cannot be trusted to
+            # reason correctly. These metrics satisfy the corollary for the
+            # three load-bearing internal signals.
+            # -----------------------------------------------------------------
+
+            # Decision grounding-state distribution
+            self.decision_grounding_state = Counter(
+                "adam_decision_grounding_state_total",
+                "Decision outcomes by epistemic grounding state",
+                ["mode"],  # grounded, incomplete, refused
+            )
+
+            # Theory-update source distribution — are we learning on real
+            # inferential chains, synthesized chains from metadata, or
+            # skipping entirely? Drift toward synthesized indicates atoms
+            # are not producing chains at decision time (Foundation §4.3).
+            self.theory_update_source = Counter(
+                "adam_theory_update_source_total",
+                "Source of chains feeding theory_learner updates",
+                ["source"],  # real_chain, synthesized, no_chain_available
+            )
+
+            # Ethics-gate signal counter — surfaces when negative outcomes
+            # arrive so operators can trace selection-pressure inputs.
+            # Foundation §7 rule 11: the fitness function IS the ethics.
+            self.outcome_ethics_signal = Counter(
+                "adam_outcome_ethics_signal_total",
+                "Ethics-gate outcome events (refund/complaint/regret/churn)",
+                ["outcome_type"],
+            )
+
+            # Signed-reward direction counter — exposes the balance of
+            # evidence-for vs evidence-against flowing through the
+            # posterior-update paths. A skew toward zero indicates
+            # outcomes arriving with unknown outcome_type values, which
+            # would silently starve the learning loop.
+            self.signed_reward_direction = Counter(
+                "adam_signed_reward_direction_total",
+                "Signed-reward direction from outcome processing",
+                ["direction"],  # positive, negative, zero
+            )
+
+            # -----------------------------------------------------------------
             # MECHANISM SELECTION & POSTERIOR METRICS
             # -----------------------------------------------------------------
 
