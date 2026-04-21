@@ -30,14 +30,15 @@ import {
   DISCOVERY_PHASES,
   questionsForPhase,
   type DiscoveryQuestion,
+  type PhaseNumber,
 } from "@/lib/discovery/questions";
 import { QuestionRenderer } from "./question-renderer";
 
 export type DiscoveryFlowProps = {
-  phase: 1 | 2 | 3 | 4;
+  phase: PhaseNumber;
   sessionId: string;
   moodIndex: number | null;
-  onChangePhase: (phase: 1 | 2 | 3 | 4) => void;
+  onChangePhase: (phase: PhaseNumber) => void;
 };
 
 export function DiscoveryFlow({
@@ -84,7 +85,7 @@ export function DiscoveryFlow({
       <div className="flex items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <Badge variant="secondary">Phase {phase} of 4</Badge>
+            <Badge variant="secondary">Phase {phase} of 8</Badge>
             <h2 className="text-lg font-semibold tracking-tight">
               {phaseDef.name}
             </h2>

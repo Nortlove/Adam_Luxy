@@ -16,10 +16,13 @@ import { DataSourcesPanel } from "@/components/discovery/data-sources";
 import {
   DISCOVERY_PHASES,
   questionsForPhase,
+  type PhaseNumber,
 } from "@/lib/discovery/questions";
 
+type TabValue = `p${PhaseNumber}`;
+
 export function DiscoveryClient() {
-  const [tab, setTab] = useState<"p1" | "p2" | "p3" | "p4">("p1");
+  const [tab, setTab] = useState<TabValue>("p1");
   const [sessionId, setSessionId] = useState<string>("");
   const [moodIndex, setMoodIndex] = useState<number | null>(null);
   const [moodSet, setMoodSet] = useState<boolean>(false);
@@ -29,10 +32,6 @@ export function DiscoveryClient() {
       `discovery-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     );
   }, []);
-
-  function phaseFromTab(t: string): 1 | 2 | 3 | 4 {
-    return (Number(t.slice(1)) as 1 | 2 | 3 | 4) ?? 1;
-  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -57,7 +56,7 @@ export function DiscoveryClient() {
 
       <Tabs
         value={tab}
-        onValueChange={(v) => setTab(v as typeof tab)}
+        onValueChange={(v) => setTab(v as TabValue)}
         className="flex flex-col gap-4"
       >
         <TabsList className="flex flex-wrap">
@@ -67,9 +66,9 @@ export function DiscoveryClient() {
                 {p.n}
               </span>
               {p.name}
-              {p.n < 4 && (
+              {p.n !== 4 && (
                 <span className="ml-1 text-[10px] text-muted-foreground">
-                  · {questionsForPhase(p.n as 1 | 2 | 3 | 4).length} q
+                  · {questionsForPhase(p.n).length} q
                 </span>
               )}
             </TabsTrigger>
@@ -85,11 +84,11 @@ export function DiscoveryClient() {
               />
             ) : (
               <DiscoveryFlow
-                phase={p.n as 1 | 2 | 3}
+                phase={p.n}
                 sessionId={sessionId}
                 moodIndex={moodIndex}
                 onChangePhase={(next) =>
-                  setTab(`p${next}` as typeof tab)
+                  setTab(`p${next}` as TabValue)
                 }
               />
             )}
