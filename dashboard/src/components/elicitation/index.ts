@@ -12,3 +12,6 @@ export type { RecallabilityProbeProps } from "./recallability-probe";
 
 export { MoodProbe } from "./mood-probe";
 export type { MoodProbeProps } from "./mood-probe";
+
+export { KAFC } from "./k-afc";
+export type { KAFCProps, KAFCOption } from "./k-afc";
