@@ -352,6 +352,61 @@ class WhyLibraryResponse(BaseModel):
 
 
 # =============================================================================
+# Multi-tenant shell (Partner / Advertiser / Workspace)
+# =============================================================================
+
+
+TenantStatus = Literal["active", "paused", "suspended", "archived"]
+
+PartnerKind = Literal["superadmin", "agency", "independent", "direct_brand"]
+
+
+class TenantWorkspace(BaseModel):
+    id: str
+    advertiser_id: str
+    name: str
+    purpose: Optional[str] = None
+    status: TenantStatus
+    created_at: datetime
+
+
+class TenantAdvertiser(BaseModel):
+    id: str
+    partner_id: str
+    name: str
+    category: Optional[str] = None
+    stackadapt_advertiser_id: Optional[str] = None
+    status: TenantStatus
+    created_at: datetime
+    workspaces: list[TenantWorkspace] = Field(default_factory=list)
+
+
+class TenantPartner(BaseModel):
+    id: str
+    name: str
+    kind: PartnerKind
+    white_label_name: Optional[str] = None
+    billing_email: Optional[str] = None
+    status: TenantStatus
+    created_at: datetime
+    advertisers: list[TenantAdvertiser] = Field(default_factory=list)
+
+
+class TenantHierarchyResponse(BaseModel):
+    partners: list[TenantPartner]
+    total_partners: int
+    total_advertisers: int
+    total_workspaces: int
+
+
+class UserMembership(BaseModel):
+    user_id: str
+    role: Literal["superadmin", "partner_admin", "advertiser_admin", "viewer"]
+    partner: Optional[TenantPartner] = None
+    advertiser: Optional[TenantAdvertiser] = None
+
+
+# =============================================================================
 # Analytics (skeleton)
 # =============================================================================
 

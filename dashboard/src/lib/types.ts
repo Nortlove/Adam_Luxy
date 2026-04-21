@@ -400,3 +400,60 @@ export type WhyLibraryResponse = {
   entries: WhyLibraryEntry[];
   total: number;
 };
+
+// =============================================================================
+// Multi-tenant shell
+// =============================================================================
+
+export type TenantStatus = "active" | "paused" | "suspended" | "archived";
+
+export type PartnerKind =
+  | "superadmin"
+  | "agency"
+  | "independent"
+  | "direct_brand";
+
+export type TenantWorkspace = {
+  id: string;
+  advertiser_id: string;
+  name: string;
+  purpose: string | null;
+  status: TenantStatus;
+  created_at: string;
+};
+
+export type TenantAdvertiser = {
+  id: string;
+  partner_id: string;
+  name: string;
+  category: string | null;
+  stackadapt_advertiser_id: string | null;
+  status: TenantStatus;
+  created_at: string;
+  workspaces: TenantWorkspace[];
+};
+
+export type TenantPartner = {
+  id: string;
+  name: string;
+  kind: PartnerKind;
+  white_label_name: string | null;
+  billing_email: string | null;
+  status: TenantStatus;
+  created_at: string;
+  advertisers: TenantAdvertiser[];
+};
+
+export type TenantHierarchyResponse = {
+  partners: TenantPartner[];
+  total_partners: number;
+  total_advertisers: number;
+  total_workspaces: number;
+};
+
+export type UserMembership = {
+  user_id: string;
+  role: "superadmin" | "partner_admin" | "advertiser_admin" | "viewer";
+  partner: TenantPartner | null;
+  advertiser: TenantAdvertiser | null;
+};

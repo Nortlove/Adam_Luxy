@@ -46,8 +46,13 @@ from adam.api.dashboard.models import (
     RecommendationListResponse,
     RecommendationSummary,
     StackAdaptSource,
+    TenantAdvertiser,
+    TenantHierarchyResponse,
+    TenantPartner,
+    TenantWorkspace,
     UserDecisionRequest,
     UserDecisionResponse,
+    UserMembership,
     WhyLibraryEntry,
     WhyLibraryResponse,
 )
@@ -176,6 +181,183 @@ async def analytics_summary(
         stackadapt_reason=stackadapt.reason,
         graph_source=graph.source,
         last_updated=datetime.now(timezone.utc),
+    )
+
+
+# =============================================================================
+# Multi-tenant shell (Phase C scaffolding; single-tenant operational in v1)
+# =============================================================================
+
+
+@router.get("/tenants/me", response_model=UserMembership)
+async def get_my_membership(
+    user: DashboardUser = Depends(require_user),
+) -> UserMembership:
+    """Current user's tenant membership (role, partner, advertiser).
+
+    v1 pilot returns the superadmin membership stamped by migration
+    022. When Phase C multi-tenancy lands this endpoint is how the
+    dashboard resolves the active scope for any request.
+    """
+    partner: Optional[TenantPartner] = None
+    advertiser: Optional[TenantAdvertiser] = None
+    role = "superadmin"
+
+    try:
+        from adam.infrastructure.neo4j.client import get_neo4j_client
+
+        client = get_neo4j_client()
+        if client.is_connected:
+            async with await client.session() as session:
+                result = await session.run(
+                    """
+                    MATCH (u:DialogueUser {id: $user_id})
+                    OPTIONAL MATCH (u)-[:BELONGS_TO_PARTNER]->(p:TenantPartner)
+                    OPTIONAL MATCH (u)-[:ADMIN_OF_ADVERTISER]->(a:TenantAdvertiser)
+                    RETURN u, p, a
+                    """,
+                    user_id=user.id,
+                )
+                record = await result.single()
+                if record:
+                    u_node = record["u"]
+                    role = u_node.get("role", "superadmin")
+                    if record["p"] is not None:
+                        partner = _tenant_partner_from_node(record["p"])
+                    if record["a"] is not None:
+                        advertiser = _tenant_advertiser_from_node(record["a"])
+    except Exception as exc:
+        logger.warning("get_my_membership failed: %s", exc)
+
+    return UserMembership(
+        user_id=user.id,
+        role=role,
+        partner=partner,
+        advertiser=advertiser,
+    )
+
+
+@router.get("/tenants/hierarchy", response_model=TenantHierarchyResponse)
+async def get_tenant_hierarchy(
+    user: DashboardUser = Depends(require_user),
+) -> TenantHierarchyResponse:
+    """The full Partner → Advertiser → Workspace hierarchy.
+
+    Superadmin-only in the Phase C roll-out. v1 returns the full tree
+    unconditionally (single-tenant pilot); when role scoping lands,
+    non-superadmin callers will see only their own partner subtree.
+    """
+    try:
+        from adam.infrastructure.neo4j.client import get_neo4j_client
+
+        client = get_neo4j_client()
+        if not client.is_connected:
+            return TenantHierarchyResponse(
+                partners=[],
+                total_partners=0,
+                total_advertisers=0,
+                total_workspaces=0,
+            )
+        async with await client.session() as session:
+            partners_result = await session.run(
+                """
+                MATCH (p:TenantPartner)
+                RETURN p
+                ORDER BY p.created_at ASC
+                """,
+            )
+            partners: list[TenantPartner] = []
+            async for record in partners_result:
+                partners.append(_tenant_partner_from_node(record["p"]))
+
+            total_advertisers = 0
+            total_workspaces = 0
+            for partner in partners:
+                adv_result = await session.run(
+                    """
+                    MATCH (p:TenantPartner {id: $partner_id})
+                          -[:HAS_ADVERTISER]->(a:TenantAdvertiser)
+                    RETURN a
+                    ORDER BY a.created_at ASC
+                    """,
+                    partner_id=partner.id,
+                )
+                async for adv_record in adv_result:
+                    advertiser = _tenant_advertiser_from_node(adv_record["a"])
+                    ws_result = await session.run(
+                        """
+                        MATCH (a:TenantAdvertiser {id: $adv_id})
+                              -[:HAS_WORKSPACE]->(w:TenantWorkspace)
+                        RETURN w
+                        ORDER BY w.created_at ASC
+                        """,
+                        adv_id=advertiser.id,
+                    )
+                    async for ws_record in ws_result:
+                        advertiser.workspaces.append(
+                            _tenant_workspace_from_node(ws_record["w"])
+                        )
+                        total_workspaces += 1
+                    partner.advertisers.append(advertiser)
+                    total_advertisers += 1
+    except Exception as exc:
+        logger.exception("get_tenant_hierarchy failed: %s", exc)
+        return TenantHierarchyResponse(
+            partners=[],
+            total_partners=0,
+            total_advertisers=0,
+            total_workspaces=0,
+        )
+
+    return TenantHierarchyResponse(
+        partners=partners,
+        total_partners=len(partners),
+        total_advertisers=total_advertisers,
+        total_workspaces=total_workspaces,
+    )
+
+
+def _tenant_partner_from_node(node: Any) -> TenantPartner:
+    created_at = node.get("created_at")
+    if hasattr(created_at, "to_native"):
+        created_at = created_at.to_native()
+    return TenantPartner(
+        id=node["id"],
+        name=node.get("name", ""),
+        kind=node.get("kind", "agency"),
+        white_label_name=node.get("white_label_name"),
+        billing_email=node.get("billing_email"),
+        status=node.get("status", "active"),
+        created_at=created_at or datetime.now(timezone.utc),
+    )
+
+
+def _tenant_advertiser_from_node(node: Any) -> TenantAdvertiser:
+    created_at = node.get("created_at")
+    if hasattr(created_at, "to_native"):
+        created_at = created_at.to_native()
+    return TenantAdvertiser(
+        id=node["id"],
+        partner_id=node.get("partner_id", ""),
+        name=node.get("name", ""),
+        category=node.get("category"),
+        stackadapt_advertiser_id=node.get("stackadapt_advertiser_id"),
+        status=node.get("status", "active"),
+        created_at=created_at or datetime.now(timezone.utc),
+    )
+
+
+def _tenant_workspace_from_node(node: Any) -> TenantWorkspace:
+    created_at = node.get("created_at")
+    if hasattr(created_at, "to_native"):
+        created_at = created_at.to_native()
+    return TenantWorkspace(
+        id=node["id"],
+        advertiser_id=node.get("advertiser_id", ""),
+        name=node.get("name", ""),
+        purpose=node.get("purpose"),
+        status=node.get("status", "active"),
+        created_at=created_at or datetime.now(timezone.utc),
     )
 
 

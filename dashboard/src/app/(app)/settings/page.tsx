@@ -1,5 +1,9 @@
 import { ApiError, api } from "@/lib/api";
-import type { AutopilotSettings } from "@/lib/types";
+import type {
+  AutopilotSettings,
+  TenantHierarchyResponse,
+  UserMembership,
+} from "@/lib/types";
 import {
   Card,
   CardContent,
@@ -11,6 +15,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { PageHeader } from "@/components/page-header";
 import { getCurrentUser } from "@/lib/auth";
 import { AutopilotPanel } from "./_components/autopilot-panel";
+import { TenantView } from "./_components/tenant-view";
 
 export const metadata = {
   title: "Settings · INFORMATIV",
@@ -33,9 +38,31 @@ async function loadAutopilot(): Promise<
   }
 }
 
+async function loadMembership(): Promise<UserMembership | null> {
+  try {
+    return await api.get<UserMembership>("/api/dashboard/tenants/me");
+  } catch {
+    return null;
+  }
+}
+
+async function loadHierarchy(): Promise<TenantHierarchyResponse | null> {
+  try {
+    return await api.get<TenantHierarchyResponse>(
+      "/api/dashboard/tenants/hierarchy",
+    );
+  } catch {
+    return null;
+  }
+}
+
 export default async function SettingsPage() {
   const user = getCurrentUser();
-  const autopilot = await loadAutopilot();
+  const [autopilot, membership, hierarchy] = await Promise.all([
+    loadAutopilot(),
+    loadMembership(),
+    loadHierarchy(),
+  ]);
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -60,6 +87,10 @@ export default async function SettingsPage() {
         </Alert>
       ) : (
         <AutopilotPanel current={autopilot} />
+      )}
+
+      {membership && (
+        <TenantView membership={membership} hierarchy={hierarchy} />
       )}
 
       <Card>
