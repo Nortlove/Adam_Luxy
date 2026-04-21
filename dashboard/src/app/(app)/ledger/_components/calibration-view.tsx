@@ -26,17 +26,20 @@ export function CalibrationView({ data }: { data: CalibrationResponse }) {
 
   if (data.domains.length === 0) {
     return (
-      <Card className="border-dashed">
-        <CardHeader>
-          <CardTitle>No calibration data yet</CardTitle>
-          <CardDescription>
-            Start making claims (Sandbox tab) and the per-domain profile
-            will populate — activity counts, recallability breakdown, and
-            latency averages first, with Brier-scored calibration curves
-            activating once outcomes have been observed and adjudicated.
-          </CardDescription>
-        </CardHeader>
-      </Card>
+      <>
+        <Card className="border-dashed">
+          <CardHeader>
+            <CardTitle>No calibration data yet</CardTitle>
+            <CardDescription>
+              Start making claims (Sandbox tab) and the per-domain profile
+              will populate — activity counts, recallability breakdown, and
+              latency averages first, with Brier-scored calibration curves
+              activating once outcomes have been observed and adjudicated.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+        <TrainingCTA />
+      </>
     );
   }
 
@@ -45,12 +48,32 @@ export function CalibrationView({ data }: { data: CalibrationResponse }) {
       {data.source_note && (
         <p className="text-sm text-muted-foreground">{data.source_note}</p>
       )}
+      <TrainingCTA />
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {data.domains.map((d) => (
           <DomainCard key={d.domain} d={d} />
         ))}
       </div>
     </div>
+  );
+}
+
+function TrainingCTA() {
+  return (
+    <Alert>
+      <AlertTitle>Take the calibration training</AlertTitle>
+      <AlertDescription>
+        Ten binary forecasts with live Brier scoring (Tetlock/Mellers
+        protocol). Trains you to produce calibrated probability estimates
+        rather than round numbers.{" "}
+        <a
+          href="/calibration"
+          className="font-medium text-foreground underline-offset-4 hover:underline"
+        >
+          Start the training →
+        </a>
+      </AlertDescription>
+    </Alert>
   );
 }
 
