@@ -146,12 +146,20 @@ class ReviewLearningsService:
         return cls._instance
     
     def _connect(self) -> bool:
-        """Connect to Neo4j."""
+        """Connect to Neo4j.
+
+        Phase 13 hygiene: no hardcoded credential defaults. Routes through
+        the settings singleton so all Neo4j connections use consistent,
+        env-sourced credentials rather than string literals that leak in
+        error logs.
+        """
         try:
             from neo4j import GraphDatabase
+            from adam.config.settings import get_settings
+            _s = get_settings()
             self._driver = GraphDatabase.driver(
-                "bolt://localhost:7687",
-                auth=("neo4j", "atomofthought")
+                _s.neo4j.uri,
+                auth=(_s.neo4j.username, _s.neo4j.password),
             )
             self._connected = True
             logger.info("ReviewLearningsService connected to Neo4j")

@@ -272,10 +272,15 @@ def load_category_mechanism_priors() -> Dict[str, Dict[str, float]]:
     """
     try:
         from neo4j import GraphDatabase
-        
+        import os
+        # Phase 13 hygiene: no hardcoded credential defaults. Use settings
+        # so local-dev, staging, and production all route through the same
+        # resolved values rather than a literal that leaks in error logs.
+        from adam.config.settings import get_settings
+        _s = get_settings()
         driver = GraphDatabase.driver(
-            "bolt://localhost:7687",
-            auth=("neo4j", "atomofthought")
+            _s.neo4j.uri,
+            auth=(_s.neo4j.username, _s.neo4j.password),
         )
         
         category_priors = {}

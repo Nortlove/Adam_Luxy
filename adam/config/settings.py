@@ -21,7 +21,14 @@ class Neo4jSettings(BaseSettings):
     
     uri: str = Field(default="bolt://127.0.0.1:7687", env="NEO4J_URI")
     username: str = Field(default="neo4j", env="NEO4J_USERNAME")
-    password: str = Field(default="atomofthought", env="NEO4J_PASSWORD")
+    # Phase 13 hygiene: no production credential as a literal default. The
+    # previous default was the known local-dev password "atomofthought",
+    # which meant a production deployment with NEO4J_PASSWORD unset would
+    # silently attempt to authenticate with that value against whatever
+    # Neo4j responded first — a credential-leak footgun the orientation
+    # document names under antipattern A15. Default is now empty; a
+    # production deployment must supply NEO4J_PASSWORD explicitly.
+    password: str = Field(default="", env="NEO4J_PASSWORD")
     database: str = Field(default="neo4j", env="NEO4J_DATABASE")
     max_connection_pool_size: int = Field(default=50, env="NEO4J_POOL_SIZE")
     

@@ -35,9 +35,17 @@ from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
-NEO4J_URI = "neo4j://127.0.0.1:7687"
-NEO4J_USER = "neo4j"
-NEO4J_PASSWORD = "atomofthought"
+# Phase 13 hygiene: hardcoded credential defaults removed. Routed through
+# the settings singleton so values come from the single .env-parsing path
+# rather than direct os.environ reads that miss .env-loaded values. If
+# NEO4J_PASSWORD is unset in a production deployment, settings.neo4j.password
+# is empty string and the driver call will fail loudly rather than silently
+# authenticating as "atomofthought" against whatever database responds.
+# Resolved lazily at first use to avoid import-time settings side effects.
+def _get_neo4j_credentials():
+    from adam.config.settings import get_settings
+    _s = get_settings()
+    return _s.neo4j.uri, _s.neo4j.username, _s.neo4j.password
 
 PRIORS_PATH = Path("data/learning/ingestion_merged_priors.json")
 COLDSTART_PRIORS_PATH = Path("data/learning/complete_coldstart_priors.json")
@@ -117,8 +125,9 @@ class UnifiedIntelligenceService:
             return self._driver
         try:
             from neo4j import GraphDatabase
+            uri, user, password = _get_neo4j_credentials()
             self._driver = GraphDatabase.driver(
-                NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD)
+                uri, auth=(user, password),
             )
             self._driver.verify_connectivity()
             logger.info("UnifiedIntelligenceService connected to Neo4j")

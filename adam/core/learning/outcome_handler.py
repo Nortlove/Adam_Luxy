@@ -162,8 +162,25 @@ class OutcomeHandler:
                 )
                 processing_depth_str = depth.value
             processing_depth_weight = get_processing_weight(depth)
-        except Exception:
-            pass  # Default weight=1.0 if processing depth unavailable
+        except Exception as e:
+            # Phase 13 hygiene: previously `except Exception: pass` silently
+            # reverted unprocessed impressions to weight=1.0, contaminating
+            # posteriors by counting noise as signal. Now logged at debug.
+            # An unexpected surge in these log lines indicates the
+            # Enhancement #34 telemetry pipeline is broken upstream.
+            logger.debug(
+                "Processing depth classification failed (defaulting to "
+                "weight=1.0); decision_id=%s outcome_type=%s reason=%s",
+                decision_id, outcome_type, e,
+            )
+            try:
+                from adam.infrastructure.prometheus.metrics import get_metrics
+                get_metrics().prefetch_source_failure.labels(
+                    source="processing_depth",
+                    reason="classification_error",
+                ).inc()
+            except Exception:
+                pass
 
         # ── STRUCTURAL DECISION-MODE GATE ──
         # Reads the epistemic status of the reasoning chain that produced

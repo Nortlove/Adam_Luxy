@@ -53,9 +53,17 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("anthropic").setLevel(logging.WARNING)
 logging.getLogger("neo4j.notifications").setLevel(logging.WARNING)
 
-NEO4J_URI = "neo4j://127.0.0.1:7687"
-NEO4J_USER = "neo4j"
-NEO4J_PASSWORD = "atomofthought"
+# Phase 13 hygiene: hardcoded credential defaults removed (see
+# adam/intelligence/unified_intelligence_service.py for the full rationale).
+NEO4J_URI = os.environ.get("NEO4J_URI", "neo4j://127.0.0.1:7687")
+NEO4J_USER = os.environ.get("NEO4J_USER", "neo4j")
+NEO4J_PASSWORD = os.environ.get("NEO4J_PASSWORD") or os.environ.get("NEO4J_PASS")
+if NEO4J_PASSWORD is None:
+    logger.warning(
+        "NEO4J_PASSWORD is not set — ingest_resubmit_results will fail on "
+        "any Neo4j session. Set NEO4J_PASSWORD in the environment before "
+        "running this pipeline."
+    )
 
 
 def ingest_product_results(client: anthropic.Anthropic, batch_ids: list[str], driver):

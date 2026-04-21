@@ -170,7 +170,16 @@ class PersuasionResonanceIndex:
                 logger.warning(f"Failed to load {filepath}: {e}")
 
     def _load_from_merged_priors(self) -> None:
-        """Load resonance data from ingestion_merged_priors.json."""
+        """Load resonance data from ingestion_merged_priors.json.
+
+        Phase 13 hygiene: previously this block silently swallowed
+        UnifiedIntelligenceService failures and fell back to on-disk
+        priors without any log signal. If the service was chronically
+        unavailable, the cascade would operate on stale priors and look
+        healthy. The service failure is now logged at warning level,
+        and a prometheus counter is emitted so operators can detect
+        repeated fall-through to file-loaded priors.
+        """
         data = None
         try:
             from adam.intelligence.unified_intelligence_service import get_unified_intelligence_service
@@ -178,8 +187,24 @@ class PersuasionResonanceIndex:
             raw = svc._load_layer1_priors()
             if raw:
                 data = raw
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(
+                "UnifiedIntelligenceService unavailable for resonance priors "
+                "— falling back to on-disk ingestion_merged_priors.json. "
+                "Repeated warnings here mean the service is chronically down "
+                "and resonance is operating on stale data. Reason: %s",
+                e,
+            )
+            try:
+                from adam.infrastructure.prometheus.metrics import get_metrics
+                metrics = get_metrics()
+                if hasattr(metrics, "prefetch_source_failure"):
+                    metrics.prefetch_source_failure.labels(
+                        source="resonance_priors",
+                        reason="service_unavailable",
+                    ).inc()
+            except Exception:
+                pass
 
         if data is None:
             priors_path = os.path.join(
@@ -229,6 +254,7 @@ class PersuasionResonanceIndex:
 
             async def _fetch_all():
                 results = []
+                failures: list[str] = []
                 for arch in archetypes:
                     try:
                         templates = await persistence.get_best_templates_for_archetype(
@@ -239,8 +265,26 @@ class PersuasionResonanceIndex:
                         for t in templates:
                             if isinstance(t, dict):
                                 results.append((arch, t))
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        # Phase 13 hygiene: previously silently swallowed.
+                        # Now logged at debug (per-archetype) and tracked
+                        # for the final aggregate warning below. If every
+                        # archetype fetch fails, that is a systemic issue
+                        # worth surfacing rather than producing an empty
+                        # template cache that the resonance model will
+                        # then treat as authoritative.
+                        logger.debug(
+                            "Template fetch failed for archetype=%s: %s",
+                            arch, e,
+                        )
+                        failures.append(arch)
+                if failures and len(failures) == len(archetypes):
+                    logger.warning(
+                        "All %d archetype template fetches failed — "
+                        "resonance template cache will be empty. Downstream "
+                        "resonance computations will operate on defaults.",
+                        len(archetypes),
+                    )
                 return results
 
             all_templates = _run_async(_fetch_all())
