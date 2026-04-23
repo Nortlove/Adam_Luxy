@@ -41,7 +41,17 @@ from adam.api.dashboard.models import (
     DeviationHorizonResponse,
     DeviationListResponse,
     DeviationSummary,
+    ClientDecisionAuditResponse,
+    ClientMessageObservation,
+    ClientRecommendation,
+    ClientRecommendationDecisionRequest,
+    ClientRecommendationDecisionResponse,
+    ClientReportResponse,
+    ClientSegmentHighlight,
     DomainCalibration,
+    SystemConvergenceResponse,
+    MechanismEffectivenessResponse,
+    MechanismPosterior,
     RecommendationDetail,
     RecommendationListResponse,
     RecommendationSummary,
@@ -778,6 +788,299 @@ async def get_why_library(
             )
         )
     return WhyLibraryResponse(entries=entries, total=len(entries))
+
+
+# =============================================================================
+# Mechanism effectiveness — renders Enhancement #33's hierarchical retargeting
+# learning posteriors. Dashboard proxy over /api/v1/retargeting/learning/
+# mechanism-effectiveness so the bearer-auth surface stays consistent and
+# tenant-scoping hooks can be added here without touching the internal API.
+# =============================================================================
+
+
+@router.get(
+    "/learning/mechanism-effectiveness",
+    response_model=MechanismEffectivenessResponse,
+)
+async def get_mechanism_effectiveness(
+    user: DashboardUser = Depends(require_user),
+    archetype_id: Optional[str] = Query(
+        None,
+        description=(
+            "Canonical archetype slug (e.g., 'careful_truster'). When paired "
+            "with barrier, returns the per-mechanism Beta posteriors for that "
+            "cell. Alone, returns barrier prevalence for the archetype."
+        ),
+    ),
+    barrier: Optional[str] = Query(
+        None,
+        description=(
+            "Barrier category slug (e.g., 'trust_deficit'). Only honored when "
+            "archetype_id is also provided."
+        ),
+    ),
+) -> MechanismEffectivenessResponse:
+    """Read Enhancement #33's learned posteriors for the dashboard.
+
+    v1 single-tenant pilot returns the full hierarchy regardless of caller;
+    tenant-scoping (filter by TenantAdvertiser from migration 022) lands in
+    Phase C multi-tenant build.
+    """
+    try:
+        from adam.retargeting.api import (
+            get_mechanism_effectiveness as _retargeting_endpoint,
+        )
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.warning(
+            "Retargeting API unavailable for mechanism-effectiveness: %s", exc,
+        )
+        return MechanismEffectivenessResponse(
+            global_stats={"error": "retargeting-engine-unavailable"},
+            archetype_id=archetype_id,
+            barrier=barrier,
+        )
+
+    try:
+        raw = await _retargeting_endpoint(
+            mechanism=None, barrier=barrier, archetype_id=archetype_id,
+        )
+    except Exception as exc:  # pragma: no cover - engine error
+        logger.warning("Retargeting endpoint raised: %s", exc, exc_info=True)
+        raw = {"global_stats": {"error": str(exc)[:200]}}
+
+    posteriors_raw = raw.get("posteriors")
+    posteriors: Optional[dict[str, MechanismPosterior]] = None
+    if posteriors_raw:
+        posteriors = {
+            mech: MechanismPosterior(
+                mean=float(p.get("mean", 0.0)),
+                alpha=float(p.get("alpha", 0.0)),
+                beta=float(p.get("beta", 0.0)),
+                sample_count=int(p.get("sample_count", 0)),
+                confidence=float(p.get("confidence", 0.0)),
+            )
+            for mech, p in posteriors_raw.items()
+        }
+
+    barrier_prevalence_raw = raw.get("barrier_prevalence")
+    barrier_prevalence: Optional[dict[str, float]] = None
+    if barrier_prevalence_raw:
+        barrier_prevalence = {
+            k: float(v) for k, v in barrier_prevalence_raw.items()
+        }
+
+    return MechanismEffectivenessResponse(
+        global_stats=raw.get("global_stats") or {},
+        posteriors=posteriors,
+        barrier_prevalence=barrier_prevalence,
+        archetype_id=archetype_id,
+        barrier=barrier,
+    )
+
+
+# =============================================================================
+# System Convergence (Front-end B — internal superadmin surface)
+#
+# Cross-archetype roll-up of Enhancement #33's retargeting learning
+# state. Surface the cells the system has accumulated real confidence
+# in, the novel findings still accumulating, and the cross-archetype
+# patterns worth treating as platform-level priors. Internal only;
+# client surfaces consume the PublicLabel-translated report endpoint.
+# =============================================================================
+
+
+@router.get(
+    "/system/convergence",
+    response_model=SystemConvergenceResponse,
+)
+async def get_system_convergence(
+    user: DashboardUser = Depends(require_user),
+) -> SystemConvergenceResponse:
+    """Cross-archetype learning state for the internal operator surface."""
+    from adam.api.dashboard.system_insights_service import (
+        compose_system_convergence,
+    )
+    try:
+        return await compose_system_convergence()
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.warning(
+            "System convergence composition failed: %s", exc, exc_info=True,
+        )
+        raise HTTPException(
+            status_code=503,
+            detail="System convergence temporarily unavailable",
+        )
+
+
+@router.get(
+    "/system/client-decisions",
+    response_model=ClientDecisionAuditResponse,
+)
+async def get_client_decision_audit(
+    user: DashboardUser = Depends(require_user),
+    limit: int = Query(100, ge=1, le=500),
+) -> ClientDecisionAuditResponse:
+    """Internal audit view of every client-rec acknowledge/decline event.
+
+    Reads the UserDecision nodes produced by the Front-end A
+    acknowledge-persistence flow and joins them with their Deviation +
+    Outcome where applicable. Powers the Front-end B client-decisions
+    audit tab so the operator can see what clients have been doing with
+    recommendations and whether the causal adjudicator has resolved
+    pending declines.
+    """
+    from adam.api.dashboard.client_decisions_service import (
+        compose_client_decision_audit,
+    )
+    try:
+        return await compose_client_decision_audit(limit=limit)
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.warning(
+            "Client decision audit composition failed: %s", exc, exc_info=True,
+        )
+        raise HTTPException(
+            status_code=503,
+            detail="Client decision audit temporarily unavailable",
+        )
+
+
+# =============================================================================
+# Client Report (Front-end A)
+#
+# Produces the report-style payload for the advertiser-facing surface.
+# Strict rule: every entity that could identify our methodology is
+# resolved through the PublicLabelService before returning. See
+# adam/api/dashboard/client_report_service.py for the composer.
+# =============================================================================
+
+
+@router.get(
+    "/client/report",
+    response_model=ClientReportResponse,
+)
+async def get_client_report(
+    user: DashboardUser = Depends(require_user),
+    advertiser_id: Optional[str] = Query(
+        None,
+        description=(
+            "Advertiser to scope the report to. For the single-tenant LUXY "
+            "pilot, defaults to 'luxy_ride' when omitted."
+        ),
+    ),
+) -> ClientReportResponse:
+    """Compose the client-facing report for an advertiser.
+
+    Output contains ONLY labeled natural-language sections + safe
+    performance metrics. No internal taxonomy, no posteriors, no
+    mechanism/barrier/archetype slugs.
+
+    ``missing_labels`` is populated as an internal diagnostic when a
+    PublicLabel is absent; it is returned in the response body so an
+    internal-role caller can surface the gap, but the client renderer
+    must not display it.
+    """
+    from adam.api.dashboard.client_report_service import (
+        compose_client_report,
+    )
+
+    effective_advertiser_id = advertiser_id or "luxy_ride"
+    try:
+        report = await compose_client_report(
+            advertiser_id=effective_advertiser_id,
+        )
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.warning(
+            "Client report composition failed for %s: %s",
+            effective_advertiser_id, exc, exc_info=True,
+        )
+        raise HTTPException(
+            status_code=503,
+            detail="Report composition temporarily unavailable",
+        )
+
+    # Fold any prior acknowledge/decline decisions back into the rec
+    # list so the render shows persisted state on refresh.
+    if report.recommendations:
+        from adam.api.dashboard.client_decisions_service import (
+            bulk_decisions_for_user,
+        )
+        rec_ids = [r["id"] for r in report.recommendations]
+        prior = await bulk_decisions_for_user(user.id, rec_ids)
+        for r in report.recommendations:
+            existing = prior.get(r["id"])
+            if existing is not None:
+                r["status"] = (
+                    "acknowledged" if existing.kind == "acknowledge"
+                    else "declined"
+                )
+
+    return ClientReportResponse(
+        advertiser_id=report.advertiser_id,
+        advertiser_name=report.advertiser_name,
+        period_start=report.period_start or None,
+        period_end=report.period_end,
+        generated_at=report.generated_at,
+        impressions=report.impressions,
+        clicks=report.clicks,
+        conversions=report.conversions,
+        spend_usd=report.spend_usd,
+        ctr=report.ctr,
+        cpa_usd=report.cpa_usd,
+        roas=report.roas,
+        campaigns_live=report.campaigns_live,
+        campaigns_total=report.campaigns_total,
+        segment_highlights=[
+            ClientSegmentHighlight(**h) for h in report.segment_highlights
+        ],
+        message_observations=[
+            ClientMessageObservation(**o) for o in report.message_observations
+        ],
+        recommendations=[
+            ClientRecommendation(**r) for r in report.recommendations
+        ],
+        data_source_notes=report.data_source_notes,
+        missing_labels=report.missing_labels,
+    )
+
+
+@router.post(
+    "/client/recommendations/{recommendation_id}/decide",
+    response_model=ClientRecommendationDecisionResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def decide_client_recommendation(
+    recommendation_id: str,
+    request: ClientRecommendationDecisionRequest,
+    user: DashboardUser = Depends(require_user),
+) -> ClientRecommendationDecisionResponse:
+    """Persist the client's acknowledge or decline on a client report
+    recommendation.
+
+    Idempotent per (recommendation_id, user_id). Re-submission returns
+    the existing decision rather than creating a duplicate.
+
+    Decline with feedback_text captures the feedback as a Claim
+    (status="hypothesis") and opens a Deviation for the causal
+    adjudicator, same pipeline as the internal /decide path.
+    """
+    from adam.api.dashboard.client_decisions_service import (
+        record_client_decision,
+    )
+    try:
+        return await record_client_decision(
+            user_id=user.id,
+            recommendation_id=recommendation_id,
+            request=request,
+        )
+    except Exception as exc:
+        logger.exception(
+            "decide_client_recommendation failed for user=%s rec=%s",
+            user.id, recommendation_id,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to record decision: {exc}",
+        )
 
 
 # =============================================================================

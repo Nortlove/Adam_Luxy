@@ -402,6 +402,322 @@ export type WhyLibraryResponse = {
 };
 
 // =============================================================================
+// Mechanism Effectiveness (Front-end A — Learning surface)
+// =============================================================================
+
+/**
+ * Beta posterior on a (therapeutic mechanism | archetype, barrier) cell.
+ * Produced by Enhancement #33's 5-level hierarchical retargeting learning.
+ *
+ *   mean = alpha / (alpha + beta) is the current best-estimate of barrier-
+ *   resolution probability. Render with confidence: at low sample_count the
+ *   posterior is wide and the point-estimate is unreliable. confidence
+ *   grows with sample_count per the platform's confidence model.
+ */
+export type MechanismPosterior = {
+  mean: number;
+  alpha: number;
+  beta: number;
+  sample_count: number;
+  confidence: number;
+};
+
+export type MechanismEffectivenessResponse = {
+  global_stats: Record<string, unknown>;
+  posteriors: Record<string, MechanismPosterior> | null;
+  barrier_prevalence: Record<string, number> | null;
+  archetype_id: string | null;
+  barrier: string | null;
+};
+
+// Canonical LUXY archetype slugs (mirrors ALL_ARCHETYPES in adam/constants.py).
+// Single-tenant pilot surface; Front-end B will query the live archetype list
+// when multi-tenant lands.
+export const LUXY_ARCHETYPES: readonly string[] = [
+  "careful_truster",
+  "status_seeker",
+  "easy_decider",
+  "explorer",
+  "prevention_planner",
+  "reliable_cooperator",
+  "trusting_loyalist",
+  "dependable_loyalist",
+  "consensus_seeker",
+] as const;
+
+// Canonical barrier categories (mirrors BARRIER_CATEGORIES in constants.py).
+export const BARRIER_CATEGORIES: readonly string[] = [
+  "trust_deficit",
+  "regulatory_mismatch",
+  "processing_overload",
+  "emotional_disconnect",
+  "price_friction",
+  "relevance_gap",
+  "attention_shortage",
+  "autonomy_threat",
+  "negativity_block",
+  "ambiguity_intolerance",
+] as const;
+
+// =============================================================================
+// Subject Inspection (Front-end A — cascade-state renderer per person)
+//
+// Mirrors adam/retargeting/engines/unified_puzzle.py PersonState.to_dict().
+// Each field is a named output of the unified-puzzle inference —
+// joint, not marginal — consumed directly by the render. No composed
+// English; the narrative originates from the backend.
+// =============================================================================
+
+export type SubjectTrajectory =
+  | "approaching"
+  | "stalled"
+  | "retreating"
+  | "converting"
+  | "converted"
+  | "dormant"
+  | "unknown"
+  | string; // tolerant to future additions
+
+export type SubjectResponseType =
+  | "engager"
+  | "builder"
+  | "ad_averse"
+  | "rejector"
+  | "unknown"
+  | string;
+
+export type SubjectCommunicationStyle =
+  | "reassuring"
+  | "aspirational"
+  | "efficient"
+  | "peer"
+  | string;
+
+export type PersonState = {
+  // Identity
+  user_id: string;
+  archetype: string;
+
+  // Narrative (backend-composed, NOT hand-composed in the client)
+  narrative: string;
+
+  // Psychological state
+  dominant_barrier: string;
+  barrier_confidence: number;
+  barrier_is_somatic: boolean;
+  barrier_is_cognitive: boolean;
+  barrier_is_contextual: boolean;
+
+  // Engagement trajectory
+  trajectory: SubjectTrajectory;
+  trajectory_velocity: number;
+
+  // Readiness
+  conversion_probability: number;
+  touches_remaining: number;
+  receptive_now: boolean;
+
+  // Response pattern
+  response_type: SubjectResponseType;
+  clicks_ads: boolean;
+  responds_to_organic: boolean;
+
+  // Interaction-effect archetype (population-scale)
+  interaction_archetype: string;
+  interaction_archetype_confidence: number;
+  suppress: boolean;
+  suppress_reason: string;
+
+  // Optimal action (seller-side response to buyer-side barrier)
+  recommended_mechanism: string;
+  mechanism_rationale: string;
+  prediction_error_level: number;
+  communication_style: SubjectCommunicationStyle;
+  should_continue: boolean;
+  continue_reason: string;
+
+  // Meta
+  evidence_quality: number;
+  sessions_observed: number;
+  last_updated: number;
+};
+
+// =============================================================================
+// System Convergence (Front-end B — internal superadmin surface)
+//
+// Cross-archetype roll-up of retargeting learning state. Internal only
+// — references raw taxonomy (archetype / barrier / mechanism slugs,
+// posterior numerics) deliberately. Never consumed on client surfaces.
+// =============================================================================
+
+export type ConvergedCell = {
+  archetype: string;
+  barrier: string;
+  mechanism: string;
+  mean: number;
+  sample_count: number;
+  confidence: number;
+  alpha: number;
+  beta: number;
+  rank_score: number;
+};
+
+export type CrossArchetypePattern = {
+  mechanism: string;
+  archetypes: string[];
+  barrier: string | null;
+  mean_across_archetypes: number;
+  total_sample_count: number;
+};
+
+export type NovelFinding = {
+  archetype: string;
+  barrier: string;
+  mechanism: string;
+  mean: number;
+  sample_count: number;
+  confidence: number;
+  note: string;
+};
+
+export type AdvertiserSummary = {
+  advertiser_id: string;
+  advertiser_name: string | null;
+  total_cells_with_evidence: number;
+  top_converged_cell_count: number;
+  total_observations: number;
+};
+
+export type SystemConvergenceResponse = {
+  top_converged: ConvergedCell[];
+  novel_findings: NovelFinding[];
+  cross_archetype_patterns: CrossArchetypePattern[];
+  advertisers: AdvertiserSummary[];
+  cells_examined: number;
+  generated_at: string;
+};
+
+// =============================================================================
+// Client Decisions Audit (Front-end B — internal audit of client acknowledge
+// / decline events + their adjudication state). Internal only.
+// =============================================================================
+
+export type ClientDecisionAuditEntry = {
+  decision_id: string;
+  decision_kind: "acknowledge" | "decline";
+  decided_at: string;
+  latency_ms: number | null;
+  feedback_text: string | null;
+  rec_id: string;
+  rec_headline: string;
+  advertiser_id: string | null;
+  deviation_id: string | null;
+  adjudication_status: string | null;
+  adjudication_outcome: string | null;
+  outcome_observation: string | null;
+};
+
+export type ClientDecisionAuditSummary = {
+  total_decisions: number;
+  acknowledge_count: number;
+  decline_count: number;
+  declines_with_feedback: number;
+  pending_adjudication: number;
+  adjudicated_system_right: number;
+  adjudicated_user_right: number;
+  adjudicated_indeterminate: number;
+  acceptance_rate: number;
+};
+
+export type ClientDecisionAuditResponse = {
+  summary: ClientDecisionAuditSummary;
+  entries: ClientDecisionAuditEntry[];
+  generated_at: string;
+};
+
+// =============================================================================
+// Client Report (Front-end A — advertiser-facing surface)
+//
+// Mirrors adam/api/dashboard/models.py ClientReportResponse. Every
+// string reaching the client comes from our PublicLabelService or from
+// safe performance metrics. Internal taxonomy (archetype / mechanism /
+// barrier slugs, posteriors, construct dimensions, trajectory labels)
+// never appears here.
+// =============================================================================
+
+export type ClientSegmentHighlight = {
+  segment_label: string;
+  observation: string;
+};
+
+export type ClientMessageObservation = {
+  observation: string;
+};
+
+export type ClientRecommendationStatus =
+  | "pending"
+  | "acknowledged"
+  | "declined";
+
+export type ClientRecommendation = {
+  id: string;
+  headline: string;
+  rationale: string;
+  projected_impact: string | null;
+  confirm_label: string;
+  requires_acknowledgment: boolean;
+  status: ClientRecommendationStatus;
+};
+
+export type ClientRecommendationDecisionRequest = {
+  kind: "acknowledge" | "decline";
+  advertiser_id: string;
+  headline: string;
+  rationale: string;
+  confirm_label: string;
+  projected_impact?: string | null;
+  feedback_text?: string | null;
+  latency_ms?: number | null;
+};
+
+export type ClientRecommendationDecisionResponse = {
+  id: string;
+  recommendation_id: string;
+  kind: "acknowledge" | "decline";
+  created_at: string;
+  claim_id: string | null;
+  deviation_id: string | null;
+};
+
+export type ClientReport = {
+  advertiser_id: string;
+  advertiser_name: string | null;
+  period_start: string | null;
+  period_end: string;
+  generated_at: string;
+
+  impressions: number;
+  clicks: number;
+  conversions: number;
+  spend_usd: number;
+  ctr: number;
+  cpa_usd: number | null;
+  roas: number | null;
+  campaigns_live: number;
+  campaigns_total: number;
+
+  segment_highlights: ClientSegmentHighlight[];
+  message_observations: ClientMessageObservation[];
+  recommendations: ClientRecommendation[];
+
+  data_source_notes: string[];
+
+  // Internal-only diagnostic — do NOT render on client-facing surfaces.
+  // Populated when a PublicLabel is missing for a referenced entity.
+  missing_labels: string[];
+};
+
+// =============================================================================
 // Multi-tenant shell
 // =============================================================================
 

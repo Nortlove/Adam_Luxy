@@ -9,7 +9,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/page-header";
+import { SystemConvergenceView } from "./_components/system-convergence";
+import { ClientDecisionsView } from "./_components/client-decisions";
 
 export const metadata = {
   title: "Analytics · INFORMATIV",
@@ -45,24 +48,42 @@ export default async function AnalyticsPage() {
   return (
     <div className="flex flex-col gap-6 p-6">
       <PageHeader
-        title="Daily Analytics"
-        description="Live StackAdapt totals joined with bilateral-cascade intelligence from Neo4j."
+        title="Analytics"
+        description="Live performance totals and the internal convergence state of the retargeting learning across all active archetypes."
       />
-      {state.kind === "ok" ? (
-        <SummaryView data={state.data} />
-      ) : state.kind === "api-error" ? (
-        <Alert variant="destructive">
-          <AlertTitle>API error</AlertTitle>
-          <AlertDescription>
-            {state.message} (HTTP {state.status})
-          </AlertDescription>
-        </Alert>
-      ) : (
-        <Alert variant="destructive">
-          <AlertTitle>Backend unreachable</AlertTitle>
-          <AlertDescription>{state.message}</AlertDescription>
-        </Alert>
-      )}
+      <Tabs defaultValue="convergence" className="flex flex-col gap-4">
+        <TabsList>
+          <TabsTrigger value="convergence">System Convergence</TabsTrigger>
+          <TabsTrigger value="client-decisions">Client Decisions</TabsTrigger>
+          <TabsTrigger value="performance">Performance Totals</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="convergence">
+          <SystemConvergenceView />
+        </TabsContent>
+
+        <TabsContent value="client-decisions">
+          <ClientDecisionsView />
+        </TabsContent>
+
+        <TabsContent value="performance">
+          {state.kind === "ok" ? (
+            <SummaryView data={state.data} />
+          ) : state.kind === "api-error" ? (
+            <Alert variant="destructive">
+              <AlertTitle>API error</AlertTitle>
+              <AlertDescription>
+                {state.message} (HTTP {state.status})
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <Alert variant="destructive">
+              <AlertTitle>Backend unreachable</AlertTitle>
+              <AlertDescription>{state.message}</AlertDescription>
+            </Alert>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
@@ -71,7 +92,7 @@ function SummaryView({ data }: { data: AnalyticsSummary }) {
   const lastUpdated = new Date(data.last_updated);
 
   return (
-    <>
+    <div className="flex flex-col gap-4">
       {data.stackadapt_source === "unavailable" ? (
         <Alert>
           <AlertTitle>StackAdapt unreachable</AlertTitle>
@@ -154,7 +175,7 @@ function SummaryView({ data }: { data: AnalyticsSummary }) {
       <p className="text-xs text-muted-foreground">
         Last updated {lastUpdated.toLocaleString()}
       </p>
-    </>
+    </div>
   );
 }
 

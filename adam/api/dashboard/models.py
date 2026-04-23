@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import datetime
-from typing import Literal, Optional
+from datetime import datetime, timezone
+from typing import Any, Dict, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -60,6 +60,262 @@ class CampaignListResponse(BaseModel):
     campaigns: list[CampaignSummary]
     total: int
     stackadapt: StackAdaptSource
+
+
+# =============================================================================
+# Mechanism effectiveness (Front-end A — learning surface)
+#
+# Renders what Enhancement #33's 5-level hierarchical retargeting learning is
+# accumulating. Shows, per (archetype, barrier) cell: the Beta posterior on
+# every therapeutic mechanism — mean efficacy, credible-interval width, and
+# the sample count backing each estimate. This is the scientific substance
+# of the pilot: proof that the system is learning per person, not guessing
+# from static priors.
+# =============================================================================
+
+
+class MechanismPosterior(BaseModel):
+    """Beta posterior on a (mechanism | barrier, archetype) cell.
+
+    mean = alpha / (alpha + beta) is the current best estimate of resolution
+    probability. confidence grows with sample_count; at low N the posterior
+    is wide and the UI should render the uncertainty, not the point estimate.
+    """
+    mean: float
+    alpha: float
+    beta: float
+    sample_count: int
+    confidence: float
+
+
+class MechanismEffectivenessResponse(BaseModel):
+    global_stats: Dict[str, Any] = Field(default_factory=dict)
+    posteriors: Optional[Dict[str, MechanismPosterior]] = None
+    barrier_prevalence: Optional[Dict[str, float]] = None
+    archetype_id: Optional[str] = None
+    barrier: Optional[str] = None
+
+
+# =============================================================================
+# Client Report (Front-end A)
+#
+# Report-style payload for the advertiser-facing surface. Strict rule: NO
+# internal taxonomy, NO posterior numerics, NO methodology reveal. Every
+# entity referenced is translated through the PublicLabelService before
+# it reaches this response. See adam/api/dashboard/client_report_service.py
+# for the composer and the strategic rationale.
+# =============================================================================
+
+
+class ClientSegmentHighlight(BaseModel):
+    """Outcome-framed observation about one customer segment. The
+    segment_label here is a PublicLabel — never an internal archetype slug."""
+    segment_label: str
+    observation: str
+
+
+class ClientMessageObservation(BaseModel):
+    """A single message-style observation sentence — composed from
+    labels + outcomes, never the underlying mechanism name."""
+    observation: str
+
+
+class ClientRecommendation(BaseModel):
+    """Active recommendation with natural-language rationale.
+
+    Rationale is plain English composed from public labels and outcome
+    framing. No posterior values, no mechanism/archetype/barrier slugs,
+    no confidence decimals.
+    """
+    id: str
+    headline: str
+    rationale: str
+    projected_impact: Optional[str] = None
+    confirm_label: str
+    requires_acknowledgment: bool
+    status: Literal["pending", "acknowledged", "declined"] = "pending"
+
+
+# =============================================================================
+# System Convergence (Front-end B — internal superadmin surface)
+#
+# Cross-archetype roll-up of the retargeting learning state. Lets the
+# operator see which (archetype, barrier, mechanism) cells the system
+# has accumulated real evidence for, which are still noisy, and which
+# patterns recur across multiple archetypes (platform-level signal).
+#
+# Internal only — never rendered on client surfaces. The cells here
+# reference the raw internal taxonomy (archetype slugs, barrier names,
+# mechanism names, posterior numerics) deliberately — that is the point
+# of Front-end B.
+# =============================================================================
+
+
+class ConvergedCell(BaseModel):
+    """One (archetype, barrier, mechanism) cell with accumulated evidence."""
+    archetype: str
+    barrier: str
+    mechanism: str
+    mean: float
+    sample_count: int
+    confidence: float
+    alpha: float
+    beta: float
+    # Rank score used for ordering: mean * confidence. Computed server-
+    # side so the render doesn't re-derive and the ordering is stable.
+    rank_score: float
+
+
+class CrossArchetypePattern(BaseModel):
+    """A mechanism that wins across multiple archetypes — platform-level
+    signal worth treating as a stronger prior for novel campaigns."""
+    mechanism: str
+    archetypes: list[str]
+    barrier: Optional[str] = None
+    mean_across_archetypes: float
+    total_sample_count: int
+
+
+class NovelFinding(BaseModel):
+    """A cell where evidence is accumulating but confidence is still
+    below the threshold for treating as a validated prior. Flagged so
+    the operator can decide whether to push more impressions through
+    it or suppress it."""
+    archetype: str
+    barrier: str
+    mechanism: str
+    mean: float
+    sample_count: int
+    confidence: float
+    note: str  # short description of why this is flagged
+
+
+class AdvertiserSummary(BaseModel):
+    """Per-advertiser roll-up. Pilot is single-tenant (LUXY); multi-
+    tenant breakdown arrives with Phase C shell."""
+    advertiser_id: str
+    advertiser_name: Optional[str]
+    total_cells_with_evidence: int
+    top_converged_cell_count: int
+    total_observations: int
+
+
+class SystemConvergenceResponse(BaseModel):
+    # Converged cells: mean*confidence > threshold AND sample_count >= floor.
+    # These are the system's "we know this works" entries.
+    top_converged: list[ConvergedCell] = Field(default_factory=list)
+    # Novel findings: accumulating but not yet validated.
+    novel_findings: list[NovelFinding] = Field(default_factory=list)
+    # Cross-archetype patterns: same mechanism winning across ≥2 archetypes.
+    cross_archetype_patterns: list[CrossArchetypePattern] = Field(
+        default_factory=list,
+    )
+    advertisers: list[AdvertiserSummary] = Field(default_factory=list)
+    # Total cells examined (diagnostic — operator sees coverage vs signal).
+    cells_examined: int = 0
+    generated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class ClientDecisionAuditEntry(BaseModel):
+    """One row in the internal client-decisions audit view. Connects a
+    Front-end A acknowledge/decline event to its adjudication state."""
+    decision_id: str
+    decision_kind: Literal["acknowledge", "decline"]
+    decided_at: datetime
+    latency_ms: Optional[int] = None
+    feedback_text: Optional[str] = None
+    rec_id: str
+    rec_headline: str
+    advertiser_id: Optional[str] = None
+    deviation_id: Optional[str] = None
+    adjudication_status: Optional[str] = None  # "pending" | "adjudicated"
+    adjudication_outcome: Optional[str] = None  # "user_right" | "system_right" | "indeterminate"
+    outcome_observation: Optional[str] = None  # json-encoded observation from adjudicator
+
+
+class ClientDecisionAuditSummary(BaseModel):
+    total_decisions: int
+    acknowledge_count: int
+    decline_count: int
+    declines_with_feedback: int
+    pending_adjudication: int
+    adjudicated_system_right: int
+    adjudicated_user_right: int
+    adjudicated_indeterminate: int
+    acceptance_rate: float
+
+
+class ClientDecisionAuditResponse(BaseModel):
+    summary: ClientDecisionAuditSummary
+    entries: list[ClientDecisionAuditEntry] = Field(default_factory=list)
+    generated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class ClientRecommendationDecisionRequest(BaseModel):
+    """Client acknowledges (accepts) or declines a recommendation.
+
+    The client sends a snapshot of what they saw — headline, rationale,
+    confirm_label — so we can persist an audit trail even though the
+    rec was generated on-the-fly by the report composer and doesn't
+    exist in the graph until the decision is made (persist-on-decide).
+    """
+    kind: Literal["acknowledge", "decline"]
+    advertiser_id: str
+    headline: str
+    rationale: str
+    confirm_label: str
+    projected_impact: Optional[str] = None
+    feedback_text: Optional[str] = Field(
+        None,
+        description="Optional client-supplied reason when declining.",
+    )
+    latency_ms: Optional[int] = Field(
+        None,
+        description=(
+            "How long the client took to decide, in milliseconds. Signal "
+            "for Type-1 vs Type-2 processing on the decision — captured "
+            "for learning-loop calibration."
+        ),
+    )
+
+
+class ClientRecommendationDecisionResponse(BaseModel):
+    id: str
+    recommendation_id: str
+    kind: Literal["acknowledge", "decline"]
+    created_at: datetime
+    claim_id: Optional[str] = None
+    deviation_id: Optional[str] = None
+
+
+class ClientReportResponse(BaseModel):
+    advertiser_id: str
+    advertiser_name: Optional[str] = None
+    period_start: Optional[str] = None
+    period_end: str
+    generated_at: datetime
+
+    impressions: int
+    clicks: int
+    conversions: int
+    spend_usd: float
+    ctr: float
+    cpa_usd: Optional[float] = None
+    roas: Optional[float] = None
+    campaigns_live: int
+    campaigns_total: int
+
+    segment_highlights: list[ClientSegmentHighlight] = Field(default_factory=list)
+    message_observations: list[ClientMessageObservation] = Field(default_factory=list)
+    recommendations: list[ClientRecommendation] = Field(default_factory=list)
+
+    data_source_notes: list[str] = Field(default_factory=list)
+
+    # Internal-only diagnostic — NOT rendered on the client surface.
+    # Populated when a PublicLabel is missing; signals the internal team
+    # to author a label. The route returns this field in responses only
+    # to internal-role callers; the client renderer must ignore it.
+    missing_labels: list[str] = Field(default_factory=list)
 
 
 # =============================================================================

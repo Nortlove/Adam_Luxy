@@ -11,6 +11,7 @@ import {
   Activity,
   Lightbulb,
   BrainCircuit,
+  ExternalLink,
 } from "lucide-react";
 
 import {
@@ -88,6 +89,14 @@ export function AppSidebar({
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
+        <Link
+          href="/client/report"
+          className="flex items-center gap-2 rounded-md px-2 py-2 text-xs text-muted-foreground hover:bg-muted hover:text-foreground group-data-[collapsible=icon]:hidden"
+          title="Switch to the client-facing report surface (QA)"
+        >
+          <ExternalLink className="size-3" />
+          <span>View client surface →</span>
+        </Link>
         <div className="flex items-center gap-2 rounded-md px-2 py-2 text-sm group-data-[collapsible=icon]:hidden">
           <div className="flex size-8 items-center justify-center rounded-full bg-muted font-medium">
             {userName.charAt(0).toUpperCase()}

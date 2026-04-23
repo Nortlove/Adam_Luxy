@@ -11,6 +11,8 @@ import { DecayReportView } from "./_components/decay-report";
 import { HorizonsView } from "./_components/horizons";
 import { WhyLibraryView } from "./_components/why-library";
 import { AdjudicateButton } from "./_components/adjudicate-button";
+import { MechanismEffectivenessView } from "./_components/mechanism-effectiveness";
+import { SubjectInspectionView } from "./_components/subject-inspection";
 
 export const metadata = {
   title: "Learning · INFORMATIV",
@@ -45,8 +47,10 @@ export default async function LearningPage() {
         description="Task 33 Decay Adjudicator output and multi-horizon adjudication progress on deviations. Where Loop A (analytics) and Loop B (teaming) cross-pollinate."
       />
 
-      <Tabs defaultValue="decay" className="flex flex-col gap-4">
+      <Tabs defaultValue="mechanisms" className="flex flex-col gap-4">
         <TabsList>
+          <TabsTrigger value="mechanisms">Mechanism Effectiveness</TabsTrigger>
+          <TabsTrigger value="subject">Subject Inspection</TabsTrigger>
           <TabsTrigger value="decay">Decay Adjudicator</TabsTrigger>
           <TabsTrigger value="horizons">
             Adjudication Horizons
@@ -65,6 +69,14 @@ export default async function LearningPage() {
             )}
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="mechanisms">
+          <MechanismEffectivenessView />
+        </TabsContent>
+
+        <TabsContent value="subject">
+          <SubjectInspectionView />
+        </TabsContent>
 
         <TabsContent value="decay">
           {decay === null ? (
