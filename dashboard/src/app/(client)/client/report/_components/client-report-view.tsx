@@ -97,7 +97,10 @@ function ReportMeta({ report }: { report: ClientReport }) {
               Generated
             </span>
             <span className="text-sm font-medium">
-              {generated.toLocaleString(undefined, {
+              {/* Pin locale: server (Node's default) and client (browser's
+                  locale) produce different strings with `undefined` and
+                  trigger a React hydration mismatch. */}
+              {generated.toLocaleString("en-US", {
                 dateStyle: "medium",
                 timeStyle: "short",
               })}

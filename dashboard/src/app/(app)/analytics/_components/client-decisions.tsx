@@ -38,7 +38,11 @@ function pct(v: number): string {
 function formatRelative(iso: string): string {
   const ts = new Date(iso);
   if (Number.isNaN(ts.getTime())) return "—";
-  return ts.toLocaleString(undefined, {
+  // Pin locale so server-rendered HTML matches client hydration output.
+  // Using user's locale via `undefined` produces different strings
+  // on the server (Node's locale) vs browser (user's locale) and
+  // triggers a React hydration mismatch.
+  return ts.toLocaleString("en-US", {
     dateStyle: "medium",
     timeStyle: "short",
   });
