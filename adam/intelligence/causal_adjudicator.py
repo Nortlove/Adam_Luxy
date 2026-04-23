@@ -276,6 +276,75 @@ _EVALUATORS = {
 }
 
 
+def _evaluate_client_recommendation(
+    deviation: dict[str, Any],
+    recommendation: dict[str, Any],
+) -> _Evaluation:
+    """Adjudicate a client-facing recommendation Deviation (Front-end A).
+
+    Client recommendations (Recommendation.kind = 'client') propose
+    actions to an advertiser — shift budget to a segment, separate
+    messaging for a second segment, etc. When the client declines, the
+    action is not taken, which means there is no natural before/after
+    for the system to observe against.
+
+    Full adjudication of these deviations requires the outcome-
+    observation wiring flagged as Structural Weakness #4 (2026-04-23
+    review): a mechanism that measures whether the projected impact
+    named by the recommendation actually materialized at horizon
+    expiry, AND whether it would have materialized under the
+    counterfactual action. Until that wiring ships, the adjudicator
+    returns *honest indeterminate* — NOT silent skip. The Deviation
+    still gets marked adjudicated, an Outcome node still records the
+    pending-infrastructure dependency, and the record is available for
+    re-adjudication when the outcome-observation layer lands.
+
+    This is the correct v1 behavior. Forging a before/after comparison
+    from StackAdapt totals here would reintroduce exactly the A5
+    correlational drift the platform is defined against.
+    """
+    user_choice = deviation.get("user_choice", "")
+    if user_choice == "acknowledge":
+        # Client accepted the system's preferred action. Not a
+        # deviation; the dashboard shouldn't have created one. If it
+        # did (idempotency edge case), mark indeterminate with the
+        # reason.
+        return _Evaluation(
+            outcome="indeterminate",
+            rationale=(
+                "Client acknowledged the recommendation — no deviation to "
+                "adjudicate against."
+            ),
+            metric=None,
+            before=None,
+            after=None,
+        )
+
+    # kind='client' + user_choice='decline' is the typical case.
+    # Outcome-observation wiring for client-rec projected impact is
+    # Structural Weakness #4 (pending). Record indeterminate honestly.
+    headline = recommendation.get("title") or "(no headline)"
+    feedback = deviation.get("stated_rationale") or ""
+    feedback_suffix = (
+        f" Client feedback: \"{feedback}\"." if feedback else ""
+    )
+    return _Evaluation(
+        outcome="indeterminate",
+        rationale=(
+            f"Client declined: {headline}. "
+            "Directional adjudication of client recommendations requires "
+            "outcome-observation wiring for projected-impact claims "
+            "(Structural Weakness #4, 2026-04-23 review). Until that "
+            "lands, declines are recorded for later re-adjudication; "
+            "no user_right / system_right determination is made."
+            f"{feedback_suffix}"
+        ),
+        metric=None,
+        before=None,
+        after=None,
+    )
+
+
 # =============================================================================
 # Why Library generation
 # =============================================================================
@@ -355,7 +424,72 @@ async def _adjudicate_one(
         return None
     recommendation = dict(rec_record["r"])
 
+    # Dispatch: client recommendations (kind='client' from Front-end A)
+    # have their own evaluator path because their shape differs from the
+    # internal-type-based recs (no alternatives, no UncertaintyBreakdown,
+    # natural-language rationale only). Check kind before the type-based
+    # dispatch so client recs don't fall through to the "no evaluator
+    # registered" silent-skip path.
+    rec_kind = recommendation.get("kind", "")
     rec_type = recommendation.get("type", "")
+
+    if rec_kind == "client":
+        client_evaluation = _evaluate_client_recommendation(
+            deviation, recommendation,
+        )
+        # Persist adjudication directly for client recs (bypasses the
+        # internal type-dispatch evaluator + StackAdapt snapshot path,
+        # since client-rec adjudication doesn't compare campaign
+        # totals — it records the pending-infrastructure dependency
+        # honestly).
+        now = datetime.now(timezone.utc)
+        await session.run(
+            """
+            MATCH (d:Deviation {id: $id})
+            SET d.adjudication_status = 'adjudicated',
+                d.adjudication_outcome = $outcome,
+                d.adjudicated_at = $now
+            """,
+            id=deviation["id"],
+            outcome=client_evaluation.outcome,
+            now=now,
+        )
+        outcome_id = f"outcome:{uuid.uuid4()}"
+        await session.run(
+            """
+            MATCH (d:Deviation {id: $deviation_id})
+            CREATE (o:Outcome {
+              id: $outcome_id,
+              observation: $observation,
+              horizon_ends_at: $now,
+              observed_at: $now,
+              attributed_to: 'pending_outcome_observation_infrastructure',
+              confidence: 0.0
+            })
+            MERGE (d)-[:RESOLVED_AS]->(o)
+            """,
+            deviation_id=deviation["id"],
+            outcome_id=outcome_id,
+            observation=json.dumps(
+                {
+                    "metric": None,
+                    "before": None,
+                    "after": None,
+                    "rationale": client_evaluation.rationale,
+                    "pending_weakness": "structural_weakness_4",
+                }
+            ),
+            now=now,
+        )
+        # No WhyLibraryEntry — indeterminate outcomes don't generate
+        # defensive warnings.
+        return AdjudicationResult(
+            deviation_id=deviation["id"],
+            recommendation_id=rec_id,
+            outcome=client_evaluation.outcome,
+            rationale=client_evaluation.rationale,
+        )
+
     evaluator = _EVALUATORS.get(rec_type)
     if evaluator is None:
         return AdjudicationResult(
