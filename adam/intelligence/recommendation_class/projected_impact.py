@@ -330,6 +330,50 @@ class ProjectedImpact:
         payload = self.substantive_content()
         return canonical_hash(payload)
 
+    def to_dict(self) -> Dict[str, Any]:
+        """Return full serializable dict (substantive content + metadata).
+
+        Round-trips cleanly with from_dict(). The content_hash is filled in
+        from compute_content_hash() if not already set; created_at is filled
+        with the current UTC timestamp if not already set.
+        """
+        payload = self.substantive_content()
+        payload["created_at"] = self.created_at or datetime.now(timezone.utc).isoformat()
+        payload["content_hash"] = self.content_hash or self.compute_content_hash()
+        return payload
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "ProjectedImpact":
+        """Reconstruct a ProjectedImpact from a serialized dict.
+
+        Symmetric with to_dict(). Does not re-compute content_hash — the
+        hash field in `data` is preserved so round-trip integrity is
+        verifiable by the caller (recompute and compare).
+        """
+        gfo = data["goal_fulfillment_outcome"]
+        return cls(
+            claim_id=data["claim_id"],
+            recommendation_class_id=data["recommendation_class_id"],
+            priming_condition=PrimingCondition(**data["priming_condition"]),
+            audience_scope=AudienceScope(**data["audience_scope"]),
+            goal_fulfillment_outcome=GoalFulfillmentOutcome(
+                outcome_metric=gfo["outcome_metric"],
+                projected_distribution=SpiesDistribution(
+                    **gfo["projected_distribution"]
+                ),
+                autopilot_route_fraction=gfo["autopilot_route_fraction"],
+                attention_route_fraction=gfo["attention_route_fraction"],
+                weighting_by_processing_depth=gfo.get(
+                    "weighting_by_processing_depth", True
+                ),
+            ),
+            competing_activations=CompetingActivations(**data["competing_activations"]),
+            audience_summary=AudienceSummary(**data["audience_summary"]),
+            horizon_days=data.get("horizon_days", 14),
+            created_at=data.get("created_at"),
+            content_hash=data.get("content_hash"),
+        )
+
 
 # =============================================================================
 # Hashing — canonical JSON → SHA-256 hex

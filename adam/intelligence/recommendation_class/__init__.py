@@ -34,6 +34,13 @@ from adam.intelligence.recommendation_class.graph import (
     get_recommendation_class_graph,
     recommendation_class_id,
 )
+from adam.intelligence.recommendation_class.pre_registration import (
+    current_git_head,
+    pre_registration_path,
+    pre_registration_root,
+    read_pre_registration,
+    write_pre_registration,
+)
 from adam.intelligence.recommendation_class.projected_impact import (
     AudienceScope,
     AudienceSummary,
@@ -57,6 +64,11 @@ __all__ = [
     "SpiesDistribution",
     "canonical_hash",
     "claim_node_id",
+    "current_git_head",
     "get_recommendation_class_graph",
+    "pre_registration_path",
+    "pre_registration_root",
+    "read_pre_registration",
     "recommendation_class_id",
+    "write_pre_registration",
 ]
