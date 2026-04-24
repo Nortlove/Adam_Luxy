@@ -34,6 +34,14 @@ from adam.intelligence.recommendation_class.graph import (
     get_recommendation_class_graph,
     recommendation_class_id,
 )
+from adam.intelligence.recommendation_class.inferential_chain import (
+    ActivatesEdge,
+    InferentialChainGraph,
+    PsychologicalConstructUpsert,
+    ReceptivityEdge,
+    RequiresEdge,
+    get_inferential_chain_graph,
+)
 from adam.intelligence.recommendation_class.pre_registration import (
     current_git_head,
     pre_registration_path,
@@ -53,18 +61,24 @@ from adam.intelligence.recommendation_class.projected_impact import (
 )
 
 __all__ = [
+    "ActivatesEdge",
     "AudienceScope",
     "AudienceSummary",
     "CompetingActivations",
     "GoalFulfillmentOutcome",
+    "InferentialChainGraph",
     "PrimingCondition",
     "ProjectedImpact",
+    "PsychologicalConstructUpsert",
+    "ReceptivityEdge",
     "RecommendationClassGraph",
     "RecommendationClassIdentity",
+    "RequiresEdge",
     "SpiesDistribution",
     "canonical_hash",
     "claim_node_id",
     "current_git_head",
+    "get_inferential_chain_graph",
     "get_recommendation_class_graph",
     "pre_registration_path",
     "pre_registration_root",
