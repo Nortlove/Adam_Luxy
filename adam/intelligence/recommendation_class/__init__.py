@@ -27,6 +27,13 @@ Phase of this package:
   git-commit pre-registration log.
 """
 
+from adam.intelligence.recommendation_class.graph import (
+    RecommendationClassGraph,
+    RecommendationClassIdentity,
+    claim_node_id,
+    get_recommendation_class_graph,
+    recommendation_class_id,
+)
 from adam.intelligence.recommendation_class.projected_impact import (
     AudienceScope,
     AudienceSummary,
@@ -45,6 +52,11 @@ __all__ = [
     "GoalFulfillmentOutcome",
     "PrimingCondition",
     "ProjectedImpact",
+    "RecommendationClassGraph",
+    "RecommendationClassIdentity",
     "SpiesDistribution",
     "canonical_hash",
+    "claim_node_id",
+    "get_recommendation_class_graph",
+    "recommendation_class_id",
 ]
