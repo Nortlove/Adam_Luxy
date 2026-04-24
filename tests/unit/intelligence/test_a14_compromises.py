@@ -7,7 +7,6 @@ import pytest
 from adam.intelligence.recommendation_class import (
     ACTIVE_COMPROMISES,
     COUNTER_REGULATION_UNTRACKED,
-    INFERENTIAL_CHAIN_ATTRIBUTION_EMPTY,
     POSTURE_ONLY_ROUTE_SPLIT,
     SINGLE_LEVEL_SHRINKAGE,
     VARIATIONAL_POSTERIOR_APPROXIMATION,
@@ -26,11 +25,18 @@ def test_active_compromises_contains_all_named_constants() -> None:
         SINGLE_LEVEL_SHRINKAGE,
         POSTURE_ONLY_ROUTE_SPLIT,
         COUNTER_REGULATION_UNTRACKED,
-        INFERENTIAL_CHAIN_ATTRIBUTION_EMPTY,
         VARIATIONAL_POSTERIOR_APPROXIMATION,
     }
     assert set(ACTIVE_COMPROMISES) == expected
-    assert len(ACTIVE_COMPROMISES) == 5
+    assert len(ACTIVE_COMPROMISES) == 4
+
+
+def test_inferential_chain_attribution_empty_is_retired() -> None:
+    # Retired 2026-04-25. The name should not be importable from the
+    # package root; any remaining consumer must migrate to the
+    # chain_reader / attribute_residual path.
+    from adam.intelligence import recommendation_class as pkg
+    assert not hasattr(pkg, "INFERENTIAL_CHAIN_ATTRIBUTION_EMPTY")
 
 
 def test_all_compromise_names_are_unique() -> None:
@@ -91,12 +97,6 @@ def test_retires_at_weakness_is_positive_or_none(
 
 def test_single_level_shrinkage_retires_at_weakness_8() -> None:
     assert SINGLE_LEVEL_SHRINKAGE.retires_at_weakness == 8
-
-
-def test_inferential_chain_attribution_empty_cites_weeks_8_9() -> None:
-    trigger = INFERENTIAL_CHAIN_ATTRIBUTION_EMPTY.retirement_trigger.lower()
-    assert "week" in trigger
-    assert "8" in trigger and "9" in trigger
 
 
 def test_counter_regulation_trigger_names_habituation_data() -> None:

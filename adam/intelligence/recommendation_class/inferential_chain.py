@@ -39,9 +39,13 @@ import asyncio
 import logging
 import threading
 from dataclasses import dataclass, field
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from adam.infrastructure.neo4j.client import Neo4jClient, get_neo4j_client
+from adam.intelligence.recommendation_class.chain_attribution import (
+    ChainEdge,
+    run_blocking_with_timeout,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -272,6 +276,58 @@ RETURN type(r) AS rel_type
 
 
 # =============================================================================
+# CHAIN TRAVERSAL — read path for attribution (a14_compromises.INFERENTIAL_CHAIN_ATTRIBUTION_EMPTY retirement)
+# =============================================================================
+
+# Walk the inferential chain BACKWARD from a mechanism node, up to
+# `max_depth` hops of ACTIVATES chained upstream of the
+# CREATES_RECEPTIVITY_TO layer. Also returns outbound REQUIRES edges
+# from the mechanism. Each record carries the stored strength /
+# effectiveness and evidence_count so the attribution function can
+# weight without re-reading the graph.
+#
+# depth convention:
+#   depth 1: direct (construct)-[CREATES_RECEPTIVITY_TO]->(mechanism)
+#            and (mechanism)-[REQUIRES]->(prereq)
+#   depth 2: upstream (upstream)-[ACTIVATES]->(receptive_construct)
+#   depth 3+: further ACTIVATES cascade (parameterized by max_depth)
+
+_CYPHER_CHAIN_RECEPTIVITY = """
+MATCH (c:PsychologicalConstruct)-[r:CREATES_RECEPTIVITY_TO]->(m:CognitiveMechanism {name: $mechanism_name})
+RETURN
+    c.construct_id AS source_id,
+    m.name AS target_id,
+    coalesce(r.effectiveness, 0.0) AS strength,
+    coalesce(r.evidence_count, 0) AS evidence_count
+"""
+
+_CYPHER_CHAIN_REQUIRES = """
+MATCH (m:CognitiveMechanism {name: $mechanism_name})-[r:REQUIRES]->(c:PsychologicalConstruct)
+RETURN
+    m.name AS source_id,
+    c.construct_id AS target_id,
+    coalesce(r.evidence_count, 0) AS evidence_count
+"""
+
+# ACTIVATES cascade upstream of the receptive-construct layer. Neo4j
+# path pattern `*1..K` walks ACTIVATES up to K hops. We cap at
+# max_depth-1 because depth 1 is the receptivity edge; each additional
+# hop adds one depth level.
+_CYPHER_CHAIN_ACTIVATES_CASCADE = """
+MATCH (receptive:PsychologicalConstruct)-[:CREATES_RECEPTIVITY_TO]->(:CognitiveMechanism {name: $mechanism_name})
+MATCH path = (upstream:PsychologicalConstruct)-[rels:ACTIVATES*1..%d]->(receptive)
+UNWIND range(0, size(rels) - 1) AS i
+WITH nodes(path) AS ns, rels[i] AS r, i
+RETURN
+    ns[i].construct_id AS source_id,
+    ns[i+1].construct_id AS target_id,
+    coalesce(r.strength, 0.0) AS strength,
+    coalesce(r.evidence_count, 0) AS evidence_count,
+    i + 2 AS depth_from_mechanism
+"""
+
+
+# =============================================================================
 # SERVICE
 # =============================================================================
 
@@ -430,6 +486,135 @@ class InferentialChainGraph:
                 exc, exc_info=True,
             )
             return None
+
+    # ── CHAIN TRAVERSAL ────────────────────────────────────────────────
+
+    async def chain_edges_for_mechanism(
+        self, mechanism_name: str, max_depth: int = 2,
+    ) -> List[ChainEdge]:
+        """Walk the inferential chain backward from a mechanism.
+
+        Returns every theoretical edge reachable within ``max_depth``
+        hops:
+        - ``CREATES_RECEPTIVITY_TO`` edges inbound to the mechanism
+          (depth 1).
+        - ``REQUIRES`` edges outbound from the mechanism (depth 1).
+        - ``ACTIVATES`` cascade upstream of each receptive construct
+          (depth 2..max_depth).
+
+        Empty list when Neo4j is unavailable, when the mechanism does
+        not exist in the graph, or when the mechanism has no chain
+        edges wired. Empty list is the honest response — attribution
+        on a graph-less mechanism must not fabricate structure.
+        """
+        if max_depth < 1:
+            raise ValueError(
+                f"max_depth must be >= 1; got {max_depth}"
+            )
+        if not mechanism_name:
+            raise ValueError("mechanism_name is required")
+        if not await self._ensure_connected():
+            return []
+
+        edges: List[ChainEdge] = []
+        try:
+            async with await self._client.session() as session:
+                # Depth-1 CREATES_RECEPTIVITY_TO inbound.
+                result = await session.run(
+                    _CYPHER_CHAIN_RECEPTIVITY,
+                    mechanism_name=mechanism_name,
+                )
+                records = await result.data()
+                for record in records:
+                    edges.append(
+                        ChainEdge(
+                            source_id=record["source_id"],
+                            target_id=record["target_id"],
+                            rel_type="CREATES_RECEPTIVITY_TO",
+                            strength=float(record["strength"]),
+                            evidence_count=int(record["evidence_count"]),
+                            depth_from_mechanism=1,
+                        )
+                    )
+
+                # Depth-1 REQUIRES outbound.
+                result = await session.run(
+                    _CYPHER_CHAIN_REQUIRES,
+                    mechanism_name=mechanism_name,
+                )
+                records = await result.data()
+                for record in records:
+                    edges.append(
+                        ChainEdge(
+                            source_id=record["source_id"],
+                            target_id=record["target_id"],
+                            rel_type="REQUIRES",
+                            # REQUIRES has no strength property; pilot
+                            # attribution weights it at 0 regardless.
+                            strength=0.0,
+                            evidence_count=int(record["evidence_count"]),
+                            depth_from_mechanism=1,
+                        )
+                    )
+
+                # Depth-2..max_depth ACTIVATES cascade. max_depth=1 skips
+                # this layer entirely — some mechanisms have only direct
+                # receptivity edges wired.
+                if max_depth >= 2:
+                    cypher = _CYPHER_CHAIN_ACTIVATES_CASCADE % (max_depth - 1,)
+                    result = await session.run(
+                        cypher, mechanism_name=mechanism_name,
+                    )
+                    records = await result.data()
+                    for record in records:
+                        edges.append(
+                            ChainEdge(
+                                source_id=record["source_id"],
+                                target_id=record["target_id"],
+                                rel_type="ACTIVATES",
+                                strength=float(record["strength"]),
+                                evidence_count=int(record["evidence_count"]),
+                                depth_from_mechanism=int(
+                                    record["depth_from_mechanism"]
+                                ),
+                            )
+                        )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "chain_edges_for_mechanism(%r) failed: %s",
+                mechanism_name, exc, exc_info=True,
+            )
+            return []
+
+        return edges
+
+    def chain_edges_for_mechanism_sync(
+        self,
+        mechanism_name: str,
+        max_depth: int = 2,
+        timeout_seconds: float = 2.0,
+    ) -> List[ChainEdge]:
+        """Blocking wrapper over ``chain_edges_for_mechanism``.
+
+        The Adjudicator is synchronous; this bridges to the async
+        Neo4j path over the module's persistent background loop.
+        Returns ``[]`` on timeout rather than blocking adjudication
+        indefinitely.
+        """
+        loop = _get_bg_loop()
+        try:
+            result = run_blocking_with_timeout(
+                loop,
+                self.chain_edges_for_mechanism(mechanism_name, max_depth),
+                timeout_seconds=timeout_seconds,
+            )
+            return result  # type: ignore[return-value]
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "chain_edges_for_mechanism_sync(%r) failed: %s",
+                mechanism_name, exc,
+            )
+            return []
 
     # ── INTERNAL ────────────────────────────────────────────────────────
 

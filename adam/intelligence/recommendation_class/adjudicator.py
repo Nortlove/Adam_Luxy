@@ -51,6 +51,10 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Dict, List, Optional, Sequence
 
+from adam.intelligence.recommendation_class.chain_attribution import (
+    ChainReader,
+    attribute_residual,
+)
 from adam.intelligence.recommendation_class.plant_model import (
     PlantModel, PlantModelInputs,
 )
@@ -217,12 +221,13 @@ class AdjudicatorOutput:
     parameterization_sensitivity: ParameterizationSensitivity
     evidence_trace: EvidenceTrace
     inferential_chain_attribution: Dict[str, float] = field(default_factory=dict)
-    # Populated only when partition == FAILING. For pilot launch the
-    # attribution is {} — see a14_compromises.INFERENTIAL_CHAIN_ATTRIBUTION_EMPTY.
-    # The graph-traversal helper that weights each ACTIVATES /
-    # CREATES_RECEPTIVITY_TO edge by its contribution to the residual
-    # lands in the weeks-8-9 slice. The field is present in the shape
-    # so downstream readers don't need to guard for its absence.
+    # Populated when partition == FAILING AND the Adjudicator was
+    # constructed with a chain_reader. Keys are deterministic link_ids
+    # (see chain_attribution.compute_link_id); values are signed
+    # portions of the unexplained residual summing to residual.unexplained.
+    # Empty dict means either (a) partition was not FAILING, (b) no
+    # chain_reader was injected, or (c) no strength-bearing edges were
+    # reachable from the mechanism — all honest empty states.
 
 
 # =============================================================================
@@ -252,6 +257,12 @@ class Adjudicator:
     bias_magnitudes: Dict[str, float] = field(
         default_factory=lambda: dict(DEFAULT_BIAS_MAGNITUDES),
     )
+    chain_reader: Optional[ChainReader] = None
+    # Optional injection. When provided, every FAILING cell triggers a
+    # chain-edge traversal from the rec-class's mechanism and
+    # attribution of the unexplained residual to specific theoretical
+    # edges. When None, `inferential_chain_attribution` stays empty —
+    # the adjudicator does NOT invent a default traversal.
 
     def __post_init__(self) -> None:
         if self.untested_min_sample_size < 1:
@@ -317,6 +328,12 @@ class Adjudicator:
             sample_size=realized.total_sample_size,
         )
 
+        attribution = self._chain_attribution(
+            partition=partition,
+            plant_inputs=plant_inputs,
+            residual=residual,
+        )
+
         return AdjudicatorOutput(
             claim_id=projected.claim_id,
             recommendation_class_id=projected.recommendation_class_id,
@@ -327,8 +344,34 @@ class Adjudicator:
             route_split=route_split,
             parameterization_sensitivity=sensitivity,
             evidence_trace=trace,
-            inferential_chain_attribution={},
-            # See a14_compromises.INFERENTIAL_CHAIN_ATTRIBUTION_EMPTY.
+            inferential_chain_attribution=attribution,
+        )
+
+    def _chain_attribution(
+        self,
+        partition: Partition,
+        plant_inputs: PlantModelInputs,
+        residual: ResidualDivergence,
+    ) -> Dict[str, float]:
+        """Compute inferential-chain attribution for this cell.
+
+        Populated only when partition == FAILING and a chain_reader
+        is injected. All other cases return ``{}`` — validated /
+        untested cells don't need attribution, and unconfigured
+        adjudicators must not fabricate chain structure.
+        """
+        if partition != Partition.FAILING or self.chain_reader is None:
+            return {}
+        mechanism_name = plant_inputs.identity.mechanism
+        try:
+            chain_edges = self.chain_reader(mechanism_name)
+        except Exception:  # noqa: BLE001 — chain-reader failure must
+            # not fail adjudication; log-and-swallow lives inside the
+            # injected closure (see make_chain_reader).
+            return {}
+        return attribute_residual(
+            chain_edges=chain_edges,
+            unexplained_residual=residual.unexplained,
         )
 
     # ── INTERNAL ─────────────────────────────────────────────────────────

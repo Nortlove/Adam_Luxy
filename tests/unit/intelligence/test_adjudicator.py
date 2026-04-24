@@ -9,6 +9,7 @@ from adam.intelligence.recommendation_class import (
     Adjudicator,
     AudienceScope,
     AudienceSummary,
+    ChainEdge,
     Partition,
     PlantModel,
     PlantModelInputs,
@@ -293,15 +294,18 @@ class TestAdjudicatorOutputShape:
         assert result.claim_id == projected.claim_id
         assert result.recommendation_class_id == projected.recommendation_class_id
 
-    def test_inferential_chain_attribution_empty_pilot_launch(self):
-        """Attribution is deliberately empty at pilot launch; full
-        population lands in weeks 8-9."""
+    def test_inferential_chain_attribution_empty_without_chain_reader(self):
+        """No chain_reader injected → attribution is empty even for
+        FAILING cells. The adjudicator must not fabricate chain
+        structure when the caller did not provide it."""
         model = PlantModel()
         inputs = _plant_inputs(obs=100, with_effect=True)
         projected = model.project(inputs)
+        # Failing realized outcome.
         realized = RealizedOutcomes(total_conversions=2, total_sample_size=10000)
-        adj = Adjudicator()
+        adj = Adjudicator()  # no chain_reader
         result = adj.adjudicate(projected, realized, model, inputs)
+        assert result.partition == Partition.FAILING
         assert result.inferential_chain_attribution == {}
 
     def test_evidence_trace_observation_density_positive(self):
@@ -313,3 +317,104 @@ class TestAdjudicatorOutputShape:
         result = adj.adjudicate(projected, realized, model, inputs)
         assert result.evidence_trace.observation_density > 0
         assert result.evidence_trace.sample_size == 200
+
+
+# -----------------------------------------------------------------------------
+# Chain-reader integration — inferential-chain attribution on FAILING cells
+# -----------------------------------------------------------------------------
+
+
+def _fake_chain_edges_regulatory_fit():
+    """Small fake chain for mechanism regulatory_fit: one CREATES_RECEPTIVITY_TO
+    plus one upstream ACTIVATES plus one REQUIRES. Strength-differentiated so
+    attribution produces distinguishable portions."""
+    return [
+        ChainEdge(
+            source_id="need_for_closure",
+            target_id="regulatory_fit",
+            rel_type="CREATES_RECEPTIVITY_TO",
+            strength=0.8,
+            evidence_count=0,
+            depth_from_mechanism=1,
+        ),
+        ChainEdge(
+            source_id="uncertainty_intolerance",
+            target_id="need_for_closure",
+            rel_type="ACTIVATES",
+            strength=0.2,
+            evidence_count=0,
+            depth_from_mechanism=2,
+        ),
+        ChainEdge(
+            source_id="regulatory_fit",
+            target_id="self_regulatory_focus",
+            rel_type="REQUIRES",
+            strength=0.0,
+            evidence_count=0,
+            depth_from_mechanism=1,
+        ),
+    ]
+
+
+class TestChainReaderIntegration:
+    def test_failing_cell_populates_attribution_when_reader_injected(self):
+        model = PlantModel()
+        inputs = _plant_inputs(obs=200, with_effect=True)
+        projected = model.project(inputs)
+        realized = RealizedOutcomes(total_conversions=2, total_sample_size=10000)
+
+        reader_calls = []
+
+        def reader(mech_name):
+            reader_calls.append(mech_name)
+            return _fake_chain_edges_regulatory_fit()
+
+        adj = Adjudicator(chain_reader=reader)
+        result = adj.adjudicate(projected, realized, model, inputs)
+        assert result.partition == Partition.FAILING
+        # Reader was called with the rec-class's mechanism.
+        assert reader_calls == ["regulatory_fit"]
+        # Attribution is non-empty and excludes the REQUIRES edge.
+        assert result.inferential_chain_attribution
+        # Two strength-bearing edges → two entries (REQUIRES excluded).
+        assert len(result.inferential_chain_attribution) == 2
+        # Sign matches the unexplained residual (negative for FAILING).
+        assert all(v < 0 for v in result.inferential_chain_attribution.values())
+
+    def test_validated_cell_leaves_attribution_empty_even_with_reader(self):
+        model = PlantModel()
+        inputs = _plant_inputs(obs=100, with_effect=True)
+        projected = model.project(inputs)
+        # Near-projected realized outcome → VALIDATED.
+        realized = RealizedOutcomes(total_conversions=4, total_sample_size=200)
+
+        called = False
+
+        def reader(mech_name):
+            nonlocal called
+            called = True
+            return _fake_chain_edges_regulatory_fit()
+
+        adj = Adjudicator(chain_reader=reader)
+        result = adj.adjudicate(projected, realized, model, inputs)
+        # VALIDATED or UNTESTED — either way, attribution stays empty.
+        assert result.partition != Partition.FAILING
+        assert result.inferential_chain_attribution == {}
+        # Reader should not be called for non-FAILING cells — avoids
+        # hitting Neo4j on every adjudication.
+        assert called is False
+
+    def test_chain_reader_exception_is_swallowed(self):
+        model = PlantModel()
+        inputs = _plant_inputs(obs=200, with_effect=True)
+        projected = model.project(inputs)
+        realized = RealizedOutcomes(total_conversions=2, total_sample_size=10000)
+
+        def failing_reader(mech_name):
+            raise RuntimeError("graph temporarily unavailable")
+
+        adj = Adjudicator(chain_reader=failing_reader)
+        # Adjudication must complete despite reader failure.
+        result = adj.adjudicate(projected, realized, model, inputs)
+        assert result.partition == Partition.FAILING
+        assert result.inferential_chain_attribution == {}

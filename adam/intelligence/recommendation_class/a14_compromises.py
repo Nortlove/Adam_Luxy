@@ -191,34 +191,6 @@ COUNTER_REGULATION_UNTRACKED = A14Compromise(
 )
 
 
-INFERENTIAL_CHAIN_ATTRIBUTION_EMPTY = A14Compromise(
-    name="INFERENTIAL_CHAIN_ATTRIBUTION_EMPTY",
-    description=(
-        "AdjudicatorOutput.inferential_chain_attribution is present in "
-        "the shape but emitted as `{}` for every cell at launch. The "
-        "decided architecture populates `{link_id → portion_of_residual}` "
-        "for failing cells by traversing the PsychologicalConstruct / "
-        "ACTIVATES / CREATES_RECEPTIVITY_TO graph (inferential-chain "
-        "SCM substrate, slice 5) and weighting each edge by its "
-        "contribution to the residual. Slice 5 shipped the schema, "
-        "upsert helpers, and citation-required discipline; the "
-        "graph-traversal helpers that weight each edge are deferred."
-    ),
-    retirement_trigger=(
-        "Weeks 8-9 of the pilot plan: #4 adjudicator extension lands "
-        "the graph-traversal helpers that walk the inferential chain "
-        "from rec-class archetype through mechanism through construct "
-        "and weight each edge by its contribution to the residual on "
-        "failing cells."
-    ),
-    live_at_sites=(
-        "adjudicator.py:217-222 (AdjudicatorOutput.inferential_chain_attribution field)",
-        "adjudicator.py:327 ({} emit in adjudicate())",
-    ),
-    retires_at_weakness=None,
-)
-
-
 VARIATIONAL_POSTERIOR_APPROXIMATION = A14Compromise(
     name="VARIATIONAL_POSTERIOR_APPROXIMATION",
     description=(
@@ -262,9 +234,13 @@ ACTIVE_COMPROMISES: tuple[A14Compromise, ...] = (
     SINGLE_LEVEL_SHRINKAGE,
     POSTURE_ONLY_ROUTE_SPLIT,
     COUNTER_REGULATION_UNTRACKED,
-    INFERENTIAL_CHAIN_ATTRIBUTION_EMPTY,
     VARIATIONAL_POSTERIOR_APPROXIMATION,
 )
+# INFERENTIAL_CHAIN_ATTRIBUTION_EMPTY retired 2026-04-25 by
+# adam/intelligence/recommendation_class/chain_attribution.py — the
+# Adjudicator now computes strength-weighted attribution when
+# chain_reader is injected. Retirement commit retains the original
+# entry's shape in git history.
 
 
 def _validate_registry() -> None:
@@ -320,7 +296,6 @@ __all__ = [
     "A14Compromise",
     "ACTIVE_COMPROMISES",
     "COUNTER_REGULATION_UNTRACKED",
-    "INFERENTIAL_CHAIN_ATTRIBUTION_EMPTY",
     "POSTURE_ONLY_ROUTE_SPLIT",
     "SINGLE_LEVEL_SHRINKAGE",
     "VARIATIONAL_POSTERIOR_APPROXIMATION",
