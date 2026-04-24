@@ -22,7 +22,7 @@ Frame discipline (Foundation §4.3, §4.4; pilot plan 2026-04-24):
   Every projection that takes this path emits `winners_curse_portion=True`
   in its CompetingActivations. The flag retires when Weakness #8 lands
   and the full hierarchy (industry → partner → advertiser → workspace
-  → class) is available.
+  → class) is available. See: ``a14_compromises.SINGLE_LEVEL_SHRINKAGE``.
 - Attention-inversion posture enters via the `context_posture_band`:
   `autopilot_*` bands route a larger fraction of conversions through
   the autopilot route (the blend-and-fulfill fitness landscape the
@@ -30,11 +30,13 @@ Frame discipline (Foundation §4.3, §4.4; pilot plan 2026-04-24):
   fraction through the attention route (fragile, regret-associated).
   The posture-conditioned split is what the adjudicator later reports
   as `route_split.autopilot_route_residual` vs
-  `route_split.attention_route_residual`.
+  `route_split.attention_route_residual`. Posture-only split is an
+  A14 compromise — see ``a14_compromises.POSTURE_ONLY_ROUTE_SPLIT``.
 - Counter-regulation (habituation, reactance dynamics) is NOT modeled
   in the plant — it's carried as a structured bias flag until per-user
   habituation data lets us estimate it. This is the same retirement-
-  trigger pattern as winners-curse.
+  trigger pattern as winners-curse. See:
+  ``a14_compromises.COUNTER_REGULATION_UNTRACKED``.
 
 Scope of this slice:
 
@@ -85,6 +87,7 @@ from adam.intelligence.recommendation_class.graph import (
 # =============================================================================
 # Industry-prior baseline (A14 — single-level shrinkage)
 # =============================================================================
+# See: a14_compromises.SINGLE_LEVEL_SHRINKAGE
 # Pilot uses a single generic industry prior. Hierarchy (industry → partner
 # → advertiser → workspace → class) ships with Weakness #8.
 # 2% durable-conversion-rate with concentration 30 is ADAM's pilot default —
@@ -99,6 +102,7 @@ DEFAULT_INDUSTRY_PRIOR_CONCENTRATION = 30.0
 # Posture-band → route-fraction modifiers (A14 — posture-only; expires when
 # processing-depth weighting is wired)
 # =============================================================================
+# See: a14_compromises.POSTURE_ONLY_ROUTE_SPLIT
 # Autopilot / attention fractions by context posture band. These are the
 # pilot-default weights the plant model assigns when NO cell-specific
 # posture distribution is available. Sum of autopilot + attention must
@@ -362,7 +366,8 @@ class PlantModel:
         Winners-curse discipline: single-level shrinkage is the A14
         compromise (the flag carries forward to CompetingActivations).
         The industry prior is GENERIC by design — noisy cells should
-        drown in it at low evidence counts.
+        drown in it at low evidence counts. See:
+        ``a14_compromises.SINGLE_LEVEL_SHRINKAGE``.
         """
         industry_alpha = (
             self.industry_prior_concentration * self.industry_prior_rate
@@ -465,18 +470,16 @@ class PlantModel:
         pilot plan. The plant model sets them honestly: `True` means
         "known model limitation operating on this projection."
         """
-        # Winners-curse: single-level shrinkage is the only shrinkage
-        # layer pilot ships (A14). Retires at #8 hierarchical rollout.
+        # Winners-curse: see a14_compromises.SINGLE_LEVEL_SHRINKAGE —
+        # single-level shrinkage is the only shrinkage layer pilot ships.
         winners_curse = True
 
-        # Attention-route residual: posture-only split, no processing-
-        # depth weighting yet. Retires when Layer-11 processing-depth
-        # is empirically calibrated per cell (Foundation rule 11).
+        # Attention-route residual: see a14_compromises.POSTURE_ONLY_ROUTE_SPLIT
+        # — posture-only split, no processing-depth weighting yet.
         attention_residual = True
 
-        # Counter-regulation: habituation/reactance dynamics are not
-        # yet estimated. Retires when per-user habituation data
-        # accumulates (likely weeks into pilot).
+        # Counter-regulation: see a14_compromises.COUNTER_REGULATION_UNTRACKED
+        # — habituation/reactance dynamics not yet estimated.
         counter_regulation = True
 
         # Publication-bias residual: True unless the construct effect

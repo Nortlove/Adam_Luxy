@@ -1,0 +1,292 @@
+"""A14-compromise registry for the RecommendationClass primitive.
+
+Antipattern A14 from ADAM_AGENT_ORIENTATION.md: *building N+1 on
+unverified N*. Its pilot-scale analogue is shipping a thinner substrate
+than the decided architecture and moving on to N+1 before the thinner
+substrate is retired. The pilot plan (2026-04-24) names the compromises
+explicitly so they cannot hide:
+
+    "Six A14 compromises explicit with expiration conditions — named so
+     drift cannot hide."
+
+This module is the anchor for the four runtime-emitted compromises in
+the RecommendationClass primitive. Every site in code that embodies
+one of these compromises references the named constant here instead of
+carrying its own prose description. The retirement trigger is a data
+condition; when the condition is met the compromise retires and the
+corresponding bias flag / behaviour in the code changes shape (not
+always by deletion — `COUNTER_REGULATION_UNTRACKED` retires into an
+empirical estimate, not into nothing).
+
+Not captured here:
+- Library-choice compromises (e.g. sklearn BayesianGaussianMixture vs
+  PyMC NUTS in `archetype_compression.py`). Those are internal
+  implementation choices that do not surface in any emitted output.
+- Process-level compromises (git-hash pre-registration vs OSF-public;
+  single-advertiser pilot vs multi-tenant). Tracked in the pilot plan
+  memory, not in the runtime registry, because they do not flow into
+  CompetingActivations or AdjudicatorOutput.
+- "HB latent class without external psychometric validation" — tracked
+  in the pilot plan memory (expires at contractor delivery month 4-5);
+  not runtime-emitted.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Optional
+
+
+@dataclass(frozen=True)
+class A14Compromise:
+    """A named A14 compromise with its retirement condition and live sites.
+
+    Fields:
+
+    - ``name``: stable constant-case identifier. Used for cross-reference
+      from the live sites and for the pilot report pack.
+    - ``description``: one-to-two-sentence explanation of what the
+      compromise is — what the pilot ships instead of the decided
+      architecture.
+    - ``retirement_trigger``: the data / milestone condition that moves
+      the compromise from "shipped as A14" to "retired". Phrased in
+      observable terms, not as a vague "post-pilot." When drift risk is
+      high the trigger names a concrete weakness in the multi-lens
+      registry (``retires_at_weakness``).
+    - ``live_at_sites``: tuple of ``"module.py:linerange"`` locators that
+      concretely embody this compromise. These are the audit anchors —
+      future agents grep for the constant name and find the sites
+      listed here, or find sites that reference the constant but are
+      not listed here (drift signal either way).
+    - ``retires_at_weakness``: structural-weakness number from the
+      2026-04-23 registry, if applicable. ``None`` when the retirement
+      is triggered by data accumulation rather than by a named
+      weakness's resolution.
+    """
+
+    name: str
+    description: str
+    retirement_trigger: str
+    live_at_sites: tuple[str, ...]
+    retires_at_weakness: Optional[int] = None
+
+    def validate(self) -> None:
+        if not self.name or not self.name.strip():
+            raise ValueError("A14Compromise.name must be non-empty")
+        if self.name != self.name.upper() or " " in self.name:
+            raise ValueError(
+                f"A14Compromise.name must be CONSTANT_CASE; got {self.name!r}"
+            )
+        if not self.description.strip():
+            raise ValueError(
+                f"A14Compromise.description must be non-empty "
+                f"(compromise {self.name!r})"
+            )
+        if not self.retirement_trigger.strip():
+            raise ValueError(
+                f"A14Compromise.retirement_trigger must be non-empty "
+                f"(compromise {self.name!r}) — A14 discipline requires "
+                f"an explicit retirement condition"
+            )
+        if not self.live_at_sites:
+            raise ValueError(
+                f"A14Compromise.live_at_sites must name at least one site "
+                f"(compromise {self.name!r}) — compromises with no live "
+                f"sites should be removed from the registry"
+            )
+        if self.retires_at_weakness is not None and self.retires_at_weakness < 1:
+            raise ValueError(
+                f"A14Compromise.retires_at_weakness must be >= 1 or None; "
+                f"got {self.retires_at_weakness} (compromise {self.name!r})"
+            )
+
+
+# =============================================================================
+# The four runtime-emitted compromises
+# =============================================================================
+
+
+SINGLE_LEVEL_SHRINKAGE = A14Compromise(
+    name="SINGLE_LEVEL_SHRINKAGE",
+    description=(
+        "PlantModel shrinks each cell toward a single generic industry "
+        "prior rather than the decided hierarchy (industry → partner → "
+        "advertiser → workspace → class). Winner's-curse correction is "
+        "present but single-level; the full hierarchical shrinkage that "
+        "prevents partner-level and advertiser-level winner's-curse has "
+        "not shipped. Every projection that takes this path emits "
+        "`winners_curse_portion=True` in CompetingActivations."
+    ),
+    retirement_trigger=(
+        "Weakness #8 (multi-tenant scope) ships, OR one of its "
+        "independent pressures fires: second advertiser imminent, or "
+        "per-advertiser decline-rate comparison / cross-advertiser "
+        "convergence surfaces become load-bearing."
+    ),
+    live_at_sites=(
+        "plant_model.py:86-95 (industry-prior constants header)",
+        "plant_model.py:338-366 (_posterior_parameters docstring + impl)",
+        "plant_model.py:468-470 (winners_curse flag emit)",
+        "adjudicator.py:84-88 (DEFAULT_BIAS_MAGNITUDES winners_curse header)",
+    ),
+    retires_at_weakness=8,
+)
+
+
+POSTURE_ONLY_ROUTE_SPLIT = A14Compromise(
+    name="POSTURE_ONLY_ROUTE_SPLIT",
+    description=(
+        "The autopilot-route / attention-route split on "
+        "GoalFulfillmentOutcome is driven by context_posture_band plus "
+        "the PrimingCondition's attentional_posture × confidence nudge. "
+        "The decided architecture weights route fractions by cell-level "
+        "processing-depth distributions — Layer-11 of the page-"
+        "intelligence substrate (Foundation rule 11). Processing-depth "
+        "weighting is not yet calibrated per cell, so every projection "
+        "emits `attention_route_residual=True` and "
+        "`weighting_by_processing_depth=False` on the emitted "
+        "GoalFulfillmentOutcome."
+    ),
+    retirement_trigger=(
+        "Layer-11 processing-depth weighting is empirically calibrated "
+        "per cell — page-intelligence substrate produces reliable "
+        "processing-depth distributions that downstream route-split "
+        "logic can consume."
+    ),
+    live_at_sites=(
+        "plant_model.py:99-125 (_POSTURE_ROUTE_SPLIT header + table)",
+        "plant_model.py:270-278 (weighting_by_processing_depth=False emit)",
+        "plant_model.py:425-457 (_route_split impl)",
+        "plant_model.py:472-475 (attention_residual flag emit)",
+        "adjudicator.py:89-91 (DEFAULT_BIAS_MAGNITUDES attention_route header)",
+    ),
+    retires_at_weakness=None,
+)
+
+
+COUNTER_REGULATION_UNTRACKED = A14Compromise(
+    name="COUNTER_REGULATION_UNTRACKED",
+    description=(
+        "Habituation and reactance dynamics (counter-regulation) are "
+        "carried as a bias flag on CompetingActivations, not as a term "
+        "in the plant model. The decided architecture has a per-user "
+        "habituation model that the plant model conditions on; the "
+        "pilot ships without it because per-user habituation data does "
+        "not yet accumulate at useful density. Every projection emits "
+        "`counter_regulation_untracked=True`; the adjudicator accounts "
+        "for the expected residual via DEFAULT_BIAS_MAGNITUDES."
+    ),
+    retirement_trigger=(
+        "Per-user habituation data accumulates to the density needed "
+        "for empirical estimation of habituation / reactance terms. "
+        "Likely weeks into pilot at current traffic; dependent on "
+        "identity-resolution density in the exposure pipeline."
+    ),
+    live_at_sites=(
+        "plant_model.py:477-480 (counter_regulation=True emit)",
+        "adjudicator.py:92-94 (DEFAULT_BIAS_MAGNITUDES counter_regulation header)",
+        "projected_impact.py:222 (CompetingActivations.counter_regulation_untracked field)",
+    ),
+    retires_at_weakness=None,
+)
+
+
+INFERENTIAL_CHAIN_ATTRIBUTION_EMPTY = A14Compromise(
+    name="INFERENTIAL_CHAIN_ATTRIBUTION_EMPTY",
+    description=(
+        "AdjudicatorOutput.inferential_chain_attribution is present in "
+        "the shape but emitted as `{}` for every cell at launch. The "
+        "decided architecture populates `{link_id → portion_of_residual}` "
+        "for failing cells by traversing the PsychologicalConstruct / "
+        "ACTIVATES / CREATES_RECEPTIVITY_TO graph (inferential-chain "
+        "SCM substrate, slice 5) and weighting each edge by its "
+        "contribution to the residual. Slice 5 shipped the schema, "
+        "upsert helpers, and citation-required discipline; the "
+        "graph-traversal helpers that weight each edge are deferred."
+    ),
+    retirement_trigger=(
+        "Weeks 8-9 of the pilot plan: #4 adjudicator extension lands "
+        "the graph-traversal helpers that walk the inferential chain "
+        "from rec-class archetype through mechanism through construct "
+        "and weight each edge by its contribution to the residual on "
+        "failing cells."
+    ),
+    live_at_sites=(
+        "adjudicator.py:217-222 (AdjudicatorOutput.inferential_chain_attribution field)",
+        "adjudicator.py:327 ({} emit in adjudicate())",
+    ),
+    retires_at_weakness=None,
+)
+
+
+# =============================================================================
+# Registry
+# =============================================================================
+
+
+ACTIVE_COMPROMISES: tuple[A14Compromise, ...] = (
+    SINGLE_LEVEL_SHRINKAGE,
+    POSTURE_ONLY_ROUTE_SPLIT,
+    COUNTER_REGULATION_UNTRACKED,
+    INFERENTIAL_CHAIN_ATTRIBUTION_EMPTY,
+)
+
+
+def _validate_registry() -> None:
+    """Registry-integrity check run at import time.
+
+    Fails loudly if any compromise is malformed or if names collide.
+    Drift prevention: if a new compromise is added without populating a
+    field, the package fails to import rather than silently shipping an
+    unnamed shortcut.
+    """
+    seen_names: set[str] = set()
+    for compromise in ACTIVE_COMPROMISES:
+        compromise.validate()
+        if compromise.name in seen_names:
+            raise ValueError(
+                f"A14 registry has duplicate name {compromise.name!r}"
+            )
+        seen_names.add(compromise.name)
+
+
+_validate_registry()
+
+
+# =============================================================================
+# Report rendering
+# =============================================================================
+
+
+def format_for_report() -> str:
+    """Render the active compromises as a report-pack block.
+
+    Consumed by the weeks 11-12 pilot report pack (pilot plan) so every
+    claim shipped to LUXY is accompanied by the exact list of A14
+    compromises operating under the claim's adjudication, with the
+    explicit retirement conditions. This is the external-surface version
+    of the A14 discipline.
+    """
+    lines: list[str] = ["Active A14 compromises (runtime-emitted):", ""]
+    for compromise in ACTIVE_COMPROMISES:
+        lines.append(f"- {compromise.name}")
+        lines.append(f"  Description: {compromise.description}")
+        lines.append(f"  Retirement trigger: {compromise.retirement_trigger}")
+        if compromise.retires_at_weakness is not None:
+            lines.append(
+                f"  Tied to structural weakness #"
+                f"{compromise.retires_at_weakness}."
+            )
+        lines.append("")
+    return "\n".join(lines).rstrip() + "\n"
+
+
+__all__ = [
+    "A14Compromise",
+    "ACTIVE_COMPROMISES",
+    "COUNTER_REGULATION_UNTRACKED",
+    "INFERENTIAL_CHAIN_ATTRIBUTION_EMPTY",
+    "POSTURE_ONLY_ROUTE_SPLIT",
+    "SINGLE_LEVEL_SHRINKAGE",
+    "format_for_report",
+]

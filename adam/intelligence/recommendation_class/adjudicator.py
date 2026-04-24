@@ -81,20 +81,22 @@ class Partition(str, Enum):
 # residual effects.
 #
 # Retirement conditions for each flag:
-#   winners_curse_portion: retires at #8 (full hierarchy). Default
-#     magnitude = 20% of the projected rate (realized typically runs
-#     below projected under single-level shrinkage; 20% is the order-
-#     of-magnitude finding from multi-level meta-analyses of phase
-#     II → III winner's-curse effects).
-#   attention_route_residual: retires when Layer-11 processing-depth
-#     weighting is calibrated. Default 10% — the posture-only split
-#     typically overestimates autopilot-route fulfillment.
-#   counter_regulation_untracked: retires when habituation data
-#     accumulates. Default 5% — subtle drift from reactance/habituation
-#     accumulates over the horizon.
+#   winners_curse_portion — see a14_compromises.SINGLE_LEVEL_SHRINKAGE.
+#     Default magnitude = 20% of the projected rate (realized typically
+#     runs below projected under single-level shrinkage; 20% is the
+#     order-of-magnitude finding from multi-level meta-analyses of
+#     phase II → III winner's-curse effects).
+#   attention_route_residual — see a14_compromises.POSTURE_ONLY_ROUTE_SPLIT.
+#     Default 10% — the posture-only split typically overestimates
+#     autopilot-route fulfillment.
+#   counter_regulation_untracked — see a14_compromises.COUNTER_REGULATION_UNTRACKED.
+#     Default 5% — subtle drift from reactance/habituation accumulates
+#     over the horizon.
 #   publication_bias_residual: retires when construct priors are all
 #     pre-registered. Default 15% — RoBMA-median and Schimmack-shrunk
-#     corrections still carry residual bias relative to pre-reg.
+#     corrections still carry residual bias relative to pre-reg. Not in
+#     the runtime A14 registry because the retirement trigger is
+#     per-construct pre-registration rather than a single milestone.
 
 DEFAULT_BIAS_MAGNITUDES: Dict[str, float] = {
     "winners_curse_portion":        0.20,
@@ -216,10 +218,11 @@ class AdjudicatorOutput:
     evidence_trace: EvidenceTrace
     inferential_chain_attribution: Dict[str, float] = field(default_factory=dict)
     # Populated only when partition == FAILING. For pilot launch the
-    # attribution is {} — the graph-traversal helper that weights each
-    # ACTIVATES / CREATES_RECEPTIVITY_TO edge by its contribution to the
-    # residual lands in the weeks-8-9 slice. The field is present in
-    # the shape so downstream readers don't need to guard for its absence.
+    # attribution is {} — see a14_compromises.INFERENTIAL_CHAIN_ATTRIBUTION_EMPTY.
+    # The graph-traversal helper that weights each ACTIVATES /
+    # CREATES_RECEPTIVITY_TO edge by its contribution to the residual
+    # lands in the weeks-8-9 slice. The field is present in the shape
+    # so downstream readers don't need to guard for its absence.
 
 
 # =============================================================================
@@ -325,6 +328,7 @@ class Adjudicator:
             parameterization_sensitivity=sensitivity,
             evidence_trace=trace,
             inferential_chain_attribution={},
+            # See a14_compromises.INFERENTIAL_CHAIN_ATTRIBUTION_EMPTY.
         )
 
     # ── INTERNAL ─────────────────────────────────────────────────────────

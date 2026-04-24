@@ -218,10 +218,12 @@ class CompetingActivations:
     for when decomposing residual divergence. Flags have explicit retirement
     triggers: when upstream work ships (e.g., per-user habituation data),
     the flag moves from "untracked" to "modeled in the plant-model term".
+    The runtime-emitted flags below are registered in
+    ``a14_compromises.ACTIVE_COMPROMISES``.
     """
-    counter_regulation_untracked: bool  # habituation/reactance dynamics not yet estimated
-    attention_route_residual: bool  # autopilot/attention split depends on upstream posture scoring
-    winners_curse_portion: bool  # projection not yet shrunk toward parent prior
+    counter_regulation_untracked: bool  # see a14_compromises.COUNTER_REGULATION_UNTRACKED
+    attention_route_residual: bool  # see a14_compromises.POSTURE_ONLY_ROUTE_SPLIT
+    winners_curse_portion: bool  # see a14_compromises.SINGLE_LEVEL_SHRINKAGE
     publication_bias_residual: bool  # construct priors not yet all publication-bias-corrected
     baseline_rate: float  # population baseline for the outcome_metric
     notes: str = ""

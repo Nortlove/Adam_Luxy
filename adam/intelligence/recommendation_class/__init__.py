@@ -33,6 +33,15 @@ Package status (2026-04-25):
     full population.
 """
 
+from adam.intelligence.recommendation_class.a14_compromises import (
+    A14Compromise,
+    ACTIVE_COMPROMISES,
+    COUNTER_REGULATION_UNTRACKED,
+    INFERENTIAL_CHAIN_ATTRIBUTION_EMPTY,
+    POSTURE_ONLY_ROUTE_SPLIT,
+    SINGLE_LEVEL_SHRINKAGE,
+    format_for_report as format_a14_compromises_for_report,
+)
 from adam.intelligence.recommendation_class.adjudicator import (
     Adjudicator,
     AdjudicatorOutput,
@@ -109,6 +118,7 @@ from adam.intelligence.recommendation_class.sequential_schedule import (
 )
 
 __all__ = [
+    "ACTIVE_COMPROMISES",
     "ActivatesEdge",
     "Adjudicator",
     "AdjudicatorOutput",
@@ -116,6 +126,8 @@ __all__ = [
     "ArchetypeCompressor",
     "AudienceScope",
     "AudienceSummary",
+    "A14Compromise",
+    "COUNTER_REGULATION_UNTRACKED",
     "CompetingActivations",
     "ConformalCoverage",
     "ConformalInterval",
@@ -135,10 +147,12 @@ __all__ = [
     "DEFAULT_SEQUENTIAL_ALPHA",
     "EvidenceTrace",
     "GoalFulfillmentOutcome",
+    "INFERENTIAL_CHAIN_ATTRIBUTION_EMPTY",
     "InferentialChainGraph",
     "InterimDecision",
     "InterimLookResult",
     "LookSchedule",
+    "POSTURE_ONLY_ROUTE_SPLIT",
     "ParameterizationSensitivity",
     "Partition",
     "PlantModel",
@@ -153,11 +167,13 @@ __all__ = [
     "RequiresEdge",
     "ResidualDivergence",
     "RouteSplitResidual",
+    "SINGLE_LEVEL_SHRINKAGE",
     "SequentialAdjudicator",
     "SpiesDistribution",
     "canonical_hash",
     "claim_node_id",
     "current_git_head",
+    "format_a14_compromises_for_report",
     "get_inferential_chain_graph",
     "get_recommendation_class_graph",
     "pre_registration_path",
