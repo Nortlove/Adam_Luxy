@@ -48,14 +48,23 @@ is surface-only — mandatory for pilot ship, not for pilot performance.
      `SequentialAdjudicator`. Without this, the learning loop never
      closes on any cadence shorter than horizon-complete.
    - Blocker flagged in the 2026-04-22/23 handoff; still open.
-4. **#7 MV — 5 remaining Claude-scored page features**
-   - register
-   - primary metaphor density
-   - goal-activation profile
-   - temporal-horizon induction
-   - processing-fluency profile
-   - (attentional posture already shipped via `ba39535`)
-   - Quality-of-input wins propagate through every rec-class projection.
+4. **#7 MV — 5 remaining Claude-scored page features** — *scoring substrate shipped this commit; storage + cascade wiring remain*
+   - ✓ Scoring substrate: `adam/intelligence/pages/claude_feature_scoring.py`
+     with `PageFeatureBundle` + `score_page_features()` producing all
+     five in one Claude call (register, primary_metaphor_density +
+     8-axis vector, goal_activation_profile across
+     `GOAL_TAXONOMY` keys, temporal_horizon_induction,
+     processing_fluency).
+   - ✓ `ArticleObservation` extended with the 5 optional feature fields
+     + confidence pairs, validators enforced.
+   - · Neo4j migration 029 — add properties to Author / Publication /
+     Section / Topic / Article nodes + indexes for the new features.
+   - · Welford posterior updates in `entity_graph.py` Cypher — author /
+     publication / section rollups analogous to attentional_posture.
+   - · Cascade consumption in `page_edge_bridge.py` — shift matrices
+     per feature that thread into the 20-dim bilateral activation.
+   - · Ingestion pipeline wiring — call `score_page_features()` during
+     article ingest so the fields populate.
 
 ### From the attention-inversion platform core (promoted into Tier 1)
 

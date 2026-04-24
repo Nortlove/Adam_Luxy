@@ -299,6 +299,30 @@ class ArticleObservation:
     # Welford update path skips this observation rather than imputing 0).
     attentional_posture: Optional[float] = None
 
+    # Claude-scored #7 MV features. All None-valued when upstream has not
+    # scored the article (same empty-prior semantics as attentional_posture).
+    # Storage wiring (Welford updates on the entity graph) lands in the
+    # follow-up slice; this field carries the observation into the ingest
+    # path so the scoring pipeline has a stable shape today.
+    #
+    # See adam/intelligence/pages/claude_feature_scoring.py for shape.
+    register_score: Optional[float] = None               # [-1, 1]
+    register_category: Optional[str] = None              # REGISTER_CATEGORIES
+    register_confidence: Optional[float] = None          # [0, 1]
+
+    primary_metaphor_density: Optional[float] = None     # [0, 1]
+    primary_metaphor_axes_scored: Optional[List[float]] = None  # 8 dims [0,1]
+    primary_metaphor_confidence: Optional[float] = None  # [0, 1]
+
+    goal_activation_profile: Optional[Dict[str, float]] = None  # 8 goals [0,1]
+    goal_activation_confidence: Optional[float] = None   # [0, 1]
+
+    temporal_horizon_induction: Optional[float] = None   # [-1, 1]
+    temporal_horizon_confidence: Optional[float] = None  # [0, 1]
+
+    processing_fluency: Optional[float] = None           # [0, 1]
+    processing_fluency_confidence: Optional[float] = None  # [0, 1]
+
     @property
     def id(self) -> str:
         return article_id(self.canonical_url or self.url)
@@ -324,6 +348,82 @@ class ArticleObservation:
         ):
             raise ValueError(
                 f"attentional_posture {self.attentional_posture} outside [-1, 1]"
+            )
+        # Claude-scored features.
+        if self.register_score is not None and not (-1.0 <= self.register_score <= 1.0):
+            raise ValueError(
+                f"register_score {self.register_score} outside [-1, 1]"
+            )
+        if self.register_confidence is not None and not (0.0 <= self.register_confidence <= 1.0):
+            raise ValueError(
+                f"register_confidence {self.register_confidence} outside [0, 1]"
+            )
+        if self.primary_metaphor_density is not None and not (
+            0.0 <= self.primary_metaphor_density <= 1.0
+        ):
+            raise ValueError(
+                f"primary_metaphor_density {self.primary_metaphor_density} outside [0, 1]"
+            )
+        if (
+            self.primary_metaphor_axes_scored is not None
+            and len(self.primary_metaphor_axes_scored) != PRIMARY_METAPHOR_AXES
+        ):
+            raise ValueError(
+                f"primary_metaphor_axes_scored length "
+                f"{len(self.primary_metaphor_axes_scored)} != {PRIMARY_METAPHOR_AXES}"
+            )
+        if self.primary_metaphor_axes_scored is not None:
+            for i, v in enumerate(self.primary_metaphor_axes_scored):
+                if not (0.0 <= v <= 1.0):
+                    raise ValueError(
+                        f"primary_metaphor_axes_scored[{i}] {v} outside [0, 1]"
+                    )
+        if self.primary_metaphor_confidence is not None and not (
+            0.0 <= self.primary_metaphor_confidence <= 1.0
+        ):
+            raise ValueError(
+                f"primary_metaphor_confidence {self.primary_metaphor_confidence} "
+                "outside [0, 1]"
+            )
+        if self.goal_activation_profile is not None:
+            for goal_id, v in self.goal_activation_profile.items():
+                if not (0.0 <= v <= 1.0):
+                    raise ValueError(
+                        f"goal_activation_profile[{goal_id}] {v} outside [0, 1]"
+                    )
+        if self.goal_activation_confidence is not None and not (
+            0.0 <= self.goal_activation_confidence <= 1.0
+        ):
+            raise ValueError(
+                f"goal_activation_confidence {self.goal_activation_confidence} "
+                "outside [0, 1]"
+            )
+        if self.temporal_horizon_induction is not None and not (
+            -1.0 <= self.temporal_horizon_induction <= 1.0
+        ):
+            raise ValueError(
+                f"temporal_horizon_induction {self.temporal_horizon_induction} "
+                "outside [-1, 1]"
+            )
+        if self.temporal_horizon_confidence is not None and not (
+            0.0 <= self.temporal_horizon_confidence <= 1.0
+        ):
+            raise ValueError(
+                f"temporal_horizon_confidence {self.temporal_horizon_confidence} "
+                "outside [0, 1]"
+            )
+        if self.processing_fluency is not None and not (
+            0.0 <= self.processing_fluency <= 1.0
+        ):
+            raise ValueError(
+                f"processing_fluency {self.processing_fluency} outside [0, 1]"
+            )
+        if self.processing_fluency_confidence is not None and not (
+            0.0 <= self.processing_fluency_confidence <= 1.0
+        ):
+            raise ValueError(
+                f"processing_fluency_confidence {self.processing_fluency_confidence} "
+                "outside [0, 1]"
             )
 
 
