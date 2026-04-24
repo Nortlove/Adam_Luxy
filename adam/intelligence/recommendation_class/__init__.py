@@ -19,14 +19,31 @@ memory project_weakness_4_recommendation_class_primitive.md):
   with known biases accounted) is the adjudication question, not
   treatment-effect significance.
 
-Phase of this package:
-  Slice 1 (this commit): ProjectedImpact structured predicate — the data
-  model every pre-registered claim carries. Not yet wired to the cascade.
-  Subsequent slices: RecommendationClass node + Neo4j schema, HB latent-
-  class archetype compression, SCM-native inferential chain on graph,
-  git-commit pre-registration log.
+Package status (2026-04-25):
+  Weeks 1-2: CLT recalibration + page-intelligence salvage + attentional_posture.
+  Weeks 3-4: #4 RecommendationClass scaffolding — ProjectedImpact predicate,
+    RecommendationClassGraph Neo4j entity, pre-registration file convention,
+    archetype compression, inferential-chain SCM substrate.
+  Weeks 5-7: #4 plant model — PlantModel (predicted SPIES distribution with
+    CLT-recalibrated priors, single-level shrinkage, bias-flag population),
+    SequentialSchedule (O'Brien-Fleming interim looks), ConformalCoverage
+    (split-conformal marginal guarantee), Adjudicator (partition + residual-
+    divergence decomposition + parameterization sensitivity).
+  Weeks 8-9: Adjudicator evidence-trace + inferential-chain attribution
+    full population.
 """
 
+from adam.intelligence.recommendation_class.adjudicator import (
+    Adjudicator,
+    AdjudicatorOutput,
+    DEFAULT_BIAS_MAGNITUDES,
+    EvidenceTrace,
+    ParameterizationSensitivity,
+    Partition,
+    RealizedOutcomes,
+    ResidualDivergence,
+    RouteSplitResidual,
+)
 from adam.intelligence.recommendation_class.archetype_compression import (
     ArchetypeCompressionResult,
     ArchetypeCompressor,
@@ -36,6 +53,12 @@ from adam.intelligence.recommendation_class.archetype_compression import (
     DEFAULT_MAX_COMPONENTS,
     DEFAULT_MIN_OBSERVATIONS,
     DEFAULT_SEED,
+)
+from adam.intelligence.recommendation_class.conformal import (
+    ConformalCoverage,
+    ConformalInterval,
+    DEFAULT_ALPHA as DEFAULT_CONFORMAL_ALPHA,
+    DEFAULT_MIN_CALIBRATION_SIZE,
 )
 from adam.intelligence.recommendation_class.graph import (
     RecommendationClassGraph,
@@ -51,6 +74,13 @@ from adam.intelligence.recommendation_class.inferential_chain import (
     ReceptivityEdge,
     RequiresEdge,
     get_inferential_chain_graph,
+)
+from adam.intelligence.recommendation_class.plant_model import (
+    DEFAULT_CONVERSION_RATE_BIN_EDGES,
+    DEFAULT_INDUSTRY_PRIOR_CONCENTRATION,
+    DEFAULT_INDUSTRY_PRIOR_RATE,
+    PlantModel,
+    PlantModelInputs,
 )
 from adam.intelligence.recommendation_class.pre_registration import (
     current_git_head,
@@ -69,29 +99,61 @@ from adam.intelligence.recommendation_class.projected_impact import (
     SpiesDistribution,
     canonical_hash,
 )
+from adam.intelligence.recommendation_class.sequential_schedule import (
+    DEFAULT_ALPHA as DEFAULT_SEQUENTIAL_ALPHA,
+    DEFAULT_N_LOOKS,
+    InterimDecision,
+    InterimLookResult,
+    LookSchedule,
+    SequentialAdjudicator,
+)
 
 __all__ = [
     "ActivatesEdge",
+    "Adjudicator",
+    "AdjudicatorOutput",
     "ArchetypeCompressionResult",
     "ArchetypeCompressor",
     "AudienceScope",
     "AudienceSummary",
     "CompetingActivations",
+    "ConformalCoverage",
+    "ConformalInterval",
+    "DEFAULT_BIAS_MAGNITUDES",
+    "DEFAULT_CONFORMAL_ALPHA",
+    "DEFAULT_CONVERSION_RATE_BIN_EDGES",
     "DEFAULT_COVARIANCE_TYPE",
     "DEFAULT_DIRICHLET_CONCENTRATION",
     "DEFAULT_EFFECTIVE_WEIGHT_THRESHOLD",
+    "DEFAULT_INDUSTRY_PRIOR_CONCENTRATION",
+    "DEFAULT_INDUSTRY_PRIOR_RATE",
     "DEFAULT_MAX_COMPONENTS",
+    "DEFAULT_MIN_CALIBRATION_SIZE",
     "DEFAULT_MIN_OBSERVATIONS",
+    "DEFAULT_N_LOOKS",
     "DEFAULT_SEED",
+    "DEFAULT_SEQUENTIAL_ALPHA",
+    "EvidenceTrace",
     "GoalFulfillmentOutcome",
     "InferentialChainGraph",
+    "InterimDecision",
+    "InterimLookResult",
+    "LookSchedule",
+    "ParameterizationSensitivity",
+    "Partition",
+    "PlantModel",
+    "PlantModelInputs",
     "PrimingCondition",
     "ProjectedImpact",
     "PsychologicalConstructUpsert",
+    "RealizedOutcomes",
     "ReceptivityEdge",
     "RecommendationClassGraph",
     "RecommendationClassIdentity",
     "RequiresEdge",
+    "ResidualDivergence",
+    "RouteSplitResidual",
+    "SequentialAdjudicator",
     "SpiesDistribution",
     "canonical_hash",
     "claim_node_id",
