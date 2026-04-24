@@ -82,13 +82,22 @@ is surface-only — mandatory for pilot ship, not for pilot performance.
    - · **Selection integration** — bandit / mechanism-selector calls
      `compute_blend_fit` to weight creative candidates.
    - · **Learned weights** on pilot data — post-pilot calibration slice.
-6. **Mechanism-taxonomy split: blend-compatible vs vigilance-activating**
-   - Implication #2 of `project_attention_inversion_platform_core.md`.
-   - Partitions the mechanism taxonomy so selection can be
-     posture-conditional at the mechanism level, not just at the
-     creative level. Blend-compatible mechanisms route through the
-     autopilot path; vigilance-activating mechanisms route through the
-     attention path (and carry the regret-correlation flag).
+6. **Mechanism-taxonomy split: blend-compatible vs vigilance-activating** — *taxonomy shipped; selection + adjudicator wiring remain*
+   - ✓ `adam/intelligence/mechanism_taxonomy.py`: all nine mechanisms
+     classified with rationale, regret-correlation prior, route prior.
+     7 BLEND_COMPATIBLE (autopilot-route), 2 VIGILANCE_ACTIVATING
+     (attention-route). Borderline cases (linguistic_framing,
+     identity_construction) named explicitly in rationale.
+   - ↺ A14 `MECHANISM_TAXONOMY_UNVALIDATED` — category assignments
+     + regret priors theoretically motivated; not validated on pilot
+     data. Retirement trigger requires BOTH validations with rule 11
+     guard (regret-free must not imply reinforceable).
+   - · **Selection integration** — mechanism selector consults taxonomy
+     to condition mechanism candidates on posture band.
+   - · **Adjudicator regret diagnostic** — pair `regret_correlation_prior`
+     with observed regret signals to validate or revise priors.
+   - · **Plant-model route-split refinement** — condition `_route_split`
+     on mechanism category (currently per posture band only).
 
 **Why 5 and 6 are in Tier 1.** Items 1-4 make the existing fitness
 landscape cleaner. Items 5-6 reshape the landscape itself — they

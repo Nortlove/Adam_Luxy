@@ -205,6 +205,46 @@ COUNTER_REGULATION_UNTRACKED = A14Compromise(
 )
 
 
+MECHANISM_TAXONOMY_UNVALIDATED = A14Compromise(
+    name="MECHANISM_TAXONOMY_UNVALIDATED",
+    description=(
+        "``adam/intelligence/mechanism_taxonomy.py`` partitions the nine "
+        "cognitive mechanisms seeded in migration 004 into "
+        "BLEND_COMPATIBLE vs VIGILANCE_ACTIVATING categories, each "
+        "carrying a regret-correlation prior in [0, 1]. The partition "
+        "is theoretically motivated from the literature (Bargh & "
+        "Chartrand on automatic evaluation; Berridge & Robinson on "
+        "wanting-liking; Kenrick & Griskevicius on fundamental motives; "
+        "Lakoff & Johnson on primary metaphor; Girard on mimetic "
+        "desire; Barsalou on embodied cognition; Trope & Liberman on "
+        "construal; Tajfel & Turner on social identity; saliency / "
+        "orienting literature on attention dynamics). Two mechanisms "
+        "are explicitly named borderline in their rationale text "
+        "(linguistic_framing, identity_construction) — dominant "
+        "classification is shipped but edge cases surface in the "
+        "rationale rather than being hidden. Neither the category "
+        "assignments nor the regret-correlation priors have been "
+        "validated on ADAM pilot data."
+    ),
+    retirement_trigger=(
+        "Empirical validation of (a) the category assignments on pilot "
+        "data — do mechanisms classified BLEND_COMPATIBLE actually "
+        "produce majority autopilot-route conversions when the "
+        "adjudicator's route-split annotation is populated? — and "
+        "(b) the regret-correlation priors — do observed post-"
+        "conversion regret signals correlate with "
+        "regret_correlation_prior values as predicted? Retirement "
+        "requires BOTH validations. Per rule 11, the validation must "
+        "guard against using regret purely as a reinforcement "
+        "signal; regret-free must not imply reinforceable."
+    ),
+    live_at_sites=(
+        "mechanism_taxonomy.py (MECHANISM_TAXONOMY dict + classifications)",
+    ),
+    retires_at_weakness=None,
+)
+
+
 BLEND_FIT_WEIGHTS_UNVALIDATED = A14Compromise(
     name="BLEND_FIT_WEIGHTS_UNVALIDATED",
     description=(
@@ -285,6 +325,7 @@ ACTIVE_COMPROMISES: tuple[A14Compromise, ...] = (
     COUNTER_REGULATION_UNTRACKED,
     VARIATIONAL_POSTERIOR_APPROXIMATION,
     BLEND_FIT_WEIGHTS_UNVALIDATED,
+    MECHANISM_TAXONOMY_UNVALIDATED,
 )
 # INFERENTIAL_CHAIN_ATTRIBUTION_EMPTY retired 2026-04-25 by
 # adam/intelligence/recommendation_class/chain_attribution.py — the
@@ -354,6 +395,7 @@ __all__ = [
     "BLEND_FIT_WEIGHTS_UNVALIDATED",
     "COUNTER_REGULATION_UNTRACKED",
     "DEPTH_PRIOR_UNVALIDATED",
+    "MECHANISM_TAXONOMY_UNVALIDATED",
     "SINGLE_LEVEL_SHRINKAGE",
     "VARIATIONAL_POSTERIOR_APPROXIMATION",
     "format_for_report",

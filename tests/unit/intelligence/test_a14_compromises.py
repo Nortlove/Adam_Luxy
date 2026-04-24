@@ -9,6 +9,7 @@ from adam.intelligence.recommendation_class import (
     BLEND_FIT_WEIGHTS_UNVALIDATED,
     COUNTER_REGULATION_UNTRACKED,
     DEPTH_PRIOR_UNVALIDATED,
+    MECHANISM_TAXONOMY_UNVALIDATED,
     SINGLE_LEVEL_SHRINKAGE,
     VARIATIONAL_POSTERIOR_APPROXIMATION,
     A14Compromise,
@@ -28,9 +29,10 @@ def test_active_compromises_contains_all_named_constants() -> None:
         COUNTER_REGULATION_UNTRACKED,
         VARIATIONAL_POSTERIOR_APPROXIMATION,
         BLEND_FIT_WEIGHTS_UNVALIDATED,
+        MECHANISM_TAXONOMY_UNVALIDATED,
     }
     assert set(ACTIVE_COMPROMISES) == expected
-    assert len(ACTIVE_COMPROMISES) == 5
+    assert len(ACTIVE_COMPROMISES) == 6
 
 
 def test_inferential_chain_attribution_empty_is_retired() -> None:
