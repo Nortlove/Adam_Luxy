@@ -28,10 +28,11 @@ Frame discipline (Foundation §4.3, §4.4; pilot plan 2026-04-24):
   the autopilot route (the blend-and-fulfill fitness landscape the
   platform is selecting for); `vigilance_*` bands route a larger
   fraction through the attention route (fragile, regret-associated).
-  The posture-conditioned split is what the adjudicator later reports
-  as `route_split.autopilot_route_residual` vs
-  `route_split.attention_route_residual`. Posture-only split is an
-  A14 compromise — see ``a14_compromises.POSTURE_ONLY_ROUTE_SPLIT``.
+  Route fractions are DERIVED from expected processing-depth
+  distributions per posture band composed with a relative
+  P(convert | depth) proxy (see ``processing_depth_priors.py``).
+  Both priors are externally sourced and unvalidated — see
+  ``a14_compromises.DEPTH_PRIOR_UNVALIDATED``.
 - Counter-regulation (habituation, reactance dynamics) is NOT modeled
   in the plant — it's carried as a structured bias flag until per-user
   habituation data lets us estimate it. This is the same retirement-
@@ -82,6 +83,10 @@ from adam.intelligence.recommendation_class.graph import (
     RecommendationClassIdentity,
     recommendation_class_id,
 )
+from adam.intelligence.recommendation_class.processing_depth_priors import (
+    VALID_POSTURE_BANDS,
+    expected_route_fractions,
+)
 
 
 # =============================================================================
@@ -99,34 +104,26 @@ DEFAULT_INDUSTRY_PRIOR_CONCENTRATION = 30.0
 
 
 # =============================================================================
-# Posture-band → route-fraction modifiers (A14 — posture-only; expires when
-# processing-depth weighting is wired)
+# Posture-band → route-fraction derivation
 # =============================================================================
-# See: a14_compromises.POSTURE_ONLY_ROUTE_SPLIT
-# Autopilot / attention fractions by context posture band. These are the
-# pilot-default weights the plant model assigns when NO cell-specific
-# posture distribution is available. Sum of autopilot + attention must
-# not exceed 1.0 (remainder is unresolved route).
+# See: a14_compromises.DEPTH_PRIOR_UNVALIDATED (successor to
+# POSTURE_ONLY_ROUTE_SPLIT after the 2026-04-25 refactor)
 #
-# Source: the attention-inversion platform core (the platform fulfills
-# context-primed goals by BLENDING into the attentional pattern — the
-# autopilot route — not by grabbing conscious attention). Posture bands:
-#   - autopilot_high:  context is deeply in-autopilot; conversions,
-#                      when they happen, are overwhelmingly autopilot-route.
-#   - autopilot_low:   mild autopilot tilt.
-#   - neutral:         no clear posture signal.
-#   - vigilance_low:   mild vigilance tilt.
-#   - vigilance_high:  context triggers evaluation; conversions tend
-#                      attention-route (fragile, regret-associated).
-
-_POSTURE_ROUTE_SPLIT: dict[str, tuple[float, float]] = {
-    # (autopilot_route_fraction, attention_route_fraction)
-    "autopilot_high": (0.75, 0.10),
-    "autopilot_low":  (0.60, 0.20),
-    "neutral":        (0.50, 0.35),
-    "vigilance_low":  (0.35, 0.50),
-    "vigilance_high": (0.20, 0.65),
-}
+# Route fractions are no longer a flat per-band table. They are derived
+# from the expected processing-depth distribution per posture band
+# composed with a relative P(convert | depth) proxy, both living in
+# ``processing_depth_priors.py``. Each cell's (autopilot_fraction,
+# attention_fraction) is computed at projection time by
+# ``expected_route_fractions(posture_band)``.
+#
+# Refactor motivation (attention-inversion + Dawkins rule #11): the
+# plant model's projection layer now branches on depth distributions
+# rather than posture buckets. This unlocks:
+#   - Adjudicator-side comparison of projected vs realized depth
+#     distributions (new theory-failure signal).
+#   - Two-axis recalibration (depth distribution × P(convert|depth))
+#     rather than single-axis route fractions.
+#   - Per-cell distribution priors as a named successor slice.
 
 
 # =============================================================================
@@ -435,17 +432,19 @@ class PlantModel:
     ) -> tuple[float, float]:
         """Assign autopilot / attention route fractions.
 
-        Primary signal: the identity's context_posture_band picks a
-        base (autopilot_frac, attention_frac) pair. Secondary: the
-        PrimingCondition's continuous attentional_posture × confidence
-        nudges the split toward the signed direction (negative posture
-        → autopilot; positive → attention) proportional to confidence.
+        Primary signal: ``expected_route_fractions(context_posture_band)``
+        derives (autopilot_frac, attention_frac) from the expected
+        processing-depth distribution × relative P(convert | depth)
+        proxy (see ``processing_depth_priors.py``). These base
+        fractions sum to 1.0 for the band.
 
-        A posture nudge of magnitude 1 at confidence 1 shifts up to
-        0.1 of the mass between the two routes — a deliberate cap so
-        low-confidence nudges don't overwhelm the band's base weights.
+        Secondary: the PrimingCondition's continuous
+        ``attentional_posture × confidence`` nudges the split toward
+        the signed direction (negative posture → autopilot; positive
+        → attention) proportional to confidence. Cap at 0.1 mass
+        shifted; low-confidence nudges don't overwhelm the base.
         """
-        base_auto, base_att = _POSTURE_ROUTE_SPLIT[context_posture_band]
+        base_auto, base_att = expected_route_fractions(context_posture_band)
         max_shift = 0.10
         shift = max_shift * attentional_posture_confidence * attentional_posture
         # attentional_posture in [-1, 1]: -1 = autopilot, +1 = vigilance.
@@ -474,8 +473,10 @@ class PlantModel:
         # single-level shrinkage is the only shrinkage layer pilot ships.
         winners_curse = True
 
-        # Attention-route residual: see a14_compromises.POSTURE_ONLY_ROUTE_SPLIT
-        # — posture-only split, no processing-depth weighting yet.
+        # Depth-prior unvalidated: see a14_compromises.DEPTH_PRIOR_UNVALIDATED
+        # — route fractions derive from expected depth distributions
+        # and a relative P(convert|depth) proxy, both externally
+        # sourced and per-posture-band rather than per-cell.
         attention_residual = True
 
         # Counter-regulation: see a14_compromises.COUNTER_REGULATION_UNTRACKED
@@ -533,10 +534,10 @@ class PlantModel:
 
     @staticmethod
     def _validate_posture_band(context_posture_band: str) -> None:
-        if context_posture_band not in _POSTURE_ROUTE_SPLIT:
+        if context_posture_band not in VALID_POSTURE_BANDS:
             raise ValueError(
                 f"unknown context_posture_band {context_posture_band!r}; "
-                f"must be one of {sorted(_POSTURE_ROUTE_SPLIT.keys())}"
+                f"must be one of {sorted(VALID_POSTURE_BANDS)}"
             )
 
 

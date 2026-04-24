@@ -133,32 +133,46 @@ SINGLE_LEVEL_SHRINKAGE = A14Compromise(
 )
 
 
-POSTURE_ONLY_ROUTE_SPLIT = A14Compromise(
-    name="POSTURE_ONLY_ROUTE_SPLIT",
+DEPTH_PRIOR_UNVALIDATED = A14Compromise(
+    name="DEPTH_PRIOR_UNVALIDATED",
     description=(
         "The autopilot-route / attention-route split on "
-        "GoalFulfillmentOutcome is driven by context_posture_band plus "
-        "the PrimingCondition's attentional_posture × confidence nudge. "
-        "The decided architecture weights route fractions by cell-level "
-        "processing-depth distributions — Layer-11 of the page-"
-        "intelligence substrate (Foundation rule 11). Processing-depth "
-        "weighting is not yet calibrated per cell, so every projection "
-        "emits `attention_route_residual=True` and "
-        "`weighting_by_processing_depth=False` on the emitted "
-        "GoalFulfillmentOutcome."
+        "GoalFulfillmentOutcome is now derived from an expected "
+        "processing-depth distribution per posture band "
+        "(``_EXPECTED_DEPTH_BY_POSTURE_BAND`` in "
+        "``processing_depth_priors.py``) composed with a relative "
+        "P(convert | depth) proxy (``_RELATIVE_P_CONVERT_BY_DEPTH``). "
+        "This is architectural progress over the former flat "
+        "posture-band → route-fraction table (POSTURE_ONLY_ROUTE_SPLIT, "
+        "retired 2026-04-25). Two remaining limitations: (a) the "
+        "expected distributions are seeded from aggregated external "
+        "display-advertising research (Lumen, Bruns et al., "
+        "Amplified Intelligence / Nelson-Field, Goldstein) whose "
+        "generalization to ADAM's deployment contexts has not been "
+        "internally validated; (b) the priors are per-posture-band "
+        "rather than per-cell — upstream page intelligence "
+        "(Layer-11 processing-depth) can produce per-cell priors "
+        "but the wiring is not yet live. Every projection still "
+        "emits ``attention_route_residual=True``."
     ),
     retirement_trigger=(
-        "Layer-11 processing-depth weighting is empirically calibrated "
-        "per cell — page-intelligence substrate produces reliable "
-        "processing-depth distributions that downstream route-split "
-        "logic can consume."
+        "Two slices must ship. (1) External threshold + distribution "
+        "validation: validate the ProcessingDepth enum thresholds AND "
+        "the per-posture expected distributions on ADAM pilot data; "
+        "adjust priors or thresholds where they diverge from observed "
+        "behavior. (2) Per-cell distribution priors: replace per-"
+        "posture-band ``_EXPECTED_DEPTH_BY_POSTURE_BAND`` with "
+        "cell-level priors informed by upstream page intelligence "
+        "(Layer-11 processing-depth dimension). Retirement triggers "
+        "when both ship; partial retirement is not meaningful since "
+        "per-cell priors built on unvalidated thresholds inherit the "
+        "same bias."
     ),
     live_at_sites=(
-        "plant_model.py:99-125 (_POSTURE_ROUTE_SPLIT header + table)",
-        "plant_model.py:270-278 (weighting_by_processing_depth=False emit)",
-        "plant_model.py:425-457 (_route_split impl)",
-        "plant_model.py:472-475 (attention_residual flag emit)",
-        "adjudicator.py:89-91 (DEFAULT_BIAS_MAGNITUDES attention_route header)",
+        "processing_depth_priors.py (_EXPECTED_DEPTH_BY_POSTURE_BAND + _RELATIVE_P_CONVERT_BY_DEPTH)",
+        "plant_model.py (_route_split — consumes expected_route_fractions)",
+        "plant_model.py (attention_residual flag emit in _competing_activations)",
+        "adjudicator.py (DEFAULT_BIAS_MAGNITUDES attention_route header)",
     ),
     retires_at_weakness=None,
 )
@@ -232,15 +246,21 @@ VARIATIONAL_POSTERIOR_APPROXIMATION = A14Compromise(
 
 ACTIVE_COMPROMISES: tuple[A14Compromise, ...] = (
     SINGLE_LEVEL_SHRINKAGE,
-    POSTURE_ONLY_ROUTE_SPLIT,
+    DEPTH_PRIOR_UNVALIDATED,
     COUNTER_REGULATION_UNTRACKED,
     VARIATIONAL_POSTERIOR_APPROXIMATION,
 )
 # INFERENTIAL_CHAIN_ATTRIBUTION_EMPTY retired 2026-04-25 by
 # adam/intelligence/recommendation_class/chain_attribution.py — the
 # Adjudicator now computes strength-weighted attribution when
-# chain_reader is injected. Retirement commit retains the original
-# entry's shape in git history.
+# chain_reader is injected.
+#
+# POSTURE_ONLY_ROUTE_SPLIT retired 2026-04-25 and REPLACED by
+# DEPTH_PRIOR_UNVALIDATED after the plant-model refactor that derives
+# route fractions from expected processing-depth distributions per
+# posture band. The decided architecture's full retirement requires
+# two further slices (external threshold validation + per-cell
+# priors); see DEPTH_PRIOR_UNVALIDATED.retirement_trigger.
 
 
 def _validate_registry() -> None:
@@ -296,7 +316,7 @@ __all__ = [
     "A14Compromise",
     "ACTIVE_COMPROMISES",
     "COUNTER_REGULATION_UNTRACKED",
-    "POSTURE_ONLY_ROUTE_SPLIT",
+    "DEPTH_PRIOR_UNVALIDATED",
     "SINGLE_LEVEL_SHRINKAGE",
     "VARIATIONAL_POSTERIOR_APPROXIMATION",
     "format_for_report",

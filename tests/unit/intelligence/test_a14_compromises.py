@@ -7,7 +7,7 @@ import pytest
 from adam.intelligence.recommendation_class import (
     ACTIVE_COMPROMISES,
     COUNTER_REGULATION_UNTRACKED,
-    POSTURE_ONLY_ROUTE_SPLIT,
+    DEPTH_PRIOR_UNVALIDATED,
     SINGLE_LEVEL_SHRINKAGE,
     VARIATIONAL_POSTERIOR_APPROXIMATION,
     A14Compromise,
@@ -23,7 +23,7 @@ from adam.intelligence.recommendation_class import (
 def test_active_compromises_contains_all_named_constants() -> None:
     expected = {
         SINGLE_LEVEL_SHRINKAGE,
-        POSTURE_ONLY_ROUTE_SPLIT,
+        DEPTH_PRIOR_UNVALIDATED,
         COUNTER_REGULATION_UNTRACKED,
         VARIATIONAL_POSTERIOR_APPROXIMATION,
     }
@@ -37,6 +37,14 @@ def test_inferential_chain_attribution_empty_is_retired() -> None:
     # chain_reader / attribute_residual path.
     from adam.intelligence import recommendation_class as pkg
     assert not hasattr(pkg, "INFERENTIAL_CHAIN_ATTRIBUTION_EMPTY")
+
+
+def test_posture_only_route_split_is_retired_and_replaced() -> None:
+    # Retired 2026-04-25 and REPLACED by DEPTH_PRIOR_UNVALIDATED
+    # after the plant-model refactor.
+    from adam.intelligence import recommendation_class as pkg
+    assert not hasattr(pkg, "POSTURE_ONLY_ROUTE_SPLIT")
+    assert hasattr(pkg, "DEPTH_PRIOR_UNVALIDATED")
 
 
 def test_all_compromise_names_are_unique() -> None:
@@ -104,9 +112,13 @@ def test_counter_regulation_trigger_names_habituation_data() -> None:
     assert "habituation" in trigger
 
 
-def test_posture_only_trigger_names_processing_depth() -> None:
-    trigger = POSTURE_ONLY_ROUTE_SPLIT.retirement_trigger.lower()
-    assert "processing-depth" in trigger or "processing depth" in trigger
+def test_depth_prior_unvalidated_trigger_names_validation_and_per_cell() -> None:
+    # The retirement requires BOTH slices: external validation of
+    # thresholds/distributions AND per-cell priors. Trigger language
+    # must reference both to prevent premature retirement.
+    trigger = DEPTH_PRIOR_UNVALIDATED.retirement_trigger.lower()
+    assert "valid" in trigger  # matches "validate" or "validation"
+    assert "per-cell" in trigger or "per cell" in trigger
 
 
 def test_variational_posterior_retires_at_weakness_8() -> None:

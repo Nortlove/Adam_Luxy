@@ -31,13 +31,18 @@ is surface-only — mandatory for pilot ship, not for pilot performance.
    - Closes the learning loop back from adjudication to theory
      refinement. Without this, every failing cell's residual stays as
      `unexplained` and the ILA has nothing specific to update on.
-2. **Atom-level telemetry for `EvidenceTrace`**
-   - Populate `atom_activation_counts`, `chain_depth`, `source_diversity`,
-     and specifically **`processing_depth_distribution`**.
-   - `processing_depth_distribution` retires
-     `a14_compromises.POSTURE_ONLY_ROUTE_SPLIT` — makes the
-     autopilot/attention split real per-cell rather than
-     posture-bucketed.
+2. **Atom-level telemetry for `EvidenceTrace`** — *shipped in part*.
+   - `chain_depth` populated from the traversal built in #10 when a
+     chain_reader is injected (`7454143` / this commit).
+   - `processing_depth_distribution` populated from optional
+     `RealizedOutcomes.processing_depth_counts` (this commit).
+   - `atom_activation_counts`, `source_diversity` — still open; requires
+     atom-DAG telemetry plumbing that's out of scope for this slice.
+   - Scope 3 plant-model refactor shipped: route fractions derive from
+     expected processing-depth distributions per posture band composed
+     with a P(convert|depth) proxy. `POSTURE_ONLY_ROUTE_SPLIT` is
+     retired and **replaced by** `DEPTH_PRIOR_UNVALIDATED` — full
+     retirement requires the two Tier 2 items below.
 3. **task_23-32 DCIL ownership coupling**
    - Interim-look execution substrate for the plant model's
      `SequentialAdjudicator`. Without this, the learning loop never
@@ -79,6 +84,23 @@ decision promoted them to active focus.
 ---
 
 ## Tier 2 — Meaningful but marginal (deferred until Tier 1 ships)
+
+0. **ProcessingDepth external-prior validation** (retires `DEPTH_PRIOR_UNVALIDATED` slice 1 of 2)
+   - Validate the 4-level ProcessingDepth enum thresholds (<1.0s /
+     <2.5s / <5.0s / ≥5.0s) on ADAM pilot data. Check whether
+     ADAM's cells cluster near the thresholds (threshold-sensitivity
+     signal) or spread uniformly (thresholds arbitrary for our data).
+   - Validate the per-posture-band `_EXPECTED_DEPTH_BY_POSTURE_BAND`
+     distributions against observed per-cell distributions.
+   - Validate the `_RELATIVE_P_CONVERT_BY_DEPTH` proxy against
+     observed conversion rates per depth bucket.
+   - Adjust priors / thresholds where they diverge.
+0a. **Per-cell processing-depth priors** (retires `DEPTH_PRIOR_UNVALIDATED` slice 2 of 2)
+   - Replace per-posture-band `_EXPECTED_DEPTH_BY_POSTURE_BAND` with
+     cell-level priors informed by upstream page intelligence
+     (Layer-11 processing-depth dimension).
+   - Depends on: #7 MV features landing page-side processing-depth
+     substrate (Tier 1 item 4).
 
 1. **Publisher metadata trinity + bid-request categoricals**
    - Rest of #7 MV. Feeds the Claude-scored features from Tier 1
@@ -145,10 +167,10 @@ decision promoted them to active focus.
 
 | Tier 1 item | A14 flag it retires |
 |---|---|
-| 1. Graph-traversal helpers | `INFERENTIAL_CHAIN_ATTRIBUTION_EMPTY` |
-| 2. Processing-depth distribution | `POSTURE_ONLY_ROUTE_SPLIT` |
+| 1. Graph-traversal helpers | ✓ `INFERENTIAL_CHAIN_ATTRIBUTION_EMPTY` (shipped `7f27c95`) |
+| 2. Scope 3 depth-conditioned routes | ↺ `POSTURE_ONLY_ROUTE_SPLIT` → replaced by `DEPTH_PRIOR_UNVALIDATED` (shipped this commit); full retirement needs Tier 2 items 0 + 0a |
 | 3. task_23-32 coupling | (none — unblocks execution) |
-| 4. #7 MV features | (none directly — feeds inputs) |
+| 4. #7 MV features | (none directly — feeds inputs; enables Tier 2 #0a) |
 | 5. blend_fit | (none — new primitive) |
 | 6. Mechanism taxonomy split | (none — new structure) |
 

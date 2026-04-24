@@ -222,7 +222,7 @@ class CompetingActivations:
     ``a14_compromises.ACTIVE_COMPROMISES``.
     """
     counter_regulation_untracked: bool  # see a14_compromises.COUNTER_REGULATION_UNTRACKED
-    attention_route_residual: bool  # see a14_compromises.POSTURE_ONLY_ROUTE_SPLIT
+    attention_route_residual: bool  # see a14_compromises.DEPTH_PRIOR_UNVALIDATED
     winners_curse_portion: bool  # see a14_compromises.SINGLE_LEVEL_SHRINKAGE
     publication_bias_residual: bool  # construct priors not yet all publication-bias-corrected
     baseline_rate: float  # population baseline for the outcome_metric

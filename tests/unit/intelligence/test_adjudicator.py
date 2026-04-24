@@ -418,3 +418,99 @@ class TestChainReaderIntegration:
         result = adj.adjudicate(projected, realized, model, inputs)
         assert result.partition == Partition.FAILING
         assert result.inferential_chain_attribution == {}
+
+    def test_failing_cell_populates_chain_depth_in_trace(self):
+        """When the chain reader returns edges, chain_depth is the max
+        depth_from_mechanism across the returned edges."""
+        model = PlantModel()
+        inputs = _plant_inputs(obs=200, with_effect=True)
+        projected = model.project(inputs)
+        realized = RealizedOutcomes(total_conversions=2, total_sample_size=10000)
+
+        def reader(mech_name):
+            return _fake_chain_edges_regulatory_fit()
+
+        adj = Adjudicator(chain_reader=reader)
+        result = adj.adjudicate(projected, realized, model, inputs)
+        assert result.partition == Partition.FAILING
+        # Fake edges max depth is 2 (the ACTIVATES upstream edge).
+        assert result.evidence_trace.chain_depth == 2
+
+    def test_non_failing_cell_leaves_chain_depth_none_even_with_reader(self):
+        """chain_depth telemetry should only populate on FAILING cells —
+        otherwise every adjudication would hit Neo4j for no information."""
+        model = PlantModel()
+        inputs = _plant_inputs(obs=100, with_effect=True)
+        projected = model.project(inputs)
+        realized = RealizedOutcomes(total_conversions=4, total_sample_size=200)
+
+        def reader(mech_name):
+            return _fake_chain_edges_regulatory_fit()
+
+        adj = Adjudicator(chain_reader=reader)
+        result = adj.adjudicate(projected, realized, model, inputs)
+        assert result.partition != Partition.FAILING
+        assert result.evidence_trace.chain_depth is None
+
+
+# -----------------------------------------------------------------------------
+# Processing-depth telemetry in EvidenceTrace
+# -----------------------------------------------------------------------------
+
+
+class TestProcessingDepthTelemetry:
+    def test_no_counts_leaves_distribution_none(self):
+        model = PlantModel()
+        inputs = _plant_inputs(obs=100, with_effect=True)
+        projected = model.project(inputs)
+        realized = RealizedOutcomes(total_conversions=5, total_sample_size=200)
+        adj = Adjudicator()
+        result = adj.adjudicate(projected, realized, model, inputs)
+        assert result.evidence_trace.processing_depth_distribution is None
+
+    def test_counts_populate_distribution(self):
+        model = PlantModel()
+        inputs = _plant_inputs(obs=100, with_effect=True)
+        projected = model.project(inputs)
+        realized = RealizedOutcomes(
+            total_conversions=5,
+            total_sample_size=200,
+            processing_depth_counts={
+                "unprocessed": 80,
+                "peripheral": 70,
+                "evaluated": 35,
+                "deliberate_rejection": 15,
+            },
+        )
+        adj = Adjudicator()
+        result = adj.adjudicate(projected, realized, model, inputs)
+        dist = result.evidence_trace.processing_depth_distribution
+        assert dist is not None
+        assert abs(sum(dist.values()) - 1.0) < 1e-6
+        assert abs(dist["unprocessed"] - 80 / 200) < 1e-6
+
+    def test_counts_must_sum_to_total_sample_size(self):
+        with pytest.raises(ValueError, match="must equal total_sample_size"):
+            RealizedOutcomes(
+                total_conversions=5,
+                total_sample_size=200,
+                processing_depth_counts={"unprocessed": 100},  # only 100, not 200
+            ).validate()
+
+    def test_counts_reject_unknown_depth_key(self):
+        with pytest.raises(ValueError, match="not a valid ProcessingDepth"):
+            RealizedOutcomes(
+                total_conversions=5,
+                total_sample_size=200,
+                processing_depth_counts={"partial_attention": 200},
+            ).validate()
+
+    def test_counts_reject_negative_value(self):
+        with pytest.raises(ValueError, match="must be >= 0"):
+            RealizedOutcomes(
+                total_conversions=5,
+                total_sample_size=200,
+                processing_depth_counts={
+                    "unprocessed": -5, "peripheral": 205,
+                },
+            ).validate()

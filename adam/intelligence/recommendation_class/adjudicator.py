@@ -58,9 +58,13 @@ from adam.intelligence.recommendation_class.chain_attribution import (
 from adam.intelligence.recommendation_class.plant_model import (
     PlantModel, PlantModelInputs,
 )
+from adam.intelligence.recommendation_class.processing_depth_priors import (
+    normalize_depth_counts_to_distribution,
+)
 from adam.intelligence.recommendation_class.projected_impact import (
     ProjectedImpact,
 )
+from adam.retargeting.engines.processing_depth import ProcessingDepth
 
 
 # =============================================================================
@@ -90,9 +94,10 @@ class Partition(str, Enum):
 #     runs below projected under single-level shrinkage; 20% is the
 #     order-of-magnitude finding from multi-level meta-analyses of
 #     phase II → III winner's-curse effects).
-#   attention_route_residual — see a14_compromises.POSTURE_ONLY_ROUTE_SPLIT.
-#     Default 10% — the posture-only split typically overestimates
-#     autopilot-route fulfillment.
+#   attention_route_residual — see a14_compromises.DEPTH_PRIOR_UNVALIDATED.
+#     Default 10% — route fractions now derive from expected depth
+#     distributions, but the underlying priors are externally sourced
+#     and per-posture-band rather than per-cell.
 #   counter_regulation_untracked — see a14_compromises.COUNTER_REGULATION_UNTRACKED.
 #     Default 5% — subtle drift from reactance/habituation accumulates
 #     over the horizon.
@@ -132,6 +137,15 @@ class RealizedOutcomes:
     autopilot_route_sample_size: Optional[int] = None
     attention_route_conversions: Optional[int] = None
     attention_route_sample_size: Optional[int] = None
+    processing_depth_counts: Optional[Dict[str, int]] = None
+    # Per-impression ProcessingDepth counts aggregated over the
+    # horizon. Keys must be valid ProcessingDepth enum values. When
+    # provided, the adjudicator populates
+    # ``EvidenceTrace.processing_depth_distribution``. Counts should
+    # sum to ``total_sample_size``; the validator enforces this.
+    # See ``processing_depth_priors.route_split_from_counts`` for the
+    # helper that callers use to derive autopilot / attention route
+    # counts from these per-depth counts.
 
     def validate(self) -> None:
         if self.total_sample_size <= 0:
@@ -166,6 +180,28 @@ class RealizedOutcomes:
             raise ValueError("autopilot route counts out of range")
         if att_n is not None and not (0 <= att_c <= att_n):
             raise ValueError("attention route counts out of range")
+        if self.processing_depth_counts is not None:
+            for key, count in self.processing_depth_counts.items():
+                if count < 0:
+                    raise ValueError(
+                        f"processing_depth_counts[{key!r}] must be >= 0; "
+                        f"got {count}"
+                    )
+                # Validate key against ProcessingDepth enum.
+                try:
+                    ProcessingDepth(key)
+                except ValueError as exc:
+                    raise ValueError(
+                        f"processing_depth_counts key {key!r} is not a "
+                        f"valid ProcessingDepth; expected one of "
+                        f"{[d.value for d in ProcessingDepth]}"
+                    ) from exc
+            total_depth_counts = sum(self.processing_depth_counts.values())
+            if total_depth_counts != self.total_sample_size:
+                raise ValueError(
+                    f"processing_depth_counts sum ({total_depth_counts}) "
+                    f"must equal total_sample_size ({self.total_sample_size})"
+                )
 
     @property
     def realized_rate(self) -> float:
@@ -321,17 +357,33 @@ class Adjudicator:
             realized=realized,
         )
 
+        depth_distribution: Optional[Dict[str, float]] = None
+        if realized.processing_depth_counts is not None:
+            depth_distribution = normalize_depth_counts_to_distribution(
+                realized.processing_depth_counts,
+            )
+
+        # Chain-depth comes from the traversal we're about to run for
+        # attribution on FAILING cells. We compute it up-front so both
+        # the trace and the attribution consume the same chain_edges.
+        chain_edges = self._fetch_chain_edges(partition, plant_inputs)
+        chain_depth: Optional[int] = None
+        if chain_edges:
+            chain_depth = max(e.depth_from_mechanism for e in chain_edges)
+
         trace = EvidenceTrace(
             observation_density=(
                 realized.total_sample_size / max(1, projected.horizon_days)
             ),
             sample_size=realized.total_sample_size,
+            chain_depth=chain_depth,
+            processing_depth_distribution=depth_distribution,
         )
 
-        attribution = self._chain_attribution(
+        attribution = self._chain_attribution_from_edges(
             partition=partition,
-            plant_inputs=plant_inputs,
             residual=residual,
+            chain_edges=chain_edges,
         )
 
         return AdjudicatorOutput(
@@ -347,27 +399,47 @@ class Adjudicator:
             inferential_chain_attribution=attribution,
         )
 
-    def _chain_attribution(
+    def _fetch_chain_edges(
         self,
         partition: Partition,
         plant_inputs: PlantModelInputs,
-        residual: ResidualDivergence,
-    ) -> Dict[str, float]:
-        """Compute inferential-chain attribution for this cell.
+    ):
+        """Fetch the inferential-chain edges for this cell's mechanism.
 
-        Populated only when partition == FAILING and a chain_reader
-        is injected. All other cases return ``{}`` — validated /
-        untested cells don't need attribution, and unconfigured
-        adjudicators must not fabricate chain structure.
+        Returns an empty sequence when there is no chain_reader
+        injected, when the cell is not FAILING (no point walking the
+        chain for validated / untested cells), or when the reader
+        raises. Read-only; used by both the chain_depth telemetry
+        and the attribution path so they share the same traversal.
         """
-        if partition != Partition.FAILING or self.chain_reader is None:
-            return {}
-        mechanism_name = plant_inputs.identity.mechanism
+        if self.chain_reader is None:
+            return []
+        # Only walk the chain on FAILING cells. chain_depth telemetry
+        # is only meaningful alongside attribution; populating it for
+        # validated cells adds Neo4j round-trips without informational
+        # value.
+        if partition != Partition.FAILING:
+            return []
         try:
-            chain_edges = self.chain_reader(mechanism_name)
+            return list(self.chain_reader(plant_inputs.identity.mechanism))
         except Exception:  # noqa: BLE001 — chain-reader failure must
             # not fail adjudication; log-and-swallow lives inside the
             # injected closure (see make_chain_reader).
+            return []
+
+    def _chain_attribution_from_edges(
+        self,
+        partition: Partition,
+        residual: ResidualDivergence,
+        chain_edges,
+    ) -> Dict[str, float]:
+        """Attribute the unexplained residual to the fetched chain edges.
+
+        Returns ``{}`` when not FAILING (nothing to attribute) or when
+        the edges list is empty. Pure arithmetic — the heavy lifting
+        happens in ``attribute_residual``.
+        """
+        if partition != Partition.FAILING or not chain_edges:
             return {}
         return attribute_residual(
             chain_edges=chain_edges,
