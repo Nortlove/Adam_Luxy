@@ -277,6 +277,30 @@ class PagePsychologicalProfile:
     rhetorical_appeals: Dict[str, float] = field(default_factory=dict)  # ethos, pathos, logos weights
 
     # ══════════════════════════════════════════════════════════════════
+    # LAYER 11: ATTENTIONAL POSTURE (attention-inversion principle)
+    # The attentional mode the page induces in the reader.
+    # ══════════════════════════════════════════════════════════════════
+    # Scalar in [-1, 1]:
+    #     -1 = fully autopilot-dominant (long-form narrative, lifestyle,
+    #          habitual browsing — reader on the blend-and-fulfill route)
+    #     +1 = fully vigilance-dominant (threat-news, evaluative listicles,
+    #          comparison shopping — reader on the evaluate-and-resist route)
+    #      0 = neutral / unknown
+    #
+    # Per attention-inversion (Chris 2026-04-23, platform core): conscious
+    # attention is the *barrier* in consumer behavior, not the path. Ads
+    # served on autopilot-dominant pages reach the reader via blend-and-
+    # fulfill, bypassing the evaluation gate. Ads on vigilance-dominant
+    # pages trip evaluation → persuasion resistance.
+    #
+    # Feeds page_edge_bridge.compute_page_edge_shift to shift the buyer's
+    # position along persuasion_susceptibility / autonomy_reactance /
+    # cognitive_load_tolerance / narrative_transport / decision_entropy
+    # BEFORE L3 mechanism scoring. See project_attention_inversion_platform_core.md.
+    attentional_posture: float = 0.0
+    attentional_posture_confidence: float = 0.0  # 0 = no evidence, 1 = strong signal
+
+    # ══════════════════════════════════════════════════════════════════
     # LAYER 11: SEMANTIC TOPIC EMBEDDING
     # Vector representation for similarity matching
     # ══════════════════════════════════════════════════════════════════

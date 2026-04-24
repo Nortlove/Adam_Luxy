@@ -293,6 +293,12 @@ class ArticleObservation:
     exposure_context_confidence: float = 0.0
     lexicon_evidence: Dict[str, Any] = field(default_factory=dict)
 
+    # Attentional posture (attention-inversion principle). Scalar in [-1, 1]:
+    # -1 = autopilot-dominant, +1 = vigilance-dominant, 0 = neutral.
+    # None when upstream has not scored it (empty-prior semantic — the
+    # Welford update path skips this observation rather than imputing 0).
+    attentional_posture: Optional[float] = None
+
     @property
     def id(self) -> str:
         return article_id(self.canonical_url or self.url)
@@ -312,6 +318,12 @@ class ArticleObservation:
             raise ValueError(
                 f"exposure_context_confidence {self.exposure_context_confidence} "
                 "outside [0, 1]"
+            )
+        if self.attentional_posture is not None and not (
+            -1.0 <= self.attentional_posture <= 1.0
+        ):
+            raise ValueError(
+                f"attentional_posture {self.attentional_posture} outside [-1, 1]"
             )
 
 
@@ -351,7 +363,10 @@ MERGE (a:Author {id: $author_id})
     a.construct_variance = $zero_construct,
     a.construct_observations = 0,
     a.primary_metaphor_axes = $zero_metaphor,
-    a.style_signature = []
+    a.style_signature = [],
+    a.attentional_posture = 0.0,
+    a.attentional_posture_variance = 0.0,
+    a.attentional_posture_observations = 0
   ON MATCH SET
     a.last_seen = datetime(),
     a.name = coalesce(a.name, $name),
@@ -401,7 +416,10 @@ MERGE (p:Publication {id: $publication_id})
     p.construct_centroid = $zero_construct,
     p.construct_variance = $zero_construct,
     p.construct_observations = 0,
-    p.primary_metaphor_axes = $zero_metaphor
+    p.primary_metaphor_axes = $zero_metaphor,
+    p.attentional_posture = 0.0,
+    p.attentional_posture_variance = 0.0,
+    p.attentional_posture_observations = 0
   ON MATCH SET
     p.last_seen = datetime(),
     p.name = coalesce(p.name, $name),
@@ -497,7 +515,10 @@ MERGE (ar:Article {id: $article_id})
     ar.primary_metaphor_axes = $zero_metaphor,
     ar.exposure_context_confidence = 0.0,
     ar.observation_count = 0,
-    ar.first_seen = datetime()
+    ar.first_seen = datetime(),
+    ar.attentional_posture = 0.0,
+    ar.attentional_posture_variance = 0.0,
+    ar.attentional_posture_observations = 0
 SET
     ar.observation_count = ar.observation_count + 1,
     ar.last_updated = datetime(),
@@ -595,7 +616,10 @@ MERGE (p)-[r:HAS_SECTION]->(s)
     r.article_count = 0,
     r.observation_count = 0,
     r.construct_centroid = $zero_construct,
-    r.construct_variance = $zero_construct
+    r.construct_variance = $zero_construct,
+    r.attentional_posture = 0.0,
+    r.attentional_posture_variance = 0.0,
+    r.attentional_posture_observations = 0
 SET
     r.article_count = r.article_count + 1,
     r.observation_count = r.observation_count + 1,
@@ -638,6 +662,98 @@ MATCH (t:Topic {id: $topic_id})
 MERGE (p)-[r:COVERS_TOPIC]->(t)
   ON CREATE SET r.article_count = 0
 SET r.article_count = r.article_count + 1
+"""
+
+
+# =============================================================================
+# ATTENTIONAL POSTURE — scalar Welford updates (attention-inversion addition)
+# =============================================================================
+#
+# These run AFTER the main entity upserts, only when upstream has supplied a
+# posture score. Empty-prior semantic: if posture is not scored, the entity's
+# running posterior is not touched (never imputes 0 to avoid contaminating
+# the accumulated signal with no-evidence observations).
+#
+# coalesce() on the read side protects against nodes created before this
+# migration when the ON CREATE SET initializers were not present.
+
+_CYPHER_UPDATE_AUTHOR_POSTURE = """
+MATCH (a:Author {id: $id})
+WITH a, $posture AS x,
+     coalesce(a.attentional_posture_observations, 0) AS old_n,
+     coalesce(a.attentional_posture, 0.0) AS old_mean,
+     coalesce(a.attentional_posture_variance, 0.0) AS old_var
+WITH a, x, old_n, old_mean, old_var, old_n + 1 AS new_n
+WITH a, x, old_n, old_mean, old_var, new_n,
+     old_mean + (x - old_mean) / toFloat(new_n) AS new_mean
+WITH a, x, old_n, old_mean, old_var, new_n, new_mean,
+     CASE WHEN new_n > 0
+          THEN ((old_var * toFloat(old_n))
+                + (x - old_mean) * (x - new_mean)) / toFloat(new_n)
+          ELSE old_var END AS new_var
+SET a.attentional_posture = new_mean,
+    a.attentional_posture_variance = new_var,
+    a.attentional_posture_observations = new_n
+"""
+
+
+_CYPHER_UPDATE_PUBLICATION_POSTURE = """
+MATCH (p:Publication {id: $id})
+WITH p, $posture AS x,
+     coalesce(p.attentional_posture_observations, 0) AS old_n,
+     coalesce(p.attentional_posture, 0.0) AS old_mean,
+     coalesce(p.attentional_posture_variance, 0.0) AS old_var
+WITH p, x, old_n, old_mean, old_var, old_n + 1 AS new_n
+WITH p, x, old_n, old_mean, old_var, new_n,
+     old_mean + (x - old_mean) / toFloat(new_n) AS new_mean
+WITH p, x, old_n, old_mean, old_var, new_n, new_mean,
+     CASE WHEN new_n > 0
+          THEN ((old_var * toFloat(old_n))
+                + (x - old_mean) * (x - new_mean)) / toFloat(new_n)
+          ELSE old_var END AS new_var
+SET p.attentional_posture = new_mean,
+    p.attentional_posture_variance = new_var,
+    p.attentional_posture_observations = new_n
+"""
+
+
+_CYPHER_UPDATE_ARTICLE_POSTURE = """
+MATCH (ar:Article {id: $id})
+WITH ar, $posture AS x,
+     coalesce(ar.attentional_posture_observations, 0) AS old_n,
+     coalesce(ar.attentional_posture, 0.0) AS old_mean,
+     coalesce(ar.attentional_posture_variance, 0.0) AS old_var
+WITH ar, x, old_n, old_mean, old_var, old_n + 1 AS new_n
+WITH ar, x, old_n, old_mean, old_var, new_n,
+     old_mean + (x - old_mean) / toFloat(new_n) AS new_mean
+WITH ar, x, old_n, old_mean, old_var, new_n, new_mean,
+     CASE WHEN new_n > 0
+          THEN ((old_var * toFloat(old_n))
+                + (x - old_mean) * (x - new_mean)) / toFloat(new_n)
+          ELSE old_var END AS new_var
+SET ar.attentional_posture = new_mean,
+    ar.attentional_posture_variance = new_var,
+    ar.attentional_posture_observations = new_n
+"""
+
+
+_CYPHER_UPDATE_HAS_SECTION_POSTURE = """
+MATCH (p:Publication {id: $publication_id})-[r:HAS_SECTION]->(s:Section {id: $section_id})
+WITH r, $posture AS x,
+     coalesce(r.attentional_posture_observations, 0) AS old_n,
+     coalesce(r.attentional_posture, 0.0) AS old_mean,
+     coalesce(r.attentional_posture_variance, 0.0) AS old_var
+WITH r, x, old_n, old_mean, old_var, old_n + 1 AS new_n
+WITH r, x, old_n, old_mean, old_var, new_n,
+     old_mean + (x - old_mean) / toFloat(new_n) AS new_mean
+WITH r, x, old_n, old_mean, old_var, new_n, new_mean,
+     CASE WHEN new_n > 0
+          THEN ((old_var * toFloat(old_n))
+                + (x - old_mean) * (x - new_mean)) / toFloat(new_n)
+          ELSE old_var END AS new_var
+SET r.attentional_posture = new_mean,
+    r.attentional_posture_variance = new_var,
+    r.attentional_posture_observations = new_n
 """
 
 
@@ -845,6 +961,41 @@ class PageEntityGraph:
                     _CYPHER_WRITE_SUBTOPIC_OF,
                     child_id=topic.id,
                     parent_id=parent_id,
+                )
+
+        # Attentional posture (attention-inversion addition) — scalar Welford
+        # updates on Author, Publication, Article, and the HAS_SECTION edge.
+        # Runs only when upstream supplied a posture score; otherwise the
+        # entities' running posteriors are untouched (empty-prior semantic).
+        if article.attentional_posture is not None:
+            # Defensive clamp in case a caller violated the validate() contract.
+            posture = max(-1.0, min(1.0, float(article.attentional_posture)))
+
+            await session.run(
+                _CYPHER_UPDATE_PUBLICATION_POSTURE,
+                id=article.publication.id,
+                posture=posture,
+            )
+
+            for author in article.authors:
+                await session.run(
+                    _CYPHER_UPDATE_AUTHOR_POSTURE,
+                    id=author.id,
+                    posture=posture,
+                )
+
+            await session.run(
+                _CYPHER_UPDATE_ARTICLE_POSTURE,
+                id=article.id,
+                posture=posture,
+            )
+
+            if article.section is not None:
+                await session.run(
+                    _CYPHER_UPDATE_HAS_SECTION_POSTURE,
+                    publication_id=article.publication.id,
+                    section_id=article.section.id,
+                    posture=posture,
                 )
 
     @staticmethod

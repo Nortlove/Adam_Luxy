@@ -204,6 +204,50 @@ _EXTENDED_SHIFT_RULES = {
 }
 
 
+# ── Attentional posture (attention-inversion principle) ─────────────────────
+# Per Chris, 2026-04-23 (platform core): consciousness is RAM — scarce and
+# serial. The brain punts benign familiar patterns to supraliminal / autopilot
+# processing to free conscious resources. Ads on autopilot-dominant pages
+# reach the reader via blend-and-fulfill, bypassing the evaluation gate. Ads
+# on vigilance-dominant pages trip evaluation and activate persuasion
+# resistance.
+#
+# attentional_posture ∈ [-1, 1]:  -1 = fully autopilot, +1 = fully vigilance
+# attentional_posture_confidence ∈ [0, 1] scales the shift magnitude
+#
+# Unlike NDF shifts (centered at 0.5), posture is already a signed value
+# around 0. Shift = posture × confidence × weight × direction.
+#
+# Direction semantics:
+#   +1 = vigilance raises this dimension;  autopilot lowers it
+#   -1 = vigilance lowers this dimension;  autopilot raises it
+#
+# Research anchors: Petty & Cacioppo (ELM — central vs peripheral route),
+# Zajonc (mere exposure), Bargh (auto-motive model), processing-fluency
+# literature. See project_attention_inversion_platform_core.md.
+_ATTENTIONAL_POSTURE_SHIFTS = [
+    # Vigilance activates evaluation → persuasion resistance; autopilot opens
+    # the peripheral route and relaxes critical filtering.
+    ("persuasion_susceptibility", 0.30, -1),
+    # Vigilance → reader resists being led; autopilot → accepts environmental steering.
+    ("autonomy_reactance",        0.25, +1),
+    # Vigilance consumes bandwidth (the resource the brain is conserving);
+    # autopilot preserves it.
+    ("cognitive_load_tolerance",  0.20, -1),
+    # Evaluation mode displaces narrative immersion; autopilot is receptive
+    # to narrative transport.
+    ("narrative_transport",       0.20, -1),
+    # Vigilance enables critical comparison and deliberation (higher entropy);
+    # autopilot follows the primed path (lower entropy).
+    ("decision_entropy",          0.10, +1),
+]
+
+
+# Minimum posture confidence below which no shift is applied (treat as
+# no-evidence rather than imputing zero).
+_ATTENTIONAL_POSTURE_CONFIDENCE_FLOOR = 0.1
+
+
 # ============================================================================
 # COMPUTE PAGE → EDGE SHIFT VECTOR
 # ============================================================================
@@ -279,6 +323,17 @@ def compute_page_edge_shift(
     if immersion > 0.3:
         for edge_dim, weight, direction in _EXTENDED_SHIFT_RULES.get("ctv_immersion", []):
             shift[edge_dim] += immersion * weight * direction
+
+    # ── Attentional posture (attention-inversion) ─────────────────────
+    # Applied proportionally to posture × confidence. No shift when
+    # confidence is below the floor (empty-prior semantic — the upstream
+    # has not scored posture for this page, so we do not impute one).
+    posture = profile.get("attentional_posture", 0.0)
+    posture_conf = profile.get("attentional_posture_confidence", 0.0)
+    if abs(posture) > 0.01 and posture_conf >= _ATTENTIONAL_POSTURE_CONFIDENCE_FLOOR:
+        posture_magnitude = posture * posture_conf
+        for edge_dim, weight, direction in _ATTENTIONAL_POSTURE_SHIFTS:
+            shift[edge_dim] += posture_magnitude * weight * direction
 
     # Round all values
     return {k: round(v, 4) for k, v in shift.items()}
