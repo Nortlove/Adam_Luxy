@@ -27,6 +27,16 @@ Phase of this package:
   git-commit pre-registration log.
 """
 
+from adam.intelligence.recommendation_class.archetype_compression import (
+    ArchetypeCompressionResult,
+    ArchetypeCompressor,
+    DEFAULT_COVARIANCE_TYPE,
+    DEFAULT_DIRICHLET_CONCENTRATION,
+    DEFAULT_EFFECTIVE_WEIGHT_THRESHOLD,
+    DEFAULT_MAX_COMPONENTS,
+    DEFAULT_MIN_OBSERVATIONS,
+    DEFAULT_SEED,
+)
 from adam.intelligence.recommendation_class.graph import (
     RecommendationClassGraph,
     RecommendationClassIdentity,
@@ -62,9 +72,17 @@ from adam.intelligence.recommendation_class.projected_impact import (
 
 __all__ = [
     "ActivatesEdge",
+    "ArchetypeCompressionResult",
+    "ArchetypeCompressor",
     "AudienceScope",
     "AudienceSummary",
     "CompetingActivations",
+    "DEFAULT_COVARIANCE_TYPE",
+    "DEFAULT_DIRICHLET_CONCENTRATION",
+    "DEFAULT_EFFECTIVE_WEIGHT_THRESHOLD",
+    "DEFAULT_MAX_COMPONENTS",
+    "DEFAULT_MIN_OBSERVATIONS",
+    "DEFAULT_SEED",
     "GoalFulfillmentOutcome",
     "InferentialChainGraph",
     "PrimingCondition",
