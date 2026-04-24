@@ -1,11 +1,10 @@
 """
-Daily Intelligence Strengthening Scheduler
-============================================
+Daily Intelligence Strengthening + Campaign Intelligence Scheduler
+====================================================================
 
-Orchestrates execution of all 10 strengthening tasks based on their
-declared schedules. Runs as a background task in the ADAM application.
+Orchestrates execution of 22 strengthening tasks + 10 DCIL tasks.
 
-Dependency DAG:
+Strengthening DAG (Tasks 1-22):
     01:00 Task 5 (Reviews) ─────────────┐
     02:00 Task 2 (Publisher Drift) ──────┤
     03:00 Task 7 (Social Sentiment) ─────┼──► 05:00 Task 8 (Gradient Recompute)
@@ -13,7 +12,15 @@ Dependency DAG:
     Every 4h Task 3 (News Cycle) ────────┤           ▼
     Every 6h Task 1 (Competitive) ───────┤   Every 8h Task 10 (Temperature)
     06:00/18:00 Task 6 (Calendar) ───────┘
-    Weekly Task 9 (Brand Positioning) ──────────────────────────────────
+    Weekly Task 9 (Brand Positioning)
+
+Campaign Intelligence Loop (Tasks 23-32):
+    04:00 Task 23 (DSP Pull) ──► Task 24 (Normalize)
+    05:00 Task 25 (Hypotheses) + Task 26 (Bilateral Analysis)
+    06:00 Task 27 (Scope I²) ──► Task 28 (Directives)
+    07:00 Task 29 (Coherence) ──► Task 30 (Execution)
+    08:00 Task 31 (Tier A/B/C Reports)
+    12:00+18:00 Task 32 (Rollback Monitor)
 """
 
 from __future__ import annotations
@@ -164,6 +171,68 @@ def _register_all_tasks() -> None:
         tasks.append(CausalMediationTask())
     except Exception as e:
         logger.debug("Task 22 (causal mediation) not available: %s", e)
+
+    # --- Campaign Intelligence Loop (DCIL) Tasks 23-32 ---
+
+    try:
+        from adam.intelligence.daily.task_23_dsp_performance_pull import DSPPerformancePullTask
+        tasks.append(DSPPerformancePullTask())
+    except Exception as e:
+        logger.debug("Task 23 (DSP pull) not available: %s", e)
+
+    try:
+        from adam.intelligence.daily.task_24_performance_normalizer import PerformanceNormalizerTask
+        tasks.append(PerformanceNormalizerTask())
+    except Exception as e:
+        logger.debug("Task 24 (normalizer) not available: %s", e)
+
+    try:
+        from adam.intelligence.daily.task_25_hypothesis_testing import HypothesisTestingTask
+        tasks.append(HypothesisTestingTask())
+    except Exception as e:
+        logger.debug("Task 25 (hypothesis testing) not available: %s", e)
+
+    try:
+        from adam.intelligence.daily.task_26_bilateral_analysis import BilateralAnalysisTask
+        tasks.append(BilateralAnalysisTask())
+    except Exception as e:
+        logger.debug("Task 26 (bilateral analysis) not available: %s", e)
+
+    try:
+        from adam.intelligence.daily.task_27_scope_determination import ScopeDeterminationTask
+        tasks.append(ScopeDeterminationTask())
+    except Exception as e:
+        logger.debug("Task 27 (scope determination) not available: %s", e)
+
+    try:
+        from adam.intelligence.daily.task_28_directive_generation import DirectiveGenerationTask
+        tasks.append(DirectiveGenerationTask())
+    except Exception as e:
+        logger.debug("Task 28 (directive generation) not available: %s", e)
+
+    try:
+        from adam.intelligence.daily.task_29_coherence_validation import CoherenceValidationTask
+        tasks.append(CoherenceValidationTask())
+    except Exception as e:
+        logger.debug("Task 29 (coherence validation) not available: %s", e)
+
+    try:
+        from adam.intelligence.daily.task_30_execution import CampaignExecutionTask
+        tasks.append(CampaignExecutionTask())
+    except Exception as e:
+        logger.debug("Task 30 (campaign execution) not available: %s", e)
+
+    try:
+        from adam.intelligence.daily.task_31_tier_reporting import TierReportingTask
+        tasks.append(TierReportingTask())
+    except Exception as e:
+        logger.debug("Task 31 (tier reporting) not available: %s", e)
+
+    try:
+        from adam.intelligence.daily.task_32_rollback_monitor import RollbackMonitorTask
+        tasks.append(RollbackMonitorTask())
+    except Exception as e:
+        logger.debug("Task 32 (rollback monitor) not available: %s", e)
 
     for task in tasks:
         _task_registry[task.name] = task
