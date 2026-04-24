@@ -45,7 +45,38 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Set, Tuple
 
+# Page Entity Graph — Phase A shadow-write to Neo4j alongside Redis.
+# Failure to import (e.g., driver not installed in some test environments)
+# must not break the Redis primary path; record_article() will silently
+# skip the shadow-write if the service is unavailable.
+try:
+    from adam.intelligence.pages import (  # pragma: no cover - runtime-optional
+        ArticleObservation,
+        AuthorUpsert,
+        PublicationUpsert,
+        SectionUpsert,
+        TopicUpsert,
+        get_page_entity_graph,
+    )
+    _PAGE_ENTITY_GRAPH_AVAILABLE = True
+except Exception:  # pragma: no cover
+    _PAGE_ENTITY_GRAPH_AVAILABLE = False
+
 logger = logging.getLogger(__name__)
+
+
+# Map from domain_taxonomy's `content_type` (news, opinion, review, sponsored,
+# blog) to the nearest Schema.org @type. Used by the Phase A shadow-write
+# adapter; Phase C will replace this with direct Schema.org JSON-LD parsing.
+_CONTENT_TYPE_TO_SCHEMA_ORG: Dict[str, str] = {
+    "news": "NewsArticle",
+    "opinion": "OpinionNewsArticle",
+    "analysis": "AnalysisNewsArticle",
+    "review": "ReviewNewsArticle",
+    "reportage": "ReportageNewsArticle",
+    "blog": "BlogPosting",
+    "sponsored": "AdvertiserContentArticle",
+}
 
 # The 20 edge dimensions — same space as BRAND_CONVERTED bilateral edges.
 # NDF (7 dims) is NO LONGER used. All centroids stored in edge space.
@@ -421,7 +452,92 @@ class DomainTaxonomy:
         # Update domain category list
         self._update_category_list(meta)
 
+        # ── Phase A shadow-write to Neo4j entity graph ────────────────
+        # Promotes Author / Publication / Section / Topic / Article from
+        # Redis-only string fields with 14-day TTL into durable Neo4j
+        # entities with accumulating hierarchical posteriors. Fire-and-
+        # forget: the Redis primary path has already completed above, so
+        # any Neo4j failure is logged but never propagated.
+        self._shadow_write_page_entities(meta, dims_to_record)
+
         return {"recorded": True, "updates": updates}
+
+    def _shadow_write_page_entities(
+        self,
+        meta: "ArticleMetadata",
+        dims_to_record: Dict[str, float],
+    ) -> None:
+        """Shadow-write the Redis observation into the Neo4j entity graph.
+
+        Converts the legacy ArticleMetadata shape into the canonical
+        ArticleObservation shape and fires the async write on the
+        PageEntityGraph background loop. Non-blocking; any exception is
+        swallowed so the Redis primary path is never affected.
+        """
+        if not _PAGE_ENTITY_GRAPH_AVAILABLE:
+            return
+
+        # Minimum viable payload: need publication domain, article URL,
+        # and a title. Missing any of these means we cannot create a
+        # useful Article node — skip rather than write partial junk.
+        if not self.domain or not meta.url or not meta.title:
+            return
+
+        try:
+            # Construct 20-dim vector in canonical EDGE_DIMENSIONS order
+            # so centroid math is consistent across domains.
+            construct_vector = [
+                float(dims_to_record.get(dim, 0.0)) for dim in EDGE_DIMENSIONS
+            ]
+
+            pub = PublicationUpsert(
+                name=self.domain,  # display name falls back to domain
+                canonical_domain=self.domain,
+            )
+
+            authors: List[AuthorUpsert] = []
+            for name in meta.authors:
+                if name and name.strip():
+                    authors.append(AuthorUpsert(name=name.strip()))
+
+            section_obj: Optional[SectionUpsert] = None
+            if meta.category:
+                section_obj = SectionUpsert(name=meta.category)
+
+            topics: List[TopicUpsert] = []
+            if meta.subcategory:
+                topics.append(
+                    TopicUpsert(
+                        name=meta.subcategory,
+                        parent_topic_slug=meta.category or None,
+                    )
+                )
+
+            schema_type = _CONTENT_TYPE_TO_SCHEMA_ORG.get(
+                meta.content_type.lower() if meta.content_type else "",
+                None,
+            )
+
+            observation = ArticleObservation(
+                url=meta.url,
+                title=meta.title,
+                publication=pub,
+                authors=authors,
+                section=section_obj,
+                topics=topics,
+                schema_org_type=schema_type,
+                word_count=meta.word_count or None,
+                construct_vector=construct_vector,
+                exposure_context_confidence=float(meta.confidence or 0.0),
+            )
+            observation.validate()
+            get_page_entity_graph().record_article_sync(observation)
+        except Exception:
+            logger.debug(
+                "PageEntityGraph shadow-write skipped for %s (non-fatal)",
+                meta.url,
+                exc_info=True,
+            )
 
     def _update_centroid(
         self,
