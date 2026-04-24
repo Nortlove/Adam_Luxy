@@ -40,6 +40,7 @@ from adam.intelligence.recommendation_class.a14_compromises import (
     INFERENTIAL_CHAIN_ATTRIBUTION_EMPTY,
     POSTURE_ONLY_ROUTE_SPLIT,
     SINGLE_LEVEL_SHRINKAGE,
+    VARIATIONAL_POSTERIOR_APPROXIMATION,
     format_for_report as format_a14_compromises_for_report,
 )
 from adam.intelligence.recommendation_class.adjudicator import (
@@ -62,6 +63,7 @@ from adam.intelligence.recommendation_class.archetype_compression import (
     DEFAULT_MAX_COMPONENTS,
     DEFAULT_MIN_OBSERVATIONS,
     DEFAULT_SEED,
+    PosteriorFamily,
 )
 from adam.intelligence.recommendation_class.conformal import (
     ConformalCoverage,
@@ -157,6 +159,7 @@ __all__ = [
     "Partition",
     "PlantModel",
     "PlantModelInputs",
+    "PosteriorFamily",
     "PrimingCondition",
     "ProjectedImpact",
     "PsychologicalConstructUpsert",
@@ -170,6 +173,7 @@ __all__ = [
     "SINGLE_LEVEL_SHRINKAGE",
     "SequentialAdjudicator",
     "SpiesDistribution",
+    "VARIATIONAL_POSTERIOR_APPROXIMATION",
     "canonical_hash",
     "claim_node_id",
     "current_git_head",

@@ -10,6 +10,7 @@ from adam.intelligence.recommendation_class import (
     INFERENTIAL_CHAIN_ATTRIBUTION_EMPTY,
     POSTURE_ONLY_ROUTE_SPLIT,
     SINGLE_LEVEL_SHRINKAGE,
+    VARIATIONAL_POSTERIOR_APPROXIMATION,
     A14Compromise,
     format_a14_compromises_for_report,
 )
@@ -20,15 +21,16 @@ from adam.intelligence.recommendation_class import (
 # -----------------------------------------------------------------------------
 
 
-def test_active_compromises_contains_all_four_named_constants() -> None:
+def test_active_compromises_contains_all_named_constants() -> None:
     expected = {
         SINGLE_LEVEL_SHRINKAGE,
         POSTURE_ONLY_ROUTE_SPLIT,
         COUNTER_REGULATION_UNTRACKED,
         INFERENTIAL_CHAIN_ATTRIBUTION_EMPTY,
+        VARIATIONAL_POSTERIOR_APPROXIMATION,
     }
     assert set(ACTIVE_COMPROMISES) == expected
-    assert len(ACTIVE_COMPROMISES) == 4
+    assert len(ACTIVE_COMPROMISES) == 5
 
 
 def test_all_compromise_names_are_unique() -> None:
@@ -105,6 +107,19 @@ def test_counter_regulation_trigger_names_habituation_data() -> None:
 def test_posture_only_trigger_names_processing_depth() -> None:
     trigger = POSTURE_ONLY_ROUTE_SPLIT.retirement_trigger.lower()
     assert "processing-depth" in trigger or "processing depth" in trigger
+
+
+def test_variational_posterior_retires_at_weakness_8() -> None:
+    # Same retirement trigger as SINGLE_LEVEL_SHRINKAGE: multi-tenant
+    # hierarchy lands with weakness #8 (or the earlier construct-graph-
+    # density trigger, whichever fires first).
+    assert VARIATIONAL_POSTERIOR_APPROXIMATION.retires_at_weakness == 8
+
+
+def test_variational_posterior_trigger_names_pymc_swap() -> None:
+    trigger = VARIATIONAL_POSTERIOR_APPROXIMATION.retirement_trigger.lower()
+    assert "pymc" in trigger
+    assert "nuts" in trigger
 
 
 # -----------------------------------------------------------------------------

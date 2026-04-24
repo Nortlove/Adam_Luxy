@@ -372,3 +372,42 @@ class TestLastResult:
         r2 = compressor.fit(_three_cluster_data(seed=2))
         assert compressor.last_result is r2
         assert r1 is not r2
+
+
+# -----------------------------------------------------------------------------
+# posterior_family (A14 runtime surface)
+# -----------------------------------------------------------------------------
+
+
+class TestPosteriorFamily:
+    """See a14_compromises.VARIATIONAL_POSTERIOR_APPROXIMATION.
+
+    The current substrate ships sklearn's variational Dirichlet-process
+    mixture. Every fit emits posterior_family="variational" so
+    downstream consumers (adjudicator, plant-model audit) can detect
+    the posterior quality rather than rely on implicit library
+    knowledge. When the PyMC migration fires, this value flips to
+    "nuts" and the fit_hash changes for the same (seed, data).
+    """
+
+    def test_fit_emits_variational_posterior_family(self):
+        result = ArchetypeCompressor().fit(_three_cluster_data())
+        assert result.posterior_family == "variational"
+
+    def test_posterior_family_is_included_in_fit_hash(self):
+        # Build two results differing only on posterior_family and
+        # confirm their hashes differ. Uses dataclasses.replace to
+        # preserve every other field.
+        from dataclasses import replace
+
+        result = ArchetypeCompressor().fit(_three_cluster_data())
+        alt = replace(result, posterior_family="nuts")
+        assert result.fit_hash != alt.fit_hash
+
+    def test_same_seed_same_data_same_posterior_family_same_hash(self):
+        X = _three_cluster_data()
+        a = ArchetypeCompressor(seed=42).fit(X)
+        b = ArchetypeCompressor(seed=42).fit(X)
+        # Both emit "variational" today; hash stability holds.
+        assert a.posterior_family == b.posterior_family == "variational"
+        assert a.fit_hash == b.fit_hash

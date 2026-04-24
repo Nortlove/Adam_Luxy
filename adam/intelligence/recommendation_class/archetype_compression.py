@@ -8,7 +8,7 @@ A14 compromise discipline): `sklearn.mixture.BayesianGaussianMixture` with
 single-level shrinkage committed to in the 2026-04-24 structural-weakness
 review. The wrapper boundary in this module IS the swap point for the
 future PyMC migration — only `ArchetypeCompressor`'s internals change when
-that lands.
+that lands. See: ``a14_compromises.VARIATIONAL_POSTERIOR_APPROXIMATION``.
 
 Migration trigger (named successor, same pattern as the hierarchical-
 shrinkage compromise): swap internals to PyMC NUTS-sampled HB when either
@@ -16,7 +16,10 @@ shrinkage compromise): swap internals to PyMC NUTS-sampled HB when either
 enough to supply construct-conditional priors that exercise custom-prior
 flexibility, or (b) Weakness #8 (multi-tenant scope) lands and a true
 multi-level hierarchy (industry → partner → advertiser → workspace →
-class) becomes load-bearing. Whichever fires first.
+class) becomes load-bearing. Whichever fires first. On retirement, the
+fit() method flips ``posterior_family`` from ``"variational"`` to
+``"nuts"`` and downstream consumers that branch on posterior quality
+will see the change.
 
 Honest framing: this is a variational mixture model, not full hierarchical
 Bayes. The "HB latent-class" label used in the 2026-04-24 pilot plan and
@@ -24,7 +27,9 @@ handoff overstates what this slice delivers. The substrate here is a
 variational latent-class compressor with the HB layer deferred. The
 downstream consumer (the plant-model adjudicator) must not assume NUTS-
 quality posteriors from this compressor — the posterior is a variational
-approximation.
+approximation. Every ArchetypeCompressionResult carries a
+``posterior_family`` field so the consumer can detect the difference
+rather than relying on implicit library knowledge.
 
 Covariance default:
   `spherical` (isotropic). Mean-field variational with full covariance
@@ -64,10 +69,16 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import List, Literal, Optional
 
 import numpy as np
 from sklearn.mixture import BayesianGaussianMixture
+
+
+# Currently-supported posterior families for ArchetypeCompressionResult.
+# See a14_compromises.VARIATIONAL_POSTERIOR_APPROXIMATION — only "variational"
+# ships at pilot; "nuts" lands when the PyMC migration fires.
+PosteriorFamily = Literal["variational", "nuts"]
 
 
 # Deterministic default seed — the session date this slice shipped.
@@ -117,16 +128,21 @@ class ArchetypeCompressionResult:
     n_features: int
     seed: int
     converged: bool
+    posterior_family: PosteriorFamily  # see a14_compromises.VARIATIONAL_POSTERIOR_APPROXIMATION
 
     @property
     def fit_hash(self) -> str:
-        """SHA-256 digest over the fitted component means + weights + seed.
+        """SHA-256 digest over the fitted component means + weights + seed +
+        posterior_family.
 
         Components are ordered by descending weight before hashing so that
         two fits differing only by permutation of identically-weighted
         components produce the same digest. Numeric precision is truncated
         to 8 decimal places to absorb float-repr noise below meaningful
-        precision for mixture components.
+        precision for mixture components. ``posterior_family`` is part of
+        the payload so that when the PyMC migration fires, the hash
+        changes for the same (seed, data) and downstream reproducibility
+        audits surface the library swap.
         """
         ordered = sorted(
             zip(self.component_weights, self.component_means),
@@ -136,6 +152,7 @@ class ArchetypeCompressionResult:
             "weights": [round(w, 8) for w, _ in ordered],
             "means": [[round(v, 8) for v in m] for _, m in ordered],
             "seed": self.seed,
+            "posterior_family": self.posterior_family,
         }
         canonical = json.dumps(
             payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False,
@@ -271,6 +288,9 @@ class ArchetypeCompressor:
             n_features=int(d),
             seed=self._seed,
             converged=bool(model.converged_),
+            posterior_family="variational",
+            # See a14_compromises.VARIATIONAL_POSTERIOR_APPROXIMATION.
+            # Flips to "nuts" when the PyMC migration trigger fires.
         )
         self._last_result = result
         return result

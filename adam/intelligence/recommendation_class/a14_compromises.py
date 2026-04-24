@@ -219,6 +219,40 @@ INFERENTIAL_CHAIN_ATTRIBUTION_EMPTY = A14Compromise(
 )
 
 
+VARIATIONAL_POSTERIOR_APPROXIMATION = A14Compromise(
+    name="VARIATIONAL_POSTERIOR_APPROXIMATION",
+    description=(
+        "ArchetypeCompressor produces a variational Dirichlet-process "
+        "mixture posterior via sklearn's BayesianGaussianMixture. The "
+        "decided architecture is NUTS-sampled full hierarchical Bayes "
+        "via PyMC, with construct-conditional priors from the "
+        "PsychologicalConstruct graph and true multi-level hierarchy "
+        "when Weakness #8 lands. Variational posteriors systematically "
+        "under-represent tail uncertainty and can produce over-"
+        "confident component assignments on well-separated data. Every "
+        "ArchetypeCompressionResult emits `posterior_family=\"variational\"` "
+        "so downstream consumers (adjudicator, plant-model audit) can "
+        "branch on posterior quality when that matters."
+    ),
+    retirement_trigger=(
+        "Either (a) the PsychologicalConstruct graph (migration 028, "
+        "slice 5) is dense enough to supply construct-conditional "
+        "priors that exercise custom-prior flexibility, or (b) "
+        "Weakness #8 (multi-tenant scope) lands and a true multi-level "
+        "hierarchy (industry → partner → advertiser → workspace → "
+        "class) becomes load-bearing. Whichever fires first. On "
+        "retirement the ArchetypeCompressor's internals swap to PyMC "
+        "NUTS and emit `posterior_family=\"nuts\"`."
+    ),
+    live_at_sites=(
+        "archetype_compression.py:1-60 (module docstring framing + library choice)",
+        "archetype_compression.py (ArchetypeCompressionResult.posterior_family field)",
+        "archetype_compression.py (posterior_family emit in fit())",
+    ),
+    retires_at_weakness=8,
+)
+
+
 # =============================================================================
 # Registry
 # =============================================================================
@@ -229,6 +263,7 @@ ACTIVE_COMPROMISES: tuple[A14Compromise, ...] = (
     POSTURE_ONLY_ROUTE_SPLIT,
     COUNTER_REGULATION_UNTRACKED,
     INFERENTIAL_CHAIN_ATTRIBUTION_EMPTY,
+    VARIATIONAL_POSTERIOR_APPROXIMATION,
 )
 
 
@@ -288,5 +323,6 @@ __all__ = [
     "INFERENTIAL_CHAIN_ATTRIBUTION_EMPTY",
     "POSTURE_ONLY_ROUTE_SPLIT",
     "SINGLE_LEVEL_SHRINKAGE",
+    "VARIATIONAL_POSTERIOR_APPROXIMATION",
     "format_for_report",
 ]
