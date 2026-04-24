@@ -6,6 +6,7 @@ import pytest
 
 from adam.intelligence.recommendation_class import (
     ACTIVE_COMPROMISES,
+    BLEND_FIT_WEIGHTS_UNVALIDATED,
     COUNTER_REGULATION_UNTRACKED,
     DEPTH_PRIOR_UNVALIDATED,
     SINGLE_LEVEL_SHRINKAGE,
@@ -26,9 +27,10 @@ def test_active_compromises_contains_all_named_constants() -> None:
         DEPTH_PRIOR_UNVALIDATED,
         COUNTER_REGULATION_UNTRACKED,
         VARIATIONAL_POSTERIOR_APPROXIMATION,
+        BLEND_FIT_WEIGHTS_UNVALIDATED,
     }
     assert set(ACTIVE_COMPROMISES) == expected
-    assert len(ACTIVE_COMPROMISES) == 4
+    assert len(ACTIVE_COMPROMISES) == 5
 
 
 def test_inferential_chain_attribution_empty_is_retired() -> None:

@@ -205,6 +205,41 @@ COUNTER_REGULATION_UNTRACKED = A14Compromise(
 )
 
 
+BLEND_FIT_WEIGHTS_UNVALIDATED = A14Compromise(
+    name="BLEND_FIT_WEIGHTS_UNVALIDATED",
+    description=(
+        "``adam/intelligence/blend_fit.py`` derives a scalar creative "
+        "↔ page fit score by confidence-weighted aggregation over six "
+        "alignment axes (goal, metaphor, fluency, posture, register, "
+        "temporal horizon). The per-axis nominal weights "
+        "(``_BLEND_AXIS_WEIGHTS``) are externally motivated by the "
+        "attention-inversion platform-core theory — goal alignment "
+        "carries the most weight because goal-activation / goal-"
+        "fulfillment pairing is the mechanism by which context-primed "
+        "goals get fulfilled without demanding attention. The weights "
+        "have NOT been empirically calibrated on ADAM pilot data. "
+        "Every blend_fit score emitted today is accompanied by a "
+        "BlendFitDecomposition naming the per-axis contribution so "
+        "downstream selection layers can audit which axes actually "
+        "drove the score under these unvalidated weights."
+    ),
+    retirement_trigger=(
+        "Empirical calibration of ``_BLEND_AXIS_WEIGHTS`` on ADAM "
+        "pilot data — weights fit to maximize conversion lift on "
+        "high-blend_fit creatives vs low-blend_fit creatives within "
+        "matched (archetype, context_posture_band) cells, with "
+        "explicit guarding against the fitness-function-corruption "
+        "risk named in rule 11 (weights must penalize backfire, not "
+        "just maximize conversion)."
+    ),
+    live_at_sites=(
+        "blend_fit.py (_BLEND_AXIS_WEIGHTS table)",
+        "blend_fit.py (compute_blend_fit aggregation)",
+    ),
+    retires_at_weakness=None,
+)
+
+
 VARIATIONAL_POSTERIOR_APPROXIMATION = A14Compromise(
     name="VARIATIONAL_POSTERIOR_APPROXIMATION",
     description=(
@@ -249,6 +284,7 @@ ACTIVE_COMPROMISES: tuple[A14Compromise, ...] = (
     DEPTH_PRIOR_UNVALIDATED,
     COUNTER_REGULATION_UNTRACKED,
     VARIATIONAL_POSTERIOR_APPROXIMATION,
+    BLEND_FIT_WEIGHTS_UNVALIDATED,
 )
 # INFERENTIAL_CHAIN_ATTRIBUTION_EMPTY retired 2026-04-25 by
 # adam/intelligence/recommendation_class/chain_attribution.py — the
@@ -315,6 +351,7 @@ def format_for_report() -> str:
 __all__ = [
     "A14Compromise",
     "ACTIVE_COMPROMISES",
+    "BLEND_FIT_WEIGHTS_UNVALIDATED",
     "COUNTER_REGULATION_UNTRACKED",
     "DEPTH_PRIOR_UNVALIDATED",
     "SINGLE_LEVEL_SHRINKAGE",

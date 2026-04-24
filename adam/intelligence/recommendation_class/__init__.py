@@ -36,6 +36,7 @@ Package status (2026-04-25):
 from adam.intelligence.recommendation_class.a14_compromises import (
     A14Compromise,
     ACTIVE_COMPROMISES,
+    BLEND_FIT_WEIGHTS_UNVALIDATED,
     COUNTER_REGULATION_UNTRACKED,
     DEPTH_PRIOR_UNVALIDATED,
     SINGLE_LEVEL_SHRINKAGE,
@@ -148,6 +149,7 @@ __all__ = [
     "AudienceScope",
     "AudienceSummary",
     "A14Compromise",
+    "BLEND_FIT_WEIGHTS_UNVALIDATED",
     "COUNTER_REGULATION_UNTRACKED",
     "ChainEdge",
     "ChainEdgeRelType",

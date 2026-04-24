@@ -68,12 +68,20 @@ is surface-only — mandatory for pilot ship, not for pilot performance.
 
 ### From the attention-inversion platform core (promoted into Tier 1)
 
-5. **`blend_fit` creative parameterization**
-   - Implication #1 of `project_attention_inversion_platform_core.md`.
-   - Every creative carries a `blend_fit` parameter that scores how
-     continuously the creative reads within the context it ships into.
-     Drives selection pressure toward blend-and-fulfill creatives over
-     attention-grabbing ones.
+5. **`blend_fit` creative parameterization** — *primitive shipped; creative scorer + selection wiring remain*
+   - ✓ `adam/intelligence/blend_fit.py`: `CreativeFeatureBundle` +
+     `compute_blend_fit()` producing (score, `BlendFitDecomposition`)
+     via confidence-weighted alignment across six axes (goal, metaphor,
+     fluency, posture, register, horizon).
+   - ↺ A14 `BLEND_FIT_WEIGHTS_UNVALIDATED` — axis weights externally
+     motivated by attention-inversion theory, not calibrated on pilot
+     data. Retirement trigger names backfire-guarded empirical fit.
+   - · **Creative-side feature scorer** (mirror of
+     `claude_feature_scoring.py`) that produces
+     `CreativeFeatureBundle` from creative text / copy / CTA.
+   - · **Selection integration** — bandit / mechanism-selector calls
+     `compute_blend_fit` to weight creative candidates.
+   - · **Learned weights** on pilot data — post-pilot calibration slice.
 6. **Mechanism-taxonomy split: blend-compatible vs vigilance-activating**
    - Implication #2 of `project_attention_inversion_platform_core.md`.
    - Partitions the mechanism taxonomy so selection can be
