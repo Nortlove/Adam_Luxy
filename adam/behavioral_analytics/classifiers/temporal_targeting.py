@@ -7,7 +7,7 @@
 TEMPORAL TARGETING CLASSIFIER
 
 Optimizes ad timing and message construal based on:
-1. Construal Level Theory (g = 0.475 for matching)
+1. Construal Level Theory (d = 0.276 pre-registered; see effect_size_correction.CLT_MATCHING_EFFECT)
 2. Circadian patterns (cognitive peak vs trough)
 3. Weekly patterns (weekend hedonic vs weekday utilitarian)
 4. Synchrony effect (chronotype × time)
@@ -16,7 +16,11 @@ Key Insight: Match message abstraction to psychological distance.
 - Far distance (awareness) → Abstract (WHY, benefits)
 - Near distance (purchase) → Concrete (HOW, features)
 
-Reference: Trope & Liberman CLT; Yoon et al. (2007)
+Reference: Trope & Liberman CLT; Yoon et al. (2007).
+Effect-size provenance: published meta-analytic g = 0.475 (111 studies) is
+subject to publication-bias inflation per Schimmack (2022) R-index and Maier
+et al. (2023) RoBMA multiverse. ADAM operates on pre-registered d = 0.276.
+See docs/CLT_recalibration_2026_04_24.md.
 """
 
 from typing import Dict, List, Optional, Any, Tuple
@@ -56,7 +60,7 @@ FUNNEL_CONSTRUAL_MAP = {
         "message_focus": "WHY - benefits, values, desirability",
         "language": "Transform, achieve, experience, lifestyle",
         "imagery": "Wide shots, aspirational, future self",
-        "effect_size": 0.475,  # g from meta-analysis
+        "effect_size": 0.276,  # pre-registered d; see effect_size_correction.CLT_MATCHING_EFFECT
     },
     FunnelStage.CONSIDERATION: {
         "psychological_distance": "medium",
@@ -64,7 +68,7 @@ FUNNEL_CONSTRUAL_MAP = {
         "message_focus": "WHY + HOW balance",
         "language": "Benefits supported by features",
         "imagery": "Mixed wide and detail shots",
-        "effect_size": 0.475,
+        "effect_size": 0.276,
     },
     FunnelStage.DECISION: {
         "psychological_distance": "near",
@@ -72,7 +76,7 @@ FUNNEL_CONSTRUAL_MAP = {
         "message_focus": "HOW - features, specs, feasibility",
         "language": "Specific, practical, actionable",
         "imagery": "Close-ups, details, product in use",
-        "effect_size": 0.475,
+        "effect_size": 0.276,
     },
     FunnelStage.PURCHASE: {
         "psychological_distance": "very_near",
@@ -80,7 +84,7 @@ FUNNEL_CONSTRUAL_MAP = {
         "message_focus": "ACTION - checkout, delivery, guarantee",
         "language": "Now, today, simple steps",
         "imagery": "Cart, checkout process, delivery",
-        "effect_size": 0.475,
+        "effect_size": 0.276,
     },
     FunnelStage.POST_PURCHASE: {
         "psychological_distance": "past_concrete",
@@ -145,7 +149,7 @@ class TemporalRecommendation(BaseModel):
     message_complexity: str = Field(default="moderate")  # high, moderate, low
     
     # Effect sizes
-    construal_effect_size: float = Field(default=0.475)
+    construal_effect_size: float = Field(default=0.276)  # Pre-registered d; see effect_size_correction.CLT_MATCHING_EFFECT
     total_expected_lift: float = Field(default=0.0)
     
     # Confidence
@@ -184,7 +188,7 @@ class TemporalTargetingClassifier:
     Optimizes ad timing and message construal.
     
     Combines:
-    1. Construal Level Theory (g = 0.475)
+    1. Construal Level Theory (d = 0.276 pre-registered)
     2. Circadian patterns
     3. Weekly patterns
     4. Chronotype synchrony
@@ -393,8 +397,8 @@ class TemporalTargetingClassifier:
         """Calculate expected lift from temporal optimization."""
         lift = 0.0
         
-        # Construal matching (g = 0.475)
-        lift += 0.475 * 0.5  # Assume 50% of max effect for matching
+        # Construal matching (d = 0.276 pre-registered; see effect_size_correction.CLT_MATCHING_EFFECT)
+        lift += 0.276 * 0.5  # Assume 50% of max effect for matching
         
         # Synchrony effect (d ≈ 0.4)
         if synchrony_status == "at_peak":

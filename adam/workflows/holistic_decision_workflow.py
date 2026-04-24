@@ -631,7 +631,7 @@ async def get_advertising_psychology_context(
     This node pulls:
     - Regulatory focus detection (OR = 2-6x CTR when matched)
     - Cognitive state estimation (d = 0.5-0.8 for load-reducing interventions)
-    - Message frame recommendations (g = 0.475 for construal matching)
+    - Message frame recommendations (d = 0.276 pre-registered for construal matching; see effect_size_correction.CLT_MATCHING_EFFECT)
     
     The advertising psychology research integration enables:
     - Signal collection (linguistic, desktop, mobile)

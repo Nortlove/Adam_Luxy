@@ -591,7 +591,7 @@ def build_signal_registry() -> Dict[str, BehavioralSignal]:
         reliability=SignalReliability.TIER_2_REPLICATED,
         psychological_construct_ids=["construal_level", "psychological_distance", "message_match"],
         extraction_method="Analyze content for abstract vs concrete language; compute LIW (Linguistic Inquiry Word) scores",
-        effect_sizes=[EffectSize("g", 0.475, context="construal match → persuasion")],
+        effect_sizes=[EffectSize("d", 0.276, context="construal match → persuasion (pre-registered; publication-bias-corrected from published g=0.475; see effect_size_correction.CLT_MATCHING_EFFECT)")],
         latency_budget_ms=30,
         validated_accuracy=0.68,
         description="Content with abstract language (why, values) primes abstract construal. Concrete (how, features) primes concrete.",

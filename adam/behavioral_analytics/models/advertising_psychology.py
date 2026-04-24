@@ -785,8 +785,11 @@ class ConstrualLevelProfile(BaseModel):
     """
     Match message abstraction to psychological distance.
     
-    Effect size: g = 0.475 (meta-analysis); d = 0.276 (pre-registered)
-    Reference: Liberman & Trope, Construal Level Theory
+    Effect size: d = 0.276 (pre-registered, operational).
+    Published meta-analytic g = 0.475 is publication-bias-inflated per Schimmack
+    (2022) R-index and Maier et al. (2023) RoBMA multiverse. See
+    effect_size_correction.CLT_MATCHING_EFFECT.
+    Reference: Liberman & Trope, Construal Level Theory.
     """
     
     funnel_stage: str = Field(default="consideration",
@@ -1034,7 +1037,7 @@ class UserAdvertisingPsychologyProfile(BaseModel):
             recommendations['message_frame'] = self.regulatory_focus.recommended_frame
             recommendations['regulatory_focus'] = self.regulatory_focus.focus_type
         
-        # Construal level (g = 0.475)
+        # Construal level (d = 0.276 pre-registered; see effect_size_correction.CLT_MATCHING_EFFECT)
         if self.construal_level:
             recommendations['construal_recommendations'] = self.construal_level.get_recommendations()
         

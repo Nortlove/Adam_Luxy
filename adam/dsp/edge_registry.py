@@ -117,8 +117,8 @@ def build_edge_registry() -> Dict[str, Dict[str, Any]]:
         mechanism=MechanismType.CONSTRUAL_MATCHING,
         reasoning_type=ReasoningType.CAUSAL,
         direction="match_increases_persuasion",
-        description="Matching message abstraction to consumer construal level. g=0.475.",
-        effect_sizes=[EffectSize("g", 0.475, context="construal match meta-analysis")],
+        description="Matching message abstraction to consumer construal level. d=0.276 pre-registered (publication-bias-corrected from published g=0.475; see effect_size_correction.CLT_MATCHING_EFFECT).",
+        effect_sizes=[EffectSize("d", 0.276, context="construal match pre-registered (publication-bias-corrected from published meta-analytic g=0.475)")],
         confidence=ConfidenceLevel.META_ANALYTIC,
         creative_implications={
             "abstract_match": {"copy": "Why-framing, values, benefits", "format": "percent_off"},

@@ -99,15 +99,15 @@ class StrategyGenerationEngine:
             f"Cognitive load={state.cognitive_load:.2f}, attention={state.attention_level:.2f}."
         )
 
-        # Step 3: Construal Level Match (g=0.475)
+        # Step 3: Construal Level Match (d=0.276 pre-registered; see effect_size_correction.CLT_MATCHING_EFFECT)
         if state.construal_level > 0.6:
             strategy.construal_match = "abstract_why"
             strategy.copy_length = "brief"
-            reasoning.append("High construal -> abstract why-framing, benefits, percent-off. g=0.475.")
+            reasoning.append("High construal -> abstract why-framing, benefits, percent-off. d=0.276 (pre-registered).")
         elif state.construal_level < 0.4:
             strategy.construal_match = "concrete_how"
             strategy.copy_length = "detailed"
-            reasoning.append("Low construal -> concrete how-framing, features, dollar-off. g=0.475.")
+            reasoning.append("Low construal -> concrete how-framing, features, dollar-off. d=0.276 (pre-registered).")
         else:
             strategy.construal_match = "mixed"
             strategy.copy_length = "medium"

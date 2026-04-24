@@ -812,7 +812,7 @@ class AtomKnowledgeInterface:
         Combines all psychology domains for ad targeting:
         - Regulatory focus (OR = 2-6x CTR when matched)
         - Cognitive state (d = 0.5-0.8 for load-reducing interventions)
-        - Temporal patterns (g = 0.475 for construal matching)
+        - Temporal patterns (d = 0.276 pre-registered for construal matching; see effect_size_correction.CLT_MATCHING_EFFECT)
         
         Args:
             user_id: User identifier
@@ -940,7 +940,7 @@ class AtomKnowledgeInterface:
         
         Combines:
         - Regulatory focus matching (OR = 2-6x)
-        - Construal level matching (g = 0.475)
+        - Construal level matching (d = 0.276 pre-registered; see effect_size_correction.CLT_MATCHING_EFFECT)
         - Cognitive state adaptation (d = 0.5-0.8)
         
         Args:
@@ -1006,7 +1006,7 @@ class AtomKnowledgeInterface:
             "cognitive_state": cog_recs,
             "research_basis": {
                 "regulatory_fit_effect": "OR = 2-6x CTR",
-                "construal_matching_effect": "g = 0.475",
+                "construal_matching_effect": "d = 0.276 (pre-registered; publication-bias-corrected from published g = 0.475)",
                 "cognitive_load_effect": "d = 0.5-0.8",
             },
         }

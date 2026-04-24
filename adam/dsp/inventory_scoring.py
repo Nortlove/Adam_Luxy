@@ -122,7 +122,7 @@ class InventoryEnrichmentScoringEngine:
             rf_strength = abs(state.promotion_focus - state.prevention_focus)
             score += 0.4 * rf_strength
 
-        # Construal match (g=0.475)
+        # Construal match (d=0.276 pre-registered; see effect_size_correction.CLT_MATCHING_EFFECT)
         if strategy.construal_match != "mixed":
             score += 0.3
 

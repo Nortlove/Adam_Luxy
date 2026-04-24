@@ -669,7 +669,7 @@ class GraphEdgeService:
                 ResearchDomainBacking("regulatory_focus", "regulatory_focus", 0.475, 1, "Higgins (1997)"),
             ],
             "temporal_construal": [
-                ResearchDomainBacking("temporal_construal", "temporal_targeting", 0.475, 1, "Trope & Liberman CLT"),
+                ResearchDomainBacking("temporal_construal", "temporal_targeting", 0.276, 1, "Trope & Liberman CLT (pre-registered d; see effect_size_correction.CLT_MATCHING_EFFECT)"),
             ],
             "social_proof": [
                 ResearchDomainBacking("social_proof", "social_effects", 0.32, 1, "Cialdini (2001)"),

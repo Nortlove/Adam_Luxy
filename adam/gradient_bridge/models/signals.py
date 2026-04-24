@@ -309,7 +309,7 @@ class AdvertisingPsychologySignal(BaseModel):
     Key research domains tracked:
     - Regulatory focus matching (OR = 2-6x CTR)
     - Cognitive load optimization (d = 0.5-0.8)
-    - Construal level matching (g = 0.475)
+    - Construal level matching (d = 0.276 pre-registered; see effect_size_correction.CLT_MATCHING_EFFECT)
     - Temporal targeting
     - Moral foundations
     - Memory optimization (spacing, peak-end)
@@ -335,7 +335,7 @@ class AdvertisingPsychologySignal(BaseModel):
     message_complexity: str = ""  # "high", "moderate", "low"
     complexity_match_effective: bool = Field(default=False)
     
-    # Construal Level (g = 0.475)
+    # Construal Level (d = 0.276 pre-registered; see effect_size_correction.CLT_MATCHING_EFFECT)
     funnel_stage: str = ""  # "awareness", "consideration", "decision", "purchase"
     predicted_construal: str = ""  # "high_abstract", "low_concrete", "mixed"
     used_construal: str = ""

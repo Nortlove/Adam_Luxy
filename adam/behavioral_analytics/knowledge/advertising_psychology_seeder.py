@@ -1035,9 +1035,14 @@ def create_moral_foundations_knowledge() -> List[AdvertisingKnowledge]:
 def create_temporal_targeting_knowledge() -> List[AdvertisingKnowledge]:
     """
     Create construal level and temporal pattern knowledge.
-    
-    Effect size: g = 0.475 (meta-analysis); d = 0.276 (pre-registered)
-    Reference: Liberman & Trope, Construal Level Theory
+
+    Effect size: d = 0.276 (pre-registered, operational).
+    Published meta-analytic Hedges' g = 0.475 (111 studies) is retained for
+    transparency but is publication-bias-inflated per Schimmack (2022) R-index
+    and Maier et al. (2023) RoBMA multiverse. See
+    adam.core.learning.effect_size_correction.CLT_MATCHING_EFFECT and
+    docs/CLT_recalibration_2026_04_24.md.
+    Reference: Liberman & Trope, Construal Level Theory.
     """
     knowledge = []
     
@@ -1061,7 +1066,7 @@ def create_temporal_targeting_knowledge() -> List[AdvertisingKnowledge]:
             outcome_metric=OutcomeMetric.CONVERSION if stage in ["decision", "purchase"] else OutcomeMetric.BRAND_ATTITUDE,
             outcome_direction="positive",
             outcome_description="Matching construal to distance increases effectiveness",
-            effect_size=0.475,
+            effect_size=0.276,  # Pre-registered d; see effect_size_correction.CLT_MATCHING_EFFECT
             effect_type=EffectType.COHENS_D,
             robustness_tier=RobustnessTier.TIER_1_META_ANALYZED,
             study_count=111,
@@ -1619,7 +1624,7 @@ def create_research_interactions() -> List[AdvertisingInteraction]:
         moderating_value="far",
         interaction_type=InteractionType.AMPLIFIES,
         interaction_description="Abstract messages more effective at far psychological distance",
-        effect_when_moderator_present=0.475,
+        effect_when_moderator_present=0.276,  # Pre-registered d; see effect_size_correction.CLT_MATCHING_EFFECT. Moderator-absent value 0.20 unchanged (judgment estimate, not from the same meta-analytic pool).
         effect_when_moderator_absent=0.20,
         effect_type=EffectType.COHENS_D,
         robustness_tier=RobustnessTier.TIER_1_META_ANALYZED,
@@ -1630,7 +1635,7 @@ def create_research_interactions() -> List[AdvertisingInteraction]:
                 year=2024,
                 title="Construal level effects",
                 num_studies=111,
-                key_finding="g = 0.475 for construal matching"
+                key_finding="d = 0.276 pre-registered for construal matching (published meta-analytic g = 0.475; publication-bias-corrected)"
             ),
         ],
         implementation_notes="Match construal to funnel stage distance.",
