@@ -455,7 +455,21 @@ def register_routers(app: FastAPI) -> None:
 
     # Health check endpoints (comprehensive)
     app.include_router(health_router)
-    
+
+    # ── Management Platform API (v2) ──────────────────────────
+    try:
+        from adam.api.admin.routers.auth_router import router as admin_auth_router
+        from adam.api.admin.routers.org_router import router as admin_org_router
+        from adam.api.admin.routers.campaign_router import router as admin_campaign_router
+        from adam.api.admin.routers.client_router import router as admin_client_router
+        app.include_router(admin_auth_router)
+        app.include_router(admin_org_router)
+        app.include_router(admin_campaign_router)
+        app.include_router(admin_client_router)
+        logger.info("Management Platform routes registered (v2: auth, orgs, campaigns, client portal)")
+    except ImportError as e:
+        logger.debug("Management Platform routes not available: %s", e)
+
     # Backward-compatible root health endpoint
     @app.get("/health", tags=["health"], include_in_schema=False)
     async def health_check_root():
