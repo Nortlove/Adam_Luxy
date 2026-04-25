@@ -662,6 +662,164 @@ _HORIZON_TO_DAYS = {
 }
 
 
+async def adjudicate_deviation_with_operator_verdict(
+    deviation_id: str,
+    verdict: AdjudicationOutcome,
+    user_id: str,
+    rationale: Optional[str] = None,
+) -> Optional[AdjudicationResult]:
+    """Adjudicate a single deviation with the operator's explicit verdict.
+
+    Used by the dashboard recommendations queue (slice D2 of the
+    decision-gate unification work) when the operator decides on a
+    source="horizon_adjudication" recommendation. The operator IS the
+    verdict — their integrated read of realized outcome, business
+    context, and signals the auto-evaluator may not have access to.
+
+    Persistence is identical to the auto-adjudicator path
+    (`_adjudicate_one`) modulo two differences:
+      - The verdict comes from the operator argument, not from running
+        a per-rec-type evaluator over campaign metrics. No StackAdapt
+        snapshot is consulted.
+      - The Outcome node carries `verdict_source='operator'` so future
+        audits can distinguish operator-led from evaluator-led
+        adjudications. Auto-adjudicator Outcomes implicitly have
+        verdict_source absent / 'evaluator' (existing rows pre-date
+        this field — Neo4j is schemaless; absence is honest).
+
+    On `verdict='system_right'`, a WhyLibraryEntry is created via the
+    existing `_persist_why_library_entry` helper (line 353) so the
+    Why Library accumulates from operator-led adjudications the same
+    way it does from auto-adjudicator system_right outcomes
+    (causal_adjudicator.py:635-638). This keeps the defensive-
+    reasoning catalog single-source regardless of verdict origin.
+
+    Returns None when:
+      - deviation not found by id
+      - Neo4j unreachable
+    Returns an AdjudicationResult flagged with rationale='Already
+    adjudicated.' when the deviation has already been adjudicated;
+    we do NOT double-write — operator double-clicks must be safe.
+    """
+    if verdict not in ("system_right", "user_right", "indeterminate"):
+        raise ValueError(
+            f"Invalid verdict {verdict!r}; expected one of "
+            "system_right / user_right / indeterminate"
+        )
+
+    try:
+        from adam.infrastructure.neo4j.client import get_neo4j_client
+        client = get_neo4j_client()
+        if not client.is_connected:
+            return None
+    except Exception as exc:
+        logger.warning("Neo4j unavailable for operator verdict: %s", exc)
+        return None
+
+    async with await client.session() as session:
+        result = await session.run(
+            """
+            MATCH (d:Deviation {id: $deviation_id})
+            OPTIONAL MATCH (d)-[:FROM]->(r:Recommendation)
+            RETURN d, r
+            """,
+            deviation_id=deviation_id,
+        )
+        record = await result.single()
+        if record is None:
+            return None
+        deviation = dict(record["d"])
+        recommendation = dict(record["r"]) if record["r"] else {}
+
+        # Idempotency: if already adjudicated, do not double-write.
+        # Return a typed result so the caller knows the verdict landed
+        # at some prior point (vs. confusing this with deviation-not-found).
+        if deviation.get("adjudication_status") == "adjudicated":
+            return AdjudicationResult(
+                deviation_id=deviation_id,
+                recommendation_id=deviation.get("recommendation_id", ""),
+                outcome=deviation.get("adjudication_outcome", "indeterminate"),
+                rationale="Already adjudicated.",
+            )
+
+        now = datetime.now(timezone.utc)
+        await session.run(
+            """
+            MATCH (d:Deviation {id: $id})
+            SET d.adjudication_status = 'adjudicated',
+                d.adjudication_outcome = $verdict,
+                d.adjudicated_at = $now
+            """,
+            id=deviation_id,
+            verdict=verdict,
+            now=now,
+        )
+
+        outcome_id = f"outcome:{uuid.uuid4()}"
+        attributed_to = {
+            "system_right": "system_choice",
+            "user_right": "user_choice",
+            "indeterminate": "confounded",
+        }[verdict]
+        observation_rationale = (
+            rationale.strip() if rationale and rationale.strip()
+            else f"Operator-led verdict: {verdict}"
+        )
+        await session.run(
+            """
+            MATCH (d:Deviation {id: $deviation_id})
+            CREATE (o:Outcome {
+              id: $outcome_id,
+              observation: $observation,
+              horizon_ends_at: $now,
+              observed_at: $now,
+              attributed_to: $attributed_to,
+              confidence: $confidence,
+              verdict_source: 'operator'
+            })
+            MERGE (d)-[:RESOLVED_AS]->(o)
+            """,
+            deviation_id=deviation_id,
+            outcome_id=outcome_id,
+            observation=json.dumps({
+                "metric": None,
+                "before": None,
+                "after": None,
+                "rationale": observation_rationale,
+                "verdict_source": "operator",
+            }),
+            now=now,
+            attributed_to=attributed_to,
+            # Operator's confidence is their own integrated read; we don't
+            # have a separate calibration channel to attach a numeric
+            # confidence here. 1.0 reflects "this is the operator's stated
+            # verdict", not "the system is 100% sure". Future calibration
+            # work can replace this with operator-trust-level posteriors.
+            confidence=1.0,
+        )
+
+        why_id: Optional[str] = None
+        if verdict == "system_right":
+            evaluation = _Evaluation(
+                outcome="system_right",
+                rationale=observation_rationale,
+                metric=None,
+                before=None,
+                after=None,
+            )
+            why_id = await _persist_why_library_entry(
+                session, deviation, recommendation, evaluation, user_id,
+            )
+
+        return AdjudicationResult(
+            deviation_id=deviation_id,
+            recommendation_id=deviation.get("recommendation_id", ""),
+            outcome=verdict,
+            rationale=observation_rationale,
+            why_library_entry_id=why_id,
+        )
+
+
 async def adjudicate_ready_deviations(user_id: str) -> AdjudicationBatch:
     """Adjudicate every Deviation belonging to the user whose horizon
     window has closed and that has not yet been adjudicated.

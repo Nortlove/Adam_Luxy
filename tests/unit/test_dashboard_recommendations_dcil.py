@@ -509,6 +509,287 @@ def test_horizon_carries_original_recommendation_campaign(
     assert "Q2 LUXY daily budget" in rec.title  # original title preserved
 
 
+# -----------------------------------------------------------------------------
+# Slice D2: operator-verdict adjudication routes to causal_adjudicator
+# -----------------------------------------------------------------------------
+
+
+class _FakeSession:
+    """Minimal async-context-manager session that records run() calls.
+
+    Records every Cypher query + parameters so tests can assert which
+    writes happened. Returns canned records for specific queries.
+    """
+
+    def __init__(self, deviation_record: dict | None) -> None:
+        self.deviation_record = deviation_record
+        self.calls: list[tuple[str, dict]] = []
+
+    async def __aenter__(self) -> "_FakeSession":
+        return self
+
+    async def __aexit__(self, *exc_info) -> None:
+        return None
+
+    async def run(self, query: str, **params):
+        self.calls.append((query, params))
+
+        class _Result:
+            def __init__(self, record):
+                self._record = record
+
+            async def single(self):
+                return self._record
+
+        # The deviation lookup query returns the seed record.
+        if "MATCH (d:Deviation {id: $deviation_id})" in query and "OPTIONAL MATCH (d)-[:FROM]->(r:Recommendation)" in query and "RETURN d, r" in query:
+            return _Result(self.deviation_record)
+        # All other queries are write-only — no return value needed.
+        return _Result(None)
+
+
+class _FakeClient:
+    def __init__(self, deviation_record: dict | None, connected: bool = True) -> None:
+        self._deviation_record = deviation_record
+        self.is_connected = connected
+        self.last_session: _FakeSession | None = None
+
+    async def session(self) -> _FakeSession:
+        self.last_session = _FakeSession(self._deviation_record)
+        return self.last_session
+
+
+@pytest.fixture
+def pending_deviation_record() -> dict:
+    """Shape mirrors what the Cypher query MATCH (d:Deviation)..RETURN d,r
+    returns: a record with d (Deviation node dict) and r (Recommendation
+    node dict)."""
+    return {
+        "d": {
+            "id": "deviation:abc123",
+            "recommendation_id": "rec:original_xyz",
+            "user_id": "user:chris",
+            "system_choice": "approve",
+            "user_choice": "diagnose",
+            "stated_rationale": "wanted diagnostic",
+            "rationale_class": "missing_context",
+            "adjudication_status": "pending",
+            "horizon_class": "days",
+            "created_at": datetime(2026, 4, 18, tzinfo=timezone.utc),
+        },
+        "r": {
+            "id": "rec:original_xyz",
+            "type": "budget_shift",
+            "title": "Increase Q2 LUXY budget",
+            "campaign_id": "luxy_q2",
+        },
+    }
+
+
+def _patch_neo4j(monkeypatch, deviation_record):
+    """Helper: patch the neo4j client lookup the operator-verdict
+    function makes."""
+    fake_client = _FakeClient(deviation_record)
+    import adam.infrastructure.neo4j.client as neo4j_client_module
+    monkeypatch.setattr(
+        neo4j_client_module, "get_neo4j_client", lambda: fake_client,
+    )
+    return fake_client
+
+
+@pytest.mark.asyncio
+async def test_operator_verdict_persists_status_outcome_and_why_library_on_system_right(
+    monkeypatch: pytest.MonkeyPatch, pending_deviation_record: dict,
+) -> None:
+    """The operator-led adjudication must write the same artifacts as
+    the auto-adjudicator on system_right: Deviation status update,
+    Outcome node attributed_to=system_choice, AND a WhyLibraryEntry.
+    Drift guard cited at causal_adjudicator.py:587-638."""
+    from adam.intelligence.causal_adjudicator import (
+        adjudicate_deviation_with_operator_verdict,
+    )
+
+    client = _patch_neo4j(monkeypatch, pending_deviation_record)
+
+    result = await adjudicate_deviation_with_operator_verdict(
+        deviation_id="deviation:abc123",
+        verdict="system_right",
+        user_id="user:chris",
+        rationale="Realized CPA drift confirmed system was right.",
+    )
+    assert result is not None
+    assert result.outcome == "system_right"
+    assert result.why_library_entry_id is not None  # WhyLibraryEntry created
+
+    # Confirm the writes happened in the right order with the right shape.
+    queries = [q for q, _ in client.last_session.calls]
+    # Step 1: deviation lookup
+    assert any("MATCH (d:Deviation {id: $deviation_id})" in q for q in queries)
+    # Step 2: status update
+    assert any(
+        "SET d.adjudication_status = 'adjudicated'" in q
+        and "d.adjudication_outcome = $verdict" in q
+        for q in queries
+    )
+    # Step 3: Outcome node creation with verdict_source='operator'
+    assert any("CREATE (o:Outcome" in q and "verdict_source: 'operator'" in q for q in queries)
+    # Step 4: WhyLibraryEntry created (system_right only)
+    assert any("CREATE (wl:WhyLibraryEntry" in q for q in queries)
+
+
+@pytest.mark.asyncio
+async def test_operator_verdict_user_right_does_not_create_why_library(
+    monkeypatch: pytest.MonkeyPatch, pending_deviation_record: dict,
+) -> None:
+    """Vigilance: WhyLibraryEntry is created ONLY on system_right
+    (causal_adjudicator.py:635-638). user_right must NOT create one."""
+    from adam.intelligence.causal_adjudicator import (
+        adjudicate_deviation_with_operator_verdict,
+    )
+
+    client = _patch_neo4j(monkeypatch, pending_deviation_record)
+
+    result = await adjudicate_deviation_with_operator_verdict(
+        deviation_id="deviation:abc123",
+        verdict="user_right",
+        user_id="user:chris",
+        rationale="Operator's diagnostic call exposed a creative issue.",
+    )
+    assert result is not None
+    assert result.outcome == "user_right"
+    assert result.why_library_entry_id is None
+
+    queries = [q for q, _ in client.last_session.calls]
+    # No WhyLibraryEntry creation query.
+    assert not any("CREATE (wl:WhyLibraryEntry" in q for q in queries)
+    # But Outcome node IS created with attributed_to='user_choice'.
+    assert any("CREATE (o:Outcome" in q for q in queries)
+
+
+@pytest.mark.asyncio
+async def test_operator_verdict_indeterminate_attributed_to_confounded(
+    monkeypatch: pytest.MonkeyPatch, pending_deviation_record: dict,
+) -> None:
+    from adam.intelligence.causal_adjudicator import (
+        adjudicate_deviation_with_operator_verdict,
+    )
+
+    client = _patch_neo4j(monkeypatch, pending_deviation_record)
+    result = await adjudicate_deviation_with_operator_verdict(
+        deviation_id="deviation:abc123",
+        verdict="indeterminate",
+        user_id="user:chris",
+        rationale=None,
+    )
+    assert result is not None
+    assert result.outcome == "indeterminate"
+    assert result.why_library_entry_id is None
+
+    # attributed_to argument on the Outcome creation must be 'confounded'
+    # (the causal_adjudicator convention for indeterminate). We check the
+    # params dict on the Outcome-creation call.
+    outcome_calls = [
+        params for q, params in client.last_session.calls
+        if "CREATE (o:Outcome" in q
+    ]
+    assert len(outcome_calls) == 1
+    assert outcome_calls[0]["attributed_to"] == "confounded"
+
+
+@pytest.mark.asyncio
+async def test_operator_verdict_idempotent_on_already_adjudicated(
+    monkeypatch: pytest.MonkeyPatch, pending_deviation_record: dict,
+) -> None:
+    """Operator double-clicks must be safe — the function must not
+    double-write Outcomes or WhyLibraryEntries on a deviation that
+    has already been adjudicated."""
+    from adam.intelligence.causal_adjudicator import (
+        adjudicate_deviation_with_operator_verdict,
+    )
+
+    pending_deviation_record["d"]["adjudication_status"] = "adjudicated"
+    pending_deviation_record["d"]["adjudication_outcome"] = "system_right"
+    client = _patch_neo4j(monkeypatch, pending_deviation_record)
+
+    result = await adjudicate_deviation_with_operator_verdict(
+        deviation_id="deviation:abc123",
+        verdict="user_right",  # operator tries to flip the verdict
+        user_id="user:chris",
+        rationale=None,
+    )
+    assert result is not None
+    # The prior verdict is preserved; we don't allow flipping silently.
+    assert result.outcome == "system_right"
+    assert "Already adjudicated" in result.rationale
+    # No write queries beyond the lookup.
+    queries = [q for q, _ in client.last_session.calls]
+    assert not any("SET d.adjudication_status" in q for q in queries)
+    assert not any("CREATE (o:Outcome" in q for q in queries)
+    assert not any("CREATE (wl:WhyLibraryEntry" in q for q in queries)
+
+
+@pytest.mark.asyncio
+async def test_operator_verdict_returns_none_when_deviation_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from adam.intelligence.causal_adjudicator import (
+        adjudicate_deviation_with_operator_verdict,
+    )
+
+    _patch_neo4j(monkeypatch, None)  # lookup returns no record
+
+    result = await adjudicate_deviation_with_operator_verdict(
+        deviation_id="deviation:nonexistent",
+        verdict="system_right",
+        user_id="user:chris",
+        rationale=None,
+    )
+    assert result is None
+
+
+@pytest.mark.asyncio
+async def test_operator_verdict_invalid_kind_raises(
+    monkeypatch: pytest.MonkeyPatch, pending_deviation_record: dict,
+) -> None:
+    """Invalid verdict raises rather than silently coercing — same
+    discipline as route_dcil_directive_decision (slice A2)."""
+    from adam.intelligence.causal_adjudicator import (
+        adjudicate_deviation_with_operator_verdict,
+    )
+
+    _patch_neo4j(monkeypatch, pending_deviation_record)
+
+    with pytest.raises(ValueError, match="Invalid verdict"):
+        await adjudicate_deviation_with_operator_verdict(
+            deviation_id="deviation:abc123",
+            verdict="random_string",  # type: ignore[arg-type]
+            user_id="user:chris",
+            rationale=None,
+        )
+
+
+@pytest.mark.asyncio
+async def test_operator_verdict_default_rationale_when_none(
+    monkeypatch: pytest.MonkeyPatch, pending_deviation_record: dict,
+) -> None:
+    """When operator provides no rationale, the Outcome observation
+    still carries a structured default — audit trail must be informative."""
+    from adam.intelligence.causal_adjudicator import (
+        adjudicate_deviation_with_operator_verdict,
+    )
+
+    client = _patch_neo4j(monkeypatch, pending_deviation_record)
+    result = await adjudicate_deviation_with_operator_verdict(
+        deviation_id="deviation:abc123",
+        verdict="user_right",
+        user_id="user:chris",
+        rationale=None,
+    )
+    assert result is not None
+    assert "Operator-led verdict" in result.rationale
+    assert "user_right" in result.rationale
+
+
 def test_horizon_with_missing_original_recommendation_does_not_crash(
     ready_horizon_record: dict,
 ) -> None:

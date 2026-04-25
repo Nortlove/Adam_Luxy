@@ -1297,7 +1297,17 @@ async def decide_recommendation(
             # 4. If this is a reject or modify (i.e. a deviation from
             # preferred_choice), also create a Deviation node for the
             # causal-adjudication pipeline per HMT §9.2.
-            if request.kind in ("reject", "modify"):
+            #
+            # Skip Deviation creation when the recommendation IS a horizon
+            # adjudication on a previously-recorded deviation. The
+            # operator's verdict on a horizon-source rec is a JUDGMENT
+            # on the existing deviation, not a new deviation to be
+            # adjudicated later. Slice D2 routes the verdict to the
+            # operator-led adjudication path below.
+            if (
+                request.kind in ("reject", "modify")
+                and detail.source != "horizon_adjudication"
+            ):
                 deviation_id = f"deviation:{uuid.uuid4()}"
                 await session.run(
                     """
@@ -1366,6 +1376,49 @@ async def decide_recommendation(
                     "captured in Neo4j but directive remains proposed; "
                     "reconciliation needed): %s",
                     detail.directive_id, request.kind, exc,
+                )
+
+        # 6. Source-routed write for horizon adjudication: the operator's
+        # chosen verdict is sent to the causal adjudicator's operator-led
+        # path so the Deviation gets adjudicated with the correct outcome,
+        # the Outcome node is written, and a WhyLibraryEntry is created
+        # if the verdict is system_right. Skip on `kind=reject` —
+        # rejecting the chance to verdict (a "not-now" signal) leaves the
+        # deviation in pending state. Slice D2 of the unification work.
+        if (
+            detail.source == "horizon_adjudication"
+            and detail.id.startswith("horizon:")
+            and request.kind in ("accept", "modify")
+        ):
+            from adam.intelligence.causal_adjudicator import (
+                adjudicate_deviation_with_operator_verdict,
+            )
+
+            deviation_id = detail.id[len("horizon:"):]
+            verdict = chosen if chosen in (
+                "system_right", "user_right", "indeterminate"
+            ) else "indeterminate"
+            try:
+                adj_result = await adjudicate_deviation_with_operator_verdict(
+                    deviation_id=deviation_id,
+                    verdict=verdict,  # type: ignore[arg-type]
+                    user_id=user.id,
+                    rationale=request.rationale_text,
+                )
+                logger.info(
+                    "Horizon adjudication for deviation %s: verdict=%s "
+                    "(why_library_entry_id=%s, by user=%s)",
+                    deviation_id,
+                    adj_result.outcome if adj_result else "skipped",
+                    adj_result.why_library_entry_id if adj_result else None,
+                    user.id,
+                )
+            except Exception as exc:
+                logger.error(
+                    "Horizon adjudication write failed for deviation %s "
+                    "(decision %s captured in Neo4j but Deviation remains "
+                    "pending; reconciliation needed): %s",
+                    deviation_id, request.kind, exc,
                 )
     except HTTPException:
         raise

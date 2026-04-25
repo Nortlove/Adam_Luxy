@@ -1395,7 +1395,12 @@ def _horizon_deviation_to_recommendation(
         summary=summary,
         campaign_id=campaign_id,
         campaign_name=campaign_name,
-        preferred_choice="system_right",  # neutral default; not a system call
+        # Default verdict on a click-through "accept" is INDETERMINATE — the
+        # epistemically humble pick. Setting "system_right" here would bias
+        # the operator toward agreeing with the system on the absent-thought
+        # path. The operator must explicitly pick system_right or user_right
+        # via "modify"; default-accept stays indeterminate.
+        preferred_choice="indeterminate",
         alternatives=alternatives,
         evidence=UncertaintyBreakdown(
             confident=confident,
