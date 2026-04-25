@@ -16,7 +16,7 @@ import asyncio
 import logging
 import os
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
 import requests
@@ -1126,6 +1126,12 @@ async def generate_recommendations(
     dcil_recs = await _load_dcil_directives(campaign_id_to_name, now)
     dcil_campaign_ids = {r.campaign_id for r in dcil_recs if r.campaign_id}
 
+    # Loop B: ready horizon adjudications. Independent source — they're
+    # judgments on past operator deviations, not new proposals — so the
+    # Pinker override on threshold doesn't apply here. They merge into
+    # the queue alongside DCIL.
+    horizon_recs = await _load_horizon_adjudications(user_id, now)
+
     # Threshold path is gated by StackAdapt availability — it has no DB
     # to read from. DCIL path is independent of StackAdapt.
     threshold_recs: list[RecommendationDetail] = []
@@ -1154,7 +1160,7 @@ async def generate_recommendations(
             if rec is not None:
                 threshold_recs.append(rec)
 
-    recommendations = dcil_recs + threshold_recs
+    recommendations = dcil_recs + horizon_recs + threshold_recs
     recommendations.sort(key=lambda r: r.created_at, reverse=True)
 
     if not recommendations:
@@ -1162,16 +1168,336 @@ async def generate_recommendations(
             return [], "unavailable", summary.reason
         return (
             recommendations, "live",
-            f"No pending directives or threshold signals across "
-            f"{len(summary.campaigns)} live StackAdapt campaign(s).",
+            f"No pending directives, ready horizons, or threshold "
+            f"signals across {len(summary.campaigns)} live StackAdapt "
+            f"campaign(s).",
         )
 
     note = (
-        f"{len(dcil_recs)} DCIL directive(s) + {len(threshold_recs)} "
-        f"threshold signal(s) across {len(summary.campaigns)} live "
-        f"StackAdapt campaign(s)."
+        f"{len(dcil_recs)} DCIL directive(s) + {len(horizon_recs)} "
+        f"horizon adjudication(s) + {len(threshold_recs)} threshold "
+        f"signal(s) across {len(summary.campaigns)} live StackAdapt "
+        f"campaign(s)."
     )
     return recommendations, "live", note
+
+
+# =============================================================================
+# Horizon-adjudication loader (Slice D1)
+#
+# Loop B closes when a deviation's horizon window expires and the operator
+# adjudicates whether the system was right, the operator was right, or the
+# evidence is indeterminate. Today that surface lives only in the
+# `(app)/learning/` Adjudication Horizons tab — separate from the
+# recommendations queue where DCIL directives live. Pilot-week strategy
+# (validated 2026-04-25): consolidate both onto the recommendations queue
+# so the operator's attention budget covers everything actionable in one
+# place. Single-surface attention, single-place selection signal — both
+# the multi-lens pass (PK/PD undosing, bioinformatics merge-upstream,
+# Pinker dual-mechanism, Dawkins selection-at-decision-point, receptor-
+# ligand binding-requires-presence) converge on this.
+#
+# We read directly from Neo4j the same way `/deviations/horizons` does in
+# the router, joining the Deviation to its original Recommendation snapshot.
+# A horizon is "ready" when (now - created_at) >= window_days_for_horizon_class
+# AND the deviation's adjudication_status is still 'pending'.
+# =============================================================================
+
+
+# Mirrors _HORIZON_TO_DAYS in the router. Single source of truth would be
+# nicer; pilot-week ships duplicated to keep the slice minimal and avoid
+# touching the router for a constants reshuffle. Tracked in commit message.
+_HORIZON_TO_DAYS: dict[str, float] = {
+    "hours": 1.0,
+    "days": 7.0,
+    "weeks": 14.0,
+    "months": 60.0,
+}
+
+
+def _horizon_deviation_to_recommendation(
+    record: dict[str, Any], now: datetime,
+) -> RecommendationDetail:
+    """Project a (Deviation, Recommendation) pair onto RecommendationDetail.
+
+    Loop B horizon adjudications carry the original recommendation's
+    snapshot (preserved at decide-time on the Recommendation node) plus
+    the deviation's system_choice / user_choice / stated_rationale. The
+    operator's task on this surface is JUDGMENT (system_right /
+    user_right / indeterminate), not authorship of a new proposal.
+
+    Title and summary are derived from structural state: the original
+    recommendation title, the time elapsed, and the choice diff. No
+    interpretive prose composed by the rendering layer (orientation A4).
+    """
+    deviation = record["deviation"]
+    rec = record["original_recommendation"]
+
+    deviation_id = str(deviation["id"])
+    horizon_class = deviation.get("horizon_class") or "days"
+
+    created_at_raw = deviation.get("created_at")
+    if isinstance(created_at_raw, datetime):
+        deviation_created_at = created_at_raw
+    elif hasattr(created_at_raw, "to_native"):
+        deviation_created_at = created_at_raw.to_native()
+    else:
+        try:
+            deviation_created_at = datetime.fromisoformat(
+                str(created_at_raw).replace("Z", "+00:00")
+            )
+        except (ValueError, TypeError):
+            deviation_created_at = now
+
+    window_days = _HORIZON_TO_DAYS.get(horizon_class, 7.0)
+    days_elapsed = max(
+        0.0, (now - deviation_created_at).total_seconds() / 86_400.0
+    )
+
+    system_choice = deviation.get("system_choice") or "—"
+    user_choice = deviation.get("user_choice")
+    stated_rationale = deviation.get("stated_rationale")
+
+    # Original recommendation snapshot fields are stored on the Neo4j
+    # Recommendation node. They reflect the recommendation AT DECIDE
+    # TIME — not regenerated. This is correct: adjudication evaluates
+    # the decision the operator actually made, not the current state.
+    original_title = rec.get("title") if rec else None
+    original_summary = rec.get("summary") if rec else None
+    original_type = rec.get("type") if rec else "other"
+    campaign_id = rec.get("campaign_id") if rec else None
+    campaign_name = rec.get("campaign_name") if rec else None
+
+    title = (
+        f"Adjudicate: {original_title}" if original_title
+        else f"Adjudicate deviation {deviation_id[-8:]}"
+    )
+    # Summary is structural state: horizon class + elapsed time + the
+    # choice diff. No exhortation, no interpretation of what the
+    # adjudication will do — that lives on the alternatives'
+    # predicted_outcome where it can be cited against
+    # causal_adjudicator.py.
+    summary = (
+        f"Horizon expired ({horizon_class}, {days_elapsed:.1f} days "
+        f"elapsed). System recommended '{system_choice}'; operator "
+        f"chose '{user_choice or '—'}'."
+    )
+
+    # Alternatives map onto the three adjudication outcomes the
+    # causal_adjudicator records (causal_adjudicator.py:585-638). The
+    # decide handler in slice D2 routes accept/modify onto these via
+    # chosen_alternative; for D1 (this commit) the decide handler is
+    # NOT yet wired — surface only.
+    #
+    # predicted_outcome strings reference the actual structural writes
+    # the adjudicator performs per verdict, not interpretation. Cited:
+    #   - All verdicts: Deviation.adjudication_status='adjudicated',
+    #     adjudication_outcome=verdict, plus a new Outcome node
+    #     (causal_adjudicator.py:587-632).
+    #   - WhyLibraryEntry created ONLY on system_right
+    #     (causal_adjudicator.py:635-638).
+    alternatives = [
+        RecommendationAlternative(
+            id="system_right",
+            label="System was right",
+            description=(
+                f"Records that the system's '{system_choice}' "
+                f"matched the realized outcome better than the "
+                f"operator's deviation."
+            ),
+            predicted_outcome=(
+                "Outcome node created (attributed_to='system_choice'). "
+                "A WhyLibraryEntry is generated for defensive reasoning. "
+                "Deviation marked adjudicated."
+            ),
+        ),
+        RecommendationAlternative(
+            id="user_right",
+            label="Operator was right",
+            description=(
+                f"Records that the operator's "
+                f"'{user_choice or 'deviation'}' matched the realized "
+                f"outcome better than the system's choice."
+            ),
+            predicted_outcome=(
+                "Outcome node created (attributed_to='user_choice'). "
+                "No WhyLibraryEntry generated for user_right. Deviation "
+                "marked adjudicated."
+            ),
+        ),
+        RecommendationAlternative(
+            id="indeterminate",
+            label="Evidence inconclusive",
+            description=(
+                "Records that available realized data does not support "
+                "a confident verdict either way."
+            ),
+            predicted_outcome=(
+                "Outcome node created (attributed_to='confounded'). "
+                "No WhyLibraryEntry generated. Deviation marked "
+                "adjudicated; re-opening requires a new deviation."
+            ),
+        ),
+    ]
+
+    confident: list[ConfidentClaim] = [
+        ConfidentClaim(
+            claim=f"Deviation horizon: {horizon_class}",
+            sources=[f"Deviation node {deviation_id}"],
+            strength=1.0,
+        ),
+        ConfidentClaim(
+            claim=f"Time elapsed: {days_elapsed:.1f} days",
+            sources=[f"Deviation.created_at"],
+            strength=1.0,
+        ),
+        ConfidentClaim(
+            claim=f"System choice: {system_choice}",
+            sources=["Deviation.system_choice (snapshot at decide time)"],
+            strength=1.0,
+        ),
+    ]
+    if user_choice:
+        confident.append(
+            ConfidentClaim(
+                claim=f"Operator choice: {user_choice}",
+                sources=["Deviation.user_choice"],
+                strength=1.0,
+            )
+        )
+
+    uncertain: list[UncertainClaim] = []
+    if stated_rationale:
+        # Operator-authored rationale at decide time. Not interpretation;
+        # it's the operator's own recorded hypothesis to test.
+        uncertain.append(
+            UncertainClaim(
+                claim=(
+                    f"Operator's stated rationale at decide time: "
+                    f"\"{stated_rationale}\""
+                ),
+                missing=(
+                    "The realized outcome metrics that would confirm or "
+                    "refute the rationale."
+                ),
+                would_reduce=(
+                    "Adjudicating now consumes the available realized "
+                    "outcome and writes the verdict to theory."
+                ),
+            )
+        )
+
+    return RecommendationDetail(
+        id=f"horizon:{deviation_id}",
+        source="horizon_adjudication",
+        type=original_type,  # type: ignore[arg-type]
+        title=title,
+        summary=summary,
+        campaign_id=campaign_id,
+        campaign_name=campaign_name,
+        preferred_choice="system_right",  # neutral default; not a system call
+        alternatives=alternatives,
+        evidence=UncertaintyBreakdown(
+            confident=confident,
+            uncertain=uncertain,
+            possibly_wrong=[],
+        ),
+        expected_horizon_class=horizon_class,  # type: ignore[arg-type]
+        status="pending",
+        # created_at on the queue card reflects when the horizon became
+        # ready (= deviation_created_at + window_days), not when the
+        # deviation itself was logged. Operators see the urgency.
+        created_at=deviation_created_at + timedelta(days=window_days),
+    )
+
+
+async def _load_horizon_adjudications(
+    user_id: str, now: datetime,
+) -> list[RecommendationDetail]:
+    """Load READY horizon adjudications and project to RecommendationDetail.
+
+    A horizon is READY when:
+      - the deviation's adjudication_status is 'pending'
+      - the elapsed time since deviation.created_at meets or exceeds the
+        window for its horizon_class
+
+    The query joins each Deviation to its original Recommendation snapshot
+    (the audit-trail node created by the decide handler) so the surface
+    can render the system_choice / user_choice / title context.
+    Deviations whose original Recommendation node is missing fall back to
+    a degraded title; they are NOT silently dropped — that would hide
+    real adjudications-needed from the operator.
+    """
+    try:
+        from adam.infrastructure.neo4j.client import get_neo4j_client
+        client = get_neo4j_client()
+        if not client.is_connected:
+            return []
+    except Exception as exc:
+        logger.warning("Neo4j unavailable for horizon adjudications: %s", exc)
+        return []
+
+    recs: list[RecommendationDetail] = []
+    try:
+        async with await client.session() as session:
+            result = await session.run(
+                """
+                MATCH (u:DialogueUser {id: $user_id})-[:DEVIATED]->(d:Deviation)
+                WHERE d.adjudication_status = 'pending'
+                OPTIONAL MATCH (d)-[:FROM]->(r:Recommendation)
+                RETURN d, r
+                ORDER BY d.created_at ASC
+                """,
+                user_id=user_id,
+            )
+            async for record in result:
+                d_node = record["d"]
+                r_node = record["r"]
+
+                # Compute readiness in Python so we can use the same
+                # _HORIZON_TO_DAYS mapping the router uses; keeps the
+                # readiness rule single-sourced even if the Cypher query
+                # later moves window logic into the database.
+                horizon_class = d_node.get("horizon_class") or "days"
+                window_days = _HORIZON_TO_DAYS.get(horizon_class, 7.0)
+                created_at = d_node["created_at"]
+                if hasattr(created_at, "to_native"):
+                    created_at = created_at.to_native()
+                elif isinstance(created_at, str):
+                    try:
+                        created_at = datetime.fromisoformat(
+                            created_at.replace("Z", "+00:00")
+                        )
+                    except ValueError:
+                        continue
+                elapsed = (now - created_at).total_seconds() / 86_400.0
+                if elapsed < window_days:
+                    continue
+
+                deviation_dict = dict(d_node)
+                deviation_dict["created_at"] = created_at
+                rec_dict = dict(r_node) if r_node else None
+                try:
+                    recs.append(
+                        _horizon_deviation_to_recommendation(
+                            {
+                                "deviation": deviation_dict,
+                                "original_recommendation": rec_dict,
+                            },
+                            now,
+                        )
+                    )
+                except Exception as exc:
+                    logger.warning(
+                        "Skipping horizon for deviation %s: mapping failed: %s",
+                        d_node.get("id"), exc,
+                    )
+                    continue
+    except Exception as exc:
+        logger.warning("horizon adjudication load failed: %s", exc)
+        return []
+
+    return recs
 
 
 async def route_dcil_directive_decision(
@@ -1279,6 +1605,48 @@ async def get_recommendation_by_id(
         campaign_name = row_dict.pop("_campaign_name", None)
         return _dcil_directive_to_recommendation(
             row_dict, campaign_name, datetime.now(timezone.utc),
+        )
+
+    if recommendation_id.startswith("horizon:"):
+        deviation_id = recommendation_id[len("horizon:"):]
+        try:
+            from adam.infrastructure.neo4j.client import get_neo4j_client
+            client = get_neo4j_client()
+            if not client.is_connected:
+                return None
+            async with await client.session() as session:
+                result = await session.run(
+                    """
+                    MATCH (d:Deviation {id: $deviation_id})
+                    OPTIONAL MATCH (d)-[:FROM]->(r:Recommendation)
+                    RETURN d, r
+                    """,
+                    deviation_id=deviation_id,
+                )
+                record = await result.single()
+        except Exception as exc:
+            logger.warning("Horizon adjudication lookup failed for %s: %s",
+                           deviation_id, exc)
+            return None
+        if not record:
+            return None
+        d_node = record["d"]
+        r_node = record["r"]
+        # Detail view does NOT re-check readiness — operator may want to
+        # inspect a horizon that's already adjudicated, or one that's
+        # not quite ready, by ID. List view enforces readiness; detail
+        # view honors the lookup.
+        deviation_dict = dict(d_node)
+        created_at = deviation_dict.get("created_at")
+        if hasattr(created_at, "to_native"):
+            deviation_dict["created_at"] = created_at.to_native()
+        rec_dict = dict(r_node) if r_node else None
+        return _horizon_deviation_to_recommendation(
+            {
+                "deviation": deviation_dict,
+                "original_recommendation": rec_dict,
+            },
+            datetime.now(timezone.utc),
         )
 
     recommendations, _source, _note = await generate_recommendations(user_id)

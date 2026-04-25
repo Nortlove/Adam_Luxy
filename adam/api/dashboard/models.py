@@ -694,24 +694,32 @@ RecommendationStatus = Literal[
 
 
 # RecommendationSource is the discriminator that lets the decide handler route to
-# the correct backend write path and lets the UI prioritize the queue. The three
+# the correct backend write path and lets the UI prioritize the queue. The four
 # sources have very different epistemic standing:
 #
-#   "dcil"               — DCIL directive from inferential / theory-grounded path.
-#                          Authoritative. Carries i², expected_lift_pct, rollback
-#                          conditions. Decide routes to the admin directive
-#                          approve/block endpoint so the directive lifecycle in
-#                          dcil_directives is preserved.
-#   "chain_attribution"  — System-flagged-for-help: a FAILING cell with a
-#                          negative `unexplained` residual. Decide writes
-#                          adjudication back to the chain-attribution graph.
-#                          (Surfaced in slice D.)
-#   "threshold"          — Correlational A1 fallback (CPA / CTR / zero-conv
-#                          generators) tracked under
-#                          THRESHOLD_GENERATORS_AS_FALLBACK in the A14 registry.
-#                          Retired when DCIL achieves ≥1 directive per active
-#                          campaign per week sustained.
-RecommendationSource = Literal["dcil", "chain_attribution", "threshold"]
+#   "dcil"                  — DCIL directive from inferential / theory-grounded
+#                             path. Authoritative. Carries i², expected_lift_pct,
+#                             rollback conditions. Decide routes to the admin
+#                             directive approve/block endpoint so the directive
+#                             lifecycle in dcil_directives is preserved.
+#   "horizon_adjudication"  — Loop B horizon expired: an operator-deviated
+#                             recommendation has reached its horizon window
+#                             and is ready to adjudicate (system_right /
+#                             user_right / indeterminate). Decide routes to
+#                             the causal adjudicator. Closes the operator-
+#                             deviation theory-update loop.
+#   "chain_attribution"     — Loop A FAILING cell with a negative `unexplained`
+#                             residual on the horizon-adjudicated rec-class.
+#                             Reserved for when the Loop A horizon adjudicator
+#                             pipeline lights up post-pilot; not produced today.
+#   "threshold"             — Correlational A1 fallback (CPA / CTR / zero-conv
+#                             generators) tracked under
+#                             THRESHOLD_GENERATORS_AS_FALLBACK in the A14
+#                             registry. Retired when DCIL achieves ≥1 directive
+#                             per active campaign per week sustained.
+RecommendationSource = Literal[
+    "dcil", "horizon_adjudication", "chain_attribution", "threshold",
+]
 
 
 HorizonClass = Literal["hours", "days", "weeks", "months"]

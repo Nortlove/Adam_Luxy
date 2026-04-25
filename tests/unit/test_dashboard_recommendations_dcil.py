@@ -368,6 +368,164 @@ async def test_dcil_decision_unknown_kind_raises(
     fake_db.execute.assert_not_awaited()
 
 
+# -----------------------------------------------------------------------------
+# Slice D1: horizon-adjudication projection
+#
+# The mapping from (Deviation, original Recommendation) → RecommendationDetail
+# preserves bilateral structure (system_choice + user_choice) and produces
+# alternatives whose predicted_outcome strings are cited against
+# adam/intelligence/causal_adjudicator.py:585-638. Drift guard: if a future
+# change weakens the citation (e.g., asserts WhyLibraryEntry on user_right),
+# these tests fire.
+# -----------------------------------------------------------------------------
+
+
+@pytest.fixture
+def ready_horizon_record() -> dict:
+    """A Deviation with horizon expired + the snapshot Recommendation
+    node it deviated from. Mirrors the shape returned by the Cypher
+    query in _load_horizon_adjudications."""
+    return {
+        "deviation": {
+            "id": "deviation:abc123",
+            "user_id": "user:chris",
+            "recommendation_id": "rec:luxy:budget_shift:20260418",
+            "system_choice": "approve",
+            "user_choice": "diagnose",
+            "stated_rationale": (
+                "Wanted to see the bilateral diagnostic before scaling spend."
+            ),
+            "rationale_class": "missing_context",
+            "adjudication_status": "pending",
+            "horizon_class": "days",
+            "created_at": datetime(2026, 4, 18, 9, 0, tzinfo=timezone.utc),
+        },
+        "original_recommendation": {
+            "id": "rec:luxy:budget_shift:20260418",
+            "title": "Increase Q2 LUXY daily budget to $600",
+            "summary": "DCIL proposed +20% daily for careful_truster archetype.",
+            "type": "budget_shift",
+            "campaign_id": "luxy_q2",
+            "campaign_name": "Q2 LUXY",
+        },
+    }
+
+
+def test_horizon_source_and_id(ready_horizon_record: dict) -> None:
+    from adam.api.dashboard.service import _horizon_deviation_to_recommendation
+    rec = _horizon_deviation_to_recommendation(
+        ready_horizon_record, datetime(2026, 4, 26, 9, 0, tzinfo=timezone.utc),
+    )
+    assert rec.source == "horizon_adjudication"
+    # ID prefixed for decide-handler routing in slice D2.
+    assert rec.id == "horizon:deviation:abc123"
+
+
+def test_horizon_alternatives_are_three_adjudication_outcomes(
+    ready_horizon_record: dict,
+) -> None:
+    from adam.api.dashboard.service import _horizon_deviation_to_recommendation
+    rec = _horizon_deviation_to_recommendation(
+        ready_horizon_record, datetime(2026, 4, 26, 9, 0, tzinfo=timezone.utc),
+    )
+    alt_ids = {a.id for a in rec.alternatives}
+    assert alt_ids == {"system_right", "user_right", "indeterminate"}
+
+
+def test_horizon_predicted_outcomes_match_causal_adjudicator(
+    ready_horizon_record: dict,
+) -> None:
+    """Drift guard: the predicted_outcome strings make structural claims
+    about what the adjudicator does (causal_adjudicator.py:585-638). If
+    those strings are softened or made fictional, this test must fire.
+
+    Specifically: WhyLibraryEntry is created ONLY on system_right
+    (line 635-638). Past me wrote a version that claimed user_right
+    'may generate a WhyLibraryEntry'; this test ensures that mistake
+    cannot return."""
+    from adam.api.dashboard.service import _horizon_deviation_to_recommendation
+    rec = _horizon_deviation_to_recommendation(
+        ready_horizon_record, datetime(2026, 4, 26, 9, 0, tzinfo=timezone.utc),
+    )
+    alts = {a.id: a for a in rec.alternatives}
+
+    sr = alts["system_right"].predicted_outcome or ""
+    assert "WhyLibraryEntry" in sr
+    assert "system_choice" in sr
+
+    ur = alts["user_right"].predicted_outcome or ""
+    # WhyLibraryEntry must NOT be claimed for user_right.
+    assert "No WhyLibraryEntry" in ur
+    assert "user_choice" in ur
+
+    ind = alts["indeterminate"].predicted_outcome or ""
+    assert "No WhyLibraryEntry" in ind
+    assert "confounded" in ind
+
+
+def test_horizon_evidence_carries_system_and_user_choices(
+    ready_horizon_record: dict,
+) -> None:
+    """A12 (unidirectional rendering) counterpart: the bilateral split
+    must be visible — both system_choice and user_choice present."""
+    from adam.api.dashboard.service import _horizon_deviation_to_recommendation
+    rec = _horizon_deviation_to_recommendation(
+        ready_horizon_record, datetime(2026, 4, 26, 9, 0, tzinfo=timezone.utc),
+    )
+    confident_text = " ".join(c.claim for c in rec.evidence.confident)
+    assert "approve" in confident_text  # system_choice
+    assert "diagnose" in confident_text  # user_choice
+
+
+def test_horizon_summary_is_structural_no_exhortation(
+    ready_horizon_record: dict,
+) -> None:
+    """Vigilance check: the summary must not include exhortation
+    ('Decide!', 'so theory updates', etc.). It is a structural state
+    description — what is, not what to do."""
+    from adam.api.dashboard.service import _horizon_deviation_to_recommendation
+    rec = _horizon_deviation_to_recommendation(
+        ready_horizon_record, datetime(2026, 4, 26, 9, 0, tzinfo=timezone.utc),
+    )
+    lower = rec.summary.lower()
+    # No imperative voice or exhortation.
+    assert "decide" not in lower
+    assert "so theory" not in lower
+    # Structural facts that must be present.
+    assert "horizon" in lower
+    assert "expired" in lower
+    assert "elapsed" in lower
+
+
+def test_horizon_carries_original_recommendation_campaign(
+    ready_horizon_record: dict,
+) -> None:
+    from adam.api.dashboard.service import _horizon_deviation_to_recommendation
+    rec = _horizon_deviation_to_recommendation(
+        ready_horizon_record, datetime(2026, 4, 26, 9, 0, tzinfo=timezone.utc),
+    )
+    assert rec.campaign_id == "luxy_q2"
+    assert rec.campaign_name == "Q2 LUXY"
+    assert "Q2 LUXY daily budget" in rec.title  # original title preserved
+
+
+def test_horizon_with_missing_original_recommendation_does_not_crash(
+    ready_horizon_record: dict,
+) -> None:
+    """If the original Recommendation node is missing (e.g., deviation
+    pre-dates the audit-trail snapshot), the surface degrades gracefully
+    rather than dropping the deviation silently — that would hide a
+    real adjudication-needed from the operator."""
+    from adam.api.dashboard.service import _horizon_deviation_to_recommendation
+    ready_horizon_record["original_recommendation"] = None
+    rec = _horizon_deviation_to_recommendation(
+        ready_horizon_record, datetime(2026, 4, 26, 9, 0, tzinfo=timezone.utc),
+    )
+    assert rec.source == "horizon_adjudication"
+    # Title degrades to deviation-id reference, but the rec exists.
+    assert "deviation" in rec.title.lower() or "abc123" in rec.id
+
+
 def test_json_string_columns_are_parsed_defensively(now: datetime) -> None:
     """asyncpg returns JSON columns as strings; sqlite returns them parsed.
     The loader must handle both without losing data."""

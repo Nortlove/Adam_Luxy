@@ -21,6 +21,13 @@ export function SourceBadge({ source }: { source: RecommendationSource }) {
       </Badge>
     );
   }
+  if (source === "horizon_adjudication") {
+    return (
+      <Badge className="bg-amber-600 text-white hover:bg-amber-700">
+        horizon ready
+      </Badge>
+    );
+  }
   if (source === "chain_attribution") {
     return (
       <Badge className="bg-amber-600 text-white hover:bg-amber-700">

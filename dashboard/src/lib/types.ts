@@ -86,14 +86,23 @@ export type RecommendationStatus =
  *   - "dcil": DCIL directive from inferential / theory-grounded path.
  *     Authoritative. Carries i², expected_lift_pct, rollback_conditions.
  *     Decide routes to /api/v2/admin/.../directives/{id}/approve|block.
- *   - "chain_attribution": System-flagged-for-help — a FAILING cell with
- *     negative `unexplained` residual. (Surfaced in slice D.)
+ *   - "horizon_adjudication": Loop B horizon expired — an operator-
+ *     deviated recommendation has reached its horizon window and is
+ *     ready to adjudicate (system_right / user_right / indeterminate).
+ *     Decide routes to the causal adjudicator.
+ *   - "chain_attribution": Loop A FAILING cell with negative
+ *     `unexplained` residual. Reserved for when the Loop A horizon
+ *     adjudicator pipeline lights up post-pilot; not produced today.
  *   - "threshold": Correlational A1 fallback (CPA / CTR / zero-conv
  *     generators). Tracked under THRESHOLD_GENERATORS_AS_FALLBACK in the
  *     A14 registry. Retired when DCIL achieves ≥1 directive per active
  *     campaign per week sustained.
  */
-export type RecommendationSource = "dcil" | "chain_attribution" | "threshold";
+export type RecommendationSource =
+  | "dcil"
+  | "horizon_adjudication"
+  | "chain_attribution"
+  | "threshold";
 
 export type HorizonClass = "hours" | "days" | "weeks" | "months";
 
