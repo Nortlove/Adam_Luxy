@@ -79,6 +79,22 @@ export type RecommendationStatus =
   | "rejected"
   | "expired";
 
+/**
+ * RecommendationSource — the discriminator that identifies where a
+ * recommendation originated. The list view uses this to render priority
+ * order and the decide action routes by source:
+ *   - "dcil": DCIL directive from inferential / theory-grounded path.
+ *     Authoritative. Carries i², expected_lift_pct, rollback_conditions.
+ *     Decide routes to /api/v2/admin/.../directives/{id}/approve|block.
+ *   - "chain_attribution": System-flagged-for-help — a FAILING cell with
+ *     negative `unexplained` residual. (Surfaced in slice D.)
+ *   - "threshold": Correlational A1 fallback (CPA / CTR / zero-conv
+ *     generators). Tracked under THRESHOLD_GENERATORS_AS_FALLBACK in the
+ *     A14 registry. Retired when DCIL achieves ≥1 directive per active
+ *     campaign per week sustained.
+ */
+export type RecommendationSource = "dcil" | "chain_attribution" | "threshold";
+
 export type HorizonClass = "hours" | "days" | "weeks" | "months";
 
 export type DecisionKind = "accept" | "modify" | "reject";
@@ -130,6 +146,9 @@ export type RecommendationSummary = {
   expected_horizon_class: HorizonClass;
   status: RecommendationStatus;
   created_at: string;
+  // Defaults to "threshold" on the wire for backward compat with the
+  // existing rule-based generators; "dcil" is the inferential path.
+  source: RecommendationSource;
 };
 
 export type UserDecisionResponse = {
@@ -148,6 +167,26 @@ export type RecommendationDetail = RecommendationSummary & {
   alternatives: RecommendationAlternative[];
   evidence: UncertaintyBreakdown;
   decisions: UserDecisionResponse[];
+
+  // Structural fields populated for source="dcil". Carried first-class so
+  // the UI can render them as derived views without parsing claim strings.
+  // Slice B will wire the dedicated UI rendering of these fields.
+  directive_id: string | null;
+  parameter: string | null;
+  current_value: unknown;
+  proposed_value: unknown;
+  i_squared: number | null;
+  expected_lift_pct: number | null;
+  generator_confidence: number | null;
+  rollback_conditions: string[];
+
+  // Upstream-authored narrative — surfaced with explicit attribution
+  // ("directive narrative — generator-authored") so it is not mistaken
+  // for a derived view of atom state. The directive generator's
+  // string-flattening of structured evidence is upstream A4 drift to
+  // retire post-pilot at the source.
+  directive_rationale: string | null;
+  directive_bilateral_evidence: string | null;
 };
 
 export type RecommendationListResponse = {

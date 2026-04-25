@@ -693,6 +693,27 @@ RecommendationStatus = Literal[
 ]
 
 
+# RecommendationSource is the discriminator that lets the decide handler route to
+# the correct backend write path and lets the UI prioritize the queue. The three
+# sources have very different epistemic standing:
+#
+#   "dcil"               — DCIL directive from inferential / theory-grounded path.
+#                          Authoritative. Carries i², expected_lift_pct, rollback
+#                          conditions. Decide routes to the admin directive
+#                          approve/block endpoint so the directive lifecycle in
+#                          dcil_directives is preserved.
+#   "chain_attribution"  — System-flagged-for-help: a FAILING cell with a
+#                          negative `unexplained` residual. Decide writes
+#                          adjudication back to the chain-attribution graph.
+#                          (Surfaced in slice D.)
+#   "threshold"          — Correlational A1 fallback (CPA / CTR / zero-conv
+#                          generators) tracked under
+#                          THRESHOLD_GENERATORS_AS_FALLBACK in the A14 registry.
+#                          Retired when DCIL achieves ≥1 directive per active
+#                          campaign per week sustained.
+RecommendationSource = Literal["dcil", "chain_attribution", "threshold"]
+
+
 HorizonClass = Literal["hours", "days", "weeks", "months"]
 
 
@@ -766,12 +787,41 @@ class RecommendationSummary(BaseModel):
     expected_horizon_class: HorizonClass
     status: RecommendationStatus
     created_at: datetime
+    # Source defaults to "threshold" for backward-compatibility with the
+    # existing rule-based generators; the DCIL path explicitly sets "dcil".
+    # The list view uses this to render priority order and route the decide
+    # action.
+    source: RecommendationSource = "threshold"
 
 
 class RecommendationDetail(RecommendationSummary):
     alternatives: list[RecommendationAlternative]
     evidence: UncertaintyBreakdown
     decisions: list[UserDecisionResponse] = Field(default_factory=list)
+
+    # Structural fields populated for source="dcil". Optional so threshold
+    # generators don't have to fabricate them. These are NOT redundant with
+    # the evidence panel — they are the raw structural state that the
+    # evidence panel surfaces derived views of, kept first-class so the UI
+    # can render them without parsing claim strings.
+    directive_id: Optional[str] = None
+    parameter: Optional[str] = None
+    current_value: Any = None
+    proposed_value: Any = None
+    i_squared: Optional[float] = None
+    expected_lift_pct: Optional[float] = None
+    generator_confidence: Optional[float] = None
+    rollback_conditions: list[str] = Field(default_factory=list)
+
+    # Upstream-authored narrative carried forward unchanged. Surfaced to the
+    # operator with explicit attribution ("directive narrative — generator-
+    # authored") so it is not mistaken for a derived view of atom state.
+    # The directive generator's flattening of structured evidence into
+    # English strings is upstream A4 drift to retire post-pilot at the
+    # source (`adam/intelligence/campaign_intelligence/directive_generator.py`),
+    # not here. We carry it through honestly rather than papering over.
+    directive_rationale: Optional[str] = None
+    directive_bilateral_evidence: Optional[str] = None
 
 
 class RecommendationListResponse(BaseModel):

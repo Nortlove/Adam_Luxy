@@ -245,6 +245,50 @@ MECHANISM_TAXONOMY_UNVALIDATED = A14Compromise(
 )
 
 
+THRESHOLD_GENERATORS_AS_FALLBACK = A14Compromise(
+    name="THRESHOLD_GENERATORS_AS_FALLBACK",
+    description=(
+        "The dashboard recommendations endpoint currently surfaces three "
+        "correlational threshold generators (high CPA, zero conversions, "
+        "low CTR) alongside DCIL directives. The threshold path is pure "
+        "antipattern A1 (rule-based recommendation generator) and A4 "
+        "(hand-composed evidence panel) — its Confident / Uncertain / "
+        "Possibly-Wrong claims are author-template boilerplate "
+        "parameterized by StackAdapt aggregate metrics, not derived "
+        "from atom state. It is retained through pilot only as a "
+        "fallback for campaigns where DCIL has not yet produced a "
+        "directive (Pinker override: when DCIL fires for a campaign, "
+        "threshold generators skip that campaign). Every threshold-"
+        "sourced recommendation emits ``source=\"threshold\"`` so the "
+        "UI can render it at lower priority and the audit can trace "
+        "decisions back to the correlational path. The decided "
+        "architecture is for the recommendations queue to be sourced "
+        "exclusively from inferential paths (DCIL directives + "
+        "chain-attribution residuals + future operator-noticed "
+        "proposals routed through a structured proposal primitive)."
+    ),
+    retirement_trigger=(
+        "DCIL produces ≥1 directive per active campaign per week "
+        "sustained for two consecutive weeks. At that density the "
+        "threshold generators no longer add coverage that the "
+        "inferential path doesn't produce structurally, and they "
+        "should be removed from ``adam/api/dashboard/service.py``"
+        "(``_generate_high_cpa_recommendation``, "
+        "``_generate_zero_conversion_recommendation``, "
+        "``_generate_low_ctr_recommendation``). Until retired, every "
+        "threshold-sourced response carries ``source=\"threshold\"`` "
+        "so its presence in the queue is observable in the audit."
+    ),
+    live_at_sites=(
+        "adam/api/dashboard/service.py (_generate_high_cpa_recommendation)",
+        "adam/api/dashboard/service.py (_generate_zero_conversion_recommendation)",
+        "adam/api/dashboard/service.py (_generate_low_ctr_recommendation)",
+        "adam/api/dashboard/service.py (generate_recommendations: dispatches both DCIL and threshold paths)",
+    ),
+    retires_at_weakness=None,
+)
+
+
 BLEND_FIT_WEIGHTS_UNVALIDATED = A14Compromise(
     name="BLEND_FIT_WEIGHTS_UNVALIDATED",
     description=(
@@ -326,6 +370,7 @@ ACTIVE_COMPROMISES: tuple[A14Compromise, ...] = (
     VARIATIONAL_POSTERIOR_APPROXIMATION,
     BLEND_FIT_WEIGHTS_UNVALIDATED,
     MECHANISM_TAXONOMY_UNVALIDATED,
+    THRESHOLD_GENERATORS_AS_FALLBACK,
 )
 # INFERENTIAL_CHAIN_ATTRIBUTION_EMPTY retired 2026-04-25 by
 # adam/intelligence/recommendation_class/chain_attribution.py — the
@@ -397,6 +442,7 @@ __all__ = [
     "DEPTH_PRIOR_UNVALIDATED",
     "MECHANISM_TAXONOMY_UNVALIDATED",
     "SINGLE_LEVEL_SHRINKAGE",
+    "THRESHOLD_GENERATORS_AS_FALLBACK",
     "VARIATIONAL_POSTERIOR_APPROXIMATION",
     "format_for_report",
 ]

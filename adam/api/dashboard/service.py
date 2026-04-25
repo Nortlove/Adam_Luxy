@@ -371,8 +371,15 @@ def _generate_high_cpa_recommendation(
 
     ratio = campaign_cpa / advertiser_avg_cpa
 
+    # A14: THRESHOLD_GENERATORS_AS_FALLBACK — correlational rule-based
+    # generator with hand-composed evidence. Tagged source="threshold" so
+    # the UI can render at lower priority than DCIL directives and the
+    # audit can trace decisions back to the correlational path. Retires
+    # when DCIL produces ≥1 directive per active campaign per week
+    # sustained for two weeks.
     return RecommendationDetail(
         id=_deterministic_id(c.id, "pause_campaign_high_cpa"),
+        source="threshold",
         type="pause_campaign",
         title=f"Pause '{c.name}' — CPA {ratio:.1f}× advertiser average",
         summary=(
@@ -515,8 +522,11 @@ def _generate_zero_conversion_recommendation(
     if c.spend_usd < _ZERO_CONVERSION_SPEND_USD:
         return None
 
+    # A14: THRESHOLD_GENERATORS_AS_FALLBACK (see header on the high-CPA
+    # generator above for the full retirement contract).
     return RecommendationDetail(
         id=_deterministic_id(c.id, "zero_conversions"),
+        source="threshold",
         type="mechanism_shift",
         title=f"'{c.name}' — ${c.spend_usd:,.0f} spent, 0 conversions",
         summary=(
@@ -639,8 +649,11 @@ def _generate_low_ctr_recommendation(
     if c.ctr >= _LOW_CTR_THRESHOLD:
         return None
 
+    # A14: THRESHOLD_GENERATORS_AS_FALLBACK (see header on the high-CPA
+    # generator for the full retirement contract).
     return RecommendationDetail(
         id=_deterministic_id(c.id, "low_ctr"),
+        source="threshold",
         type="creative_rotate",
         title=f"'{c.name}' — CTR {c.ctr * 100:.3f}% (low)",
         summary=(
@@ -747,58 +760,453 @@ def _generate_low_ctr_recommendation(
     )
 
 
+# =============================================================================
+# DCIL → recommendation loader
+#
+# The directive store (`dcil_directives` in PostgreSQL via the admin db pool)
+# is the inferential / theory-grounded source of system-proposed changes. We
+# load pending directives (status="proposed") and project each onto the
+# recommendation contract so the operator sees ONE queue regardless of source.
+#
+# Mapping discipline:
+#   - Structural fields (i_squared, expected_lift_pct, current/proposed
+#     value, rollback_conditions) are carried through as first-class fields
+#     on RecommendationDetail and ALSO surfaced as ConfidentClaims so the
+#     existing UncertaintyPanel renders them. The claim text labels the
+#     value (e.g. "i² = 23%"); it does not interpret it. Interpretation is
+#     antipattern A4.
+#   - Each rollback_condition becomes a PossiblyWrongClaim — these are
+#     literally "the proposal is wrong if this condition fires", so they
+#     map structurally onto the possibly_wrong slot.
+#   - directive.rationale and directive.bilateral_evidence are upstream-
+#     authored strings (A4 drift in directive_generator.py — to be
+#     retired at source post-pilot, NOT papered over here). We carry them
+#     through unchanged on RecommendationDetail.directive_rationale /
+#     .directive_bilateral_evidence with explicit attribution. The UI
+#     renders them in a separate "directive narrative — generator-
+#     authored" section so they cannot be mistaken for derived views of
+#     atom state.
+# =============================================================================
+
+
+# Map DirectiveType.value (the string stored in `dcil_directives.directive_type`)
+# onto the dashboard's RecommendationType literal. Unknown DCIL types fall back
+# to "other" rather than failing — DCIL evolves faster than the dashboard
+# literal, and an unknown-type directive should still be visible to the
+# operator. Unknown types should be added to RecommendationType when they
+# stabilize.
+_DCIL_TYPE_TO_RECOMMENDATION_TYPE: dict[str, str] = {
+    "budget_reallocation": "budget_shift",
+    "mechanism_rotation": "mechanism_shift",
+    "creative_swap": "creative_rotate",
+    "pause_resume": "pause_campaign",
+    "domain_targeting": "audience_expand",
+    "geo_targeting": "audience_expand",
+    "dayparting": "other",
+    "frequency_cap": "other",
+}
+
+
+def _format_value(value: Any) -> str:
+    """Render a current/proposed value for display in a claim. Structural —
+    no interpretation. Numbers get thousands separators, dicts get JSON-ish
+    rendering, strings pass through.
+    """
+    if value is None:
+        return "—"
+    if isinstance(value, (int, float)):
+        return f"{value:,}" if isinstance(value, int) else f"{value:,.4g}"
+    if isinstance(value, dict):
+        return ", ".join(f"{k}={_format_value(v)}" for k, v in value.items())
+    if isinstance(value, (list, tuple)):
+        return "[" + ", ".join(_format_value(v) for v in value) + "]"
+    return str(value)
+
+
+def _dcil_directive_to_recommendation(
+    directive: dict[str, Any], campaign_name: Optional[str], now: datetime,
+) -> RecommendationDetail:
+    """Project a `dcil_directives` row onto RecommendationDetail.
+
+    The directive row comes from the same shape the admin router's
+    `_directive_to_response` expects. We deserialize JSON-stored fields
+    (`current_value`, `proposed_value`, `rollback_conditions`,
+    `bilateral_evidence`) defensively because the underlying storage may
+    be string-JSON (asyncpg) or already-parsed (sqlite fallback).
+    """
+    import json as _json
+
+    def _maybe_parse(v: Any) -> Any:
+        if isinstance(v, str):
+            try:
+                return _json.loads(v)
+            except (ValueError, TypeError):
+                return v
+        return v
+
+    directive_id = str(directive["id"])
+    directive_type = directive.get("directive_type") or "other"
+    parameter = directive.get("parameter")
+    current_value = _maybe_parse(directive.get("current_value"))
+    proposed_value = _maybe_parse(directive.get("proposed_value"))
+    rationale = directive.get("rationale")
+    bilateral_evidence = directive.get("bilateral_evidence")
+    i_squared = directive.get("i_squared")
+    if i_squared is not None:
+        i_squared = float(i_squared)
+    confidence = directive.get("confidence")
+    if confidence is not None:
+        confidence = float(confidence)
+    expected_lift_pct = directive.get("expected_lift_pct")
+    if expected_lift_pct is not None:
+        expected_lift_pct = float(expected_lift_pct)
+    rollback_raw = directive.get("rollback_conditions") or []
+    rollback_parsed = _maybe_parse(rollback_raw) or []
+    rollback_conditions = [str(r) for r in rollback_parsed if r]
+
+    rec_type = _DCIL_TYPE_TO_RECOMMENDATION_TYPE.get(
+        directive_type.lower() if isinstance(directive_type, str) else "",
+        "other",
+    )
+
+    # Title and summary derive from STRUCTURAL diff, not from the rationale
+    # string. The operator sees what is changing, not the generator's narrative.
+    title_campaign = f"'{campaign_name}'" if campaign_name else f"campaign {directive.get('campaign_id', '?')}"
+    if parameter and current_value is not None and proposed_value is not None:
+        title = (
+            f"{rec_type.replace('_', ' ')} on {title_campaign}: "
+            f"{parameter} {_format_value(current_value)} → "
+            f"{_format_value(proposed_value)}"
+        )
+    elif parameter and proposed_value is not None:
+        title = (
+            f"{rec_type.replace('_', ' ')} on {title_campaign}: "
+            f"set {parameter} = {_format_value(proposed_value)}"
+        )
+    else:
+        title = f"{rec_type.replace('_', ' ')} on {title_campaign}"
+
+    if expected_lift_pct is not None:
+        summary_text = (
+            f"DCIL directive proposes {parameter or 'a parameter change'} "
+            f"with expected lift {expected_lift_pct:+.1f}%. "
+            f"i² = {i_squared:.0f}%." if i_squared is not None
+            else (
+                f"DCIL directive proposes {parameter or 'a parameter change'} "
+                f"with expected lift {expected_lift_pct:+.1f}%."
+            )
+        )
+    else:
+        summary_text = (
+            f"DCIL directive proposes {parameter or 'a parameter change'} "
+            f"on this campaign. Review the structural fields and approve, "
+            f"block, or modify."
+        )
+
+    # Confident claims = structural facts the generator emitted as numbers.
+    # Each is a label for a value; not interpretation. Interpretation lives
+    # in the directive narrative section (A4-attributed).
+    confident: list[ConfidentClaim] = []
+    if parameter and current_value is not None and proposed_value is not None:
+        confident.append(
+            ConfidentClaim(
+                claim=(
+                    f"{parameter}: "
+                    f"{_format_value(current_value)} → "
+                    f"{_format_value(proposed_value)}"
+                ),
+                sources=["dcil_directives.current_value, dcil_directives.proposed_value"],
+                strength=1.0,
+            )
+        )
+    if i_squared is not None:
+        confident.append(
+            ConfidentClaim(
+                claim=f"i² = {i_squared:.0f}%",
+                sources=["DCIL meta-analytic estimator (DerSimonian-Laird)"],
+                strength=1.0,
+            )
+        )
+    if expected_lift_pct is not None:
+        confident.append(
+            ConfidentClaim(
+                claim=f"expected lift = {expected_lift_pct:+.1f}%",
+                sources=["DCIL effect-size estimator"],
+                strength=1.0,
+            )
+        )
+    if confidence is not None:
+        confident.append(
+            ConfidentClaim(
+                claim=f"generator confidence = {confidence:.2f}",
+                sources=["DCIL hypothesis posterior"],
+                strength=1.0,
+            )
+        )
+
+    # Possibly-wrong claims = rollback_conditions, structurally. Each is
+    # literally a forward statement of when the proposal would be wrong.
+    possibly_wrong: list[PossiblyWrongClaim] = [
+        PossiblyWrongClaim(
+            claim=f"This proposal is wrong if: {condition}",
+            conflicting_signal=(
+                "Forward rollback condition — adjudicated at horizon expiry."
+            ),
+            alternative=(
+                f"Roll back to {parameter} = {_format_value(current_value)}"
+                if parameter and current_value is not None
+                else "Roll back to current configuration"
+            ),
+        )
+        for condition in rollback_conditions
+    ]
+
+    # Uncertain claims surface the upstream-A4 status of the generator
+    # narrative explicitly. The operator should know that bilateral_evidence
+    # and rationale are author-strings, not derived views of atom state.
+    uncertain: list[UncertainClaim] = []
+    if bilateral_evidence or rationale:
+        uncertain.append(
+            UncertainClaim(
+                claim=(
+                    "Generator narrative is author-string; structured "
+                    "evidence trace not yet emitted at the source."
+                ),
+                missing=(
+                    "directive_generator.py emits free-text bilateral_evidence "
+                    "and rationale rather than structured evidence trace. "
+                    "Tracked as upstream A4 drift to retire post-pilot."
+                ),
+                would_reduce=(
+                    "Refactor directive_generator.py to emit structured "
+                    "evidence (atom activations, edge IDs, link posteriors) "
+                    "in place of authored summary strings."
+                ),
+            )
+        )
+
+    alternatives = [
+        RecommendationAlternative(
+            id="approve",
+            label="Approve the directive",
+            description=(
+                f"Set {parameter} = {_format_value(proposed_value)}."
+                if parameter and proposed_value is not None
+                else "Apply the proposed change as defined by the directive."
+            ),
+            predicted_outcome=(
+                f"Expected lift {expected_lift_pct:+.1f}%."
+                if expected_lift_pct is not None else None
+            ),
+        ),
+        RecommendationAlternative(
+            id="block",
+            label="Block the directive",
+            description=(
+                "Reject the proposed change. Records the rejection as a "
+                "deviation; adjudicated at horizon expiry to update theory."
+            ),
+            predicted_outcome=(
+                f"Current {parameter} = {_format_value(current_value)} maintained."
+                if parameter and current_value is not None
+                else "Current configuration preserved."
+            ),
+        ),
+        RecommendationAlternative(
+            id="modify",
+            label="Modify and approve",
+            description=(
+                "Apply a different value than DCIL proposed. Captures your "
+                "alternative as a hypothesis tested against the realized "
+                "outcome."
+            ),
+        ),
+    ]
+
+    created_at_raw = directive.get("created_at")
+    if isinstance(created_at_raw, datetime):
+        created_at = created_at_raw
+    else:
+        try:
+            created_at = datetime.fromisoformat(str(created_at_raw).replace("Z", "+00:00"))
+        except (ValueError, TypeError):
+            created_at = now
+
+    return RecommendationDetail(
+        id=f"dcil:{directive_id}",
+        source="dcil",
+        directive_id=directive_id,
+        type=rec_type,  # type: ignore[arg-type]
+        title=title,
+        summary=summary_text,
+        campaign_id=str(directive.get("campaign_id") or ""),
+        campaign_name=campaign_name,
+        preferred_choice="approve",
+        alternatives=alternatives,
+        evidence=UncertaintyBreakdown(
+            confident=confident,
+            uncertain=uncertain,
+            possibly_wrong=possibly_wrong,
+        ),
+        expected_horizon_class="days",
+        status="pending",
+        created_at=created_at,
+        parameter=parameter,
+        current_value=current_value,
+        proposed_value=proposed_value,
+        i_squared=i_squared,
+        expected_lift_pct=expected_lift_pct,
+        generator_confidence=confidence,
+        rollback_conditions=rollback_conditions,
+        directive_rationale=rationale,
+        directive_bilateral_evidence=bilateral_evidence,
+    )
+
+
+async def _load_dcil_directives(
+    campaign_id_to_name: dict[str, str], now: datetime,
+) -> list[RecommendationDetail]:
+    """Load pending DCIL directives and project to RecommendationDetail.
+
+    Returns an empty list if the admin db pool is unreachable or no
+    directives are proposed. The dashboard endpoint must remain functional
+    even when the directive store is empty (e.g., DCIL has not yet run for
+    this campaign).
+    """
+    try:
+        from adam.api.admin.db import get_db
+        db = get_db()
+        rows = await db.fetch_all(
+            "SELECT * FROM dcil_directives WHERE status = 'proposed' "
+            "ORDER BY created_at DESC"
+        )
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.warning("DCIL directive load failed: %s", exc)
+        return []
+
+    recs: list[RecommendationDetail] = []
+    for row in rows:
+        try:
+            campaign_id = str(row.get("campaign_id") or "")
+            campaign_name = campaign_id_to_name.get(campaign_id)
+            recs.append(
+                _dcil_directive_to_recommendation(dict(row), campaign_name, now)
+            )
+        except Exception as exc:
+            logger.warning(
+                "Skipping DCIL directive %s: mapping failed: %s",
+                row.get("id"), exc,
+            )
+            continue
+    return recs
+
+
 async def generate_recommendations(
     user_id: str,
 ) -> tuple[list[RecommendationDetail], str, Optional[str]]:
-    """Produce structured recommendations from live StackAdapt data.
+    """Produce structured recommendations from the inferential learning loop.
 
-    Returns (recommendations, source, source_note). source is one of
-    "live" | "unavailable". Recommendations are deterministic within
-    a day: the same campaign conditions produce the same id, so the
-    list-detail round trip remains consistent.
+    Sources, in priority order:
+      1. DCIL directives (status="proposed") — theory-grounded, structural.
+      2. Threshold generators — A14 fallback (THRESHOLD_GENERATORS_AS_FALLBACK)
+         applied only to campaigns that DCIL has NOT proposed for. This is
+         the Pinker override discipline: when memory (DCIL's reinforced
+         theory chain on a specific campaign) has produced a directive, the
+         productive rule layer (correlational thresholds) defers.
+
+    Returns (recommendations, source, source_note). source is "live" |
+    "unavailable" reflecting the StackAdapt connection state. DCIL
+    recommendations may still surface even when StackAdapt is unavailable
+    if directives exist on prior campaigns.
     """
-
     summary = await fetch_stackadapt_summary()
-    if summary.source != "live":
-        return [], "unavailable", summary.reason
-
     now = datetime.now(timezone.utc)
-    recommendations: list[RecommendationDetail] = []
 
-    advertiser_avg_cpa = _advertiser_average_cpa(summary)
+    campaign_id_to_name = {c.id: c.name for c in summary.campaigns}
+    dcil_recs = await _load_dcil_directives(campaign_id_to_name, now)
+    dcil_campaign_ids = {r.campaign_id for r in dcil_recs if r.campaign_id}
 
-    for campaign in summary.campaigns:
-        if advertiser_avg_cpa is not None:
-            rec = _generate_high_cpa_recommendation(
-                campaign, advertiser_avg_cpa, now,
-            )
+    # Threshold path is gated by StackAdapt availability — it has no DB
+    # to read from. DCIL path is independent of StackAdapt.
+    threshold_recs: list[RecommendationDetail] = []
+    if summary.source == "live":
+        advertiser_avg_cpa = _advertiser_average_cpa(summary)
+        for campaign in summary.campaigns:
+            # Pinker override: skip threshold generators for campaigns
+            # where DCIL has already proposed. The directive carries the
+            # full inferential chain; the threshold evidence panel would
+            # be redundant noise.
+            if campaign.id in dcil_campaign_ids:
+                continue
+
+            if advertiser_avg_cpa is not None:
+                rec = _generate_high_cpa_recommendation(
+                    campaign, advertiser_avg_cpa, now,
+                )
+                if rec is not None:
+                    threshold_recs.append(rec)
+
+            rec = _generate_zero_conversion_recommendation(campaign, now)
             if rec is not None:
-                recommendations.append(rec)
+                threshold_recs.append(rec)
 
-        rec = _generate_zero_conversion_recommendation(campaign, now)
-        if rec is not None:
-            recommendations.append(rec)
+            rec = _generate_low_ctr_recommendation(campaign, now)
+            if rec is not None:
+                threshold_recs.append(rec)
 
-        rec = _generate_low_ctr_recommendation(campaign, now)
-        if rec is not None:
-            recommendations.append(rec)
-
+    recommendations = dcil_recs + threshold_recs
     recommendations.sort(key=lambda r: r.created_at, reverse=True)
 
-    return (
-        recommendations,
-        "live",
-        f"Generated from {len(summary.campaigns)} live StackAdapt campaign(s).",
+    if not recommendations:
+        if summary.source != "live":
+            return [], "unavailable", summary.reason
+        return (
+            recommendations, "live",
+            f"No pending directives or threshold signals across "
+            f"{len(summary.campaigns)} live StackAdapt campaign(s).",
+        )
+
+    note = (
+        f"{len(dcil_recs)} DCIL directive(s) + {len(threshold_recs)} "
+        f"threshold signal(s) across {len(summary.campaigns)} live "
+        f"StackAdapt campaign(s)."
     )
+    return recommendations, "live", note
 
 
 async def get_recommendation_by_id(
     user_id: str, recommendation_id: str,
 ) -> Optional[RecommendationDetail]:
-    """Resolve a single recommendation for detail view. Regenerates
-    on read so the detail page reflects current live metrics; the ID
-    is deterministic per campaign+type+day.
+    """Resolve a single recommendation for detail view.
+
+    For source="dcil" recommendations (id prefix "dcil:"), reads the
+    directive directly so the detail view reflects the current row state
+    rather than a stale snapshot. For source="threshold" recommendations,
+    regenerates from live StackAdapt metrics so the detail page reflects
+    the current numbers.
     """
+    if recommendation_id.startswith("dcil:"):
+        directive_id = recommendation_id[len("dcil:"):]
+        try:
+            from adam.api.admin.db import get_db
+            db = get_db()
+            row = await db.fetch_one(
+                "SELECT d.*, c.name AS _campaign_name FROM dcil_directives d "
+                "LEFT JOIN campaigns c ON c.id = d.campaign_id "
+                "WHERE d.id = $1",
+                directive_id,
+            )
+        except Exception as exc:
+            logger.warning("DCIL directive lookup failed for %s: %s", directive_id, exc)
+            return None
+        if not row:
+            return None
+        row_dict = dict(row)
+        campaign_name = row_dict.pop("_campaign_name", None)
+        return _dcil_directive_to_recommendation(
+            row_dict, campaign_name, datetime.now(timezone.utc),
+        )
+
     recommendations, _source, _note = await generate_recommendations(user_id)
     for rec in recommendations:
         if rec.id == recommendation_id:

@@ -11,6 +11,7 @@ from adam.intelligence.recommendation_class import (
     DEPTH_PRIOR_UNVALIDATED,
     MECHANISM_TAXONOMY_UNVALIDATED,
     SINGLE_LEVEL_SHRINKAGE,
+    THRESHOLD_GENERATORS_AS_FALLBACK,
     VARIATIONAL_POSTERIOR_APPROXIMATION,
     A14Compromise,
     format_a14_compromises_for_report,
@@ -30,9 +31,28 @@ def test_active_compromises_contains_all_named_constants() -> None:
         VARIATIONAL_POSTERIOR_APPROXIMATION,
         BLEND_FIT_WEIGHTS_UNVALIDATED,
         MECHANISM_TAXONOMY_UNVALIDATED,
+        THRESHOLD_GENERATORS_AS_FALLBACK,
     }
     assert set(ACTIVE_COMPROMISES) == expected
-    assert len(ACTIVE_COMPROMISES) == 6
+    assert len(ACTIVE_COMPROMISES) == 7
+
+
+def test_threshold_generators_as_fallback_has_pinker_override_retirement_trigger() -> None:
+    """The retirement trigger must name a concrete data condition, not a
+    vague timeline. Drift prevention: if the trigger softens to "post-
+    pilot" or "later", the registry-level test catches it.
+    """
+    trigger = THRESHOLD_GENERATORS_AS_FALLBACK.retirement_trigger.lower()
+    # Names a concrete sustained-density condition.
+    assert "directive" in trigger
+    assert ("week" in trigger) or ("day" in trigger)
+    # Names the actual functions to remove on retirement, so the future
+    # agent doesn't have to grep.
+    sites = " ".join(THRESHOLD_GENERATORS_AS_FALLBACK.live_at_sites)
+    assert "dashboard/service.py" in sites
+    assert "_generate_high_cpa_recommendation" in sites
+    assert "_generate_zero_conversion_recommendation" in sites
+    assert "_generate_low_ctr_recommendation" in sites
 
 
 def test_inferential_chain_attribution_empty_is_retired() -> None:

@@ -41,6 +41,7 @@ from adam.intelligence.recommendation_class.a14_compromises import (
     DEPTH_PRIOR_UNVALIDATED,
     MECHANISM_TAXONOMY_UNVALIDATED,
     SINGLE_LEVEL_SHRINKAGE,
+    THRESHOLD_GENERATORS_AS_FALLBACK,
     VARIATIONAL_POSTERIOR_APPROXIMATION,
     format_for_report as format_a14_compromises_for_report,
 )
@@ -197,6 +198,7 @@ __all__ = [
     "ResidualDivergence",
     "RouteSplitResidual",
     "SINGLE_LEVEL_SHRINKAGE",
+    "THRESHOLD_GENERATORS_AS_FALLBACK",
     "SequentialAdjudicator",
     "SpiesDistribution",
     "VALID_POSTURE_BANDS",
