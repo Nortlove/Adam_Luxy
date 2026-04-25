@@ -71,6 +71,7 @@ from adam.api.dashboard.service import (
     fetch_stackadapt_summary,
     generate_recommendations,
     get_recommendation_by_id,
+    route_dcil_directive_decision,
 )
 
 logger = logging.getLogger(__name__)
@@ -1327,6 +1328,44 @@ async def decide_recommendation(
                     rationale_class=request.rationale_class,
                     horizon=detail.expected_horizon_class,
                     created_at=created_at,
+                )
+
+        # 5. Source-routed write: when the recommendation came from DCIL,
+        # apply the same decision onto the directive lifecycle in
+        # dcil_directives so the DCIL pipeline picks up only directives
+        # the operator has reviewed. This is what makes the unified
+        # decision gate actually unified — without it the dashboard
+        # would record decisions in Neo4j while the directive store
+        # remained orthogonal. Slice A2 of the unification work.
+        #
+        # Failure here is logged but does NOT roll back the Neo4j
+        # writes above. The Deviation + UserDecision capture the
+        # operator's intent regardless; a transient db hiccup on the
+        # directive write becomes an audit-visible inconsistency
+        # (status="proposed" in dcil_directives but a UserDecision in
+        # Neo4j) that a reconciliation job can fix later. The
+        # alternative — failing the whole decide call — would lose the
+        # operator's intent on a transient infra issue, which is worse.
+        if detail.source == "dcil" and detail.directive_id:
+            try:
+                new_directive_status = await route_dcil_directive_decision(
+                    directive_id=detail.directive_id,
+                    decision_kind=request.kind,
+                    review_notes=request.rationale_text,
+                    user_id=user.id,
+                )
+                logger.info(
+                    "DCIL directive %s lifecycle updated: status=%s "
+                    "(decision=%s by user=%s)",
+                    detail.directive_id, new_directive_status,
+                    request.kind, user.id,
+                )
+            except Exception as exc:
+                logger.error(
+                    "DCIL directive %s lifecycle write failed (decision %s "
+                    "captured in Neo4j but directive remains proposed; "
+                    "reconciliation needed): %s",
+                    detail.directive_id, request.kind, exc,
                 )
     except HTTPException:
         raise

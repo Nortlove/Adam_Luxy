@@ -228,6 +228,146 @@ def test_alternatives_include_approve_block_modify(
 # -----------------------------------------------------------------------------
 
 
+# -----------------------------------------------------------------------------
+# Slice A2: decide handler routes by source — directive lifecycle preserved
+# -----------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_dcil_decision_accept_routes_to_approved(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Accept on a DCIL recommendation must update dcil_directives.status
+    to 'approved' so the DCIL pipeline picks it up for execution. Without
+    this the loop never closes — UI says approved, directive stays
+    'proposed' forever."""
+    from unittest.mock import AsyncMock, MagicMock
+    from adam.api.dashboard.service import route_dcil_directive_decision
+
+    fake_db = MagicMock()
+    fake_db.execute = AsyncMock(return_value="UPDATE 1")
+
+    import adam.api.admin.db as admin_db
+    monkeypatch.setattr(admin_db, "get_db", lambda: fake_db)
+
+    new_status = await route_dcil_directive_decision(
+        directive_id="dir_abc",
+        decision_kind="accept",
+        review_notes=None,
+        user_id="user:chris",
+    )
+
+    assert new_status == "approved"
+    fake_db.execute.assert_awaited_once()
+    sql, *args = fake_db.execute.await_args.args
+    assert "UPDATE dcil_directives" in sql
+    assert "SET status = $1" in sql
+    assert args[0] == "approved"  # new status
+    assert args[1] == "user:chris"  # reviewed_by
+    assert args[5] == "dir_abc"  # directive id
+
+
+@pytest.mark.asyncio
+async def test_dcil_decision_reject_routes_to_blocked(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from unittest.mock import AsyncMock, MagicMock
+    from adam.api.dashboard.service import route_dcil_directive_decision
+
+    fake_db = MagicMock()
+    fake_db.execute = AsyncMock(return_value="UPDATE 1")
+    import adam.api.admin.db as admin_db
+    monkeypatch.setattr(admin_db, "get_db", lambda: fake_db)
+
+    new_status = await route_dcil_directive_decision(
+        directive_id="dir_abc",
+        decision_kind="reject",
+        review_notes="Too aggressive given current campaign state.",
+        user_id="user:chris",
+    )
+    assert new_status == "blocked"
+    args = fake_db.execute.await_args.args
+    assert args[1] == "blocked"  # status
+    assert args[4] == "Too aggressive given current campaign state."  # review_notes
+
+
+@pytest.mark.asyncio
+async def test_dcil_decision_modify_blocks_directive_with_deviation_pattern(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Modify on a DCIL recommendation blocks the directive (operator wants
+    a different value than DCIL proposed). The Deviation node captured
+    upstream by decide_recommendation handles the operator's chosen
+    alternative as a hypothesis adjudicated at horizon. The directive
+    itself MUST NOT execute — it represents a value the operator did
+    not endorse."""
+    from unittest.mock import AsyncMock, MagicMock
+    from adam.api.dashboard.service import route_dcil_directive_decision
+
+    fake_db = MagicMock()
+    fake_db.execute = AsyncMock(return_value="UPDATE 1")
+    import adam.api.admin.db as admin_db
+    monkeypatch.setattr(admin_db, "get_db", lambda: fake_db)
+
+    new_status = await route_dcil_directive_decision(
+        directive_id="dir_abc",
+        decision_kind="modify",
+        review_notes="Prefer 550 daily not 600.",
+        user_id="user:chris",
+    )
+    assert new_status == "blocked"  # NOT executed; deviation captures alternative
+
+
+@pytest.mark.asyncio
+async def test_dcil_decision_default_review_notes_when_none_provided(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """When the operator provides no rationale, review_notes still get a
+    structured default so the audit trail is informative."""
+    from unittest.mock import AsyncMock, MagicMock
+    from adam.api.dashboard.service import route_dcil_directive_decision
+
+    fake_db = MagicMock()
+    fake_db.execute = AsyncMock(return_value="UPDATE 1")
+    import adam.api.admin.db as admin_db
+    monkeypatch.setattr(admin_db, "get_db", lambda: fake_db)
+
+    await route_dcil_directive_decision(
+        directive_id="dir_abc",
+        decision_kind="accept",
+        review_notes=None,
+        user_id="user:chris",
+    )
+    args = fake_db.execute.await_args.args
+    notes = args[4]
+    assert notes is not None and len(notes) > 0
+    assert "approved" in notes.lower()
+
+
+@pytest.mark.asyncio
+async def test_dcil_decision_unknown_kind_raises(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An unknown decision_kind should fail loudly rather than silently
+    coerce to a default lifecycle state."""
+    from unittest.mock import AsyncMock, MagicMock
+    from adam.api.dashboard.service import route_dcil_directive_decision
+
+    fake_db = MagicMock()
+    fake_db.execute = AsyncMock(return_value="UPDATE 1")
+    import adam.api.admin.db as admin_db
+    monkeypatch.setattr(admin_db, "get_db", lambda: fake_db)
+
+    with pytest.raises(ValueError, match="Unknown decision_kind"):
+        await route_dcil_directive_decision(
+            directive_id="dir_abc",
+            decision_kind="ignore",
+            review_notes=None,
+            user_id="user:chris",
+        )
+    fake_db.execute.assert_not_awaited()
+
+
 def test_json_string_columns_are_parsed_defensively(now: datetime) -> None:
     """asyncpg returns JSON columns as strings; sqlite returns them parsed.
     The loader must handle both without losing data."""

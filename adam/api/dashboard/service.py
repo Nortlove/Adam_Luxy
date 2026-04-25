@@ -1174,6 +1174,80 @@ async def generate_recommendations(
     return recommendations, "live", note
 
 
+async def route_dcil_directive_decision(
+    directive_id: str,
+    decision_kind: str,
+    review_notes: Optional[str],
+    user_id: str,
+) -> str:
+    """Apply a dashboard decide event onto the DCIL directive lifecycle.
+
+    Slice A2 of the unified-decision-gate work: when the operator decides
+    on a source="dcil" recommendation, the directive's row in
+    `dcil_directives` is updated to reflect the operator's choice so the
+    DCIL pipeline picks up only directives that have been reviewed.
+    Without this, approving in the dashboard UI would persist the
+    UserDecision in Neo4j but the directive would stay "proposed" forever
+    and never execute — the loop would not close.
+
+    Mapping rationale (DecisionKind → directive status):
+      - "accept"  → "approved"
+        The operator endorses the directive as-proposed. DCIL pipeline
+        executes it on the next run within the safety rails.
+      - "reject"  → "blocked"
+        The operator rejects the proposal outright. The directive will
+        not execute; the deviation captured upstream by
+        `decide_recommendation` adjudicates at horizon expiry.
+      - "modify"  → "blocked"
+        The operator wants a different value than DCIL proposed. The
+        directive itself is blocked; the deviation record captures the
+        operator's chosen alternative as the hypothesis tested at
+        horizon expiry. DCIL may regenerate a refined directive based on
+        the realized outcome.
+
+    The SQL here intentionally mirrors the admin endpoints
+    (`approve_directive`, `block_directive` in
+    adam/api/admin/routers/campaign_router.py) so the directive lifecycle
+    state is identical regardless of which surface the operator decides
+    from. We do not call the admin endpoints over HTTP — that would
+    introduce an internal hop and double-auth. Same db pool, same SQL,
+    same fields written. Honest unification at the data layer.
+    """
+    from datetime import datetime as _dt, timezone as _tz
+
+    if decision_kind == "accept":
+        new_status = "approved"
+    elif decision_kind in ("reject", "modify"):
+        new_status = "blocked"
+    else:
+        raise ValueError(
+            f"Unknown decision_kind {decision_kind!r}; expected accept/modify/reject"
+        )
+
+    notes = review_notes
+    if not notes:
+        notes = f"{new_status} via dashboard decide ({decision_kind})"
+
+    try:
+        from adam.api.admin.db import get_db
+        db = get_db()
+        now = str(_dt.now(_tz.utc))
+        await db.execute(
+            "UPDATE dcil_directives SET status = $1, reviewed_by = $2, "
+            "reviewed_at = $3, review_notes = $4, updated_at = $5 WHERE id = $6",
+            new_status, user_id, now, notes, now, directive_id,
+        )
+    except Exception as exc:
+        logger.exception(
+            "DCIL directive lifecycle write failed for directive_id=%s "
+            "decision=%s: %s",
+            directive_id, decision_kind, exc,
+        )
+        raise
+
+    return new_status
+
+
 async def get_recommendation_by_id(
     user_id: str, recommendation_id: str,
 ) -> Optional[RecommendationDetail]:
