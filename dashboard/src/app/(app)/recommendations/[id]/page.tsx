@@ -17,6 +17,9 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { PageHeader } from "@/components/page-header";
 import { UncertaintyPanel } from "@/components/uncertainty-panel";
 import { RecommendationDecide } from "@/components/recommendation-decide";
+import { DirectiveSubstance } from "@/components/directive-substance";
+import { DirectiveNarrative } from "@/components/directive-narrative";
+import { SourceBadge } from "@/components/source-badge";
 
 export const dynamic = "force-dynamic";
 
@@ -67,6 +70,7 @@ export default async function RecommendationDetailPage({ params }: PageProps) {
       <PageHeader title={rec.title} description={rec.summary} />
 
       <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+        <SourceBadge source={rec.source} />
         <Badge variant="outline">{rec.type.replace(/_/g, " ")}</Badge>
         <span>horizon: {rec.expected_horizon_class}</span>
         {rec.campaign_name && (
@@ -78,6 +82,13 @@ export default async function RecommendationDetailPage({ params }: PageProps) {
         <span>·</span>
         <span>created {new Date(rec.created_at).toLocaleString()}</span>
       </div>
+
+      {/* DIRECTIVE SUBSTANCE — structural fields for source="dcil" only.
+          Rendered above "the plan" so the operator reads the structural
+          state of the proposal before evaluating alternatives. Threshold-
+          source recommendations skip this section (their evidence panel
+          IS their substance). */}
+      <DirectiveSubstance recommendation={rec} />
 
       {/* PLAN — preferred choice + alternatives (plan-before-patch) */}
       <section className="flex flex-col gap-3">
@@ -143,6 +154,14 @@ export default async function RecommendationDetailPage({ params }: PageProps) {
         </div>
         <UncertaintyPanel evidence={rec.evidence} />
       </section>
+
+      {/* DIRECTIVE NARRATIVE — upstream-authored prose carried with
+          explicit attribution. Visually distinct from the structural
+          panels above. Slice B carries upstream A4 honestly rather
+          than papering over it; the source-side fix lives in
+          adam/intelligence/campaign_intelligence/directive_generator.py
+          (post-pilot). */}
+      <DirectiveNarrative recommendation={rec} />
 
       <Separator />
 

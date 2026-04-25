@@ -16,6 +16,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { PageHeader } from "@/components/page-header";
+import { SourceBadge } from "@/components/source-badge";
 
 export const metadata = {
   title: "Recommendations · INFORMATIV",
@@ -114,13 +115,25 @@ function ListView({ data }: { data: RecommendationListResponse }) {
 }
 
 function RecommendationCard({ r }: { r: RecommendationSummary }) {
+  // Threshold-source recommendations are A14 fallback — visually muted
+  // so DCIL directives in the same queue read as the priority items.
+  // The visual difference is intentional, not decorative: it implements
+  // the Pinker override surface (memory wins where memory has fired).
+  const isFallback = r.source === "threshold";
   return (
     <Link href={`/recommendations/${encodeURIComponent(r.id)}`}>
-      <Card className="h-full transition-colors hover:bg-muted/40">
+      <Card
+        className={`h-full transition-colors hover:bg-muted/40 ${
+          isFallback ? "border-dashed bg-muted/20" : ""
+        }`}
+      >
         <CardHeader>
+          <div className="mb-2 flex items-center gap-2">
+            <SourceBadge source={r.source} />
+            <Badge variant="outline">{r.type.replace(/_/g, " ")}</Badge>
+          </div>
           <CardTitle className="flex items-center justify-between gap-3 text-base">
             <span className="flex-1 leading-snug">{r.title}</span>
-            <Badge variant="outline">{r.type.replace(/_/g, " ")}</Badge>
           </CardTitle>
           <CardDescription>{r.summary}</CardDescription>
         </CardHeader>
