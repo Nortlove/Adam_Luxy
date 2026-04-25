@@ -23,6 +23,7 @@ import requests
 
 from adam.api.dashboard.models import (
     ConfidentClaim,
+    DeviationContext,
     PossiblyWrongClaim,
     RecommendationAlternative,
     RecommendationDetail,
@@ -1413,6 +1414,19 @@ def _horizon_deviation_to_recommendation(
         # ready (= deviation_created_at + window_days), not when the
         # deviation itself was logged. Operators see the urgency.
         created_at=deviation_created_at + timedelta(days=window_days),
+        # Structural deviation state — the UI renders a DeviationContext
+        # panel from this field (slice D3), parallel to how DCIL recs
+        # render DirectiveSubstance from their structural fields.
+        deviation_context=DeviationContext(
+            deviation_id=deviation_id,
+            system_choice=system_choice,
+            user_choice=user_choice,
+            days_elapsed=days_elapsed,
+            horizon_window_days=window_days,
+            horizon_class=horizon_class,
+            stated_rationale=stated_rationale,
+            rationale_class=deviation.get("rationale_class"),
+        ),
     )
 
 

@@ -19,6 +19,7 @@ import { UncertaintyPanel } from "@/components/uncertainty-panel";
 import { RecommendationDecide } from "@/components/recommendation-decide";
 import { DirectiveSubstance } from "@/components/directive-substance";
 import { DirectiveNarrative } from "@/components/directive-narrative";
+import { DeviationContextPanel } from "@/components/deviation-context";
 import { SourceBadge } from "@/components/source-badge";
 
 export const dynamic = "force-dynamic";
@@ -90,16 +91,43 @@ export default async function RecommendationDetailPage({ params }: PageProps) {
           IS their substance). */}
       <DirectiveSubstance recommendation={rec} />
 
-      {/* PLAN — preferred choice + alternatives (plan-before-patch) */}
+      {/* DEVIATION CONTEXT — structural state of the deviation under
+          judgment for source="horizon_adjudication" only. Parallel to
+          DirectiveSubstance: same architectural slot, different source.
+          The operator's task here is JUDGMENT (verdict on existing
+          deviation), not evaluation of a new proposal. */}
+      <DeviationContextPanel recommendation={rec} />
+
+      {/* PLAN — alternatives. Header copy is source-aware: "The plan"
+          for proposal-shaped sources (dcil/threshold), "Verdict" for
+          judgment-shaped sources (horizon_adjudication). Same alternatives
+          mechanics; the framing tracks what the operator is actually
+          doing. */}
       <section className="flex flex-col gap-3">
         <div>
-          <h2 className="text-lg font-semibold tracking-tight">
-            The plan
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            The preferred choice, annotated. Accept, modify, or reject — with
-            reasons captured as hypotheses for later adjudication.
-          </p>
+          {rec.source === "horizon_adjudication" ? (
+            <>
+              <h2 className="text-lg font-semibold tracking-tight">
+                Verdict
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                Adjudicate this deviation. Pick the verdict that matches
+                the realized outcome — the verdict drives Loop B theory
+                update (Outcome node, and on system_right, a
+                WhyLibraryEntry).
+              </p>
+            </>
+          ) : (
+            <>
+              <h2 className="text-lg font-semibold tracking-tight">
+                The plan
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                The preferred choice, annotated. Accept, modify, or reject — with
+                reasons captured as hypotheses for later adjudication.
+              </p>
+            </>
+          )}
         </div>
         <div className="grid gap-3 md:grid-cols-3">
           {rec.alternatives.map((alt) => {

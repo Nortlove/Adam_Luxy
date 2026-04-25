@@ -802,6 +802,27 @@ class RecommendationSummary(BaseModel):
     source: RecommendationSource = "threshold"
 
 
+class DeviationContext(BaseModel):
+    """Structural state of the deviation underlying a horizon adjudication.
+
+    Surfaced first-class on RecommendationDetail (not derived from claim
+    strings) so the UI can render the operator's task — judging an
+    existing deviation — as the structural state it actually is. The
+    operator sees what they chose, what the system chose, how long
+    has elapsed, and the rationale they recorded at the time. No
+    interpretation composed by the rendering layer.
+    """
+
+    deviation_id: str
+    system_choice: str
+    user_choice: Optional[str] = None
+    days_elapsed: float
+    horizon_window_days: float
+    horizon_class: str
+    stated_rationale: Optional[str] = None
+    rationale_class: Optional[str] = None
+
+
 class RecommendationDetail(RecommendationSummary):
     alternatives: list[RecommendationAlternative]
     evidence: UncertaintyBreakdown
@@ -830,6 +851,13 @@ class RecommendationDetail(RecommendationSummary):
     # not here. We carry it through honestly rather than papering over.
     directive_rationale: Optional[str] = None
     directive_bilateral_evidence: Optional[str] = None
+
+    # Populated for source="horizon_adjudication". Carries the structural
+    # state of the deviation the operator is judging. UI renders a
+    # DeviationContext panel from this field for horizon recs (slice D3),
+    # the same way DirectiveSubstance renders directive structural fields
+    # for DCIL recs.
+    deviation_context: Optional[DeviationContext] = None
 
 
 class RecommendationListResponse(BaseModel):

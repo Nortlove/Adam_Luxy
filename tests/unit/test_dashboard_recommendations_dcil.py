@@ -790,6 +790,58 @@ async def test_operator_verdict_default_rationale_when_none(
     assert "user_right" in result.rationale
 
 
+def test_horizon_populates_deviation_context_structurally(
+    ready_horizon_record: dict,
+) -> None:
+    """D3 surface contract: deviation_context carries structural state
+    (not derived from claim strings). The UI's DeviationContextPanel
+    reads from this field directly. Regression guard against accidental
+    flattening of the structural fields into the claims-only path."""
+    from adam.api.dashboard.service import _horizon_deviation_to_recommendation
+    rec = _horizon_deviation_to_recommendation(
+        ready_horizon_record, datetime(2026, 4, 26, 9, 0, tzinfo=timezone.utc),
+    )
+    ctx = rec.deviation_context
+    assert ctx is not None
+    assert ctx.deviation_id == "deviation:abc123"
+    assert ctx.system_choice == "approve"
+    assert ctx.user_choice == "diagnose"
+    assert ctx.horizon_class == "days"
+    assert ctx.horizon_window_days == 7.0
+    # 8 days elapsed (Apr 18 → Apr 26)
+    assert 7.5 < ctx.days_elapsed < 8.5
+    assert ctx.stated_rationale is not None
+    assert ctx.rationale_class == "missing_context"
+
+
+def test_horizon_deviation_context_optional_when_user_choice_missing(
+    ready_horizon_record: dict,
+) -> None:
+    """Reject decisions create deviations with user_choice=None
+    (decide handler line 1183: chosen=None for kind=reject). The
+    deviation_context must surface this honestly — None, not empty
+    string."""
+    from adam.api.dashboard.service import _horizon_deviation_to_recommendation
+    ready_horizon_record["deviation"]["user_choice"] = None
+    rec = _horizon_deviation_to_recommendation(
+        ready_horizon_record, datetime(2026, 4, 26, 9, 0, tzinfo=timezone.utc),
+    )
+    assert rec.deviation_context is not None
+    assert rec.deviation_context.user_choice is None
+
+
+def test_dcil_recommendation_has_no_deviation_context(
+    budget_directive: dict, now: datetime,
+) -> None:
+    """A DCIL recommendation must NOT carry deviation_context. The two
+    source-specific structural panels (DirectiveSubstance / DeviationContext)
+    are mutually exclusive by source; populating both would break the
+    A12 unidirectional discipline."""
+    from adam.api.dashboard.service import _dcil_directive_to_recommendation
+    rec = _dcil_directive_to_recommendation(budget_directive, "Q2 LUXY", now)
+    assert rec.deviation_context is None
+
+
 def test_horizon_with_missing_original_recommendation_does_not_crash(
     ready_horizon_record: dict,
 ) -> None:

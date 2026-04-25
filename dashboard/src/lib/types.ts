@@ -172,6 +172,23 @@ export type UserDecisionResponse = {
   created_at: string;
 };
 
+/**
+ * DeviationContext — structural state of the deviation underlying a
+ * horizon adjudication. Surfaced first-class on RecommendationDetail
+ * (not derived from claim strings) so the UI can render the operator's
+ * judgment task as the structural state it actually is.
+ */
+export type DeviationContext = {
+  deviation_id: string;
+  system_choice: string;
+  user_choice: string | null;
+  days_elapsed: number;
+  horizon_window_days: number;
+  horizon_class: string;
+  stated_rationale: string | null;
+  rationale_class: string | null;
+};
+
 export type RecommendationDetail = RecommendationSummary & {
   alternatives: RecommendationAlternative[];
   evidence: UncertaintyBreakdown;
@@ -179,7 +196,6 @@ export type RecommendationDetail = RecommendationSummary & {
 
   // Structural fields populated for source="dcil". Carried first-class so
   // the UI can render them as derived views without parsing claim strings.
-  // Slice B will wire the dedicated UI rendering of these fields.
   directive_id: string | null;
   parameter: string | null;
   current_value: unknown;
@@ -196,6 +212,11 @@ export type RecommendationDetail = RecommendationSummary & {
   // retire post-pilot at the source.
   directive_rationale: string | null;
   directive_bilateral_evidence: string | null;
+
+  // Populated for source="horizon_adjudication". UI renders a
+  // DeviationContext panel from this field, parallel to how DCIL recs
+  // render DirectiveSubstance from their structural fields.
+  deviation_context: DeviationContext | null;
 };
 
 export type RecommendationListResponse = {
