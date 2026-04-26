@@ -69,12 +69,33 @@ class StackAdaptSummary:
 
 
 # =============================================================================
-# GraphQL query — campaigns with per-campaign stats + advertiser totals
+# GraphQL query — campaigns with per-campaign metrics + advertiser totals
+#
+# Per-campaign metrics moved from `Campaign.stats` (removed) to the top-level
+# `campaignDelivery` resolver in StackAdapt's current schema. The primary
+# query joins three resolvers:
+#
+#   - advertisers(first:1).nodes[0].stats — lifetime advertiser totals,
+#     consumed by the analytics summary (unchanged shape).
+#   - campaigns(first:100).nodes — full campaign list (id, name, status,
+#     group, channel). One row per campaign regardless of activity.
+#   - campaignDelivery(dataType:TABLE, granularity:TOTAL, date:{from,to})
+#     .records.nodes — windowed per-campaign metrics. One row per campaign
+#     WITH activity in the date window. Campaigns without activity get
+#     zero metrics in _parse_summary, which is semantically correct for
+#     threshold generators ("did this campaign trip a threshold this
+#     window?" — silent on inactive campaigns is the right answer).
+#
+# `campaignDelivery` is a UNION returning either CampaignDeliveryOutcome
+# (with records) or Progress (async-pending placeholder). Both cases are
+# handled non-destructively in _parse_summary — a Progress response logs
+# at info and continues with zero per-campaign metrics, which the
+# threshold generators correctly read as "no signal."
 # =============================================================================
 
 
 _CAMPAIGNS_QUERY = """
-{
+query CampaignsAndDelivery($from: ISO8601Date!, $to: ISO8601Date!) {
   advertisers(first: 1) {
     nodes {
       id name
@@ -89,16 +110,35 @@ _CAMPAIGNS_QUERY = """
       id name channelType
       campaignGroup { name }
       campaignStatus { status }
-      stats {
-        impressionsBigint clicksBigint conversionsBigint
-        cost ctr ecpa roas
+    }
+  }
+  campaignDelivery(
+    dataType: TABLE,
+    granularity: TOTAL,
+    date: { from: $from, to: $to }
+  ) {
+    __typename
+    ... on CampaignDeliveryOutcome {
+      records {
+        nodes {
+          campaign { id }
+          metrics {
+            impressionsBigint clicksBigint conversionsBigint
+            cost ctr ecpa roas
+          }
+        }
       }
     }
+    ... on Progress { _ }
   }
 }
 """
 
 
+# Fallback query — drops campaignDelivery entirely. Used when the primary
+# query errors (e.g. schema drift on campaignDelivery in the future). Returns
+# advertiser totals + campaign list with no per-campaign metrics; threshold
+# generators correctly produce no signal on the zero metrics.
 _CAMPAIGNS_QUERY_FALLBACK = """
 {
   advertisers(first: 1) {
@@ -121,11 +161,29 @@ _CAMPAIGNS_QUERY_FALLBACK = """
 """
 
 
+# Threshold generators evaluate "act now" signals (high CPA, zero conversion
+# at meaningful spend, persistently low CTR). A 30-day rolling window
+# smooths daily noise without diluting the signal so much that recent bad
+# spend gets averaged out by older good spend. Matches StackAdapt UI's
+# default reporting horizon.
+_DELIVERY_WINDOW_DAYS = 30
+
+
+def _campaign_window() -> tuple[str, str]:
+    """30-day rolling window ending today (UTC). Returns (from, to) ISO dates."""
+    today = datetime.now(timezone.utc).date()
+    from_date = today - timedelta(days=_DELIVERY_WINDOW_DAYS)
+    return from_date.isoformat(), today.isoformat()
+
+
 def _api_key() -> Optional[str]:
     return os.environ.get("STACKADAPT_GRAPHQL_KEY")
 
 
-def _query_sync(query: str) -> dict[str, Any]:
+def _query_sync(
+    query: str,
+    variables: Optional[dict[str, Any]] = None,
+) -> dict[str, Any]:
     key = _api_key()
     if not key:
         return {"errors": [{"message": "STACKADAPT_GRAPHQL_KEY unset"}]}
@@ -133,10 +191,13 @@ def _query_sync(query: str) -> dict[str, Any]:
         "Content-Type": "application/json",
         "Authorization": f"Bearer {key}",
     }
+    body: dict[str, Any] = {"query": query}
+    if variables is not None:
+        body["variables"] = variables
     try:
         response = requests.post(
             STACKADAPT_GRAPHQL_ENDPOINT,
-            json={"query": query},
+            json=body,
             headers=headers,
             timeout=30,
         )
@@ -171,22 +232,61 @@ def _parse_optional_float(value: Any) -> Optional[float]:
     return result if result != 0.0 else None
 
 
-def _parse_campaign(node: dict[str, Any]) -> StackAdaptCampaign:
-    stats = node.get("stats") or {}
+def _parse_campaign(
+    node: dict[str, Any],
+    metrics: Optional[dict[str, Any]] = None,
+) -> StackAdaptCampaign:
+    metrics = metrics or {}
     return StackAdaptCampaign(
         id=node.get("id", ""),
         name=node.get("name", "") or "",
         channel_type=node.get("channelType"),
         group_name=(node.get("campaignGroup") or {}).get("name"),
         status=(node.get("campaignStatus") or {}).get("status"),
-        impressions=_parse_int(stats.get("impressionsBigint")),
-        clicks=_parse_int(stats.get("clicksBigint")),
-        conversions=_parse_int(stats.get("conversionsBigint")),
-        spend_usd=_parse_float(stats.get("cost")),
-        ctr=_parse_float(stats.get("ctr")),
-        cpa_usd=_parse_optional_float(stats.get("ecpa")),
-        roas=_parse_optional_float(stats.get("roas")),
+        impressions=_parse_int(metrics.get("impressionsBigint")),
+        clicks=_parse_int(metrics.get("clicksBigint")),
+        conversions=_parse_int(metrics.get("conversionsBigint")),
+        spend_usd=_parse_float(metrics.get("cost")),
+        ctr=_parse_float(metrics.get("ctr")),
+        cpa_usd=_parse_optional_float(metrics.get("ecpa")),
+        roas=_parse_optional_float(metrics.get("roas")),
     )
+
+
+def _delivery_metrics_by_campaign_id(
+    payload_data: dict[str, Any],
+) -> dict[str, dict[str, Any]]:
+    """Build campaign_id → metrics map from a campaignDelivery payload.
+
+    Handles three response shapes non-destructively:
+      - CampaignDeliveryOutcome with records → populated map.
+      - Progress (async pending) → empty map + info log; the next call
+        cycle typically resolves to records.
+      - Missing (e.g. fallback query) → empty map.
+
+    Empty map is the correct degraded state — campaigns receive zero
+    metrics, threshold generators silently produce no signal, the UI
+    renders the live-source empty state.
+    """
+    delivery = payload_data.get("campaignDelivery") or {}
+    typename = delivery.get("__typename")
+    by_id: dict[str, dict[str, Any]] = {}
+
+    if typename == "CampaignDeliveryOutcome":
+        records_nodes = (delivery.get("records") or {}).get("nodes") or []
+        for record in records_nodes:
+            campaign_ref = record.get("campaign") or {}
+            cid = campaign_ref.get("id")
+            if not cid:
+                continue
+            by_id[str(cid)] = record.get("metrics") or {}
+    elif typename == "Progress":
+        logger.info(
+            "campaignDelivery returned Progress (async pending); "
+            "per-campaign metrics will be zero this cycle"
+        )
+
+    return by_id
 
 
 def _parse_summary(payload: dict[str, Any]) -> StackAdaptSummary:
@@ -215,7 +315,11 @@ def _parse_summary(payload: dict[str, Any]) -> StackAdaptSummary:
         adv_cpa = _parse_optional_float(stats.get("ecpa"))
         adv_roas = _parse_optional_float(stats.get("roas"))
 
-    campaigns = [_parse_campaign(node) for node in campaigns_nodes]
+    delivery_by_id = _delivery_metrics_by_campaign_id(data)
+    campaigns = [
+        _parse_campaign(node, delivery_by_id.get(str(node.get("id", ""))))
+        for node in campaigns_nodes
+    ]
 
     return StackAdaptSummary(
         advertiser_name=advertiser_name,
@@ -249,14 +353,18 @@ async def fetch_stackadapt_summary() -> StackAdaptSummary:
             reason="STACKADAPT_GRAPHQL_KEY not configured",
         )
 
-    payload = await asyncio.to_thread(_query_sync, _CAMPAIGNS_QUERY)
+    from_date, to_date = _campaign_window()
+    primary_variables = {"from": from_date, "to": to_date}
+    payload = await asyncio.to_thread(
+        _query_sync, _CAMPAIGNS_QUERY, primary_variables,
+    )
 
     if payload.get("errors"):
         error_msg = str(payload["errors"][0].get("message", "unknown error"))
-        # If the primary query failed (e.g. stats field unsupported),
-        # retry without per-campaign stats so we at least get the list.
+        # If the primary query failed (e.g. campaignDelivery schema drift),
+        # retry without per-campaign metrics so we at least get the list.
         logger.info(
-            "StackAdapt primary query errored, retrying without campaign stats: %s",
+            "StackAdapt primary query errored, retrying without campaign delivery: %s",
             error_msg,
         )
         payload = await asyncio.to_thread(_query_sync, _CAMPAIGNS_QUERY_FALLBACK)
