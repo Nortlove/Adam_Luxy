@@ -29,9 +29,16 @@ type PageProps = {
 };
 
 async function loadRecommendation(id: string): Promise<RecommendationDetail | null> {
+  // Next.js 16 passes dynamic-route params in different encoding states
+  // between generateMetadata (decoded) and the page component (still
+  // URL-encoded from the request path). encodeURIComponent over an
+  // already-encoded id double-encodes its `%` characters, producing a
+  // path FastAPI can't match. decode-then-encode is idempotent: it
+  // normalizes both inputs to the once-encoded form the backend expects.
+  const safeId = encodeURIComponent(decodeURIComponent(id));
   try {
     return await api.get<RecommendationDetail>(
-      `/api/dashboard/recommendations/${encodeURIComponent(id)}`,
+      `/api/dashboard/recommendations/${safeId}`,
     );
   } catch (err) {
     if (err instanceof ApiError && err.status === 404) {
