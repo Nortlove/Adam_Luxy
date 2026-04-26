@@ -82,15 +82,18 @@ class StackAdaptMonitor:
             "eff852132f1db1ece9317c5b7c55e5b94f13df3cf9a8076488c90d5d408feb88"
         )
 
-    def _query(self, query: str) -> Dict:
+    def _query(self, query: str, variables: Optional[Dict] = None) -> Dict:
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self.api_key}",
         }
+        body: Dict = {"query": query}
+        if variables is not None:
+            body["variables"] = variables
         try:
             r = requests.post(
                 GRAPHQL_ENDPOINT,
-                json={"query": query},
+                json=body,
                 headers=headers,
                 timeout=30,
             )

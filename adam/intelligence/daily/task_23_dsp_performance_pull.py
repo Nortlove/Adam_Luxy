@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 import logging
 import time
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
 from adam.intelligence.daily.base import DailyStrengtheningTask, TaskResult
@@ -22,6 +23,24 @@ from adam.intelligence.campaign_intelligence.models import (
     CampaignSnapshot,
     PerformanceSnapshot,
 )
+
+
+# 30-day rolling window for per-campaign delivery metrics. Mirrors the
+# dashboard service.py window — same window in both surfaces means the
+# threshold-fallback path and the DCIL path see the same per-campaign
+# CPA / spend / CTR figures, which keeps the Pinker override coherent.
+# (DCIL gets priority over threshold per campaign; if the windows
+# diverged, the override would compare apples to oranges.)
+_DELIVERY_WINDOW_DAYS = 30
+
+
+def _campaign_window() -> tuple[str, str]:
+    """30-day rolling window ending today (UTC). Returns (from, to) ISO dates."""
+    today = datetime.now(timezone.utc).date()
+    return (
+        (today - timedelta(days=_DELIVERY_WINDOW_DAYS)).isoformat(),
+        today.isoformat(),
+    )
 
 logger = logging.getLogger(__name__)
 
@@ -100,47 +119,102 @@ class DSPPerformancePullTask(DailyStrengtheningTask):
         # Data came from real DSP API — mark provenance
         snapshot.provenance_verified = True
 
-        # 2. Pull per-campaign stats with creative counts
-        camp_data = monitor._query("""
-            { campaigns(first: 100) {
+        # 2. Pull campaign list (metadata only) + per-campaign delivery metrics.
+        #
+        # StackAdapt removed Campaign.stats from the schema — per-campaign
+        # metrics now live on the top-level campaignDelivery resolver. We
+        # join in two queries:
+        #   - campaigns(first:100) → id, name, channel, group, status, ads
+        #   - campaignDelivery(dataType:TABLE, granularity:TOTAL, date:{from,to})
+        #     → metrics per campaign WITH activity in the window
+        # Campaigns without delivery records get zero metrics — DCIL upstream
+        # tasks (hypothesis testing, scope determination) correctly produce
+        # no findings on zero metrics, which is the right behavior for
+        # campaigns that haven't been live in the window.
+        #
+        # Same window/shape as adam/api/dashboard/service.py so the DCIL
+        # path and the threshold-fallback path see identical per-campaign
+        # figures (Pinker override coherence).
+        from_date, to_date = _campaign_window()
+
+        camp_data = monitor._query(
+            """
+            query CampaignsList {
+              campaigns(first: 100) {
                 nodes {
-                    id name channelType
-                    campaignGroup { name }
-                    campaignStatus { status }
-                    stats {
+                  id name channelType
+                  campaignGroup { name }
+                  campaignStatus { status }
+                  ads(first: 10) { nodes { id name } totalCount }
+                }
+              }
+            }
+            """,
+        )
+
+        delivery_data = monitor._query(
+            """
+            query CampaignDelivery($from: ISO8601Date!, $to: ISO8601Date!) {
+              campaignDelivery(
+                dataType: TABLE,
+                granularity: TOTAL,
+                date: { from: $from, to: $to }
+              ) {
+                __typename
+                ... on CampaignDeliveryOutcome {
+                  records {
+                    nodes {
+                      campaign { id }
+                      metrics {
                         impressionsBigint clicksBigint conversionsBigint
                         cost ctr ecpa roas conversionRevenue
+                      }
                     }
-                    ads(first: 10) {
-                        nodes { id name }
-                        totalCount
-                    }
-                    budget { daily total }
-                    frequencyCap { impressions period }
+                  }
                 }
-            }}
-        """)
+                ... on Progress { _ }
+              }
+            }
+            """,
+            variables={"from": from_date, "to": to_date},
+        )
+
+        # Build campaign_id → metrics map from delivery records. Empty map
+        # if Progress (async pending), errors, or missing — campaigns get
+        # zero metrics, which downstream tasks treat as "no signal."
+        delivery_metrics_by_id: Dict[str, Dict[str, Any]] = {}
+        delivery = (delivery_data.get("data") or {}).get("campaignDelivery") or {}
+        if delivery.get("__typename") == "CampaignDeliveryOutcome":
+            for rec in (delivery.get("records") or {}).get("nodes") or []:
+                cid = (rec.get("campaign") or {}).get("id")
+                if cid:
+                    delivery_metrics_by_id[str(cid)] = rec.get("metrics") or {}
+        elif delivery.get("__typename") == "Progress":
+            logger.info(
+                "task_23: campaignDelivery returned Progress (async pending); "
+                "per-campaign metrics will be zero for this snapshot"
+            )
 
         for camp in camp_data.get("data", {}).get("campaigns", {}).get("nodes", []):
-            cs = camp.get("stats") or {}
-            budget_info = camp.get("budget") or {}
-            freq_info = camp.get("frequencyCap") or {}
+            cid = str(camp.get("id", ""))
+            metrics = delivery_metrics_by_id.get(cid) or {}
 
             snap = CampaignSnapshot(
-                campaign_id=str(camp.get("id", "")),
+                campaign_id=cid,
                 name=camp.get("name", ""),
                 channel_type=camp.get("channelType", ""),
                 group_name=(camp.get("campaignGroup") or {}).get("name", ""),
                 status=(camp.get("campaignStatus") or {}).get("status", ""),
-                impressions=int(cs.get("impressionsBigint", 0) or 0),
-                clicks=int(cs.get("clicksBigint", 0) or 0),
-                conversions=int(cs.get("conversionsBigint", 0) or 0),
-                spend=float(cs.get("cost", 0) or 0),
-                revenue=float(cs.get("conversionRevenue", 0) or 0),
+                impressions=int(metrics.get("impressionsBigint", 0) or 0),
+                clicks=int(metrics.get("clicksBigint", 0) or 0),
+                conversions=int(metrics.get("conversionsBigint", 0) or 0),
+                spend=float(metrics.get("cost", 0) or 0),
+                revenue=float(metrics.get("conversionRevenue", 0) or 0),
             )
             snap.compute_derived()
 
-            # Store creative info
+            # Store creative info from the campaigns query (ads still
+            # resolves on Campaign in the current schema).
             ads = camp.get("ads") or {}
             snap.creative_stats = [
                 {"id": a.get("id"), "name": a.get("name")}
