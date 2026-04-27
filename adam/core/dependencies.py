@@ -505,7 +505,13 @@ class LearningComponents:
         except Exception as e:
             logger.warning("Behavioral analytics partially initialized: %s", e)
         
-        # Register all consumers with signal router
+        # Register all components with signal router. The universal
+        # LearningSignalRouter exposes register_component (not register_consumer
+        # — there is no such method on either router class). Calling the wrong
+        # name silently raised AttributeError on the first component, was
+        # caught by the outer try/except in main.py, and surfaced as
+        # "Learning components partially initialized" — six components
+        # constructed but unrouted to events. The fan-out is restored here.
         for component in [
             self._cold_start_learning,
             self._multimodal_learning,
@@ -514,7 +520,7 @@ class LearningComponents:
             self._verification_learning,
             self._emergence_detector,
         ]:
-            self._signal_router.register_consumer(component)
+            self._signal_router.register_component(component)
 
         # =================================================================
         # THERAPEUTIC RETARGETING (Enhancement #33 + #36)
