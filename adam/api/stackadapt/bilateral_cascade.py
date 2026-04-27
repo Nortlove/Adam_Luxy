@@ -1693,7 +1693,12 @@ def apply_context_modulation(
                 # page creates?" The answer is empirical mechanism effectiveness.
                 if pp.edge_dimensions and result.mechanism_scores:
                     try:
-                        from adam.intelligence.page_conditioned_query import (
+                        # query_causal_effects lives in causal_learning, not
+                        # page_conditioned_query. The earlier import path was
+                        # silently swallowed by the surrounding try/except,
+                        # which meant the causal-amplification block here
+                        # never fired. Fixed.
+                        from adam.intelligence.causal_learning import (
                             query_causal_effects,
                         )
                         import asyncio

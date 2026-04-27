@@ -77,10 +77,12 @@ class StackAdaptMonitor:
     """Monitors StackAdapt campaigns and feeds data to INFORMATIV."""
 
     def __init__(self, api_key: str = ""):
-        self.api_key = api_key or os.environ.get(
-            "STACKADAPT_GRAPHQL_KEY",
-            "eff852132f1db1ece9317c5b7c55e5b94f13df3cf9a8076488c90d5d408feb88"
-        )
+        # API key resolves from explicit constructor arg → env var → empty.
+        # Empty causes the monitor to surface "no key configured" errors
+        # at query time rather than running with a hardcoded fallback.
+        # The previous fallback embedded a real production token in source
+        # — removed; rely on env var.
+        self.api_key = api_key or os.environ.get("STACKADAPT_GRAPHQL_KEY", "")
 
     def _query(self, query: str, variables: Optional[Dict] = None) -> Dict:
         headers = {
