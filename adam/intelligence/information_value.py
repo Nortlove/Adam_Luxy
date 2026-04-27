@@ -134,6 +134,14 @@ UNCERTAINTY_DIMENSIONS = [
     "cooperative_framing_fit",      # fairness/reciprocity orientation (cooperative_framing.py)
     "decision_entropy",             # choice difficulty/paralysis (decision_entropy.py)
 ]
+# NOTE on bilateral edge dimensions (e.g., metaphor_alignment from F3):
+# UNCERTAINTY_DIMENSIONS is the BUYER-SIDE trait list, each tracked as
+# a per-buyer Beta posterior. Bilateral interaction scores like
+# metaphor_alignment (buyer × brand_copy cosine — depends on WHICH
+# brand) are NOT buyer traits and must NOT be added here. They flow
+# through the cascade's edge_dimensions dict as derived per-decision
+# values, computed at request time when both halves' metaphor bundles
+# are available. See adam/intelligence/metaphor_alignment.py.
 
 # Default prior: Beta(2, 2) = uniform-ish, high uncertainty
 DEFAULT_ALPHA = 2.0
