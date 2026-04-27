@@ -112,6 +112,20 @@ class GroundingEvidence:
     `derive_mode` stays structural. The probabilistic future will replace
     the dataclass wholesale; individual scalar fields will make that
     transition more painful.
+
+    PATH-AWARE GROUNDING: ADAM has two production decision paths today
+    that produce different evidence shapes:
+      - "campaign_orchestrator": runs the bilateral cascade AND the
+        30-atom DAG AND theoretical-link traversal. All 3 links are
+        meaningful; GROUNDED requires all 3.
+      - "stackadapt_creative_intelligence": runs only the bilateral
+        cascade (the atoms are dead code on this path per the audit).
+        atom_run_real is N/A; GROUNDED is determined by cascade_level
+        and edge_count, NOT by the 3-link count.
+
+    The `decision_path` field disambiguates so derive_mode applies the
+    correct gate for each. Producers MUST set decision_path; legacy
+    callers default to "campaign_orchestrator" for backwards compat.
     """
 
     # L3 bilateral cascade produced real edge evidence. False when the
@@ -122,18 +136,42 @@ class GroundingEvidence:
     # prefetch populated, blackboard carrying real data). False when all
     # atoms resolved to 0.5 defaults or when the AtomDAG execution raised
     # an exception.
+    #
+    # On the stackadapt_creative_intelligence path this is N/A (the
+    # atoms are dead code per the audit). decision_path == "stackadapt_
+    # creative_intelligence" callers should leave this False; derive_mode
+    # ignores it for that path.
     atom_run_real: bool = False
 
     # TheoryLearner or equivalent theoretical graph traversal successful.
     # False when the traversal returned empty or raised.
     theoretical_link_traversed: bool = False
 
+    # Path-aware grounding: which decision path produced this evidence.
+    # derive_mode uses this to apply the correct gate.
+    decision_path: str = "campaign_orchestrator"
+
+    # Cascade level the producer reached. Meaningful for the
+    # stackadapt_creative_intelligence path:
+    #   0 → cascade returned no usable result (REFUSED)
+    #   1 → archetype prior only
+    #   2 → archetype + category posterior
+    #   3 → bilateral edges (the GROUNDED threshold for this path)
+    #   4 → inferential transfer (also GROUNDED)
+    cascade_level: int = 0
+
+    # L3 edge evidence count. Meaningful for stackadapt_creative_
+    # intelligence: GROUNDED requires cascade_level >= 3 AND edge_count
+    # >= some threshold (cfg.l3_min_edge_count, surfaced here as the
+    # producer's threshold result).
+    edge_count: int = 0
+
     # Diagnostic list of which links failed and why. Populated by producers
     # to help operators debug infrastructure failures that are degrading
     # the mode rate in production.
     failure_reasons: List[str] = field(default_factory=list)
 
-    def as_dict(self) -> Dict[str, bool]:
+    def as_dict(self) -> Dict[str, object]:
         """Return a serializable dict of the structural tests.
 
         Excludes the diagnostic `failure_reasons` list so the result is a
@@ -143,6 +181,9 @@ class GroundingEvidence:
             "bilateral_edge_evidence_present": self.bilateral_edge_evidence_present,
             "atom_run_real": self.atom_run_real,
             "theoretical_link_traversed": self.theoretical_link_traversed,
+            "decision_path": self.decision_path,
+            "cascade_level": self.cascade_level,
+            "edge_count": self.edge_count,
         }
 
     def as_full_dict(self) -> Dict[str, object]:
@@ -154,11 +195,20 @@ class GroundingEvidence:
 
     @classmethod
     def from_dict(cls, d: Dict[str, object]) -> "GroundingEvidence":
-        """Reconstruct from a dict, tolerating missing keys."""
+        """Reconstruct from a dict, tolerating missing keys.
+
+        Legacy dicts (without decision_path / cascade_level / edge_count)
+        default to campaign_orchestrator path with zero scalars — same
+        behavior as before this typed-evidence shipped. New consumers
+        will see explicit fields.
+        """
         return cls(
             bilateral_edge_evidence_present=bool(d.get("bilateral_edge_evidence_present", False)),
             atom_run_real=bool(d.get("atom_run_real", False)),
             theoretical_link_traversed=bool(d.get("theoretical_link_traversed", False)),
+            decision_path=str(d.get("decision_path", "campaign_orchestrator")),
+            cascade_level=int(d.get("cascade_level", 0) or 0),
+            edge_count=int(d.get("edge_count", 0) or 0),
             failure_reasons=list(d.get("failure_reasons", []) or []),
         )
 
@@ -191,17 +241,38 @@ class GroundingEvidence:
 def derive_mode(evidence: GroundingEvidence) -> DecisionMode:
     """Derive the epistemic status from the structural grounding evidence.
 
-    Current rule (discrete, all-or-nothing):
+    Path-aware: each production decision path has its own grounding
+    criteria because different paths produce different evidence shapes.
+
+    stackadapt_creative_intelligence path (cascade-only, no atom DAG):
+        - cascade_level == 0 → REFUSED (cascade returned no usable result)
+        - cascade_level >= 3 AND bilateral_edge_evidence_present → GROUNDED
+          (real L3 edge evidence backs the decision)
+        - otherwise → INCOMPLETE (only L1/L2 priors; the cascade fell back)
+
+    campaign_orchestrator path (cascade + atom DAG + theoretical traversal):
         - All three load-bearing links grounded → GROUNDED
         - At least one link grounded but not all → INCOMPLETE
         - No links grounded → REFUSED
 
-    This is intentionally strict for the first pass. Future refinement may
-    introduce a soft-gate on specific link combinations (e.g., "bilateral
-    edge + theoretical link without real atom run is INCOMPLETE, not
-    REFUSED") once we have empirical evidence about which combinations
-    produce usable decisions.
+    The campaign_orchestrator gate is intentionally strict (3-of-3) — its
+    decisions traverse three independent reasoning sources, and crediting
+    a posterior when one source is missing imports correlational error.
+    The stackadapt_creative_intelligence gate is single-source by
+    architecture; the bilateral cascade IS the reasoning chain on that
+    path, so the gate is L3-with-edges, not 3-of-3.
     """
+    if evidence.decision_path == "stackadapt_creative_intelligence":
+        if evidence.cascade_level == 0:
+            return DecisionMode.REFUSED
+        if (
+            evidence.cascade_level >= 3
+            and evidence.bilateral_edge_evidence_present
+        ):
+            return DecisionMode.GROUNDED
+        return DecisionMode.INCOMPLETE
+
+    # campaign_orchestrator path (default)
     grounded = evidence.grounded_count
     if grounded == 3:
         return DecisionMode.GROUNDED

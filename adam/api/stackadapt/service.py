@@ -707,6 +707,49 @@ class CreativeIntelligenceService:
             page_confidence=ci.context_intelligence.get("page_confidence", 0.0) if ci.context_intelligence else 0.0,
         )
 
+        # Replace the legacy "all-true grounded" defaults with typed
+        # grounding evidence derived from the actual cascade output.
+        # Without this, every cascade decision (including L1/L2-only
+        # fallbacks) is marked GROUNDED and writes posteriors as if it
+        # had real bilateral edge evidence — corrupts the fitness
+        # landscape per audit Agent 4 finding.
+        from adam.core.decision_mode import (
+            GroundingEvidence, derive_mode,
+        )
+        from adam.api.stackadapt.bilateral_cascade import _cascade_cfg
+        cfg = _cascade_cfg()
+        l3_min_edges = getattr(cfg, "l3_min_edge_count", 10)
+        edge_count = ci.edge_count or 0
+        bilateral_present = (
+            ci.cascade_level >= 3 and edge_count >= l3_min_edges
+        )
+        failure_reasons: List[str] = []
+        if ci.cascade_level == 0:
+            failure_reasons.append(
+                "cascade_returned_no_usable_result"
+            )
+        elif ci.cascade_level < 3:
+            failure_reasons.append(
+                f"cascade_level={ci.cascade_level}_below_l3_threshold"
+            )
+        elif edge_count < l3_min_edges:
+            failure_reasons.append(
+                f"edge_count={edge_count}_below_l3_min={l3_min_edges}"
+            )
+        evidence = GroundingEvidence(
+            bilateral_edge_evidence_present=bilateral_present,
+            atom_run_real=False,  # N/A on stackadapt path; atoms not run
+            theoretical_link_traversed=False,  # N/A on stackadapt path
+            decision_path="stackadapt_creative_intelligence",
+            cascade_level=ci.cascade_level or 0,
+            edge_count=edge_count,
+            failure_reasons=failure_reasons,
+        )
+        mode = derive_mode(evidence)
+        ctx.decision_mode = mode.value
+        ctx.grounding_evidence = evidence.as_full_dict()
+        ctx.missing_links = evidence.missing_links
+
         cache = get_decision_cache()
         cache.persist(ctx)
 
