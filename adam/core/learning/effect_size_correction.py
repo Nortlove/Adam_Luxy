@@ -118,6 +118,31 @@ def d_to_success_probability(
     return max(clip[0], min(clip[1], p))
 
 
+def d_to_relative_lift_pct(d: float) -> float:
+    """Convert Cohen's d to a relative-lift percentage (Chinn 2000).
+
+    Used by the cascade's lift estimator to translate a publication-bias-
+    corrected effect size into the headline lift number reported in
+    StackAdapt creative intelligence responses.
+
+    Conversion:
+        OR = exp(d × π / √3)            (Chinn 2000, Stat Med 19)
+        relative_lift_pct = (OR − 1) × 100
+
+    For d=0.15 (Matz 2017 corrected): OR ≈ 1.313, lift ≈ 31.3%.
+    For d=0.30 (Matz 2017 published, uncorrected): OR ≈ 1.72, lift ≈ 72%.
+    For d=0.50 (Cohen "moderate"): OR ≈ 2.48, lift ≈ 148%.
+
+    Anchor: when ad-tech reports "personality-matched ads deliver 40-54%
+    conversion lift," that's quoting the UNCORRECTED published g. The
+    publication-bias-corrected ceiling is roughly 31% — what ADAM
+    operates on.
+    """
+    import math
+    or_value = math.exp(d * math.pi / math.sqrt(3))
+    return round((or_value - 1.0) * 100.0, 1)
+
+
 def to_beta_prior(
     effect: PublicationBiasCorrectedEffect,
     prior_concentration: float = 30.0,

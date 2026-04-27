@@ -312,16 +312,40 @@ def derive_lift_from_composite(
 ) -> Tuple[float, float]:
     """Compute CTR and conversion lift from composite alignment.
 
-    Based on Matz et al. (2017): personality-matched advertising delivers
-    40-54% conversion lift. We scale by composite alignment strength and
-    discount by evidence count.
+    C3: CORRECTED for publication bias. The headline 40-54% conversion
+    lift commonly cited from Matz et al. 2017 is the UNCORRECTED
+    published value. The pre-registered effect was OR=1.30 which
+    corresponds to Cohen's d≈0.15 (PERSONALITY_MATCHING_EFFECT in
+    effect_size_correction.py). Converting d=0.15 via Chinn 2000
+    (OR = exp(d·π/√3)) yields ~31% relative lift — what this function
+    now uses as the ceiling.
+
+    The cfg.matz_conversion_lift_pct / cfg.matz_ctr_lift_pct settings
+    remain in place for legacy callers and for environments wanting
+    explicit override; the discipline default is the corrected value.
 
     Returns (ctr_lift_pct, conversion_lift_pct).
     """
+    from adam.core.learning.effect_size_correction import (
+        PERSONALITY_MATCHING_EFFECT, d_to_relative_lift_pct,
+    )
+
     cfg = _cascade_cfg()
-    # Base lift from alignment strength (0.0-1.0 → 0%-54%)
-    base_conversion_lift = composite * cfg.matz_conversion_lift_pct
-    base_ctr_lift = composite * cfg.matz_ctr_lift_pct
+
+    # Corrected ceiling from the publication-bias-corrected effect size.
+    # For d=0.15 (pre-registered): ~31.3% lift. The uncorrected 54%
+    # in cfg.matz_conversion_lift_pct is retained for legacy caller
+    # compatibility but no longer used by default.
+    corrected_lift_pct = d_to_relative_lift_pct(
+        PERSONALITY_MATCHING_EFFECT.corrected_d
+    )
+
+    # Base lift from alignment strength (0.0-1.0 → 0% to corrected_lift_pct).
+    # CTR and conversion both scaled by the same corrected ceiling — without
+    # a separate empirical CTR meta-analysis correction, applying a
+    # different ratio would be invention.
+    base_conversion_lift = composite * corrected_lift_pct
+    base_ctr_lift = composite * corrected_lift_pct
 
     # Discount for low evidence (full strength at N+ edges)
     evidence_factor = min(1.0, edge_count / cfg.lift_full_evidence_edges)
@@ -2562,6 +2586,35 @@ def run_bilateral_cascade(
 
     # Synergy check
     result = check_mechanism_synergy(result, archetype)
+
+    # ─── C2: PROCESSING-DEPTH ROUTE GATE ───
+    # Predict the buyer's likely processing depth from page features +
+    # device context, then gate mechanism_scores so vigilance-activating
+    # mechanisms only compete when depth is high enough to support them
+    # (and blend-compatible mechanisms only when low enough to land
+    # productively). Per the attention-inversion platform commitment.
+    # Soft-fail: any error → pass scores through unchanged.
+    if result.mechanism_scores:
+        try:
+            from adam.intelligence.processing_depth_router import (
+                route_mechanism_scores_by_predicted_depth,
+            )
+            page_profile_for_route = (
+                _page_profile_prefetch
+                if "_page_profile_prefetch" in locals()
+                else None
+            )
+            gated_scores = route_mechanism_scores_by_predicted_depth(
+                scores=result.mechanism_scores,
+                page_profile=page_profile_for_route,
+                device_type=device_type,
+            )
+            # Only adopt gated scores if at least one is non-zero (avoid
+            # serving an all-zero distribution to the MRT sampler)
+            if any(s > 0 for s in gated_scores.values()):
+                result.mechanism_scores = gated_scores
+        except Exception as exc:
+            logger.debug("Route gate skipped: %s", exc)
 
     # ─── M1 LIVE-CASCADE REWIRE — bid-time p_t logging ───
     # All argmax decisions inside L1/L2/L3 have already shaped the final
