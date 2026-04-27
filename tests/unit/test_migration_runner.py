@@ -139,15 +139,27 @@ def test_dry_run_handles_missing_file(tmp_path):
 # -----------------------------------------------------------------------------
 
 
-def test_execute_with_no_driver_returns_error(tmp_path):
-    """When driver=None and no built-in driver available, must surface
-    an error rather than silently no-op."""
+def test_execute_with_no_driver_no_credentials_returns_error(tmp_path):
+    """When driver=None and NEO4J_URI/USERNAME/PASSWORD env vars are
+    not all set, must surface an explicit error rather than silently
+    no-op."""
+    from unittest.mock import patch
     p = tmp_path / "m.cypher"
     p.write_text("MATCH (n) RETURN n;")
-    summary = run_migration(p, dry_run=False, driver=None)
-    # Either the dependencies module isn't importable (sandbox) or the
-    # driver returns None — either way, errors should be non-empty.
+
+    # Force missing-password state — guarantees the credential-check
+    # branch fires regardless of the developer's local .env.
+    fake_settings = MagicMock()
+    fake_settings.neo4j.uri = "bolt://localhost:7687"
+    fake_settings.neo4j.username = "neo4j"
+    fake_settings.neo4j.password = ""
+    with patch(
+        "adam.config.settings.settings", fake_settings,
+    ):
+        summary = run_migration(p, dry_run=False, driver=None)
+
     assert len(summary["errors"]) >= 1
+    assert any("NEO4J" in e for e in summary["errors"])
 
 
 # -----------------------------------------------------------------------------

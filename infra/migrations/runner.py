@@ -103,10 +103,23 @@ def run_migration(
         return summary
 
     # ── Execute path — caller must explicitly opt in via dry_run=False ──
+    # Build a SYNCHRONOUS driver from settings. adam.core.dependencies
+    # returns an async driver (AsyncGraphDatabase) which doesn't support
+    # the `with driver.session()` pattern this runner uses. The runner
+    # is one-shot batch work — sync is the right shape.
     if driver is None:
         try:
-            from adam.core.dependencies import get_neo4j_driver
-            driver = get_neo4j_driver()
+            from neo4j import GraphDatabase
+            from adam.config.settings import settings
+            uri = settings.neo4j.uri
+            user = settings.neo4j.username
+            password = settings.neo4j.password
+            if not uri or not user or not password:
+                summary["errors"].append(
+                    "NEO4J_URI / NEO4J_USERNAME / NEO4J_PASSWORD not all set"
+                )
+                return summary
+            driver = GraphDatabase.driver(uri, auth=(user, password))
         except Exception as exc:
             summary["errors"].append(f"could not build Neo4j driver: {exc}")
             return summary
