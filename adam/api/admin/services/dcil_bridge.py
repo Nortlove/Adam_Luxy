@@ -24,37 +24,96 @@ from adam.intelligence.campaign_intelligence.config import get_dcil_config
 logger = logging.getLogger(__name__)
 
 
-async def sync_directives_to_postgres(campaign_id: str) -> int:
-    """Sync DCIL directives from Redis to PostgreSQL for a specific campaign."""
-    config = get_dcil_config()
+async def sync_directives_to_postgres() -> Dict[str, int]:
+    """Sync DCIL validated directives from Redis to management.dcil_directives.
+
+    Reads the most recent validated_directives blob (written by task_29
+    coherence_validation) and inserts each directive into the
+    dcil_directives table, keyed on the directive's own directive_id
+    (NOT a fresh uuid) for idempotency — re-running this sync inserts
+    nothing new for directives already persisted.
+
+    Each directive carries its own campaign_id from task_28 generation;
+    the campaign_id IS the StackAdapt campaign id, which the pilot
+    bootstrap (commit 2b528ef) mirrors as management.campaigns.id —
+    so the FK gate resolves naturally.
+
+    Returns a summary dict {synced, skipped_existing, skipped_no_campaign,
+    failed} so the caller can log meaningful counts.
+
+    A previous version of this function took `campaign_id` as a parameter
+    and inserted ALL directives in the blob under that one campaign_id —
+    a bug that would have duplicated each directive once per campaign
+    iteration and silently corrupted FK semantics. This function is the
+    correct shape for the daily scheduler tail.
+    """
     db = get_db()
-    synced = 0
+    counts = {"synced": 0, "skipped_existing": 0, "skipped_no_campaign": 0, "failed": 0}
 
     directive_data = _load_from_redis_or_memory("validated_directives")
     if not directive_data:
-        return 0
+        logger.info("dcil_bridge: no validated_directives in Redis/memory; nothing to sync")
+        return counts
+
+    # Pre-load the set of campaign_ids that exist in management.campaigns
+    # — the FK target. Directives keyed on a campaign_id absent from this
+    # set get skipped (counted in skipped_no_campaign) rather than
+    # FK-violating mid-batch.
+    existing_campaigns_rows = await db.fetch_all("SELECT id FROM campaigns")
+    existing_campaigns = {r["id"] for r in existing_campaigns_rows}
 
     for dd in directive_data.get("directives", []):
-        directive_id = str(uuid.uuid4())
-        now = time.strftime("%Y-%m-%d %H:%M:%S")
+        directive_id = dd.get("directive_id") or str(uuid.uuid4())
+        campaign_id = dd.get("campaign_id", "")
 
-        await db.execute(
-            "INSERT INTO dcil_directives (id, campaign_id, directive_type, status, parameter, "
-            "proposed_value, source_finding_id, rationale, bilateral_evidence, scope, "
-            "confidence, expected_impact, created_at, updated_at) "
-            "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)",
-            directive_id, campaign_id, dd.get("type", ""),
-            dd.get("status", "proposed"), dd.get("parameter", ""),
-            json.dumps(dd.get("proposed_value", "")),
-            dd.get("source_finding_id", ""), dd.get("rationale", ""),
-            dd.get("bilateral_evidence", ""), dd.get("scope", ""),
-            dd.get("confidence", 0), dd.get("expected_impact", ""),
-            now, now,
+        # Idempotency: skip if this directive_id already exists in the
+        # management table. Re-runs of the daily sync are no-ops on
+        # already-persisted directives.
+        existing = await db.fetch_one(
+            "SELECT id FROM dcil_directives WHERE id = $1", directive_id,
         )
-        synced += 1
+        if existing:
+            counts["skipped_existing"] += 1
+            continue
 
-    logger.info("Synced %d directives to PostgreSQL for campaign %s", synced, campaign_id)
-    return synced
+        # FK gate: if the directive targets a campaign not in
+        # management.campaigns, skip rather than violate. The pilot
+        # bootstrap mirrors StackAdapt campaigns at startup, but a
+        # directive could in principle reference a campaign that wasn't
+        # mirrored (e.g. archived). Honest skip with count.
+        if not campaign_id or campaign_id not in existing_campaigns:
+            counts["skipped_no_campaign"] += 1
+            continue
+
+        now = time.strftime("%Y-%m-%d %H:%M:%S")
+        try:
+            await db.execute(
+                "INSERT INTO dcil_directives (id, campaign_id, directive_type, status, parameter, "
+                "proposed_value, source_finding_id, rationale, bilateral_evidence, scope, "
+                "confidence, expected_impact, created_at, updated_at) "
+                "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)",
+                directive_id, campaign_id, dd.get("type", ""),
+                dd.get("status", "proposed"), dd.get("parameter", ""),
+                json.dumps(dd.get("proposed_value", "")),
+                dd.get("source_finding_id", ""), dd.get("rationale", ""),
+                dd.get("bilateral_evidence", ""), dd.get("scope", ""),
+                dd.get("confidence", 0), dd.get("expected_impact", ""),
+                now, now,
+            )
+            counts["synced"] += 1
+        except Exception as exc:
+            logger.warning(
+                "dcil_bridge: insert failed for directive %s (campaign %s): %s",
+                directive_id, campaign_id, exc,
+            )
+            counts["failed"] += 1
+
+    logger.info(
+        "dcil_bridge synced: %d new, %d already-existing, %d no-campaign-match, %d failed",
+        counts["synced"], counts["skipped_existing"],
+        counts["skipped_no_campaign"], counts["failed"],
+    )
+    return counts
 
 
 async def sync_performance_snapshot(campaign_id: str) -> bool:

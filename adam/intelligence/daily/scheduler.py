@@ -217,6 +217,16 @@ def _register_all_tasks() -> None:
         logger.debug("Task 29 (coherence validation) not available: %s", e)
 
     try:
+        # Task 29.5 — DCIL bridge sync. Closes Loop β by syncing the
+        # validated directives task_29 writes to Redis into the
+        # management.dcil_directives table the dashboard reads from.
+        # Must run AFTER task_29 within the daily cycle.
+        from adam.intelligence.daily.task_29_5_dcil_bridge_sync import DCILBridgeSyncTask
+        tasks.append(DCILBridgeSyncTask())
+    except Exception as e:
+        logger.debug("Task 29.5 (DCIL bridge sync) not available: %s", e)
+
+    try:
         from adam.intelligence.daily.task_30_execution import CampaignExecutionTask
         tasks.append(CampaignExecutionTask())
     except Exception as e:
