@@ -74,6 +74,16 @@ try:
 except ImportError:
     LLM_AVAILABLE = False
 
+try:
+    from adam.retargeting.engines.claude_argument_engine import (
+        ClaudeArgumentEngine,
+        ArgumentMode,
+    )
+    from adam.llm.client import ClaudeClient
+    CLAUDE_ARGUMENT_AVAILABLE = True
+except ImportError:
+    CLAUDE_ARGUMENT_AVAILABLE = False
+
 
 # =============================================================================
 # COPY TEMPLATES
@@ -169,11 +179,20 @@ class CopyGenerationService:
             self.linguistic_service = linguistic_service or LinguisticSignalService()
         else:
             self.linguistic_service = None
-        
+
+        # Lazy-init ClaudeArgumentEngine on first use. Holds bilateral-edge-
+        # informed argument generator (Doc 3 §I.6 V0; Toulmin/Walton V1 is
+        # planned post-pilot). Until then this V0 wraps the LUXY-calibrated
+        # generator that takes the full bilateral_edge dict + archetype +
+        # barrier and returns headline+body+CTA per sequence step.
+        self._claude_argument_engine: Optional[Any] = None
+        self._claude_argument_engine_attempted = False
+
         logger.info(
             f"CopyGenerationService initialized: "
             f"constructs={'yes' if self.constructs_service else 'no'}, "
-            f"linguistic={'yes' if self.linguistic_service else 'no'}"
+            f"linguistic={'yes' if self.linguistic_service else 'no'}, "
+            f"claude_argument={'available' if CLAUDE_ARGUMENT_AVAILABLE else 'no'}"
         )
     
     async def generate(
@@ -379,8 +398,24 @@ class CopyGenerationService:
         if request.gradient_priorities:
             request = self._apply_gradient_priorities(request)
 
-        # Generate primary text
-        primary_text = self._generate_text(request, brand)
+        # ─── CANONICAL PATH: ClaudeArgumentEngine (Doc 3 §I.6 V0) ───
+        # When the request has the inputs the bilateral-informed argument
+        # generator needs (archetype + edge_dimensions + a real Claude
+        # client), the engine produces copy derived from the buyer×product
+        # alignment AND the diagnosed barrier — replacing the hand-composed
+        # f-string templates below.
+        #
+        # When any input is missing, OR the engine returns no usable output,
+        # OR the Claude client is unavailable, fall through to the
+        # DEPRECATED template path. That path is A14-flagged
+        # COPY_TEMPLATES_AS_FALLBACK; retires when (a) Toulmin/RST/Walton
+        # V1 of the engine ships per Doc 3 §I.6 spec, AND (b) every
+        # production request reliably arrives with archetype + edge data.
+        primary_text = await self._try_claude_argument(request, brand)
+
+        if primary_text is None:
+            # DEPRECATED: f-string template emission
+            primary_text = self._generate_text(request, brand)
         
         # Generate variants
         variants = self._generate_variants(request, brand)
@@ -409,6 +444,166 @@ class CopyGenerationService:
             overall_confidence=0.6,
         )
     
+    async def _try_claude_argument(
+        self,
+        request: CopyRequest,
+        brand: Optional[BrandProfile],
+    ) -> Optional[str]:
+        """Attempt the canonical ClaudeArgumentEngine emission path.
+
+        Returns the assembled copy text (headline + body + cta) on success,
+        or None when the engine cannot run with the inputs we have. None
+        signals the caller to fall through to the deprecated template path.
+
+        Gating conditions for the canonical path:
+          - CLAUDE_ARGUMENT_AVAILABLE (engine + ClaudeClient importable)
+          - request.target_archetype is set (engine routes per archetype)
+          - request.edge_dimensions is non-empty (the bilateral substrate
+            the engine operates on)
+          - A Claude API key is configured (engine without a real client
+            falls back to LUXY-only canned copy; that fallback is wrong
+            for non-LUXY brands and silently misleading for LUXY itself —
+            we explicitly route around it)
+        """
+        if not CLAUDE_ARGUMENT_AVAILABLE:
+            return None
+
+        archetype_id = getattr(request, "target_archetype", None)
+        edge_dims = getattr(request, "edge_dimensions", None)
+        if not archetype_id or not edge_dims:
+            return None
+
+        engine = self._get_or_init_claude_argument_engine()
+        if engine is None or engine._client is None:
+            # No real Claude client — engine would fall back to canned
+            # LUXY copy. Skip and let templates handle.
+            return None
+
+        # Build inputs for the engine.
+        barrier = (
+            getattr(request, "diagnosed_barrier", None)
+            or "trust_deficit"  # Default for first-touch placements
+        )
+        brand_name = (brand.name if brand else "") or request.brand_id or ""
+        brand_data = self._build_brand_data_for_argument(request, brand)
+        construal_level = "abstract" if request.abstraction_level > 0.6 else "concrete"
+
+        try:
+            result = await engine.generate(
+                mode=ArgumentMode.FULL,
+                barrier=barrier,
+                archetype_id=archetype_id,
+                brand_name=brand_name,
+                brand_data=brand_data,
+                bilateral_edge=edge_dims,
+                touch_history=[],  # First-touch context; retargeting populates this
+                narrative_chapter=1,
+                scaffold_level=2,
+                construal_level=construal_level,
+                sequence_id="",  # Single-shot; no multi-turn coherence here
+            )
+        except Exception as exc:
+            logger.debug(f"ClaudeArgumentEngine generate failed: {exc}")
+            return None
+
+        # Empty output → fall through to templates
+        if not (result.headline or result.body):
+            return None
+
+        # Concatenate into the single primary_text shape CopyGenerationService
+        # produces. Order mirrors the legacy template path: hook + body + CTA.
+        parts: List[str] = []
+        if result.headline:
+            parts.append(result.headline.strip())
+        if result.body:
+            parts.append(result.body.strip())
+        if result.cta:
+            parts.append(result.cta.strip())
+        return " ".join(parts)
+
+    def _get_or_init_claude_argument_engine(self) -> Optional[Any]:
+        """Lazy-init the ClaudeArgumentEngine, cached on the service.
+
+        Returns the engine instance, or None if construction fails. The
+        engine internally falls back to canned LUXY copy when no real
+        Claude client is provided; we wrap a real ClaudeClient so the
+        engine's Claude path runs (when ANTHROPIC_API_KEY is set).
+        """
+        if self._claude_argument_engine_attempted:
+            return self._claude_argument_engine
+        self._claude_argument_engine_attempted = True
+
+        if not CLAUDE_ARGUMENT_AVAILABLE:
+            return None
+
+        try:
+            # ClaudeArgumentEngine expects a client whose .complete()
+            # returns either a dict with "text" key or a string. Our
+            # ClaudeClient.complete returns a ClaudeResponse Pydantic
+            # object with a .content field. Wrap it in a thin adapter.
+            class _CompleteAdapter:
+                def __init__(self, claude_client: Any) -> None:
+                    self._claude_client = claude_client
+
+                async def complete(
+                    self,
+                    prompt: str,
+                    max_tokens: int = 500,
+                    temperature: float = 0.7,
+                ) -> Dict[str, str]:
+                    response = await self._claude_client.complete(
+                        prompt=prompt,
+                        max_tokens=max_tokens,
+                        temperature=temperature,
+                    )
+                    text = (
+                        response.content
+                        if hasattr(response, "content")
+                        else str(response)
+                    )
+                    return {"text": text}
+
+            client = ClaudeClient()
+            if not getattr(client, "api_key", None):
+                # No API key in env; engine would fall back to canned copy.
+                self._claude_argument_engine = ClaudeArgumentEngine(claude_client=None)
+                return self._claude_argument_engine
+
+            adapter = _CompleteAdapter(client)
+            self._claude_argument_engine = ClaudeArgumentEngine(claude_client=adapter)
+            return self._claude_argument_engine
+        except Exception as exc:
+            logger.debug(f"ClaudeArgumentEngine init failed: {exc}")
+            self._claude_argument_engine = None
+            return None
+
+    def _build_brand_data_for_argument(
+        self,
+        request: CopyRequest,
+        brand: Optional[BrandProfile],
+    ) -> Dict[str, Any]:
+        """Build the brand_data dict the argument prompts consume.
+
+        Pulls from the BrandProfile when available, falls back to fields
+        on the request. The argument prompt builders use this for brand
+        voice grounding — keys present here become available to the LLM
+        without leaking unrelated request internals.
+        """
+        data: Dict[str, Any] = {
+            "name": (brand.name if brand else "") or request.brand_id or "",
+            "category": getattr(request, "product_category", "") or "",
+            "product_name": getattr(request, "product_name", "") or "",
+            "product_description": (
+                getattr(request, "product_description", "") or ""
+            ),
+        }
+        if brand is not None:
+            for attr in ("voice_attributes", "value_propositions", "brand_personality"):
+                value = getattr(brand, attr, None)
+                if value:
+                    data[attr] = value
+        return data
+
     def _generate_text(
         self,
         request: CopyRequest,
