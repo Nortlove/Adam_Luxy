@@ -497,6 +497,50 @@ def compute_decision_probability(
             elif deviation < -0.1:
                 result.incongruent_dimensions.append(dim)
 
+    # State × trait interaction terms — OLS-fit coefficients from the gradient
+    # field's R²-improvement-gated regression. Coefficients were estimated on
+    # standardized dimensions (X_std), so we standardize buyer values here
+    # using the gradient's own means/stds. No invented multipliers — coefficients
+    # are applied AS-IS, having already passed the > 0.005 ΔR² and abs > 0.01
+    # significance filters at fit time.
+    interactions_applied = 0
+    if (
+        gradient_field
+        and hasattr(gradient_field, "interaction_terms")
+        and gradient_field.interaction_terms
+        and buyer_edge_dimensions
+    ):
+        means = getattr(gradient_field, "means", {}) or {}
+        stds = getattr(gradient_field, "stds", {}) or {}
+        for pair_name, coeff in gradient_field.interaction_terms.items():
+            parts = pair_name.split(" × ")
+            if len(parts) != 2:
+                continue
+            label_a, label_b = parts
+            val_a = buyer_edge_dimensions.get(label_a)
+            val_b = buyer_edge_dimensions.get(label_b)
+            if val_a is None or val_b is None:
+                continue
+
+            std_a = stds.get(label_a)
+            std_b = stds.get(label_b)
+            # Skip when standardization is undefined or degenerate — applying
+            # raw products would mix scales with the OLS-on-standardized fit.
+            if std_a is None or std_b is None or std_a < 0.001 or std_b < 0.001:
+                continue
+
+            mean_a = means.get(label_a, 0.5)
+            mean_b = means.get(label_b, 0.5)
+            x_a = (val_a - mean_a) / std_a
+            x_b = (val_b - mean_b) / std_b
+            interaction_contribution = coeff * x_a * x_b
+            weighted_sum += interaction_contribution
+
+            result.dimension_contributions[f"interaction:{pair_name}"] = round(
+                interaction_contribution, 4
+            )
+            interactions_applied += 1
+
     result.weighted_sum = round(weighted_sum, 4)
     result.purchase_probability = round(_sigmoid(weighted_sum), 4)
 

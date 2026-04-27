@@ -1354,12 +1354,26 @@ def level3_bilateral_edges(
         )
 
         category_for_dp = ad_profile.get("category", "") if ad_profile else ""
+
+        # Fetch gradient field early so its interaction_terms can be consumed
+        # at decision time (state × trait OLS-fit coefficients). Without this,
+        # the linear sum ignores empirically-validated dim interactions.
+        gradient_for_dp = None
+        if hasattr(graph_cache, "get_gradient_field"):
+            try:
+                gradient_for_dp = graph_cache.get_gradient_field(archetype, category_for_dp)
+            except Exception as e:
+                logger.debug("Gradient fetch for decision probability failed: %s", e)
+
         dp_result = compute_decision_probability(
             buyer_ndf=buyer_ndf,
             message_features=message_features,
             category=category_for_dp,
             # Pass the full edge profile for extended matching
             buyer_edge_dimensions=buyer_profile,
+            # Gradient field carries learned weights, means/stds, and OLS-fit
+            # interaction_terms — all consumed inside the decision equation.
+            gradient_field=gradient_for_dp,
         )
 
         # Use decision probability for lift estimation (replaces fixed Matz constants)
