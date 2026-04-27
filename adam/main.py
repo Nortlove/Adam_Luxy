@@ -84,6 +84,32 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
         else:
             logger.warning("Running in development mode with mock infrastructure")
     
+    # Neo4j migrations — run BEFORE learning-component init and graph
+    # cache pre-warm, so the relationships migration 004 creates
+    # (SYNERGIZES_WITH, ANTAGONIZES) exist when the cascade's
+    # mechanism portfolio query reads them. Migration tracking node
+    # makes this idempotent: applied migrations skip on subsequent
+    # startups. Soft-fail: missing migrations log a warning but do
+    # not block server startup.
+    try:
+        from adam.infrastructure.neo4j.migration_runner import run_migrations
+        success_count, fail_count = await run_migrations(
+            database=settings.neo4j.database,
+        )
+        if fail_count == 0:
+            logger.info(
+                "Neo4j migrations: %d applied, 0 failed",
+                success_count,
+            )
+        else:
+            logger.warning(
+                "Neo4j migrations: %d applied, %d failed (non-blocking; "
+                "see migration logs for details)",
+                success_count, fail_count,
+            )
+    except Exception as e:
+        logger.warning("Neo4j migrations skipped (non-blocking): %s", e)
+
     # Initialize learning components (non-fatal — API works without them)
     components = LearningComponents.get_instance(infra)
     try:
@@ -91,7 +117,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
     except Exception as e:
         logger.warning(f"Learning components partially initialized: {e}")
         logger.warning("API endpoints will function. Learning loop may be limited.")
-    
+
     # Ensure CustomerArchetype and CognitiveMechanism schema nodes exist
     # in Neo4j. Without these, the outcome learning loop's RESPONDS_TO
     # update silently matches zero rows (Audit #4, 2026-04-15). MERGE is
