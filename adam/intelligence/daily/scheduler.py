@@ -227,6 +227,17 @@ def _register_all_tasks() -> None:
         logger.debug("Task 29.5 (DCIL bridge sync) not available: %s", e)
 
     try:
+        # Task 29.6 — Horizon adjudicator. Closes Loop γ auto-path:
+        # nightly sweep over users-with-pending-deviations,
+        # adjudicate_ready_deviations() per user. Without this, the
+        # auto-adjudication path NEVER fires — the function is
+        # exposed only via the dashboard's operator-triggered route.
+        from adam.intelligence.daily.task_29_6_horizon_adjudicator import HorizonAdjudicatorTask
+        tasks.append(HorizonAdjudicatorTask())
+    except Exception as e:
+        logger.debug("Task 29.6 (horizon adjudicator) not available: %s", e)
+
+    try:
         from adam.intelligence.daily.task_30_execution import CampaignExecutionTask
         tasks.append(CampaignExecutionTask())
     except Exception as e:
