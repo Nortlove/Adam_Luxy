@@ -143,6 +143,27 @@ def _register_all_tasks() -> None:
         logger.debug("Task 15 (self-teaching) not available: %s", e)
 
     try:
+        from adam.intelligence.daily.task_16_page_gradients import PageGradientTask
+        tasks.append(PageGradientTask())
+    except Exception as e:
+        logger.debug("Task 16 (page gradients) not available: %s", e)
+
+    try:
+        from adam.intelligence.daily.task_17_copy_evolution import CopyEvolutionTask
+        tasks.append(CopyEvolutionTask())
+    except Exception as e:
+        logger.debug("Task 17 (copy evolution) not available: %s", e)
+
+    # Task 33 (decay_adjudicator) is intentionally NOT registered here.
+    # Its module exposes async run_decay_adjudicator() rather than a
+    # DailyStrengtheningTask subclass, and its canonical invocation is
+    # via the dashboard endpoint /api/dashboard/decay/run (see
+    # adam/api/dashboard/router.py). Per task_33's docstring: "v1
+    # pilot can run either scheduled or on-demand via the dashboard."
+    # The dashboard path is in place; forcing a scheduler shim would
+    # be duplication.
+
+    try:
         from adam.intelligence.daily.task_18_recalibration import RecalibrationTask
         tasks.append(RecalibrationTask())
     except Exception as e:
