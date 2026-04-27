@@ -678,6 +678,76 @@ def level2_category_posterior(
 # ---------------------------------------------------------------------------
 # Page edge shift — Bargh-correct page repositioning (B2 Stage 2)
 # ---------------------------------------------------------------------------
+def _query_trilateral_evidence_sync(
+    page_edge_dims: Dict[str, float],
+    category: Optional[str],
+    asin: Optional[str],
+) -> Optional[Any]:
+    """Synchronously invoke the async page-conditioned trilateral query.
+
+    The trilateral query is the canonical decision pattern per the
+    "newer directions" document: rather than shifting the buyer's
+    position in 20-dim space and running formulas (the additive
+    page-shift path that this query supersedes), the trilateral query
+    asks the empirical question — "for buyers who were in a state
+    similar to what THIS page creates, what alignment dimensions
+    predicted conversion?" — and returns the answer from the bilateral
+    edge corpus directly.
+
+    The cascade is sync; the query is async. We use a thread executor
+    to avoid event-loop reentrancy issues when the cascade is invoked
+    from inside a running event loop (FastAPI handler).
+
+    Returns the PageConditionedEvidence dataclass on success, or None
+    when (a) page state has no signature dimensions (page is neutral),
+    (b) edge corpus has insufficient matching edges, or (c) query
+    fails. None is the signal to fall through to the deprecated
+    additive page-shift path.
+    """
+    if not page_edge_dims:
+        return None
+    try:
+        import asyncio
+        import concurrent.futures
+        from adam.intelligence.page_conditioned_query import (
+            query_page_conditioned_edges,
+        )
+
+        try:
+            asyncio.get_running_loop()
+            # Already inside a loop — run the async query in a worker thread.
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                future = pool.submit(
+                    asyncio.run,
+                    query_page_conditioned_edges(
+                        page_edge_dims=page_edge_dims,
+                        category=category or "",
+                        asin=asin or "",
+                    ),
+                )
+                return future.result(timeout=2.0)
+        except RuntimeError:
+            # No running loop — safe to call asyncio.run directly.
+            return asyncio.run(
+                query_page_conditioned_edges(
+                    page_edge_dims=page_edge_dims,
+                    category=category or "",
+                    asin=asin or "",
+                )
+            )
+    except Exception as exc:
+        logger.debug("Trilateral query failed (falling back to page-shift path): %s", exc)
+        return None
+
+
+# Minimum trilateral evidence confidence required to override the
+# additive page-shift path. Below this, fall through to the older
+# formula-on-shifted-edges path. The trilateral confidence is computed
+# in page_conditioned_query._execute_graph_query as a function of edge
+# count, signature-dimension count, and category specificity.
+_TRILATERAL_CONFIDENCE_FLOOR = 0.45
+
+
 def _compute_page_shift_for_cascade(
     page_url: Optional[str],
 ) -> Tuple[Dict[str, float], float, Optional[Any]]:
@@ -791,6 +861,8 @@ def level3_bilateral_edges(
     buyer_id: Optional[str] = None,
     page_shift: Optional[Dict[str, float]] = None,
     page_confidence: float = 0.0,
+    page_edge_dimensions: Optional[Dict[str, float]] = None,
+    category: Optional[str] = None,
 ) -> CreativeIntelligence:
     """Level 3: Derive creative parameters DIRECTLY from BRAND_CONVERTED edges.
 
@@ -849,21 +921,49 @@ def level3_bilateral_edges(
     cooperative_framing_fit = edge_agg.get("avg_cooperative_framing_fit", 0.5)
     decision_entropy = edge_agg.get("avg_decision_entropy", 0.5)
 
-    # ── B2 Stage 2: Apply page edge shift BEFORE scoring ──
-    # If a page shift vector was computed upstream (run_bilateral_cascade
-    # calls _compute_page_shift_for_cascade before L3), reposition the
-    # raw edge dimensions in 20-dim space BEFORE the mechanism scoring
-    # formulas read them. This is the Bargh-correct architecture: page
-    # context shifts the buyer's psychological state FIRST, and scoring
-    # then operates on the shifted state — not the other way around.
+    # ── CANONICAL DIRECTION: Trilateral page-conditioned query ──
+    # Per the "newer directions" directive: don't shift the buyer's
+    # position and run formulas. Ask the bilateral edge corpus the
+    # empirical question directly: "among 6.7M conversions, which
+    # happened when the buyer was in a state similar to what THIS
+    # page creates, and what alignment predicted those conversions?"
     #
-    # Post-hoc modulation (see apply_context_modulation) is retained for
-    # effects that are not edge-dimension repositioning (tone, channels,
-    # etc.), but the mechanism_scores themselves are now derived from
-    # page-shifted edge evidence.
+    # The trilateral query (page_conditioned_query.query_page_conditioned_edges)
+    # filters edges by signature dimensions and returns mechanism
+    # effectiveness derived from the alignment that empirically
+    # converts under this page state. When it succeeds with sufficient
+    # confidence, we use its mechanism_effectiveness AS the L3 scores
+    # and skip the deprecated additive page-shift path.
+    #
+    # When the query has no signature dims (page is neutral) or
+    # insufficient matching edges, we fall through to the page-shift
+    # path. That path is A14-flagged: ADDITIVE_PAGE_SHIFT_FALLBACK,
+    # retires when trilateral evidence has sufficient coverage across
+    # the page-state distribution we encounter at scale.
+    trilateral_evidence = None
+    trilateral_consumed = False
+    if page_edge_dimensions:
+        trilateral_evidence = _query_trilateral_evidence_sync(
+            page_edge_dims=page_edge_dimensions,
+            category=category,
+            asin=asin,
+        )
+
+    # ── DEPRECATED: Additive page-shift path ──
+    # This path remains operational ONLY when the trilateral query
+    # returns no evidence. A14 flag: ADDITIVE_PAGE_SHIFT_FALLBACK.
+    # Retires when (a) trilateral evidence achieves ≥85% coverage of
+    # production page-state distribution, OR (b) Doc 3 §I.2 causal-
+    # forest CATE estimates supersede formula-based mechanism scoring
+    # entirely. Acknowledges the ADAM_AGENT_ORIENTATION A14 discipline:
+    # explicit compromise with stated retirement trigger.
     shift_applied: Dict[str, float] = {}
     shift_was_consumed = False
-    if page_shift:
+    use_additive_shift_path = (
+        trilateral_evidence is None
+        or trilateral_evidence.confidence < _TRILATERAL_CONFIDENCE_FLOOR
+    )
+    if page_shift and use_additive_shift_path:
         try:
             from adam.intelligence.page_edge_bridge import apply_page_shift_to_edges
 
@@ -932,6 +1032,39 @@ def level3_bilateral_edges(
             shift_was_consumed = True
         except Exception as exc:
             logger.debug("Page edge shift application failed (non-critical): %s", exc)
+
+    # If the trilateral query fired, REBIND the local scoring variables to
+    # its empirical alignment — the alignment that successful conversions
+    # exhibited under THIS page state. Mechanism scoring formulas below
+    # then operate on empirical evidence rather than shifted raw aggregates.
+    if trilateral_evidence and not use_additive_shift_path:
+        oa = trilateral_evidence.optimal_alignment
+        reg_fit = oa.get("regulatory_fit", reg_fit)
+        construal_fit = oa.get("construal_fit", construal_fit)
+        personality_align = oa.get("personality_alignment", personality_align)
+        emotional = oa.get("emotional_resonance", emotional)
+        value_align = oa.get("value_alignment", value_align)
+        evo_motive = oa.get("evolutionary_motive", evo_motive)
+        persuasion_susceptibility = oa.get("persuasion_susceptibility", persuasion_susceptibility)
+        cognitive_load_tolerance = oa.get("cognitive_load_tolerance", cognitive_load_tolerance)
+        narrative_transport = oa.get("narrative_transport", narrative_transport)
+        social_proof_sensitivity = oa.get("social_proof_sensitivity", social_proof_sensitivity)
+        loss_aversion_intensity = oa.get("loss_aversion_intensity", loss_aversion_intensity)
+        temporal_discounting = oa.get("temporal_discounting", temporal_discounting)
+        brand_relationship_depth = oa.get("brand_relationship_depth", brand_relationship_depth)
+        autonomy_reactance = oa.get("autonomy_reactance", autonomy_reactance)
+        information_seeking = oa.get("information_seeking", information_seeking)
+        mimetic_desire = oa.get("mimetic_desire", mimetic_desire)
+        interoceptive_awareness = oa.get("interoceptive_awareness", interoceptive_awareness)
+        cooperative_framing_fit = oa.get("cooperative_framing_fit", cooperative_framing_fit)
+        decision_entropy = oa.get("decision_entropy", decision_entropy)
+        trilateral_consumed = True
+        base.reasoning.append(
+            f"Level 3 TRILATERAL: empirical alignment from "
+            f"{trilateral_evidence.matching_edge_count} matching edges "
+            f"(confidence={trilateral_evidence.confidence:.2f}, "
+            f"signature_dims={','.join(trilateral_evidence.signature_dimensions)})"
+        )
 
     # --- Derive creative parameters from edge evidence ---
     # Categorical params (retained for backward compatibility with StackAdapt)
@@ -2275,12 +2408,17 @@ def run_bilateral_cascade(
         pass
 
     if asin and graph_cache and budget_ok and neo4j_circuit_ok:
-        # B2 Stage 2: compute the page edge shift BEFORE L3 so that L3's
-        # mechanism scoring formulas operate on page-shifted buyer position
-        # in 20-dim edge space. Returns ({}, 0.0, None) when no page is
-        # available — L3 then runs identically to the pre-B2 path.
+        # Compute the page shift vector AND extract the page's own 20-dim
+        # edge profile. The shift powers the deprecated additive path; the
+        # raw page edge_dimensions are the input to the canonical trilateral
+        # query inside L3.
         _page_shift, _page_conf, _page_profile_prefetch = _compute_page_shift_for_cascade(
             page_url
+        )
+        _page_edge_dims = (
+            getattr(_page_profile_prefetch, "edge_dimensions", None)
+            if _page_profile_prefetch is not None
+            else None
         )
 
         # Try Level 3 first (bilateral edges)
@@ -2293,6 +2431,8 @@ def run_bilateral_cascade(
             buyer_id=buyer_id,
             page_shift=_page_shift,
             page_confidence=_page_conf,
+            page_edge_dimensions=_page_edge_dims,
+            category=category,
         )
 
         budget_ok = latency_budget is None or latency_budget.has_budget
