@@ -196,6 +196,7 @@ class InferentialLearningAgent:
         """Record an observation for the next learning cycle."""
         self._observation_buffer.append(observation)
         self._total_observations += 1
+        maybe_persist_ifl(self)  # rate-limited Redis write
 
         # Unlock higher complexity as data accumulates
         if self._total_observations >= 100 and self._current_complexity_ceiling < ComplexityLevel.CAUSAL_CHAIN:
@@ -715,14 +716,228 @@ class InferentialLearningAgent:
         }
 
 
+# ════════════════════════════════════════════════════════
+# Persistence — survive backend restarts
+# ════════════════════════════════════════════════════════
+#
+# Without persistence, every restart wiped the entire proposition
+# graph: hypotheses, confirmed/refuted statuses, evidence ratios,
+# experiments-in-flight, the complexity ceiling unlock progression.
+# The "system understands more over time" claim required persistence
+# to be true across deployment boundaries; before this, theory built
+# during one process lifetime evaporated on the next.
+
+import json as _ifl_json
+import os as _ifl_os
+
+_IFL_REDIS_KEY = "adam:inferential_agent:state:v1"
+_IFL_PERSIST_EVERY_N = int(
+    _ifl_os.environ.get("IFL_PERSIST_EVERY_N", "10")
+)
+
+
+def _ifl_to_state_dict(agent: "InferentialLearningAgent") -> Dict[str, Any]:
+    """Serialize InferentialLearningAgent to JSON-able dict.
+
+    Captures the full proposition graph (each Proposition's evidence,
+    status, parent/child relationships), in-flight experiments,
+    observation buffer, complexity ceiling, and global counters.
+    """
+    return {
+        "schema_version": 1,
+        "propositions": {
+            pid: {
+                "prop_id": p.prop_id,
+                "statement": p.statement,
+                "complexity": int(p.complexity),
+                "predicted_observation": p.predicted_observation,
+                "predicted_direction": p.predicted_direction,
+                "predicted_magnitude": p.predicted_magnitude,
+                "supporting_observations": p.supporting_observations,
+                "contradicting_observations": p.contradicting_observations,
+                "total_observations": p.total_observations,
+                "confidence": p.confidence,
+                "archetype": p.archetype,
+                "mechanism": p.mechanism,
+                "domain_category": p.domain_category,
+                "additional_conditions": dict(p.additional_conditions),
+                "status": p.status,
+                "created_at": p.created_at,
+                "last_tested_at": p.last_tested_at,
+                "test_count": p.test_count,
+                "parent_id": p.parent_id,
+                "child_ids": list(p.child_ids),
+                "superseded_by": p.superseded_by,
+            }
+            for pid, p in agent.propositions.items()
+        },
+        "experiments": {
+            eid: {
+                "experiment_id": e.experiment_id,
+                "proposition_id": e.proposition_id,
+                "description": e.description,
+                "test_mechanism": e.test_mechanism,
+                "test_domain": e.test_domain,
+                "test_archetype": e.test_archetype,
+                "test_conditions": dict(e.test_conditions),
+                "expected_outcome": e.expected_outcome,
+                "expected_metric": e.expected_metric,
+                "expected_direction": e.expected_direction,
+                "observations": e.observations,
+                "successes": e.successes,
+                "actual_rate": e.actual_rate,
+                "baseline_rate": e.baseline_rate,
+                "started_at": e.started_at,
+            }
+            for eid, e in agent.experiments.items()
+        },
+        "observation_buffer": list(agent._observation_buffer),
+        "current_complexity_ceiling": int(agent._current_complexity_ceiling),
+        "total_observations": agent._total_observations,
+        "theory_revisions": agent._theory_revisions,
+    }
+
+
+def _ifl_load_state_dict(
+    agent: "InferentialLearningAgent",
+    state: Dict[str, Any],
+) -> None:
+    """Restore InferentialLearningAgent state from a dict.
+
+    Schema mismatch returns the agent in fresh-init state with no
+    propositions or experiments — honest empty rather than corrupted.
+    """
+    if state.get("schema_version") != 1:
+        logger.warning(
+            "InferentialLearningAgent state schema mismatch (got %s, "
+            "expected 1); skipping load",
+            state.get("schema_version"),
+        )
+        return
+
+    for pid, raw in (state.get("propositions") or {}).items():
+        try:
+            agent.propositions[pid] = Proposition(
+                prop_id=raw.get("prop_id", pid),
+                statement=raw.get("statement", ""),
+                complexity=ComplexityLevel(int(raw.get("complexity", 1))),
+                predicted_observation=raw.get("predicted_observation", ""),
+                predicted_direction=raw.get("predicted_direction", ""),
+                predicted_magnitude=float(raw.get("predicted_magnitude", 0.0)),
+                supporting_observations=int(raw.get("supporting_observations", 0)),
+                contradicting_observations=int(raw.get("contradicting_observations", 0)),
+                total_observations=int(raw.get("total_observations", 0)),
+                confidence=float(raw.get("confidence", 0.5)),
+                archetype=raw.get("archetype", ""),
+                mechanism=raw.get("mechanism", ""),
+                domain_category=raw.get("domain_category", ""),
+                additional_conditions=dict(raw.get("additional_conditions") or {}),
+                status=raw.get("status", PropositionStatus.HYPOTHESIS),
+                created_at=float(raw.get("created_at", time.time())),
+                last_tested_at=float(raw.get("last_tested_at", 0.0)),
+                test_count=int(raw.get("test_count", 0)),
+                parent_id=raw.get("parent_id"),
+                child_ids=list(raw.get("child_ids") or []),
+                superseded_by=raw.get("superseded_by"),
+            )
+        except Exception:
+            # Future-tolerance: skip malformed entries rather than fail
+            continue
+
+    for eid, raw in (state.get("experiments") or {}).items():
+        try:
+            agent.experiments[eid] = Experiment(
+                experiment_id=raw.get("experiment_id", eid),
+                proposition_id=raw.get("proposition_id", ""),
+                description=raw.get("description", ""),
+                test_mechanism=raw.get("test_mechanism", ""),
+                test_domain=raw.get("test_domain", ""),
+                test_archetype=raw.get("test_archetype", ""),
+                test_conditions=dict(raw.get("test_conditions") or {}),
+                expected_outcome=raw.get("expected_outcome", ""),
+                expected_metric=raw.get("expected_metric", "conversion_rate"),
+                expected_direction=raw.get("expected_direction", "higher"),
+                observations=int(raw.get("observations", 0)),
+                successes=int(raw.get("successes", 0)),
+                actual_rate=float(raw.get("actual_rate", 0.0)),
+                baseline_rate=float(raw.get("baseline_rate", 0.0)),
+                started_at=float(raw.get("started_at", time.time())),
+            )
+        except Exception:
+            continue
+
+    agent._observation_buffer = list(state.get("observation_buffer") or [])
+    try:
+        agent._current_complexity_ceiling = ComplexityLevel(
+            int(state.get("current_complexity_ceiling", 2))
+        )
+    except (ValueError, TypeError):
+        pass  # keep default
+    agent._total_observations = int(state.get("total_observations", 0))
+    agent._theory_revisions = int(state.get("theory_revisions", 0))
+
+
+def _save_ifl_to_redis(agent: "InferentialLearningAgent") -> bool:
+    try:
+        from adam.infrastructure.redis_client import get_redis
+        redis = get_redis()
+        if redis is None:
+            return False
+        state = _ifl_to_state_dict(agent)
+        redis.set(_IFL_REDIS_KEY, _ifl_json.dumps(state, default=str))
+        return True
+    except Exception as exc:
+        logger.debug("InferentialLearningAgent save_to_redis failed: %s", exc)
+        return False
+
+
+def _load_ifl_from_redis(agent: "InferentialLearningAgent") -> bool:
+    try:
+        from adam.infrastructure.redis_client import get_redis
+        redis = get_redis()
+        if redis is None:
+            return False
+        raw = redis.get(_IFL_REDIS_KEY)
+        if not raw:
+            return False
+        if isinstance(raw, bytes):
+            raw = raw.decode("utf-8")
+        state = _ifl_json.loads(raw)
+        _ifl_load_state_dict(agent, state)
+        logger.info(
+            "InferentialLearningAgent state restored from Redis: "
+            "%d propositions, %d experiments, %d total observations",
+            len(agent.propositions),
+            len(agent.experiments),
+            agent._total_observations,
+        )
+        return True
+    except Exception as exc:
+        logger.debug("InferentialLearningAgent load_from_redis failed: %s", exc)
+        return False
+
+
+def maybe_persist_ifl(agent: "InferentialLearningAgent") -> None:
+    if agent._total_observations <= 0:
+        return
+    if agent._total_observations % _IFL_PERSIST_EVERY_N == 0:
+        _save_ifl_to_redis(agent)
+
+
 # Singleton
 _agent: Optional[InferentialLearningAgent] = None
 
 
 def get_inferential_agent() -> InferentialLearningAgent:
-    """Get or create the singleton learning agent."""
+    """Get or create the singleton learning agent.
+
+    On first call, attempts to restore prior state from Redis. Without
+    Redis or with empty key, agent starts fresh — same as before
+    persistence shipped.
+    """
     global _agent
     if _agent is None:
         _agent = InferentialLearningAgent()
+        _load_ifl_from_redis(_agent)
         logger.info("Inferential Learning Agent initialized (theory builder)")
     return _agent
