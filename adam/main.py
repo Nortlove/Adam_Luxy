@@ -230,6 +230,33 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
     except Exception as e:
         logger.debug("Ops intelligence not started: %s", e)
 
+    # Pilot bootstrap — populates management DB with the rows DCIL Loop β
+    # requires (organization, pilot system user, campaigns mirrored from
+    # StackAdapt). Idempotent. Soft-fails on missing prerequisites; never
+    # blocks server startup. See adam/api/admin/services/pilot_bootstrap.py.
+    try:
+        from adam.api.admin.services.pilot_bootstrap import bootstrap_pilot_data
+        bootstrap_summary = await bootstrap_pilot_data()
+        if bootstrap_summary.get("skipped_reason"):
+            logger.info(
+                "Pilot bootstrap deferred: %s",
+                bootstrap_summary["skipped_reason"],
+            )
+        else:
+            logger.info(
+                "Pilot bootstrap: org=%s (created=%s), user=%s (created=%s), "
+                "campaigns=%d created / %d skipped / %d total",
+                bootstrap_summary["organization"]["id"],
+                bootstrap_summary["organization"]["created"],
+                bootstrap_summary["user"]["id"],
+                bootstrap_summary["user"]["created"],
+                bootstrap_summary["campaigns"]["created"],
+                bootstrap_summary["campaigns"]["skipped"],
+                bootstrap_summary["campaigns"]["total"],
+            )
+    except Exception as e:
+        logger.warning("Pilot bootstrap failed (non-blocking): %s", e)
+
     logger.info("ADAM Platform Ready")
     logger.info(f"API available at http://{settings.api.host}:{settings.api.port}")
     logger.info(f"Docs available at http://{settings.api.host}:{settings.api.port}/docs")
