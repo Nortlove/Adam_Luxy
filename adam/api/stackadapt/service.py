@@ -713,6 +713,12 @@ class CreativeIntelligenceService:
             page_edge_dimensions=ci.context_intelligence.get("page_edge_dimensions", {}) if ci.context_intelligence else {},
             page_edge_scoring_tier=ci.context_intelligence.get("page_edge_scoring_tier", "") if ci.context_intelligence else "",
             page_confidence=ci.context_intelligence.get("page_confidence", 0.0) if ci.context_intelligence else 0.0,
+            # ── MRT propensity (live-cascade rewire) ──
+            # Logged at decision time; persisted onto :AdDecision in Neo4j
+            # (M4 schema). When p_t_known=False, OPE/WCLS exclude this row.
+            ts_propensity=getattr(ci, "ts_propensity", 0.0),
+            epsilon_floor=getattr(ci, "epsilon_floor", 0.0),
+            p_t_known=getattr(ci, "p_t_known", False),
         )
 
         # Replace the legacy "all-true grounded" defaults with typed

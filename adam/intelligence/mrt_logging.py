@@ -175,6 +175,39 @@ def assert_positivity(
 # -----------------------------------------------------------------------------
 
 
+def pi_from_argmax_scores(scores: Dict[str, float]) -> Dict[str, float]:
+    """Greedy-TS optimality from a continuous score distribution.
+
+    The bilateral cascade selects mechanisms via argmax over mechanism
+    scores, not via Thompson sampling over Beta posteriors. The handoff's
+    ε-floor mixer applies the same way: it expects π_TS — the probability
+    each arm is the argmax. For score-based selection this is a delta
+    distribution: 1.0 on argmax, 0.0 elsewhere. Tied argmax splits the
+    mass equally across tied arms.
+
+    This converts the cascade's score-based selection into the same
+    π_TS shape the ε-floor mixer expects, so logged p_t flows the same
+    way regardless of whether the upstream selector is Beta-Bernoulli TS
+    or score-based ranking.
+
+    Args:
+        scores: {arm_name: score} — any real-valued score; ties allowed
+
+    Returns:
+        {arm_name: π_TS(arm)} — sums to 1.0
+    """
+    if not scores:
+        return {}
+    max_score = max(scores.values())
+    # Find all arms tied at the max (within numerical tolerance)
+    winners = [arm for arm, s in scores.items() if abs(s - max_score) < 1e-9]
+    n_winners = len(winners)
+    return {
+        arm: (1.0 / n_winners) if arm in winners else 0.0
+        for arm in scores
+    }
+
+
 def estimate_optimality_probabilities(
     posteriors: Dict[str, Tuple[float, float]],
     n_samples: int = 1000,
@@ -236,6 +269,94 @@ def estimate_optimality_probabilities(
 DecisionProducer = Optional[Callable[[MRTDecisionRecord], None]]
 
 
+def select_action_from_pi(
+    pi_ts: Dict[str, float],
+    user_id: str,
+    decision_point_t: int,
+    archetype_id: str,
+    category_id: str,
+    moderators_S_t: Dict[str, float],
+    availability_I_t: int = 1,
+    epsilon: float = EPSILON_FLOOR,
+    rng_seed: Optional[int] = None,
+    producer: DecisionProducer = None,
+    trial_id: str = "",
+    context_H_t: Optional[Dict[str, Any]] = None,
+    posterior_alpha: float = 0.0,
+    posterior_beta: float = 0.0,
+) -> Tuple[Optional[str], float, Optional[MRTDecisionRecord]]:
+    """The canonical bid-time selector: ε-floor mix + sample + log.
+
+    Takes a pre-computed optimality distribution π_TS and produces a
+    chosen action with logged propensity. Caller decides how π_TS was
+    computed (MC over Beta posteriors via estimate_optimality_
+    probabilities; or score-based argmax via pi_from_argmax_scores).
+
+    Per handoff §1.9: when I_t=0 do NOT randomize and do NOT log.
+
+    Returns:
+        (selected_arm, p_t_realised, record_or_None)
+    """
+    if availability_I_t == 0:
+        return None, 0.0, None
+
+    if not pi_ts:
+        raise ValueError("select_action_from_pi: empty pi_ts")
+
+    try:
+        import numpy as np
+    except ImportError:
+        raise RuntimeError("numpy required for MRT logging")
+
+    # 1) ε-floor mix
+    p_t_dist = epsilon_floor_mix(pi_ts, epsilon=epsilon)
+
+    # 2) Positivity invariant — MUST hold or we don't log p_t_known=true
+    try:
+        assert_positivity(p_t_dist, epsilon=epsilon)
+        positivity_ok = True
+    except AssertionError as exc:
+        logger.warning("Positivity violation, will mark p_t_known=false: %s", exc)
+        positivity_ok = False
+
+    # 3) Sample action from p_t_dist
+    rng = np.random.default_rng(rng_seed)
+    arms = list(p_t_dist.keys())
+    probs = np.array([p_t_dist[a] for a in arms], dtype=float)
+    # Renormalize against floating-point drift
+    probs = probs / probs.sum()
+    chosen_idx = int(rng.choice(len(arms), p=probs))
+    chosen_arm = arms[chosen_idx]
+    p_t_realised = float(p_t_dist[chosen_arm])
+
+    record = MRTDecisionRecord(
+        ts=int(time.time() * 1000),
+        user_id=user_id,
+        decision_point_t=decision_point_t,
+        archetype_id=archetype_id,
+        mechanism_id=chosen_arm,
+        category_id=category_id,
+        moderators_S_t=dict(moderators_S_t or {}),
+        action_A_t=1,
+        rand_prob_p_t=p_t_realised,
+        epsilon_floor=epsilon,
+        availability_I_t=availability_I_t,
+        p_t_known=positivity_ok,
+        trial_id=trial_id,
+        ts_posterior_alpha=float(posterior_alpha),
+        ts_posterior_beta=float(posterior_beta),
+        context_H_t=dict(context_H_t or {}),
+    )
+
+    if producer is not None:
+        try:
+            producer(record)
+        except Exception as exc:
+            logger.warning("MRT producer failed: %s", exc)
+
+    return chosen_arm, p_t_realised, record
+
+
 def select_action_with_logged_propensity(
     user_id: str,
     decision_point_t: int,
@@ -251,97 +372,86 @@ def select_action_with_logged_propensity(
     trial_id: str = "",
     context_H_t: Optional[Dict[str, Any]] = None,
 ) -> Tuple[Optional[str], float, Optional[MRTDecisionRecord]]:
-    """Wrap mechanism selection with ε-floor mixing + p_t logging.
+    """Beta-posterior bid-time selector — handoff §1.3 canonical path.
 
-    This is the canonical bid-time hook described in handoff §1.3. It
-    replaces a bare `sampler.sample_mechanism(...)` call so that every
-    decision lands a row in the MRT log with the correct p_t.
+    Thin wrapper over select_action_from_pi: estimates π_TS via Monte
+    Carlo over Beta posteriors, then dispatches.
 
     Returns:
         (selected_arm, p_t_realised, record_or_None)
-
-        record is None when availability_I_t=0 (per handoff: "when I_t=0
-        do NOT randomize and do NOT log; the availability argument in
-        wcls() filters" — §1.9).
-
-    The producer (if provided) is called synchronously with the record
-    BEFORE this function returns. Production wiring: producer wraps the
-    Kafka client. Dev: producer appends to an in-memory list.
     """
-    # Handoff §1.9: when I_t=0 do NOT randomize and do NOT log.
     if availability_I_t == 0:
         return None, 0.0, None
-
     if not posteriors:
-        # No arms available — caller's contract violation; surface clearly.
         raise ValueError("select_action_with_logged_propensity: empty posteriors")
 
-    try:
-        import numpy as np
-    except ImportError:
-        raise RuntimeError("numpy required for MRT logging")
-
-    # 1) Estimate π_TS via MC over the Beta posteriors
     pi_ts = estimate_optimality_probabilities(
         posteriors, n_samples=n_mc_samples, rng_seed=rng_seed,
     )
 
-    # 2) ε-floor mix
-    p_t_dist = epsilon_floor_mix(pi_ts, epsilon=epsilon)
-
-    # 3) Positivity invariant — MUST hold or we don't log p_t_known=true
-    try:
-        assert_positivity(p_t_dist, epsilon=epsilon)
-        positivity_ok = True
-    except AssertionError as exc:
-        logger.warning("Positivity violation, will mark p_t_known=false: %s", exc)
-        positivity_ok = False
-
-    # 4) Sample action from p_t_dist (deterministic-tie-break safe)
-    rng = np.random.default_rng(rng_seed)
-    arms = list(p_t_dist.keys())
-    probs = np.array([p_t_dist[a] for a in arms], dtype=float)
-    # Renormalize against floating-point drift (sum should be 1; force it)
-    probs = probs / probs.sum()
-    chosen_idx = int(rng.choice(len(arms), p=probs))
-    chosen_arm = arms[chosen_idx]
-    p_t_realised = float(p_t_dist[chosen_arm])
-
-    # 5) Build record. action_A_t coding here: this is the K-arm version,
-    #    so we log the chosen mechanism_id explicitly. The {0,1} action
-    #    coding from handoff §1 maps cleanly when K=2 (the original
-    #    HeartSteps setup); for K>2 the analysis pipeline derives binary
-    #    contrasts from mechanism_id.
-    record = MRTDecisionRecord(
-        ts=int(time.time() * 1000),
-        user_id=user_id,
-        decision_point_t=decision_point_t,
-        archetype_id=archetype_id,
-        mechanism_id=chosen_arm,
-        category_id=category_id,
-        moderators_S_t=dict(moderators_S_t or {}),
-        action_A_t=1,  # action was taken (control vs deliver coded by mechanism_id)
-        rand_prob_p_t=p_t_realised,
-        epsilon_floor=epsilon,
-        availability_I_t=availability_I_t,
-        p_t_known=positivity_ok,
-        trial_id=trial_id,
-        ts_posterior_alpha=float(posteriors[chosen_arm][0]),
-        ts_posterior_beta=float(posteriors[chosen_arm][1]),
-        context_H_t=dict(context_H_t or {}),
+    chosen_arm, p_t, record = select_action_from_pi(
+        pi_ts=pi_ts,
+        user_id=user_id, decision_point_t=decision_point_t,
+        archetype_id=archetype_id, category_id=category_id,
+        moderators_S_t=moderators_S_t, availability_I_t=availability_I_t,
+        epsilon=epsilon, rng_seed=rng_seed, producer=producer,
+        trial_id=trial_id, context_H_t=context_H_t,
     )
 
-    if producer is not None:
-        try:
-            producer(record)
-        except Exception as exc:
-            # Logging failure must not break the bid path. Mark the
-            # record as not-known so downstream analysis excludes it,
-            # and drop. The decision still lands; only the audit row
-            # is lost.
-            logger.warning("MRT producer failed: %s", exc)
+    # Stamp the chosen arm's posterior parameters onto the record for audit.
+    if record is not None and chosen_arm in posteriors:
+        a, b = posteriors[chosen_arm]
+        record.ts_posterior_alpha = float(a)
+        record.ts_posterior_beta = float(b)
 
-    return chosen_arm, p_t_realised, record
+    return chosen_arm, p_t, record
+
+
+def select_action_from_scores(
+    scores: Dict[str, float],
+    user_id: str,
+    decision_point_t: int,
+    archetype_id: str,
+    category_id: str,
+    moderators_S_t: Dict[str, float],
+    availability_I_t: int = 1,
+    epsilon: float = EPSILON_FLOOR,
+    rng_seed: Optional[int] = None,
+    producer: DecisionProducer = None,
+    trial_id: str = "",
+    context_H_t: Optional[Dict[str, Any]] = None,
+) -> Tuple[Optional[str], float, Optional[MRTDecisionRecord]]:
+    """Score-based bid-time selector — for the bilateral cascade.
+
+    The cascade ranks mechanisms via continuous scores (edge evidence,
+    gradient field, ad profile boosts). Greedy argmax collapses p_t to
+    {0,1}. This wraps argmax with the ε-floor mixer + sample + log so
+    the same analytical guarantee (Boruvka 2018 §2) holds for
+    score-based selectors.
+
+    π_TS is the delta-on-argmax distribution from pi_from_argmax_scores.
+    With ε=0.02 and K=10, the argmax wins ~98.2% of the time; the
+    remaining ~1.8% spreads uniformly over the other 9 mechanisms. That
+    1.8% is the cost of valid causal inference.
+
+    Returns:
+        (selected_arm, p_t_realised, record_or_None)
+    """
+    if availability_I_t == 0:
+        return None, 0.0, None
+    if not scores:
+        raise ValueError("select_action_from_scores: empty scores")
+
+    pi_ts = pi_from_argmax_scores(scores)
+
+    return select_action_from_pi(
+        pi_ts=pi_ts,
+        user_id=user_id, decision_point_t=decision_point_t,
+        archetype_id=archetype_id, category_id=category_id,
+        moderators_S_t=moderators_S_t, availability_I_t=availability_I_t,
+        epsilon=epsilon, rng_seed=rng_seed, producer=producer,
+        trial_id=trial_id, context_H_t=context_H_t,
+    )
 
 
 # -----------------------------------------------------------------------------

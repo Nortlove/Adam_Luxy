@@ -118,6 +118,15 @@ class DecisionContext:
     missing_links: List[str] = field(default_factory=list)
     refusal_reason: str = ""
 
+    # ── MRT propensity (M1 substrate, live-cascade rewire) ──
+    # Logged at decision time per Boruvka 2018 §2 + handoff §1.2.
+    # When p_t_known=False, OPE/WCLS MUST exclude this row (the
+    # propensity could not be validly logged). The M4 schema migration
+    # added the corresponding properties on :AdDecision in Neo4j.
+    ts_propensity: float = 0.0
+    epsilon_floor: float = 0.0
+    p_t_known: bool = False
+
     # Timing
     created_at: float = field(default_factory=time.time)
 
@@ -186,6 +195,12 @@ class DecisionContext:
             "grounding_evidence": dict(self.grounding_evidence),
             "missing_links": list(self.missing_links),
             "refusal_reason": self.refusal_reason,
+            # MRT propensity (M1 substrate, live-cascade rewire). Names match
+            # the M4 :AdDecision schema. OPE/WCLS reads pscore_known FIRST;
+            # ts_propensity is only meaningful when pscore_known=true.
+            "ts_propensity": self.ts_propensity,
+            "epsilon_floor": self.epsilon_floor,
+            "pscore_known": self.p_t_known,
         }
 
 
@@ -253,6 +268,13 @@ class DecisionCache:
             metadata_json = json.dumps(ctx.to_outcome_metadata(), default=str)
 
             async with driver.session() as session:
+                # MRT propensity is written as first-class properties (NOT just
+                # in metadata_json) so OPE/WCLS queries can filter on
+                # pscore_known and read ts_propensity without parsing JSON.
+                # Property names match infra/migrations/2026_04_27_add_ts_propensity_*.cypher.
+                # When p_t_known=False, ts_propensity is set to null (NOT 0.0)
+                # to match the M4 migration's discipline anchor: a 0.0 sentinel
+                # would silently corrupt downstream aggregates.
                 await session.run(
                     """
                     MERGE (dc:DecisionContext {decision_id: $decision_id})
@@ -262,7 +284,10 @@ class DecisionCache:
                         dc.buyer_id = $buyer_id,
                         dc.segment_id = $segment_id,
                         dc.metadata_json = $metadata_json,
-                        dc.created_at = $created_at
+                        dc.created_at = $created_at,
+                        dc.pscore_known = $pscore_known,
+                        dc.ts_propensity = $ts_propensity,
+                        dc.epsilon_floor = $epsilon_floor
                     """,
                     decision_id=ctx.decision_id,
                     archetype=ctx.archetype,
@@ -272,6 +297,9 @@ class DecisionCache:
                     segment_id=ctx.segment_id,
                     metadata_json=metadata_json,
                     created_at=ctx.created_at,
+                    pscore_known=ctx.p_t_known,
+                    ts_propensity=ctx.ts_propensity if ctx.p_t_known else None,
+                    epsilon_floor=ctx.epsilon_floor if ctx.p_t_known else None,
                 )
         except Exception as e:
             logger.debug("Neo4j decision context write failed: %s", e)

@@ -28,6 +28,9 @@ from adam.intelligence.mrt_logging import (
     assert_positivity,
     epsilon_floor_mix,
     estimate_optimality_probabilities,
+    pi_from_argmax_scores,
+    select_action_from_pi,
+    select_action_from_scores,
     select_action_with_logged_propensity,
 )
 
@@ -329,6 +332,174 @@ def test_avro_schema_p_t_known_is_required_boolean():
 
 # -----------------------------------------------------------------------------
 # In-memory producer
+# -----------------------------------------------------------------------------
+
+
+# -----------------------------------------------------------------------------
+# Score-based path — pi_from_argmax_scores + select_action_from_scores
+# -----------------------------------------------------------------------------
+
+
+def test_pi_from_argmax_scores_delta_on_unique_winner():
+    """Single argmax → π = 1.0 on argmax, 0.0 elsewhere."""
+    scores = {"a": 0.8, "b": 0.5, "c": 0.3}
+    pi = pi_from_argmax_scores(scores)
+    assert pi["a"] == 1.0
+    assert pi["b"] == 0.0
+    assert pi["c"] == 0.0
+    assert pytest.approx(sum(pi.values())) == 1.0
+
+
+def test_pi_from_argmax_scores_splits_ties_equally():
+    """Tied argmax → mass split equally. Important: in a 3-way tie, each
+    gets 1/3 — never 1.0 to one and 0.0 to others (that would silently
+    bias toward dict-iteration order)."""
+    scores = {"a": 0.7, "b": 0.7, "c": 0.7}
+    pi = pi_from_argmax_scores(scores)
+    for arm, p in pi.items():
+        assert pytest.approx(p) == 1.0 / 3.0
+
+
+def test_pi_from_argmax_scores_handles_negative_scores():
+    scores = {"a": -0.5, "b": -0.3, "c": -0.8}
+    pi = pi_from_argmax_scores(scores)
+    # b is the max (-0.3 > -0.5 > -0.8)
+    assert pi["b"] == 1.0
+    assert pi["a"] == 0.0
+    assert pi["c"] == 0.0
+
+
+def test_pi_from_argmax_scores_empty_returns_empty():
+    assert pi_from_argmax_scores({}) == {}
+
+
+def test_select_action_from_scores_argmax_wins_most_of_time():
+    """With ε=0.02 and one strong argmax, the argmax should be picked
+    ~98% of the time (1 - ε(1-1/K)). For K=3 → ε(2/3) = 0.0133 floor
+    on each non-argmax → 1 - 2*0.0133 = 0.9733 on argmax."""
+    scores = {"social_proof": 0.9, "authority": 0.4, "scarcity": 0.2}
+
+    chosen_counts = {"social_proof": 0, "authority": 0, "scarcity": 0}
+    log = InMemoryDecisionLog()
+
+    for trial in range(2000):
+        arm, _, _ = select_action_from_scores(
+            scores=scores,
+            user_id=f"u{trial}", decision_point_t=trial,
+            archetype_id="x", category_id="x",
+            moderators_S_t={}, producer=log.emit, rng_seed=trial,
+        )
+        chosen_counts[arm] += 1
+
+    # Argmax should be picked ~97-98% of the time (some MC noise)
+    argmax_rate = chosen_counts["social_proof"] / 2000
+    assert 0.95 <= argmax_rate <= 0.99, f"argmax picked {argmax_rate}, expected ~0.97"
+    # Non-argmax arms should each be picked ~0.7-1.5% of the time
+    assert chosen_counts["authority"] > 0
+    assert chosen_counts["scarcity"] > 0
+
+
+def test_select_action_from_scores_logs_p_t_in_canonical_range():
+    """K=3, ε=0.02 → bounds [ε/3, 1-ε(2/3)] = [0.00667, 0.98667]."""
+    scores = {"a": 0.9, "b": 0.4, "c": 0.2}
+    log = InMemoryDecisionLog()
+
+    arm, p_t, record = select_action_from_scores(
+        scores=scores,
+        user_id="u1", decision_point_t=1,
+        archetype_id="x", category_id="x",
+        moderators_S_t={}, producer=log.emit, rng_seed=42,
+    )
+
+    assert arm in scores
+    floor = 0.02 / 3.0 - 1e-9
+    ceiling = 1.0 - 0.02 * (2.0 / 3.0) + 1e-9
+    assert floor <= p_t <= ceiling
+    assert record.p_t_known is True
+    assert record.mechanism_id == arm
+
+
+def test_select_action_from_scores_unavailability_silent():
+    """I_t=0 → no decision, no log row."""
+    scores = {"a": 0.5, "b": 0.5}
+    log = InMemoryDecisionLog()
+
+    arm, p_t, record = select_action_from_scores(
+        scores=scores,
+        user_id="u1", decision_point_t=1,
+        archetype_id="x", category_id="x",
+        moderators_S_t={}, availability_I_t=0,
+        producer=log.emit, rng_seed=42,
+    )
+
+    assert arm is None
+    assert p_t == 0.0
+    assert record is None
+    assert len(log) == 0
+
+
+def test_select_action_from_scores_empty_raises():
+    with pytest.raises(ValueError):
+        select_action_from_scores(
+            scores={}, user_id="u", decision_point_t=1,
+            archetype_id="x", category_id="x", moderators_S_t={},
+        )
+
+
+def test_select_action_from_scores_handles_tied_argmax():
+    """When the top score is tied, the ε-floor mixer + sample distribute
+    fairly across the tied arms. No silent bias from argmax order."""
+    scores = {"a": 0.5, "b": 0.5, "c": 0.0}
+
+    chosen_counts = {"a": 0, "b": 0, "c": 0}
+    for trial in range(500):
+        arm, _, _ = select_action_from_scores(
+            scores=scores,
+            user_id=f"u{trial}", decision_point_t=trial,
+            archetype_id="x", category_id="x",
+            moderators_S_t={}, rng_seed=trial,
+        )
+        chosen_counts[arm] += 1
+
+    # a and b should each be picked ~half (within MC noise — 500 trials),
+    # c should rarely be picked (only via ε-floor leak)
+    assert chosen_counts["a"] > 200
+    assert chosen_counts["b"] > 200
+    assert chosen_counts["c"] < 50
+
+
+# -----------------------------------------------------------------------------
+# select_action_from_pi — the shared core
+# -----------------------------------------------------------------------------
+
+
+def test_select_action_from_pi_flows_through():
+    """Pre-computed π flows through ε-floor + sample correctly."""
+    pi = {"a": 0.7, "b": 0.3}
+    log = InMemoryDecisionLog()
+
+    arm, p_t, record = select_action_from_pi(
+        pi_ts=pi,
+        user_id="u", decision_point_t=1,
+        archetype_id="x", category_id="x",
+        moderators_S_t={}, producer=log.emit, rng_seed=42,
+    )
+
+    assert arm in pi
+    assert 0.01 <= p_t <= 0.99
+    assert record.p_t_known is True
+
+
+def test_select_action_from_pi_rejects_empty():
+    with pytest.raises(ValueError):
+        select_action_from_pi(
+            pi_ts={}, user_id="u", decision_point_t=1,
+            archetype_id="x", category_id="x", moderators_S_t={},
+        )
+
+
+# -----------------------------------------------------------------------------
+# In-memory producer (existing test below)
 # -----------------------------------------------------------------------------
 
 

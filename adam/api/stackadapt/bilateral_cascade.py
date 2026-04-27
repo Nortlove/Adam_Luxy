@@ -41,6 +41,78 @@ from adam.config.settings import get_settings
 
 logger = logging.getLogger(__name__)
 
+def _select_primary_with_logged_propensity(
+    base: "CreativeIntelligence",
+    archetype: str,
+    category: str,
+    user_id: str = "",
+    decision_point_t: int = 0,
+    moderators: Optional[Dict[str, float]] = None,
+    rng_seed: Optional[int] = None,
+) -> Tuple[str, float, bool]:
+    """Replace argmax over mechanism_scores with ε-floor-mixed sample.
+
+    The cascade's action selection used to be greedy argmax over
+    base.mechanism_scores. Greedy collapses p_t to {0,1}, which breaks
+    WCLS/OPE per Boruvka 2018 §2. This helper applies the canonical
+    handoff §1.1 ε-floor (ε=0.02) to the score-derived π_TS, samples,
+    logs the chosen mechanism's p_t, and stamps propensity fields onto
+    `base` (ts_propensity, epsilon_floor, p_t_known).
+
+    Returns (chosen_mechanism, p_t, p_t_known).
+
+    ε=0.02 means ~98.2% of impressions still pick the argmax — the
+    cost of valid causal inference is ~1.8% exploration. user_id="" or
+    K<2 short-circuits to argmax with p_t_known=False (degenerate
+    cases unsuited to MRT).
+    """
+    scores = base.mechanism_scores
+    if not scores or len(scores) < 2:
+        # Degenerate; argmax fallback. Surface as not-known so OPE excludes.
+        if not scores:
+            return base.primary_mechanism, 0.0, False
+        only_arm = max(scores.items(), key=lambda x: x[1])[0]
+        base.ts_propensity = 0.0
+        base.epsilon_floor = 0.0
+        base.p_t_known = False
+        return only_arm, 0.0, False
+
+    # Lazy import to keep cascade import-safe in environments without numpy.
+    try:
+        from adam.intelligence.mrt_logging import (
+            EPSILON_FLOOR, select_action_from_scores,
+        )
+        from adam.intelligence.mrt_producer import emit as mrt_emit
+    except Exception as exc:
+        # MRT module unavailable — fall back to argmax with p_t_known=False.
+        # This must not break the cascade.
+        logger.debug("MRT logging unavailable, falling back to argmax: %s", exc)
+        chosen = max(scores.items(), key=lambda x: x[1])[0]
+        base.ts_propensity = 0.0
+        base.epsilon_floor = 0.0
+        base.p_t_known = False
+        return chosen, 0.0, False
+
+    chosen_arm, p_t, record = select_action_from_scores(
+        scores=scores,
+        user_id=user_id or "anonymous",
+        decision_point_t=decision_point_t,
+        archetype_id=archetype or "unknown",
+        category_id=category or "unknown",
+        moderators_S_t=moderators or {},
+        epsilon=EPSILON_FLOOR,
+        rng_seed=rng_seed,
+        producer=mrt_emit,
+    )
+    p_t_known = bool(record and record.p_t_known)
+
+    base.ts_propensity = float(p_t)
+    base.epsilon_floor = float(EPSILON_FLOOR)
+    base.p_t_known = p_t_known
+
+    return chosen_arm or base.primary_mechanism, p_t, p_t_known
+
+
 def _cascade_cfg():
     """Lazy accessor for cascade settings."""
     return get_settings().cascade
@@ -101,6 +173,15 @@ class CreativeIntelligence:
 
     # Category deviation from universal (cross-category transfer)
     category_deviation: Optional[Dict[str, float]] = None
+
+    # ── MRT propensity (M1 substrate, live-cascade rewire) ──
+    # Logged at decision time per Boruvka 2018 §2 + handoff §1.2.
+    # ts_propensity is the probability the chosen mechanism was selected
+    # under ε-floor mixing applied to mechanism_scores. p_t_known=False
+    # means OPE/WCLS must EXCLUDE the row.
+    ts_propensity: float = 0.0
+    epsilon_floor: float = 0.0
+    p_t_known: bool = False
 
     # Reasoning trace
     reasoning: List[str] = field(default_factory=list)
@@ -2481,6 +2562,34 @@ def run_bilateral_cascade(
 
     # Synergy check
     result = check_mechanism_synergy(result, archetype)
+
+    # ─── M1 LIVE-CASCADE REWIRE — bid-time p_t logging ───
+    # All argmax decisions inside L1/L2/L3 have already shaped the final
+    # mechanism_scores dict. The CANONICAL action selection happens here:
+    # one ε-floor-mixed sample per request, with logged p_t. This makes
+    # WCLS / OPE valid for the LUXY pilot per Boruvka 2018 §2.
+    #
+    # ε=0.02 means ~98% of impressions still pick what argmax would have.
+    # The 2% exploration is the cost of valid causal inference. The
+    # logged record carries (user_id, decision_point_t, archetype,
+    # category, mechanism_id, p_t, p_t_known) — handoff §1.2 schema.
+    chosen_mech, p_t, p_t_known = _select_primary_with_logged_propensity(
+        base=result,
+        archetype=archetype,
+        category=category or "",
+        user_id=buyer_id or "",
+        decision_point_t=int(t0 * 1000) % (10 ** 9),  # cheap monotonic per call
+        moderators={
+            "device_type_score": 1.0 if device_type else 0.0,
+            "tod": float(time_of_day or 0),
+        },
+    )
+    if chosen_mech:
+        result.primary_mechanism = chosen_mech
+    if p_t_known:
+        result.reasoning.append(
+            f"MRT-logged: mechanism={chosen_mech}, p_t={p_t:.4f}, ε={result.epsilon_floor}"
+        )
 
     elapsed_ms = (time.monotonic() - t0) * 1000
     result.reasoning.append(f"Cascade complete: level={result.cascade_level}, elapsed={elapsed_ms:.1f}ms")
