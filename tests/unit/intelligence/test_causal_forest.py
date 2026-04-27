@@ -185,11 +185,17 @@ def test_write_uses_handoff_property_names():
 
 
 def test_write_returns_false_when_driver_unavailable():
+    """When driver=None and the auto-built sync driver also unavailable
+    (no NEO4J env vars / unreachable Neo4j), write returns False."""
     result = CATEResult(
         archetype="x", mechanism="y", category="z",
         tau_hat=0.0, tau_lower=0.0, tau_upper=0.0, n_events=0,
     )
-    ok = write_cate_to_neo4j(result, driver=None)
+    with patch(
+        "adam.core.dependencies.get_neo4j_driver",
+        return_value=None,
+    ):
+        ok = write_cate_to_neo4j(result, driver=None)
     assert ok is False
 
 

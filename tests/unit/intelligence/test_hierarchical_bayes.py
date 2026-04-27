@@ -217,11 +217,17 @@ def test_writeback_records_provenance():
 
 
 def test_writeback_returns_false_when_driver_unavailable():
+    """When driver=None and the auto-built sync driver also unavailable
+    (no NEO4J env vars / unreachable Neo4j), writeback returns False."""
     cell = CellPosterior(
         archetype="x", mechanism="y", category="z",
         alpha=1.0, beta=1.0, p_mean=0.5, p_variance=0.1, n_obs=0,
     )
-    ok = write_cell_posterior_to_neo4j(cell, driver=None)
+    with patch(
+        "adam.core.dependencies.get_neo4j_driver",
+        return_value=None,
+    ):
+        ok = write_cell_posterior_to_neo4j(cell, driver=None)
     assert ok is False
 
 

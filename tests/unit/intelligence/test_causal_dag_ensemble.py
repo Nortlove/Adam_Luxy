@@ -198,8 +198,14 @@ def test_writeback_uses_psychdim_causes_schema():
 
 
 def test_writeback_returns_false_when_driver_unavailable():
+    """When driver=None and the auto-built sync driver also unavailable
+    (no NEO4J env vars / unreachable Neo4j), writeback returns False."""
     edge = M7CausalEdge(source="x", target="y", method_votes=2)
-    ok = write_causal_edge_to_neo4j(edge, driver=None)
+    with patch(
+        "adam.core.dependencies.get_neo4j_driver",
+        return_value=None,
+    ):
+        ok = write_causal_edge_to_neo4j(edge, driver=None)
     assert ok is False
 
 

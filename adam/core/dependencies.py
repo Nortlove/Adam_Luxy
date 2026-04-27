@@ -868,9 +868,65 @@ async def get_infrastructure() -> Infrastructure:
 
 
 async def get_neo4j() -> AsyncDriver:
-    """Get Neo4j driver."""
+    """Get Neo4j driver (async — for FastAPI handlers)."""
     infra = Infrastructure.get_instance()
     return infra.neo4j
+
+
+# Sync driver — separate from the async path. Daily-task / script / batch
+# code paths consume this. The async driver is loop-bound and not safely
+# reusable from sync contexts; this builds a separate sync driver with
+# its own connection pool. Cached as a process singleton on first call.
+_SYNC_NEO4J_DRIVER = None
+_SYNC_NEO4J_INIT_ATTEMPTED = False
+
+
+def get_neo4j_driver():
+    """Return a synchronous Neo4j driver, or None on connection failure.
+
+    Daily tasks, batch scripts, and offline-runner code paths that
+    can't easily run inside the async event loop call this. Reads
+    NEO4J_URI / NEO4J_USERNAME / NEO4J_PASSWORD from
+    adam.config.settings and builds a sync ``neo4j.GraphDatabase``
+    driver. Failure to connect returns None — caller must handle the
+    'no neo4j today' state, never raise.
+
+    Production note: each call returns the SAME driver instance so
+    connection pooling works. The driver is cached on first
+    successful build for the lifetime of the process.
+    """
+    global _SYNC_NEO4J_DRIVER, _SYNC_NEO4J_INIT_ATTEMPTED
+    if _SYNC_NEO4J_DRIVER is not None:
+        return _SYNC_NEO4J_DRIVER
+    if _SYNC_NEO4J_INIT_ATTEMPTED:
+        # Already failed once this process; don't re-attempt.
+        return None
+    _SYNC_NEO4J_INIT_ATTEMPTED = True
+
+    try:
+        from neo4j import GraphDatabase
+        from adam.config.settings import settings
+
+        uri = settings.neo4j.uri
+        username = settings.neo4j.username
+        password = settings.neo4j.password
+        if not uri or not username or not password:
+            logger.warning(
+                "get_neo4j_driver: NEO4J_URI / USERNAME / PASSWORD not all set; "
+                "sync driver unavailable.",
+            )
+            return None
+
+        driver = GraphDatabase.driver(uri, auth=(username, password))
+        # Verify connection eagerly so callers get None on bad config
+        # rather than failing later during session.run.
+        driver.verify_connectivity()
+    except Exception as exc:
+        logger.warning("get_neo4j_driver: sync driver build failed: %s", exc)
+        return None
+
+    _SYNC_NEO4J_DRIVER = driver
+    return _SYNC_NEO4J_DRIVER
 
 
 async def get_redis() -> redis.Redis:

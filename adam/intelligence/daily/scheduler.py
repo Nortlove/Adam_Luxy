@@ -258,6 +258,22 @@ def _register_all_tasks() -> None:
     except Exception as e:
         logger.debug("Task 29.6 (horizon adjudicator) not available: %s", e)
 
+    # F1 daily runner (task #55) — buyer review metaphor scoring.
+    # Activates the buyer half of F3's metaphor_alignment cascade wire.
+    try:
+        from adam.intelligence.daily.task_29_7_buyer_metaphor_scoring import BuyerMetaphorScoringTask
+        tasks.append(BuyerMetaphorScoringTask())
+    except Exception as e:
+        logger.debug("Task 29.7 (buyer metaphor scoring) not available: %s", e)
+
+    # F2 daily runner (task #55) — brand product copy metaphor scoring.
+    # Activates the brand half of F3's metaphor_alignment cascade wire.
+    try:
+        from adam.intelligence.daily.task_29_8_brand_metaphor_scoring import BrandMetaphorScoringTask
+        tasks.append(BrandMetaphorScoringTask())
+    except Exception as e:
+        logger.debug("Task 29.8 (brand metaphor scoring) not available: %s", e)
+
     try:
         from adam.intelligence.daily.task_30_execution import CampaignExecutionTask
         tasks.append(CampaignExecutionTask())
