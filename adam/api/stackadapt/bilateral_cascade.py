@@ -2587,6 +2587,24 @@ def run_bilateral_cascade(
     # Synergy check
     result = check_mechanism_synergy(result, archetype)
 
+    # ─── F5: BLEND-VS-VIGILANCE STRATEGIC WEIGHTING ───
+    # Apply the attention-inversion platform commitment as a soft
+    # preference: blend-compatible mechanisms boosted, vigilance-
+    # activating mechanisms dampened (default ±5%). Composes BEFORE the
+    # C2 hard gate — F5 weights mechanisms within the eligible set; C2
+    # then zeros any whose route is incompatible with predicted depth.
+    # Soft-fail: any error → pass scores through unchanged.
+    if result.mechanism_scores:
+        try:
+            from adam.intelligence.blend_vigilance_weighting import (
+                apply_blend_vigilance_weighting,
+            )
+            result.mechanism_scores = apply_blend_vigilance_weighting(
+                result.mechanism_scores,
+            )
+        except Exception as exc:
+            logger.debug("F5 blend/vigilance weighting skipped: %s", exc)
+
     # ─── C2: PROCESSING-DEPTH ROUTE GATE ───
     # Predict the buyer's likely processing depth from page features +
     # device context, then gate mechanism_scores so vigilance-activating
