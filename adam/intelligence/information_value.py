@@ -438,10 +438,34 @@ class BuyerUncertaintyProfile:
 
     @property
     def aggregate_uncertainty(self) -> float:
-        """Average uncertainty across all dimensions.
+        """Average per-dimension Beta variance ∈ [0, 0.25].
 
-        Uses BONG entropy when available (captures cross-dimension correlations).
-        Falls back to average per-dimension Beta variance.
+        This is the variance-based uncertainty measure — bounded, scale-
+        comparable across dimensions. For the entropy-based BONG measure
+        (which captures cross-dimension correlations but is unbounded
+        and can be negative for concentrated posteriors), use
+        ``aggregate_entropy`` instead.
+
+        Why two properties: variance and entropy are different
+        quantities with different units. Production decisions need
+        whichever the caller's math actually requires; conflating
+        them under one name was a drift. New buyer (Beta(2,2) per
+        dimension) → variance ≈ 0.05 per dim, aggregate ≈ 0.05.
+        """
+        if not self.constructs:
+            return 1.0
+        return sum(c.variance for c in self.constructs.values()) / len(self.constructs)
+
+    @property
+    def aggregate_entropy(self) -> float:
+        """BONG-derived posterior entropy (cross-dimension-correlated).
+
+        Captures correlation structure that variance ignores. Unbounded;
+        can be negative for highly concentrated posteriors. Use when
+        the math you're feeding it into is on the entropy scale (e.g.,
+        information-gain bidding via BONG.information_gain).
+        Falls back to ``aggregate_uncertainty`` (variance) when BONG
+        isn't initialized.
         """
         if self.bong_posterior is not None:
             try:
@@ -449,9 +473,7 @@ class BuyerUncertaintyProfile:
                 return get_bong_updater().information_value(self.bong_posterior)
             except Exception:
                 pass
-        if not self.constructs:
-            return 1.0
-        return sum(c.variance for c in self.constructs.values()) / len(self.constructs)
+        return self.aggregate_uncertainty
 
     @property
     def aggregate_confidence(self) -> float:
@@ -724,35 +746,42 @@ def compute_information_value(
     bong_entropy_gain = 0.0
     use_bong = False
 
+    # Per-dimension Beta information gain — the canonical "decays as the
+    # buyer is characterized" quantity. Always compute this; it's the
+    # base for total_eig and (when no gradient field is supplied) for
+    # gradient_weighted as well.
+    for dim, posterior in buyer.constructs.items():
+        dimension_gains[dim] = posterior.expected_information_gain()
+
     if buyer.bong_posterior is not None:
         try:
             from adam.intelligence.bong import get_bong_updater
             updater = get_bong_updater()
-            # BONG information gain: entropy reduction from a hypothetical observation
-            # This accounts for correlations — observing trust tells us about emotion
+            # BONG information gain captures cross-dimension correlations
+            # but is a "per-observation entropy reduction" quantity that
+            # plateaus by design (Gaussian entropy: each observation
+            # contributes log|D + 1| - log|D|, asymptotically constant).
+            # Surface it as a diagnostic; do NOT use it as total_eig
+            # because info_value MUST decay as the buyer is characterized
+            # (otherwise bid premium saturates the cap forever).
             obs_placeholder = np.full(len(updater.dimension_names), 0.5)
             bong_entropy_gain = updater.information_gain(
                 buyer.bong_posterior, obs_placeholder, noise_precision=1.0,
             )
-            # Still compute per-dimension gains for gradient weighting
-            for dim, posterior in buyer.constructs.items():
-                dimension_gains[dim] = posterior.expected_information_gain()
             use_bong = True
         except Exception:
             pass
 
-    if not use_bong:
-        for dim, posterior in buyer.constructs.items():
-            eig = posterior.expected_information_gain()
-            dimension_gains[dim] = eig
-
-    total_eig = bong_entropy_gain if use_bong else sum(dimension_gains.values())
+    # Total EIG always tracks the Beta sum — the quantity that decays
+    # with observations. BONG entropy is a separate, approximately-stable
+    # diagnostic.
+    total_eig = sum(dimension_gains.values())
     result.expected_info_gain = total_eig
 
     if use_bong:
         result.reasoning.append(
-            f"BONG joint entropy gain: {bong_entropy_gain:.4f} bits "
-            f"(captures cross-dimension correlations)"
+            f"BONG joint entropy gain (diagnostic): {bong_entropy_gain:.4f} bits; "
+            f"total_eig from Beta sum: {total_eig:.4f}"
         )
 
     if total_eig < 1e-6:
@@ -845,11 +874,16 @@ def compute_information_value(
     # than sitting at the cap for the first 10+ observations.
     base_factor = iv_settings.accuracy_to_lift_factor if iv_settings else 5.0
     n_dims = len(buyer.constructs) or 1
-    # More dimensions = more potential information gain = higher value.
-    # Use sqrt scaling: diminishing returns but still increasing with dimensions.
-    # Previously divided by n_dims (penalized more dims by 65%) — backwards.
-    import math
-    accuracy_to_lift_factor = base_factor * math.sqrt(n_dims / 7.0)
+    # Calibration anchor (preserved from the original derivation):
+    #     With 7 dims: factor = 5.0 (canonical from research synthesis)
+    #     With 20 dims: factor ≈ 1.75
+    #     With N dims: factor = base_factor * 7 / N
+    # The dim-count denominator keeps premium-per-dim constant: more
+    # dimensions = lower per-dim weight, total info_value tracks
+    # gradient_weighted-times-pv at a stable scale. Without this
+    # normalization, premium saturates the cap for veteran buyers and
+    # never reflects the actual posterior shrinkage.
+    accuracy_to_lift_factor = base_factor * 7.0 / n_dims
     info_value = gradient_weighted * accuracy_to_lift_factor * pv
 
     # Enhancement #36: Add within-subject mechanism exploration premium
