@@ -3,19 +3,25 @@
 # =============================================================================
 
 """
-ADAM Learning System
+ADAM Learning System (CONVENIENCE AGGREGATOR — see role below)
 
-The learning system builds understanding from data through the unified
-learning interface defined in Enhancement #13.
+ROLE PER G1 LANDSCAPE DOC: this package is a thin convenience
+aggregator. It re-exports from cold-start, user-cold-start, and
+archetype modules so callers can reach multiple surfaces with one
+import. Do NOT add new logic here.
 
-For Amazon data processing, use:
-    from adam.data.amazon import AmazonPipeline, PipelineConfig
-    
-For Cold Start learning, use:
+For new learning code:
+  - Production runtime: adam.core.learning (CANONICAL)
+  - Cold-start gradient bridge: adam.cold_start.learning
+  - Offline corpus learning scripts: adam.intelligence.learning
+
+See adam/core/learning/__init__.py for the full four-package
+landscape documentation.
+
+Convenience imports below (kept for backwards compat):
     from adam.coldstart.unified_learning import UnifiedColdStartLearning
-    
-For Thompson Sampling, use:
-    from adam.meta_learner.thompson import ThompsonSamplingEngine
+    from adam.user.cold_start.service import ColdStartService
+    from adam.user.cold_start.archetypes import AMAZON_ARCHETYPES
 """
 
 # Re-export from proper locations
