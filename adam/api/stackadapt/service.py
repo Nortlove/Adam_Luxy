@@ -238,8 +238,16 @@ class CreativeIntelligenceService:
             product_category or content_category,
         )
 
-        # Build copy guidance from cascade result
-        copy_guidance = self._build_copy_guidance(cascade_result, brand_name)
+        # Build copy guidance from cascade result. brand_id (asin) and
+        # archetype are threaded through so the audited-argument cache
+        # (informativ:argument:v1:*) can be consulted for this cell —
+        # the canonical CLAUDE_ARGUMENT path on the StackAdapt hot path.
+        # Cache miss falls through to the existing mechanism templates.
+        copy_guidance = self._build_copy_guidance(
+            cascade_result, brand_name,
+            brand_id=asin or "",
+            archetype=archetype or "",
+        )
 
         elapsed_ms = (time.perf_counter() - start) * 1000
         self._request_count += 1
@@ -968,8 +976,24 @@ class CreativeIntelligenceService:
 
     def _build_copy_guidance(
         self, ci: CreativeIntelligence, brand_name: str,
+        brand_id: str = "", archetype: str = "",
+        barrier: str = "trust_deficit",
     ) -> Dict[str, Any]:
-        """Generate copy guidance from cascade result."""
+        """Generate copy guidance from cascade result.
+
+        Two paths, in order:
+          1. **Audited argument cache** (canonical) — if (brand_id × archetype
+             × primary_mechanism × barrier) has an argument that PASSED the
+             constitutional rubric (handoff §6 / M6 CAI loop), prepend it
+             to the headlines list and surface the full structured argument
+             on `audited_argument`. The cache is populated offline by M6.
+          2. **Mechanism templates** (fallback, A14-flagged) — Cialdini-
+             keyed hand-composed strings. Used when (a) M6 hasn't populated
+             the cell yet, (b) Redis is unreachable, (c) the cascade
+             resolved to a cell outside the constitutional rubric (unknown
+             archetype/mechanism). Retires when M6 production deploy
+             reaches full coverage of LUXY's archetype × mechanism cells.
+        """
         brand_ref = brand_name or "this product"
         headlines: List[str] = []
         value_props: List[str] = []
@@ -977,6 +1001,40 @@ class CreativeIntelligenceService:
         avoid: List[str] = []
 
         mech = ci.primary_mechanism
+
+        # ─── Path 1: Audited argument from M6 CAI loop ───
+        # Sync read; soft-fails on every error path. Mechanism + archetype
+        # round-trip checked by the cache layer — a cached argument audited
+        # under a different (archetype, mechanism) cannot be served here.
+        audited_argument: Optional[Dict[str, Any]] = None
+        if brand_id and archetype and mech:
+            try:
+                from adam.intelligence.argument_cache import (
+                    get_cached_argument,
+                )
+                cached = get_cached_argument(
+                    brand_id=brand_id,
+                    archetype=archetype,
+                    mechanism=mech,
+                    barrier=barrier,
+                )
+                if cached is not None:
+                    if cached.headline:
+                        headlines.append(cached.headline)
+                    if cached.cta:
+                        ctas.append(cached.cta)
+                    audited_argument = {
+                        "headline": cached.headline,
+                        "body": cached.body,
+                        "cta": cached.cta,
+                        "barrier_addressed": cached.barrier_addressed,
+                        "archetype_fit_score": cached.archetype_fit_score,
+                        "factscore": cached.factscore,
+                        "iterations_to_converge": cached.iterations_to_converge,
+                        "constitution_version": cached.constitution_version,
+                    }
+            except Exception as exc:
+                logger.debug("Audited argument cache lookup skipped: %s", exc)
 
         # Mechanism-specific copy templates
         _TEMPLATES = {
@@ -1065,12 +1123,20 @@ class CreativeIntelligenceService:
             elif composite < 0.4:
                 value_props.append("Low bilateral alignment — test multiple approaches")
 
-        return {
+        result: Dict[str, Any] = {
             "headline_templates": headlines,
             "value_propositions": value_props,
             "cta_templates": ctas,
             "avoid": avoid,
         }
+        if audited_argument is not None:
+            # Source flag lets downstream integrations route on whether the
+            # creative came from the audited path or the template fallback.
+            # The full structured argument is preserved so consumers that
+            # want body text (richer than templates carry) can use it.
+            result["audited_argument"] = audited_argument
+            result["audited_argument_source"] = "cached"
+        return result
 
     def _run_dsp_if_available(
         self,
