@@ -419,7 +419,41 @@ class CopyGenerationService:
         
         # Generate variants
         variants = self._generate_variants(request, brand)
-        
+
+        # ─── B4: ClaudeArgumentEngine RANKING mode ───
+        # _generate_variants emits 3-4 candidates with statically-assigned
+        # confidence scores (0.5-0.6). RANKING mode (~100ms) reorders them
+        # against THIS buyer's bilateral edge profile so the strongest
+        # candidate sits at index 0 — where downstream consumers (DSP
+        # adapter, platform_calibration) read first.
+        # We use ranked_indices for ordering only; original confidence
+        # values stay attached to their variants (we don't fabricate
+        # confidence from rank position). Soft-fail: variants pass through
+        # unchanged when the engine is unavailable or returns junk.
+        if (
+            getattr(request, "target_archetype", None)
+            and getattr(request, "edge_dimensions", None)
+            and len(variants) > 1
+        ):
+            try:
+                from adam.intelligence.argument_ranking import (
+                    rank_variants_via_claude,
+                )
+                barrier = (
+                    getattr(request, "diagnosed_barrier", None)
+                    or "trust_deficit"
+                )
+                variants = await rank_variants_via_claude(
+                    variants=variants,
+                    text_extractor=lambda v: v.text,
+                    barrier=barrier,
+                    archetype_id=request.target_archetype,
+                    bilateral_edge=request.edge_dimensions,
+                )
+            except Exception as exc:
+                # Variant generation must never break on a ranker error.
+                logger.debug("Variant RANKING skipped: %s", exc)
+
         # Generate audio if requested
         audio = None
         if request.include_audio:
