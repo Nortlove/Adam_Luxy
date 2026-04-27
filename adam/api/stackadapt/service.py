@@ -39,10 +39,38 @@ from adam.constants import (
     MECHANISMS,
     resolve_archetype,
 )
+from adam.core.learning.effect_size_correction import (
+    correction_metadata_for_response,
+)
 
 logger = logging.getLogger(__name__)
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
+
+
+def _build_correction_block(
+    primary: Optional[str],
+    secondary: Optional[str],
+) -> Dict[str, Any]:
+    """Build the publication_bias_correction block for the response.
+
+    Returns provenance metadata for the primary mechanism (and secondary
+    when present) — published_g, corrected_d, correction_method,
+    citations, and the pending_review flag. Consumers cite this block
+    so lift claims aren't read in isolation from their correction
+    provenance.
+
+    Returns an empty dict when no primary mechanism is set (e.g., very
+    low cascade level with no mechanism resolved). The empty-block case
+    is honest: the response simply lacks correction provenance for that
+    request, which is correct when no mechanism was selected.
+    """
+    block: Dict[str, Any] = {}
+    if primary:
+        block["primary"] = correction_metadata_for_response(primary)
+    if secondary and secondary != primary:
+        block["secondary"] = correction_metadata_for_response(secondary)
+    return block
 
 
 class CreativeIntelligenceService:
@@ -379,6 +407,17 @@ class CreativeIntelligenceService:
                 "evidence_source": ci.evidence_source,
                 "sample_size": ci.sample_size,
             },
+            # Publication-bias-correction provenance for the primary and
+            # secondary mechanisms. Per Doc 3 §I.8: every mechanism MUST
+            # carry the corrected-effect annotation alongside any lift
+            # surface. Partner-facing consumers (Tier A reports, regulatory
+            # disclosure, CMO/CFO surfaces) cite this block to interpret
+            # lift claims with full provenance — published_g, corrected_d,
+            # correction_method, citations, pending_review flag.
+            "publication_bias_correction": _build_correction_block(
+                primary=ci.primary_mechanism,
+                secondary=ci.secondary_mechanism,
+            ),
             "mechanism_chain": [
                 m for m, _ in sorted(ci.mechanism_scores.items(), key=lambda x: x[1], reverse=True)
             ][:5] if ci.mechanism_scores else [ci.primary_mechanism, ci.secondary_mechanism],

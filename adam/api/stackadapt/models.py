@@ -423,6 +423,19 @@ class CreativeIntelligenceResponse(BaseModel):
     ndf_profile: NDFProfile
     copy_guidance: CopyGuidance
     expected_lift: ExpectedLift
+    publication_bias_correction: Dict[str, Any] = Field(
+        default_factory=dict,
+        description=(
+            "Per-mechanism publication-bias correction provenance for the "
+            "primary (and secondary, if distinct) mechanisms. Carries "
+            "published_g, corrected_d, correction_method, citations, and "
+            "pending_review flag. Doc 3 §I.8 mandate: every mechanism MUST "
+            "carry corrected-effect annotation alongside lift claims so "
+            "consumers (Tier A reports, regulatory disclosure, CMO/CFO "
+            "surfaces) can interpret claims with full provenance. Empty "
+            "dict when no mechanism is resolved (very low cascade level)."
+        ),
+    )
     mechanism_chain: List[str] = []
     mechanism_scores: Optional[Dict[str, float]] = Field(
         default=None,

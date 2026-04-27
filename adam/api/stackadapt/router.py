@@ -145,6 +145,7 @@ async def creative_intelligence(request: CreativeIntelligenceRequest):
         ndf_profile=NDFProfile(**result["ndf_profile"]),
         copy_guidance=CopyGuidance(**result["copy_guidance"]),
         expected_lift=ExpectedLift(**result["expected_lift"]),
+        publication_bias_correction=result.get("publication_bias_correction", {}),
         mechanism_chain=result.get("mechanism_chain", []),
         mechanism_scores=result.get("mechanism_scores"),
         reasoning_trace=result.get("reasoning_trace", []),
