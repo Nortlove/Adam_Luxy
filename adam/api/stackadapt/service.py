@@ -767,6 +767,36 @@ class CreativeIntelligenceService:
         cache = get_decision_cache()
         cache.persist(ctx)
 
+        # ─── G5: RecommendationClass upsert ───
+        # Every cascade decision is an instance of a RecommendationClass per
+        # the (advertiser, archetype, mechanism, context_posture, horizon)
+        # tuple (project memory: project_weakness_4_recommendation_class_
+        # primitive). Upsert the class node so future adjudication has a
+        # durable target. Fire-and-forget — never blocks the bid path. The
+        # plant-model projection + ProjectedImpactClaim recording is
+        # follow-on work; this commit closes the dark-code surface for
+        # the 12-module recommendation_class package by INVOKING it on
+        # every decision.
+        try:
+            from adam.intelligence.recommendation_class import (
+                RecommendationClassIdentity,
+                get_recommendation_class_graph,
+            )
+            posture_band = (
+                ci.context_intelligence.get("attentional_posture_band", "neutral")
+                if ci.context_intelligence else "neutral"
+            )
+            identity = RecommendationClassIdentity(
+                advertiser_id=asin or buyer_id or "unknown",
+                archetype_id=archetype,
+                mechanism=ci.primary_mechanism or "unknown",
+                context_posture_band=posture_band,
+                horizon_band="30d",  # Default for LUXY pilot; configurable
+            )
+            get_recommendation_class_graph().upsert_class_sync(identity)
+        except Exception as exc:
+            logger.debug("RecommendationClass upsert skipped: %s", exc)
+
     # =========================================================================
     # Helpers — thin adapters, no business logic
     # =========================================================================
