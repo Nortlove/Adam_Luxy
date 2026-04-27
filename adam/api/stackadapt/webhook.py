@@ -322,6 +322,23 @@ async def _lookup_decision_context_neo4j(decision_id: str):
                 scaffold_level=meta.get("scaffold_level", 0),
                 conversion_stage=meta.get("conversion_stage", ""),
                 created_at=meta.get("decision_timestamp", time.time()),
+                # Typed grounding evidence — recovered from durable
+                # storage so late-arriving outcomes (cache evicted)
+                # carry the same gating semantics as in-memory cache
+                # hits. Without these, recovered outcomes fell back to
+                # the legacy "all-true grounded" default and posteriors
+                # would update for L1/L2-only decisions whose outcomes
+                # arrived after cache eviction.
+                decision_mode=meta.get("decision_mode", "grounded"),
+                grounding_evidence=meta.get(
+                    "grounding_evidence",
+                    {
+                        "bilateral_edge_evidence_present": True,
+                        "atom_run_real": True,
+                        "theoretical_link_traversed": True,
+                        "failure_reasons": [],
+                    },
+                ),
             )
     except Exception as e:
         logger.debug("Neo4j decision context lookup failed: %s", e)
