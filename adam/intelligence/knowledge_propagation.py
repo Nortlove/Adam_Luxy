@@ -312,6 +312,7 @@ class KnowledgePropagationNetwork:
         every connected node.
         """
         self._total_observations_processed += 1
+        maybe_persist_kpn(self)  # rate-limited Redis write
         trace = {
             "observation_id": initial_signal.observation_id,
             "source": initial_signal.source_node,
@@ -769,6 +770,190 @@ class KnowledgePropagationNetwork:
 
 
 # ════════════════════════════════════════════════════════
+# Persistence — survive backend restarts
+# ════════════════════════════════════════════════════════
+#
+# The network's TOPOLOGY (nodes + edges + transform_fn callables) is
+# rebuilt fresh on every init via _build_default_network. The
+# PERSISTENT state is the per-node knowledge_state dicts, per-edge
+# accumulated signal buffers, and the global counters.
+#
+# We do NOT persist transform_fn callables (not JSON-serializable, and
+# they're code, not state). On load we rebuild topology fresh, then
+# overlay the persistent state on top.
+
+import json as _kpn_json
+import os as _kpn_os
+
+_KPN_REDIS_KEY = "adam:kpn:state:v1"
+_KPN_PERSIST_EVERY_N = int(
+    _kpn_os.environ.get("KPN_PERSIST_EVERY_N", "20")
+)
+
+
+def _kpn_to_state_dict(network: "KnowledgePropagationNetwork") -> Dict[str, Any]:
+    """Serialize KPN to JSON-able dict.
+
+    Captures: per-node knowledge_state + received_signals + last_signal_time;
+    per-edge _buffer (accumulated signals); global counters.
+
+    Does NOT capture: nodes/edges topology (rebuilt on init from
+    _build_default_network), transform_fn callables (code, not state),
+    SubsystemNode.process_fn callables (also code).
+    """
+    return {
+        "schema_version": 1,
+        "node_state": {
+            name: {
+                "knowledge_state": dict(node.knowledge_state),
+                "received_signals": node.received_signals,
+                "last_signal_time": node.last_signal_time,
+            }
+            for name, node in network.nodes.items()
+        },
+        "edge_buffers": {
+            source: [
+                {
+                    "target": edge.target,
+                    "buffer": [
+                        # KnowledgeSignal serialization — minimal fields
+                        # needed to fire the signal on resumption
+                        {
+                            "signal_type": getattr(s, "signal_type", "").value
+                            if hasattr(getattr(s, "signal_type", ""), "value")
+                            else str(getattr(s, "signal_type", "")),
+                            "source_node": getattr(s, "source_node", ""),
+                            "magnitude": getattr(s, "magnitude", 0.0),
+                            "context": dict(getattr(s, "context", {})),
+                            "timestamp": getattr(s, "timestamp", 0.0),
+                        }
+                        for s in edge._buffer
+                    ],
+                }
+                for edge in edges
+            ]
+            for source, edges in network.edges.items()
+        },
+        "total_signals_propagated": network._total_signals_propagated,
+        "total_observations_processed": network._total_observations_processed,
+        "cascade_depth_history": list(network._cascade_depth_history),
+    }
+
+
+def _kpn_load_state_dict(
+    network: "KnowledgePropagationNetwork",
+    state: Dict[str, Any],
+) -> None:
+    """Restore persistent state on top of fresh-rebuilt topology.
+
+    The network's __init__ already called _build_default_network, so
+    nodes + edges + transform_fns + process_fns are in place. This
+    overlays per-node knowledge_state, received_signals, last_signal_time,
+    per-edge _buffer, and global counters.
+
+    Schema version mismatch is honest: skip load + log warning, network
+    starts fresh with topology only.
+    """
+    if state.get("schema_version") != 1:
+        logger.warning(
+            "KPN state schema mismatch (got %s, expected 1); skipping load",
+            state.get("schema_version"),
+        )
+        return
+
+    for name, node_state in (state.get("node_state") or {}).items():
+        node = network.nodes.get(name)
+        if node is None:
+            continue  # Topology may have changed; node no longer exists
+        node.knowledge_state.update(node_state.get("knowledge_state") or {})
+        node.received_signals = int(node_state.get("received_signals", 0))
+        node.last_signal_time = float(node_state.get("last_signal_time", 0.0))
+
+    for source, edge_states in (state.get("edge_buffers") or {}).items():
+        edges = network.edges.get(source, [])
+        # Match restored buffer entries to live edges by target
+        for entry in edge_states:
+            target = entry.get("target")
+            for edge in edges:
+                if edge.target == target:
+                    # Reconstruct KnowledgeSignal objects in buffer.
+                    # Lazy import to avoid forward-ref issues.
+                    for raw in entry.get("buffer") or []:
+                        try:
+                            sig = KnowledgeSignal(
+                                signal_type=SignalType(raw.get("signal_type", "outcome"))
+                                if raw.get("signal_type") in {st.value for st in SignalType}
+                                else SignalType.OUTCOME,
+                                source_node=raw.get("source_node", ""),
+                                magnitude=float(raw.get("magnitude", 0.0)),
+                                context=dict(raw.get("context") or {}),
+                                timestamp=float(raw.get("timestamp", 0.0)),
+                            )
+                            edge._buffer.append(sig)
+                        except Exception:
+                            # Schema-evolution tolerance: skip malformed
+                            # entries rather than raising
+                            continue
+                    break
+
+    network._total_signals_propagated = int(
+        state.get("total_signals_propagated", 0)
+    )
+    network._total_observations_processed = int(
+        state.get("total_observations_processed", 0)
+    )
+    network._cascade_depth_history = list(
+        state.get("cascade_depth_history") or []
+    )
+
+
+def _save_kpn_to_redis(network: "KnowledgePropagationNetwork") -> bool:
+    try:
+        from adam.infrastructure.redis_client import get_redis
+        redis = get_redis()
+        if redis is None:
+            return False
+        state = _kpn_to_state_dict(network)
+        redis.set(_KPN_REDIS_KEY, _kpn_json.dumps(state, default=str))
+        return True
+    except Exception as exc:
+        logger.debug("KPN save_to_redis failed: %s", exc)
+        return False
+
+
+def _load_kpn_from_redis(network: "KnowledgePropagationNetwork") -> bool:
+    try:
+        from adam.infrastructure.redis_client import get_redis
+        redis = get_redis()
+        if redis is None:
+            return False
+        raw = redis.get(_KPN_REDIS_KEY)
+        if not raw:
+            return False
+        if isinstance(raw, bytes):
+            raw = raw.decode("utf-8")
+        state = _kpn_json.loads(raw)
+        _kpn_load_state_dict(network, state)
+        logger.info(
+            "KPN state restored from Redis: %d total observations, "
+            "%d total signals propagated",
+            network._total_observations_processed,
+            network._total_signals_propagated,
+        )
+        return True
+    except Exception as exc:
+        logger.debug("KPN load_from_redis failed: %s", exc)
+        return False
+
+
+def maybe_persist_kpn(network: "KnowledgePropagationNetwork") -> None:
+    if network._total_observations_processed <= 0:
+        return
+    if network._total_observations_processed % _KPN_PERSIST_EVERY_N == 0:
+        _save_kpn_to_redis(network)
+
+
+# ════════════════════════════════════════════════════════
 # Singleton
 # ════════════════════════════════════════════════════════
 
@@ -776,10 +961,16 @@ _network: Optional[KnowledgePropagationNetwork] = None
 
 
 def get_knowledge_network() -> KnowledgePropagationNetwork:
-    """Get or create the singleton propagation network."""
+    """Get or create the singleton propagation network.
+
+    On first call, attempts to restore prior state from Redis. If
+    Redis is unavailable or the key is empty, the network starts
+    fresh with topology only (same as before persistence shipped).
+    """
     global _network
     if _network is None:
         _network = KnowledgePropagationNetwork()
+        _load_kpn_from_redis(_network)
         logger.info(
             "Knowledge propagation network initialized: %d nodes, %d edges",
             len(_network.nodes),
