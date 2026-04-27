@@ -246,6 +246,7 @@ class TheoryLearner:
         stats["total_value"] += outcome_value
 
         self._total_outcomes += 1
+        maybe_persist_theory_learner(self)  # rate-limited Redis write
 
         # Step 4: Flag weakening links
         flagged = []
@@ -366,6 +367,7 @@ class TheoryLearner:
         stats["total_value"] += outcome_value
 
         self._total_outcomes += 1
+        maybe_persist_theory_learner(self)  # rate-limited Redis write
 
         # Step 4: Flag weakening links
         flagged = []
@@ -627,6 +629,180 @@ class TheoryLearner:
 
 
 # =============================================================================
+# PERSISTENCE — survive backend restarts
+# =============================================================================
+#
+# Without persistence, every backend restart wiped accumulated theory:
+# Bayesian posteriors on every theoretical link, chain-outcome history,
+# pattern-stat aggregates, total observation count. Restarts happen
+# during deployments, crashes, scheduled cycles — the platform was
+# silently losing every accumulated belief on each cycle. The "system
+# gets stronger with every outcome" claim was true within a single
+# process lifetime; meaningless across restart boundaries.
+#
+# This block adds Redis-backed persistence:
+#   - to_state_dict / from_state_dict: full state ↔ JSON
+#   - save_to_redis: write current state under a known key
+#   - load_from_redis: read state on init
+#   - get_theory_learner now loads on first call
+#
+# Save cadence: every _PERSIST_EVERY_N_UPDATES outcome (default 10).
+# Higher cadence = more Redis writes; lower = more risk of loss on
+# unexpected shutdown. 10 is a defensible default for the pilot —
+# adjusts via env if production traffic warrants.
+
+import json
+import os
+
+_REDIS_KEY = "adam:theory_learner:state:v1"
+_PERSIST_EVERY_N_UPDATES = int(
+    os.environ.get("THEORY_LEARNER_PERSIST_EVERY_N", "10")
+)
+
+
+def _theory_learner_to_state_dict(learner: TheoryLearner) -> Dict[str, Any]:
+    """Serialize a TheoryLearner to a JSON-able dict.
+
+    Captures every piece of state that a fresh learner cannot
+    reconstruct: link posteriors (Beta α/β, observation counts,
+    last-updated timestamps), chain history, pattern-stat aggregates,
+    total outcomes counter.
+    """
+    return {
+        "schema_version": 1,
+        "link_posteriors": {
+            key: {
+                "alpha": p.alpha,
+                "beta": p.beta,
+                "observation_count": p.observation_count,
+                "last_updated": p.last_updated,
+            }
+            for key, p in learner._link_posteriors.items()
+        },
+        "chain_history": [
+            {
+                "chain_id": r.chain_id,
+                "decision_id": r.decision_id,
+                "mechanism": r.mechanism,
+                "theoretical_link_keys": list(r.theoretical_link_keys),
+                "success": r.success,
+                "outcome_value": r.outcome_value,
+                "timestamp": r.timestamp,
+            }
+            for r in learner._chain_history
+        ],
+        "chain_pattern_stats": {
+            key: dict(stats)
+            for key, stats in learner._chain_pattern_stats.items()
+        },
+        "total_outcomes": learner._total_outcomes,
+        "max_history": learner._max_history,
+    }
+
+
+def _theory_learner_load_state_dict(
+    learner: TheoryLearner, state: Dict[str, Any],
+) -> None:
+    """Restore a TheoryLearner from a state dict produced by
+    _theory_learner_to_state_dict.
+
+    Tolerant of missing fields — newly-added state fields default to
+    empty/zero rather than raising. Schema version is checked; mismatched
+    versions log a warning and skip the load (the in-memory learner
+    starts fresh, no corruption).
+    """
+    if state.get("schema_version") != 1:
+        logger.warning(
+            "TheoryLearner state schema mismatch (got %s, expected 1); "
+            "skipping load",
+            state.get("schema_version"),
+        )
+        return
+
+    for key, raw in (state.get("link_posteriors") or {}).items():
+        learner._link_posteriors[key] = LinkPosterior(
+            alpha=float(raw.get("alpha", 2.0)),
+            beta=float(raw.get("beta", 2.0)),
+            observation_count=int(raw.get("observation_count", 0)),
+            last_updated=float(raw.get("last_updated", 0.0)),
+        )
+
+    for raw in (state.get("chain_history") or []):
+        learner._chain_history.append(
+            ChainOutcomeRecord(
+                chain_id=raw.get("chain_id", ""),
+                decision_id=raw.get("decision_id", ""),
+                mechanism=raw.get("mechanism", ""),
+                theoretical_link_keys=list(raw.get("theoretical_link_keys") or []),
+                success=bool(raw.get("success", False)),
+                outcome_value=float(raw.get("outcome_value", 0.0)),
+                timestamp=float(raw.get("timestamp", 0.0)),
+            )
+        )
+
+    for key, stats in (state.get("chain_pattern_stats") or {}).items():
+        learner._chain_pattern_stats[key] = {
+            "successes": float(stats.get("successes", 0)),
+            "failures": float(stats.get("failures", 0)),
+            "total_value": float(stats.get("total_value", 0.0)),
+        }
+
+    learner._total_outcomes = int(state.get("total_outcomes", 0))
+
+
+def _save_theory_learner_to_redis(learner: TheoryLearner) -> bool:
+    """Write the learner's state to Redis under _REDIS_KEY.
+
+    Returns True on success. Soft-fails: Redis errors log debug and
+    return False. The in-memory learner continues operating; next save
+    attempt will retry.
+    """
+    try:
+        from adam.infrastructure.redis_client import get_redis
+        redis = get_redis()
+        if redis is None:
+            return False
+        state = _theory_learner_to_state_dict(learner)
+        redis.set(_REDIS_KEY, json.dumps(state, default=str))
+        return True
+    except Exception as exc:
+        logger.debug("TheoryLearner save_to_redis failed: %s", exc)
+        return False
+
+
+def _load_theory_learner_from_redis(learner: TheoryLearner) -> bool:
+    """Restore the learner's state from Redis on init.
+
+    Returns True if state was loaded (Redis available and key present).
+    Soft-fails on any error. The in-memory learner remains in its
+    fresh-init state if load fails.
+    """
+    try:
+        from adam.infrastructure.redis_client import get_redis
+        redis = get_redis()
+        if redis is None:
+            return False
+        raw = redis.get(_REDIS_KEY)
+        if not raw:
+            return False
+        if isinstance(raw, bytes):
+            raw = raw.decode("utf-8")
+        state = json.loads(raw)
+        _theory_learner_load_state_dict(learner, state)
+        logger.info(
+            "TheoryLearner state restored from Redis: %d posteriors, "
+            "%d chain records, %d total outcomes",
+            len(learner._link_posteriors),
+            len(learner._chain_history),
+            learner._total_outcomes,
+        )
+        return True
+    except Exception as exc:
+        logger.debug("TheoryLearner load_from_redis failed: %s", exc)
+        return False
+
+
+# =============================================================================
 # SINGLETON
 # =============================================================================
 
@@ -634,8 +810,28 @@ _theory_learner: Optional[TheoryLearner] = None
 
 
 def get_theory_learner() -> TheoryLearner:
-    """Get or create the singleton theory learner."""
+    """Get or create the singleton theory learner.
+
+    On first call, attempts to restore prior state from Redis under
+    _REDIS_KEY. If Redis is unavailable or the key is empty, the
+    learner starts fresh — same behavior as before persistence
+    shipped.
+    """
     global _theory_learner
     if _theory_learner is None:
         _theory_learner = TheoryLearner()
+        _load_theory_learner_from_redis(_theory_learner)
     return _theory_learner
+
+
+def maybe_persist_theory_learner(learner: TheoryLearner) -> None:
+    """Save the learner's state to Redis if it's time per the
+    configured cadence.
+
+    Called from the update methods after each Bayesian update.
+    Save cadence is every _PERSIST_EVERY_N_UPDATES outcomes.
+    """
+    if learner._total_outcomes <= 0:
+        return
+    if learner._total_outcomes % _PERSIST_EVERY_N_UPDATES == 0:
+        _save_theory_learner_to_redis(learner)
