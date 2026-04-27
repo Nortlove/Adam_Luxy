@@ -1526,6 +1526,40 @@ def level3_bilateral_edges(
         "decision_entropy": decision_entropy,
     }
 
+    # ─── F3 wire: bilateral metaphor_alignment (21st edge dimension) ───
+    # Sync Redis fetches for buyer + brand metaphor bundles (populated
+    # offline by F1/F2 runners). When both bundles hit the cache,
+    # compute_metaphor_alignment yields cosine × min-confidence and
+    # the result joins edge_dimensions. When either misses or has
+    # zero confidence, the alignment stays absent — honest 'no signal
+    # yet' rather than a fabricated value.
+    # Soft-fail at every step: cascade survives missing storage,
+    # missing libs, schema drift.
+    try:
+        from adam.intelligence.metaphor_storage import (
+            get_brand_metaphor_bundle, get_buyer_metaphor_bundle,
+        )
+        from adam.intelligence.metaphor_alignment import (
+            compute_metaphor_alignment,
+        )
+        buyer_bundle = (
+            get_buyer_metaphor_bundle(buyer_id) if buyer_id else None
+        )
+        brand_bundle = (
+            get_brand_metaphor_bundle(asin) if asin else None
+        )
+        if buyer_bundle is not None and brand_bundle is not None:
+            alignment_result = compute_metaphor_alignment(
+                buyer_bundle, brand_bundle,
+            )
+            if alignment_result.confidence > 0:
+                base.edge_dimensions["metaphor_alignment"] = (
+                    alignment_result.metaphor_alignment
+                )
+    except Exception as exc:
+        # Cascade must NEVER break on metaphor wiring failure.
+        logger.debug("F3 metaphor alignment wire skipped: %s", exc)
+
     # Record page-shift consumption for downstream inspection. The B2
     # Stage 1 stash was advisory-only; now that the shift is threaded
     # through scoring, we mark consumed_by_scoring=True so telemetry,
