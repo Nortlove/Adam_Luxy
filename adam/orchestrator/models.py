@@ -16,6 +16,8 @@ from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 from typing import TYPE_CHECKING
 
+from adam.atoms.models.chain_attestation import ChainAttestation
+
 if TYPE_CHECKING:
     pass  # Forward references handled by Pydantic
 
@@ -158,6 +160,14 @@ class AtomDAGResult(BaseModel):
     # Aggregated outputs
     final_psychological_profile: Dict[str, Any] = Field(default_factory=dict)
     final_mechanism_activations: Dict[str, float] = Field(default_factory=dict)
+
+    # ChainAttestations emitted by the redone B3-LUXY atoms during this DAG
+    # run. Carried forward so the orchestrator can modulate the cascade's
+    # mechanism_scores between STEP 4 (DAG) and STEP 5 (mechanism selection)
+    # without re-extracting from raw atom_outputs. Empty list when no atom
+    # in the DAG emitted a chain_attestation (the 21 unchanged wrappers).
+    # See docs/B3_LUXY_PHASE_PLAN.md §5 + foundation §4.3.
+    chain_attestations: List[ChainAttestation] = Field(default_factory=list)
 
     # Epistemic status. Default is GROUNDED for backwards compatibility with
     # call sites that have not yet been updated to populate the field, but

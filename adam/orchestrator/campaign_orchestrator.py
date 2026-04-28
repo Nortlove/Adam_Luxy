@@ -345,7 +345,51 @@ class CampaignOrchestrator:
         )
         if atom_result:
             components_used.append("AtomDAG")
-        
+
+        # =====================================================================
+        # STEP 4b: DAG → cascade chain-attestation modulation (B3-LUXY Phase 3)
+        #
+        # The cascade ran upstream with chain_attestations=None (no DAG yet).
+        # Now that the DAG has executed, modulate the cascade's
+        # mechanism_scores by the chain_attestations the atoms emitted.
+        # This is what activates the campaign-impact path for the redone
+        # 9 atoms — without it, attestations are computed but never reach
+        # the live decision. See docs/B3_LUXY_PHASE_PLAN.md §5.
+        #
+        # Foundation §4.3: chain attestations are consumed AS chains, not
+        # flattened scalars. The per-mechanism adjustment carries chain
+        # provenance; OutcomeHandler routes per-link feedback at outcome
+        # time using those link_ids.
+        #
+        # A14 PILOT_PENDING flags propagate via the underlying helper
+        # (CHAIN_ATTESTATION_LUXY_FUSION_FORM_PILOT_PENDING and the per-atom
+        # constants on each ChainAttestation).
+        # =====================================================================
+        cascade_modulated_scores: Optional[Dict[str, float]] = None
+        if (
+            bilateral_result
+            and bilateral_result.get("mechanism_scores")
+            and atom_result
+            and atom_result.chain_attestations
+        ):
+            try:
+                from adam.api.stackadapt.bilateral_cascade import (
+                    apply_chain_attestation_list_to_mechanism_scores,
+                )
+                cascade_modulated_scores = apply_chain_attestation_list_to_mechanism_scores(
+                    bilateral_result["mechanism_scores"],
+                    atom_result.chain_attestations,
+                )
+                logger.info(
+                    "Chain-attestation modulation applied: %d attestations → mechanism_scores",
+                    len(atom_result.chain_attestations),
+                )
+            except Exception as e:
+                # Non-fatal: STEP 5 falls back to unmodulated scoring.
+                # The audit trail shows the modulation was attempted.
+                logger.warning("Chain-attestation modulation failed: %s", e)
+                cascade_modulated_scores = None
+
         # =====================================================================
         # STEP 5: Select Mechanisms via MetaLearner
         # =====================================================================
@@ -356,6 +400,7 @@ class CampaignOrchestrator:
             trace=trace,
             unified_intel=unified_intel,
             barrier_intelligence=barrier_intelligence,
+            cascade_modulated_scores=cascade_modulated_scores,
         )
         components_used.append("MetaLearner")
         
@@ -664,6 +709,13 @@ class CampaignOrchestrator:
                 "secondary_mechanism": result.secondary_mechanism,
                 "confidence": result.confidence,
                 "edge_count": result.edge_count,
+                # Surface the cascade's full per-mechanism scoring so STEP 4+
+                # can consume it. Phase 3 wiring (B3-LUXY): chain attestations
+                # from the AtomDAG modulate these scores between the cascade
+                # and MetaLearner. Without this surfacing the L3 evidence is
+                # discarded before mechanism selection — see
+                # docs/B3_LUXY_PHASE_PLAN.md §5.
+                "mechanism_scores": dict(result.mechanism_scores),
             }
 
             # Extract buyer uncertainty for atoms
@@ -994,7 +1046,7 @@ class CampaignOrchestrator:
         atom_result = AtomDAGResult(
             execution_order=list(dag_result.atom_results.keys()) if dag_result.atom_results else [],
         )
-        
+
         # Extract atom results
         if dag_result.atom_outputs:
             for atom_id, output in dag_result.atom_outputs.items():
@@ -1006,6 +1058,19 @@ class CampaignOrchestrator:
                     confidence=getattr(output, 'confidence', 0.5),
                     reasoning=getattr(output, 'reasoning', ''),
                 )
+
+        # B3-LUXY Phase 3: extract ChainAttestations from atom_outputs and
+        # carry them on AtomDAGResult so STEP 5's caller can modulate the
+        # cascade's mechanism_scores via the canonical multiplicative
+        # fusion. Atoms without chain_attestation contribute nothing
+        # (unchanged wrappers); the 9 redone atoms emit one each.
+        if dag_result.atom_outputs:
+            from adam.api.stackadapt.bilateral_cascade import (
+                extract_chain_attestations_from_atom_outputs,
+            )
+            atom_result.chain_attestations = extract_chain_attestations_from_atom_outputs(
+                dag_result.atom_outputs,
+            )
         
         # Extract final profile from mechanism activation atom
         mech_output = dag_result.atom_outputs.get("atom_mechanism_activation") if dag_result.atom_outputs else None
@@ -1112,11 +1177,20 @@ class CampaignOrchestrator:
         trace: ReasoningTrace,
         unified_intel: dict = None,
         barrier_intelligence: dict = None,
+        cascade_modulated_scores: Optional[Dict[str, float]] = None,
     ) -> MechanismSelectionResult:
-        """Select optimal mechanisms using MetaLearner, with three-layer fusion."""
-        
+        """Select optimal mechanisms using MetaLearner, with three-layer fusion.
+
+        cascade_modulated_scores: when present, the cascade's mechanism_scores
+        already modulated by the AtomDAG's chain-attestations (B3-LUXY
+        Phase 3). Blended into the working scores ahead of Thompson
+        sampling so the chain-attestation evidence flows into the live
+        decision. None when no cascade signal or no attestations were
+        produced.
+        """
+
         result = MechanismSelectionResult()
-        
+
         # Get mechanism scores from graph intelligence
         mechanism_scores = {}
         for mech in mechanism_intelligence.mechanisms:
@@ -1137,7 +1211,38 @@ class CampaignOrchestrator:
                 f"Applied unified three-layer fusion ({len(unified_intel['mechanisms'])} mechanisms, "
                 f"layers: {unified_intel.get('layers_used', [])})"
             )
-        
+
+        # Blend cascade chain-attestation-modulated scores (B3-LUXY Phase 3)
+        #
+        # cascade_modulated_scores carry: (a) the cascade's full L1→L3
+        # mechanism scoring for this archetype/category/asin, and (b) the
+        # multiplicative chain-attestation modulation from the just-run
+        # AtomDAG. This is the most decision-specific signal available —
+        # graph priors are population-level; this is THIS decision.
+        #
+        # A14: CASCADE_MODULATED_BLEND_WEIGHT_PILOT_PENDING — blend weight
+        # 0.6 mirrors the unified_three_layer_fusion pattern (which is
+        # also the primary inferential signal in its own path). Pilot
+        # data may indicate the cascade's chain-modulated scores should
+        # OVERRIDE rather than blend with archetype-effectiveness priors,
+        # per Foundation §4.1's "L3 fully overrides L1/L2 when edges
+        # available" commitment. Retire when the LUXY pilot accumulates
+        # enough chain-attested decisions to compare blend-vs-override.
+        if cascade_modulated_scores:
+            for mech_key, cascade_score in cascade_modulated_scores.items():
+                if mech_key in mechanism_scores:
+                    mechanism_scores[mech_key] = (
+                        mechanism_scores[mech_key] * 0.4 + cascade_score * 0.6
+                    )
+                else:
+                    mechanism_scores[mech_key] = cascade_score
+            if not result.priors_source or result.priors_source == "cold_start":
+                result.priors_source = "cascade_chain_attested"
+            logger.info(
+                "Applied cascade chain-attestation modulation (%d mechanisms)",
+                len(cascade_modulated_scores),
+            )
+
         # If we have review intelligence, blend in its predictions
         if customer_intelligence and customer_intelligence.mechanism_predictions:
             result.review_intelligence_applied = True

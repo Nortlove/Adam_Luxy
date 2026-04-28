@@ -1029,6 +1029,27 @@ def apply_chain_attestations_to_mechanism_scores(
     return _apply_chain_attestation_adjustments(mechanism_scores, chain_attestations)
 
 
+def apply_chain_attestation_list_to_mechanism_scores(
+    mechanism_scores: Dict[str, float],
+    chain_attestations: Optional[List[ChainAttestation]],
+) -> Dict[str, float]:
+    """Apply pre-extracted ChainAttestations to mechanism_scores.
+
+    Sibling of `apply_chain_attestations_to_mechanism_scores` for consumers
+    that have already extracted the attestations structurally (e.g., the
+    orchestrator stores `List[ChainAttestation]` on `AtomDAGResult` and
+    calls into the modulation directly without re-extracting from raw
+    atom_outputs).
+
+    Empty / None inputs pass through. Same multiplicative fusion form as
+    the atom_outputs-keyed variant (B3-LUXY Phase 3 §5; A14 PILOT_PENDING
+    on the blend form).
+    """
+    if not mechanism_scores:
+        return mechanism_scores
+    return _apply_chain_attestation_adjustments(mechanism_scores, chain_attestations)
+
+
 def _apply_chain_attestation_adjustments(
     mechanism_scores: Dict[str, float],
     chain_attestations: Optional[List[ChainAttestation]],
