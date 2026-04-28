@@ -86,6 +86,10 @@ from adam.atoms.models.chain_attestation import (
     RelationType,
     TypedEvidence,
 )
+from adam.intelligence.causal_conformal import (
+    ConformalLiftInterval,
+    ConformalLiftWrap,
+)
 
 
 # =============================================================================
@@ -589,10 +593,72 @@ def run_recovery_check(
 
     A "successful recovery" means the parametric 95% CI on observed
     relative lift contains the planted lift. At sufficient N, this
-    should be true at ~95% empirical coverage.
+    should be true at ~95% empirical coverage. Note the parametric CI
+    delta-method approximation slightly under-covers at moderate N — see
+    `build_conformal_lift_wrap` and `compute_conformal_lift_interval`
+    for the conformal-CI alternative with valid coverage at any N.
     """
     sim = SyntheticABSimulator(planted_lift=planted_lift, seed=seed)
     decisions = sim.generate_decisions(n_decisions)
     outcomes = sim.generate_outcomes(decisions)
     result = sim.compute_observed_lift(decisions, outcomes)
     return result, result.planted_within_ci
+
+
+# =============================================================================
+# CONFORMAL CI INTEGRATION
+# =============================================================================
+
+
+def build_conformal_lift_wrap(
+    planted_lift: float,
+    n_per_subsample: int,
+    n_subsamples: int,
+    base_seed: int = 0,
+    min_calibration_size: int = 20,
+) -> ConformalLiftWrap:
+    """Bootstrap a conformal calibration set from the synthetic simulator.
+
+    Each subsample runs the simulator with `n_per_subsample` decisions
+    and a unique seed (base_seed + i for i in range(n_subsamples)),
+    computes the observed relative lift, and records (planted, observed)
+    as a calibration pair.
+
+    Used for:
+      - Pre-pilot: warmup the conformal wrap so live measurements have
+        valid coverage from day 1.
+      - Tests: verify the conformal wrap recovers planted lift at any N
+        with the nominal coverage property.
+
+    The synthetic-sim calibration is exchangeable by construction (same
+    DGP, independent seeds). This is the cleanest test of the conformal
+    wrap's coverage. Production calibration uses real holdout-cell
+    realizations and exchangeability holds only as long as the DGP is
+    stationary — drift detection is a downstream concern.
+    """
+    wrap = ConformalLiftWrap(min_calibration_size=min_calibration_size)
+    for i in range(n_subsamples):
+        sim = SyntheticABSimulator(planted_lift=planted_lift, seed=base_seed + i)
+        decisions = sim.generate_decisions(n_per_subsample)
+        outcomes = sim.generate_outcomes(decisions)
+        result = sim.compute_observed_lift(decisions, outcomes)
+        if math.isfinite(result.relative_lift):
+            wrap.record_realization(
+                predicted_lift=planted_lift,
+                realized_lift=result.relative_lift,
+            )
+    return wrap
+
+
+def compute_conformal_lift_interval(
+    wrap: ConformalLiftWrap,
+    point_estimate: float,
+    alpha: float = 0.05,
+) -> ConformalLiftInterval:
+    """Convenience: emit a conformal interval around a point estimate.
+
+    Wraps `ConformalLiftWrap.interval` with the Phase 0.1 default alpha.
+    Production caller substitutes the M2 CausalForestDML.tau_hat as
+    `point_estimate`; pre-pilot caller substitutes the planted lift.
+    """
+    return wrap.interval(predicted_lift=point_estimate, alpha=alpha)
