@@ -531,3 +531,31 @@ def _classify_verdict(c: AtomContribution) -> Tuple[AtomVerdict, str]:
     if n_met >= 1:
         return AtomVerdict.PARTIAL, rationale
     return AtomVerdict.FAIL, rationale
+
+
+# =============================================================================
+# SINGLETON
+# =============================================================================
+
+_per_atom_contribution_tracker: Optional[PerAtomContributionTracker] = None
+
+
+def get_per_atom_contribution_tracker() -> PerAtomContributionTracker:
+    """Get or create the global PerAtomContributionTracker.
+
+    The tracker is in-memory; survival across process restarts is a Phase 4
+    follow-up (would persist via Redis like TheoryLearner does). For the
+    LUXY pilot, the tracker accumulates within a single deployment lifetime
+    — the post_pilot_decision() snapshot is what matters, and that is
+    snapshotted before deploys.
+    """
+    global _per_atom_contribution_tracker
+    if _per_atom_contribution_tracker is None:
+        _per_atom_contribution_tracker = PerAtomContributionTracker()
+    return _per_atom_contribution_tracker
+
+
+def reset_per_atom_contribution_tracker() -> None:
+    """Reset the global tracker. Test-only — production code never calls."""
+    global _per_atom_contribution_tracker
+    _per_atom_contribution_tracker = None

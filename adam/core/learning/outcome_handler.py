@@ -428,6 +428,47 @@ class OutcomeHandler:
             results["updates"]["theory_learner"] = {"error": str(e)}
 
         # =====================================================================
+        # 7b. PER-ATOM CONTRIBUTION INGESTION (B3-LUXY Phase 3 producer)
+        #
+        # Feeds the §6 contribution-measurement framework with this
+        # decision's chain attestations. Without this producer,
+        # post_pilot_decision() returns "insufficient_data" forever and
+        # the §6 generalization decision tree never fires.
+        #
+        # Reads the same Redis cache as _process_chain_attestations
+        # (adam:atom_outputs:{decision_id}) — single decision-time write
+        # supports both consumers. Non-fatal: producer failure must not
+        # break outcome processing.
+        #
+        # See:
+        #   - docs/B3_LUXY_PHASE_PLAN.md §6
+        #   - adam/intelligence/per_atom_contribution.py (tracker)
+        #   - adam/intelligence/per_atom_contribution_ingestion.py (producer)
+        # =====================================================================
+        try:
+            from adam.intelligence.per_atom_contribution_ingestion import (
+                record_outcome_to_contribution_tracker,
+            )
+            n_records = await record_outcome_to_contribution_tracker(
+                decision_id=decision_id,
+                outcome_type=outcome_type,
+                outcome_value=outcome_value,
+                success=success,
+                metadata=metadata,
+            )
+            results["updates"]["per_atom_contribution"] = {
+                "records_added": n_records,
+            }
+        except Exception as e:
+            # Non-fatal: contribution ingestion is parallel to theory
+            # learning; failure must not block outcome processing.
+            logger.warning(
+                "Per-atom contribution ingestion failed for %s: %s",
+                decision_id, e,
+            )
+            results["updates"]["per_atom_contribution"] = {"error": str(e)}
+
+        # =====================================================================
         # 8. DSP IMPRESSION LEARNING
         #
         # When outcomes arrive from DSP impression enrichment, update:
