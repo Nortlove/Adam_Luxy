@@ -968,6 +968,67 @@ _CHAIN_MODIFIER_MIN = 0.5  # chain alone cannot more than halve the edge score
 _CHAIN_MODIFIER_MAX = 1.5  # chain alone cannot more than 1.5× the edge score
 
 
+def extract_chain_attestations_from_atom_outputs(
+    atom_outputs: Optional[Dict[str, Any]],
+) -> List[ChainAttestation]:
+    """Extract ChainAttestations emitted by atoms, from a DAG output dict.
+
+    Each entry in `atom_outputs` is an `AtomOutput` (from `adam.atoms.models.atom_io`)
+    that may carry an Optional `chain_attestation` field — populated by the 9
+    redone B3-LUXY atoms, None for the unchanged 21 wrappers.
+
+    Returns the non-None chain_attestations in atom_id order. When the input
+    is None or empty, returns an empty list.
+
+    The DAG → L3 plumbing path (B3-LUXY Phase 3 deliverable 1):
+        1. Orchestrator runs cascade → mechanism_scores
+        2. Orchestrator runs DAG → atom_outputs (each AtomOutput possibly
+           carries chain_attestation)
+        3. Orchestrator calls extract_chain_attestations_from_atom_outputs(...)
+        4. Orchestrator calls _apply_chain_attestation_adjustments(
+               mechanism_scores, chain_attestations
+           ) to modulate the cascade's mechanism_scores by atom-derived
+           chain feedback.
+
+    Step (4) uses the helper defined below; this helper performs step (3).
+    """
+    if not atom_outputs:
+        return []
+    attestations: List[ChainAttestation] = []
+    for atom_id, output in atom_outputs.items():
+        if output is None:
+            continue
+        attestation = getattr(output, "chain_attestation", None)
+        if attestation is not None:
+            attestations.append(attestation)
+    return attestations
+
+
+def apply_chain_attestations_to_mechanism_scores(
+    mechanism_scores: Dict[str, float],
+    atom_outputs: Optional[Dict[str, Any]],
+) -> Dict[str, float]:
+    """End-to-end helper: extract chain attestations from atom_outputs and
+    apply them to mechanism_scores via the multiplicative L3 fusion.
+
+    Combines `extract_chain_attestations_from_atom_outputs` and
+    `_apply_chain_attestation_adjustments` into a single call site, which
+    is what the orchestrator (and any other consumer that has both
+    cascade and DAG output) needs.
+
+    Backward compatible: empty / None atom_outputs returns the input
+    scores unmodified. Atoms without chain_attestation contribute
+    nothing.
+
+    See docs/B3_LUXY_PHASE_PLAN.md §5 for the multiplicative fusion form
+    and the A14 calibration-pending bound.
+    """
+    if not mechanism_scores:
+        return mechanism_scores
+    chain_attestations = extract_chain_attestations_from_atom_outputs(atom_outputs)
+    return _apply_chain_attestation_adjustments(mechanism_scores, chain_attestations)
+
+
 def _apply_chain_attestation_adjustments(
     mechanism_scores: Dict[str, float],
     chain_attestations: Optional[List[ChainAttestation]],

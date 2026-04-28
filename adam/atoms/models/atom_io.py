@@ -190,6 +190,17 @@ class AtomOutput(BaseModel):
         default_factory=lambda: datetime.now(timezone.utc)
     )
 
+    def to_dict(self) -> Dict[str, Any]:
+        """JSON-safe dict serialization for Redis caching.
+
+        Preserves all fields including the optional `chain_attestation`
+        (B3-LUXY Phase 0 typed evidence). The orchestrator's atom-output
+        cache (`adam:atom_outputs:{decision_id}`) writes this dict so
+        OutcomeHandler can later route per-link feedback to TheoryLearner
+        (B3-LUXY Phase 3 deliverable 2).
+        """
+        return self.model_dump(mode="json")
+
 
 # =============================================================================
 # ATOM EXECUTION RESULT

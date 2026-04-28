@@ -1572,12 +1572,46 @@ class OutcomeHandler:
           falls back to the original success/value path.
         """
         from adam.core.learning.theory_learner import get_theory_learner
-        
+
         learner = get_theory_learner()
-        
+
+        # =====================================================================
+        # B3-LUXY Phase 3 deliverable 2 — chain-attestation per-link routing
+        #
+        # The 9 redone atoms (autonomy_reactance, persuasion_pharmacology,
+        # mimetic_desire_atom, strategic_awareness, temporal_self,
+        # signal_credibility, regret_anticipation, ambiguity_attitude,
+        # regulatory_focus) emit typed ChainAttestations alongside their
+        # legacy AtomOutput. Each ChainAttestation carries 5 ConstructLinks
+        # whose link_keys match TheoryLearner's LinkPosterior format —
+        # routing them through process_chain_outcome[_signed] gives the
+        # learning loop per-link credit attribution at the canonical-formula
+        # granularity, not just at the mechanism_activation level.
+        #
+        # See docs/B3_LUXY_PHASE_PLAN.md §4.4 for the foundation §4.4
+        # theory-revision vs measurement-error update distinction this
+        # path enables.
+        # =====================================================================
+        chain_attestation_results: List[Dict[str, Any]] = []
+        try:
+            chain_attestation_results = await self._process_chain_attestations(
+                decision_id=decision_id,
+                learner=learner,
+                success=success,
+                outcome_value=outcome_value,
+                signed_reward=signed_reward,
+                processing_depth_weight=processing_depth_weight,
+                metadata=metadata,
+            )
+        except Exception as e:
+            # Non-fatal: chain-attestation routing is additive to the
+            # existing inferential_chains path. If it fails, the existing
+            # path still runs and produces the legacy theory updates.
+            logger.debug(f"Chain-attestation routing failed: {e}")
+
         # Get the inferential chains from metadata
         inferential_chains = metadata.get("inferential_chains", [])
-        
+
         if not inferential_chains:
             # Try to load from Redis cache (chains are cached with atom outputs)
             try:
@@ -1721,9 +1755,134 @@ class OutcomeHandler:
         
         # Add theory learner stats
         result["learner_stats"] = learner.stats
-        
+
+        # B3-LUXY Phase 3 deliverable 2 — surface chain-attestation results
+        if chain_attestation_results:
+            result["chain_attestations_processed"] = len(chain_attestation_results)
+            result["chain_attestation_link_updates"] = sum(
+                car.get("links_updated", 0) for car in chain_attestation_results
+            )
+
         return result
-    
+
+    async def _process_chain_attestations(
+        self,
+        decision_id: str,
+        learner: Any,
+        success: bool,
+        outcome_value: float,
+        signed_reward: Optional[float],
+        processing_depth_weight: float,
+        metadata: Dict[str, Any],
+    ) -> List[Dict[str, Any]]:
+        """B3-LUXY Phase 3 deliverable 2: route per-atom ChainAttestations
+        to TheoryLearner.
+
+        Loads the cached atom_outputs from Redis, extracts each atom's
+        ChainAttestation (when present — only the 9 redone atoms emit one),
+        and processes each via TheoryLearner.process_chain_outcome[_signed].
+
+        Each ChainAttestation's `to_chain_data()` produces the dict shape
+        TheoryLearner expects:
+            {chain_id, theoretical_link_keys, recommended_mechanism}
+        Each link_key matches the LinkPosterior key convention
+        ("{relation}:{source}:{target}"), so per-link Bayesian updates
+        target the right LinkPosterior directly.
+
+        Returns a list of per-attestation update results. Empty list if
+        no cache, no attestations, or all updates failed individually.
+        """
+        from adam.atoms.models.chain_attestation import ChainAttestation
+
+        # Load atom_outputs from Redis cache
+        try:
+            from adam.core.container import get_container
+            container = await get_container()
+            if not getattr(container, "redis_cache", None):
+                return []
+            cache_key = f"adam:atom_outputs:{decision_id}"
+            cached = await container.redis_cache.get(cache_key)
+        except Exception as e:
+            logger.debug(f"Chain-attestation cache load failed: {e}")
+            return []
+
+        if not cached or not isinstance(cached, dict):
+            return []
+
+        # Decide signed vs legacy path (matches the parent method's logic)
+        use_signed = signed_reward is not None and signed_reward != 0.0
+
+        # Decide which mechanism to credit. Default to the primary
+        # recommended mechanism if available; fall back to "" (the
+        # learner accepts an empty string).
+        mechanisms_applied = metadata.get("mechanisms_applied") or metadata.get(
+            "mechanisms", []
+        )
+        recommended_mechanism = (
+            mechanisms_applied[0] if mechanisms_applied else ""
+        )
+
+        # Process each atom's chain_attestation (when present)
+        results: List[Dict[str, Any]] = []
+        for atom_id, atom_data in cached.items():
+            if not isinstance(atom_data, dict):
+                continue
+            attestation_dict = atom_data.get("chain_attestation")
+            if not attestation_dict:
+                continue
+            try:
+                attestation = ChainAttestation(**attestation_dict)
+            except Exception as e:
+                logger.debug(
+                    f"Failed to rehydrate chain_attestation for {atom_id}: {e}"
+                )
+                continue
+
+            chain_data = attestation.to_chain_data(
+                recommended_mechanism=recommended_mechanism
+            )
+
+            try:
+                if use_signed:
+                    learner_result = learner.process_chain_outcome_signed(
+                        chain_data=chain_data,
+                        decision_id=decision_id,
+                        signed_reward=signed_reward,
+                        weight=processing_depth_weight,
+                    )
+                else:
+                    learner_result = learner.process_chain_outcome(
+                        chain_data=chain_data,
+                        decision_id=decision_id,
+                        success=success,
+                        outcome_value=outcome_value,
+                    )
+                # Build a fresh per-atom result dict (don't mutate the
+                # learner's return value — it may be shared / cached).
+                result_entry: Dict[str, Any] = dict(learner_result or {})
+                result_entry["atom_id"] = atom_id
+                result_entry["attestation_id"] = attestation.attestation_id
+                result_entry["a14_flags_active"] = list(
+                    attestation.provenance.a14_flags_active
+                )
+                results.append(result_entry)
+            except Exception as e:
+                logger.debug(
+                    f"TheoryLearner update failed for atom {atom_id}: {e}"
+                )
+
+        # Emit Prometheus metric for chain-attestation routing
+        if results:
+            try:
+                from adam.infrastructure.prometheus.metrics import get_metrics
+                get_metrics().theory_update_source.labels(
+                    source="chain_attestation"
+                ).inc()
+            except Exception as e:
+                logger.debug(f"Theory-source metric emission failed: {e}")
+
+        return results
+
     async def _update_dsp_learning(
         self,
         decision_id: str,
