@@ -17,6 +17,7 @@ from uuid import uuid4
 from pydantic import BaseModel, Field
 
 from adam.atoms.models.evidence import FusionResult, MultiSourceEvidence
+from adam.atoms.models.chain_attestation import ChainAttestation
 from adam.blackboard.models.zone1_context import RequestContext
 from adam.blackboard.models.zone2_reasoning import AtomReasoningSpace, AtomType
 
@@ -167,7 +168,15 @@ class AtomOutput(BaseModel):
     
     # Evidence package (for downstream access)
     evidence_package: Optional[MultiSourceEvidence] = None
-    
+
+    # Chain-attestation typed evidence (B3-LUXY Phase 0 primitive).
+    # Atoms redone against the discipline rule (canonical formula +
+    # paper:section citation + regression tests pinning published
+    # anchors + calibration-pending flag) emit this. Atoms still in
+    # wrapper state emit None — the absence is the signal that the
+    # atom has not yet been redone. See docs/B3_LUXY_PHASE_PLAN.md.
+    chain_attestation: Optional[ChainAttestation] = None
+
     # Execution metrics
     total_latency_ms: float = Field(default=0.0, ge=0.0)
     sources_queried: int = Field(default=0, ge=0)

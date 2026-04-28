@@ -22,6 +22,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
+from adam.atoms.models.chain_attestation import ChainAttestation
 from adam.constants import (
     AD_PERSUASION_PROPERTIES,
     EDGE_DIMENSIONS,
@@ -956,6 +957,68 @@ def _compute_page_shift_for_cascade(
 
 
 # ---------------------------------------------------------------------------
+# Chain-attestation consumption — B3-LUXY Phase 0 deliverable 4
+# ---------------------------------------------------------------------------
+# A14: CHAIN_ATTESTATION_LUXY_FUSION_FORM_PILOT_PENDING — multiplicative
+# fusion form (chain modifier × edge-derived score) is the prior. Pilot
+# data may indicate weighted-additive or chain-dim-as-21st-dim works
+# better. Retire when pilot accumulates ≥1000 decisions with both signal
+# types active. See docs/B3_LUXY_PHASE_PLAN.md §5.
+_CHAIN_MODIFIER_MIN = 0.5  # chain alone cannot more than halve the edge score
+_CHAIN_MODIFIER_MAX = 1.5  # chain alone cannot more than 1.5× the edge score
+
+
+def _apply_chain_attestation_adjustments(
+    mechanism_scores: Dict[str, float],
+    chain_attestations: Optional[List[ChainAttestation]],
+) -> Dict[str, float]:
+    """Multiplicatively combine chain-derived mechanism adjustments with
+    edge-derived mechanism scores.
+
+    For each mechanism m:
+        chain_adj(m) = sum of adjustment_value across all attestations'
+                       AdjustmentEvidence entries where mechanism_id == m
+        chain_modifier(m) = clamp(1.0 + chain_adj(m),
+                                  _CHAIN_MODIFIER_MIN,
+                                  _CHAIN_MODIFIER_MAX)
+        new_score(m) = clamp(score(m) × chain_modifier(m), 0.0, 1.0)
+
+    Mechanisms not adjusted by any attestation are unchanged. Empty or
+    None `chain_attestations` returns the input scores unmodified.
+
+    Foundation §4.3: chain-attestations are consumed AS chains, not as
+    flattened scalars. The per-mechanism adjustment_value carries the
+    `chain_links_responsible` provenance — when an outcome arrives,
+    OutcomeHandler can route per-link feedback to TheoryLearner using
+    those link_ids.
+    """
+    if not chain_attestations:
+        return mechanism_scores
+
+    # Aggregate adjustments per mechanism across all attestations
+    chain_adjustments: Dict[str, float] = {}
+    for attestation in chain_attestations:
+        for adj in attestation.mechanism_adjustments:
+            chain_adjustments[adj.mechanism_id] = (
+                chain_adjustments.get(adj.mechanism_id, 0.0) + adj.adjustment_value
+            )
+
+    # Apply multiplicative modulation
+    updated_scores = dict(mechanism_scores)
+    for mech, adj_sum in chain_adjustments.items():
+        if mech not in updated_scores:
+            continue  # chain references a mechanism not in this scoring run
+        modifier = max(
+            _CHAIN_MODIFIER_MIN,
+            min(_CHAIN_MODIFIER_MAX, 1.0 + adj_sum),
+        )
+        updated = updated_scores[mech] * modifier
+        updated_scores[mech] = round(max(0.0, min(1.0, updated)), 4)
+
+    return updated_scores
+
+
+# ---------------------------------------------------------------------------
 # Level 3: Bilateral Edge Intelligence — the core innovation
 # ---------------------------------------------------------------------------
 def level3_bilateral_edges(
@@ -968,6 +1031,7 @@ def level3_bilateral_edges(
     page_confidence: float = 0.0,
     page_edge_dimensions: Optional[Dict[str, float]] = None,
     category: Optional[str] = None,
+    chain_attestations: Optional[List[ChainAttestation]] = None,
 ) -> CreativeIntelligence:
     """Level 3: Derive creative parameters DIRECTLY from BRAND_CONVERTED edges.
 
@@ -1343,6 +1407,29 @@ def level3_bilateral_edges(
         interaction_adj = interaction_adjustments.get(mech, 0.0)
         blended = edge_w * edge_score + prior_w * prior_score + interaction_adj
         base.mechanism_scores[mech] = round(max(0.0, min(1.0, blended)), 4)
+
+    # ── B3-LUXY Phase 0: Chain-attestation consumption ──
+    # Atoms redone against the discipline rule emit ChainAttestation
+    # alongside their AtomOutput. When present, chain-derived mechanism
+    # adjustments multiplicatively modulate the edge-blended scores.
+    # The multiplicative form respects chain-dependent attenuation
+    # (foundation §4.3) — additive smears the per-link credit and
+    # breaks the theory-revision update path (§4.4).
+    #
+    # When `chain_attestations` is None or empty, this is a no-op and
+    # L3 produces exactly its pre-Phase-0 output. No other call sites
+    # need updating until the DAG plumbs chain-attestations through.
+    if chain_attestations:
+        base.mechanism_scores = _apply_chain_attestation_adjustments(
+            base.mechanism_scores,
+            chain_attestations,
+        )
+        base.reasoning.append(
+            f"Level 3 CHAIN-ATTESTATION: consumed "
+            f"{len(chain_attestations)} attestation(s) "
+            f"with {sum(len(a.mechanism_adjustments) for a in chain_attestations)} "
+            f"per-mechanism adjustment(s)"
+        )
 
     # Dimension → mechanism mapping for prospect theory adjustment
     _DIMENSION_TO_MECHANISM = {
