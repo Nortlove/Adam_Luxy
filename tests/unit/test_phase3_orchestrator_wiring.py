@@ -308,6 +308,203 @@ class TestSelectMechanismsCascadeModulation:
 
 
 # ============================================================================
+# L3 override semantics — Foundation §4.1 commitment in code
+# ============================================================================
+
+
+class TestSelectMechanismsL3Override:
+    """Foundation §4.1: 'L3 bilateral edges, when available, override L1
+    archetype priors and L2 category posteriors entirely.'
+
+    When cascade reached L3 (cascade_level == 3) AND cascade_modulated_scores
+    is present, the cascade scores are the BASE for mechanism selection.
+    Archetype-effectiveness graph priors are NOT consulted (they are
+    L1/L2 evidence superseded by L3). Other layers (unified, review,
+    corpus, barrier) apply as refinements on top of the cascade base.
+
+    When cascade_level != 3, fall back to the legacy blend pattern.
+    """
+
+    @pytest.mark.asyncio
+    async def test_l3_override_uses_cascade_as_base_not_graph_priors(self):
+        """With cascade_level=3 and cascade_modulated_scores, the
+        mechanism_intelligence archetype priors must NOT bleed into the
+        base — only mechanisms in cascade_modulated_scores should
+        appear in the working scores (modulo other blend layers).
+
+        Test asymmetry: graph priors include 'social_proof' but cascade
+        does not. Under L3 override, 'social_proof' should NOT appear
+        in the result. Under legacy blend it SHOULD appear at 0.5.
+        """
+        from adam.orchestrator.campaign_orchestrator import CampaignOrchestrator
+
+        orch = CampaignOrchestrator()
+        # Graph priors carry 3 mechanisms
+        mechanism_intelligence = _make_graph_query_result(
+            {"authority": 0.5, "scarcity": 0.5, "social_proof": 0.5},
+        )
+        # Cascade carries only 2 — social_proof is NOT in the cascade
+        cascade_modulated = {"authority": 0.9, "scarcity": 0.2}
+
+        # L3 OVERRIDE PATH
+        trace_override = ReasoningTrace(trace_id="test_l3_override")
+        result_override = await orch._select_mechanisms(
+            archetype="luxe_arbiter",
+            mechanism_intelligence=mechanism_intelligence,
+            customer_intelligence=None,
+            trace=trace_override,
+            cascade_modulated_scores=cascade_modulated,
+            cascade_level=3,
+        )
+
+        # social_proof must NOT be in the result — graph priors are
+        # superseded by L3 evidence per Foundation §4.1
+        assert "social_proof" not in result_override.mechanism_scores, (
+            "Under L3 override, mechanism_intelligence-derived priors must "
+            "NOT contribute. social_proof was in graph priors but not in "
+            "cascade — it must not appear."
+        )
+        # authority and scarcity should reflect cascade values (modulo
+        # any subsequent blend layers — but we passed no unified/review/
+        # corpus/barrier, so the cascade values pass through unchanged
+        # to Thompson sampling).
+        assert "authority" in result_override.mechanism_scores
+        assert "scarcity" in result_override.mechanism_scores
+
+    @pytest.mark.asyncio
+    async def test_legacy_blend_uses_graph_priors_as_base(self):
+        """Same inputs as override test, but cascade_level=2 (no L3).
+        Graph priors should appear in the base — social_proof present
+        at 0.5 under legacy blend."""
+        from adam.orchestrator.campaign_orchestrator import CampaignOrchestrator
+
+        orch = CampaignOrchestrator()
+        mechanism_intelligence = _make_graph_query_result(
+            {"authority": 0.5, "scarcity": 0.5, "social_proof": 0.5},
+        )
+        cascade_modulated = {"authority": 0.9, "scarcity": 0.2}
+
+        trace = ReasoningTrace(trace_id="test_legacy_blend")
+        result = await orch._select_mechanisms(
+            archetype="luxe_arbiter",
+            mechanism_intelligence=mechanism_intelligence,
+            customer_intelligence=None,
+            trace=trace,
+            cascade_modulated_scores=cascade_modulated,
+            cascade_level=2,
+        )
+
+        # social_proof IS in the result via graph priors at 0.5
+        assert "social_proof" in result.mechanism_scores
+        assert result.mechanism_scores["social_proof"] == pytest.approx(0.5, abs=1e-6)
+
+    @pytest.mark.asyncio
+    async def test_l3_override_priors_source_label(self):
+        """priors_source == 'cascade_l3_override' when override path active."""
+        from adam.orchestrator.campaign_orchestrator import CampaignOrchestrator
+
+        orch = CampaignOrchestrator()
+        mechanism_intelligence = _make_graph_query_result(
+            {"authority": 0.5},
+        )
+        trace = ReasoningTrace(trace_id="test_l3_priors_source")
+        result = await orch._select_mechanisms(
+            archetype="luxe_arbiter",
+            mechanism_intelligence=mechanism_intelligence,
+            customer_intelligence=None,
+            trace=trace,
+            cascade_modulated_scores={"authority": 0.9, "scarcity": 0.3},
+            cascade_level=3,
+        )
+        assert result.priors_source == "cascade_l3_override"
+
+    @pytest.mark.asyncio
+    async def test_no_override_at_cascade_level_4(self):
+        """Foundation §4.1 names L3 specifically. L4 (inferential transfer)
+        falls back to legacy blend pattern — graph priors consulted."""
+        from adam.orchestrator.campaign_orchestrator import CampaignOrchestrator
+
+        orch = CampaignOrchestrator()
+        mechanism_intelligence = _make_graph_query_result(
+            {"authority": 0.5, "social_proof": 0.5},
+        )
+        trace = ReasoningTrace(trace_id="test_l4_no_override")
+        result = await orch._select_mechanisms(
+            archetype="luxe_arbiter",
+            mechanism_intelligence=mechanism_intelligence,
+            customer_intelligence=None,
+            trace=trace,
+            cascade_modulated_scores={"authority": 0.9},
+            cascade_level=4,
+        )
+        # Legacy blend path: social_proof present from graph priors
+        assert "social_proof" in result.mechanism_scores
+        # Not the override priors_source
+        assert result.priors_source != "cascade_l3_override"
+
+    @pytest.mark.asyncio
+    async def test_no_override_when_cascade_modulated_empty(self):
+        """Defensive: cascade_level=3 but empty cascade_modulated_scores.
+        Falls back to legacy blend (override needs both conditions)."""
+        from adam.orchestrator.campaign_orchestrator import CampaignOrchestrator
+
+        orch = CampaignOrchestrator()
+        mechanism_intelligence = _make_graph_query_result(
+            {"authority": 0.5, "social_proof": 0.5},
+        )
+        trace = ReasoningTrace(trace_id="test_empty_cascade_at_l3")
+        result = await orch._select_mechanisms(
+            archetype="luxe_arbiter",
+            mechanism_intelligence=mechanism_intelligence,
+            customer_intelligence=None,
+            trace=trace,
+            cascade_modulated_scores={},  # empty
+            cascade_level=3,
+        )
+        # social_proof from graph priors should be present (legacy path)
+        assert "social_proof" in result.mechanism_scores
+        assert result.priors_source != "cascade_l3_override"
+
+    @pytest.mark.asyncio
+    async def test_no_double_blend_under_l3_override(self):
+        """Under L3 override, the cascade-blend block at the bottom
+        of _select_mechanisms must not re-apply (would double-count
+        the cascade evidence)."""
+        from adam.orchestrator.campaign_orchestrator import CampaignOrchestrator
+
+        orch = CampaignOrchestrator()
+        mechanism_intelligence = _make_graph_query_result(
+            {"authority": 0.5},
+        )
+        trace = ReasoningTrace(trace_id="test_no_double_blend")
+
+        # Under L3 override with no other signals (no unified, no review,
+        # no corpus, no barrier) the cascade scores should pass through
+        # to Thompson sampling unmodified by additional blend layers.
+        cascade_input = {"authority": 0.85}
+        result = await orch._select_mechanisms(
+            archetype="luxe_arbiter",
+            mechanism_intelligence=mechanism_intelligence,
+            customer_intelligence=None,
+            trace=trace,
+            cascade_modulated_scores=cascade_input,
+            cascade_level=3,
+        )
+
+        # mechanism_scores has authority — and only authority (no graph
+        # prior bleed, no double-blend back to cascade base)
+        assert "authority" in result.mechanism_scores
+        # Pass-through within Thompson sampling tolerance — score should
+        # be near the cascade input, not 0.4*cascade + 0.6*cascade=cascade
+        # (which would still pass) NOR 0.4*graph_prior + 0.6*cascade
+        # (which would NOT pass at 0.85)
+        # The exact post-Thompson-sampling final mechanism_scores reflects
+        # the working scores fed into Thompson; they should equal the
+        # cascade input.
+        assert result.mechanism_scores["authority"] == pytest.approx(0.85, abs=1e-6)
+
+
+# ============================================================================
 # A14 retirement-trigger counter emission (Phase 0.1 day-3)
 # ============================================================================
 

@@ -392,7 +392,18 @@ class CampaignOrchestrator:
 
         # =====================================================================
         # STEP 5: Select Mechanisms via MetaLearner
+        #
+        # Foundation §4.1: "L3 bilateral edges, when available, override L1
+        # archetype priors and L2 category posteriors entirely." When
+        # cascade reached L3 (cascade_level == 3), the cascade's
+        # chain-attestation-modulated scores become the BASE for mechanism
+        # selection — not a co-equal blend partner with archetype-effectiveness
+        # graph priors. Other evidence layers (unified, review, corpus,
+        # barrier) apply as refinements on top of the cascade base. When
+        # cascade did NOT reach L3, fall back to the legacy blend pattern.
         # =====================================================================
+        cascade_level = bilateral_result.get("cascade_level") if bilateral_result else None
+
         mechanism_selection = await self._select_mechanisms(
             archetype=primary_archetype,
             mechanism_intelligence=mechanism_intelligence,
@@ -401,6 +412,7 @@ class CampaignOrchestrator:
             unified_intel=unified_intel,
             barrier_intelligence=barrier_intelligence,
             cascade_modulated_scores=cascade_modulated_scores,
+            cascade_level=cascade_level,
         )
         components_used.append("MetaLearner")
         
@@ -1200,24 +1212,70 @@ class CampaignOrchestrator:
         unified_intel: dict = None,
         barrier_intelligence: dict = None,
         cascade_modulated_scores: Optional[Dict[str, float]] = None,
+        cascade_level: Optional[int] = None,
     ) -> MechanismSelectionResult:
         """Select optimal mechanisms using MetaLearner, with three-layer fusion.
 
         cascade_modulated_scores: when present, the cascade's mechanism_scores
         already modulated by the AtomDAG's chain-attestations (B3-LUXY
-        Phase 3). Blended into the working scores ahead of Thompson
-        sampling so the chain-attestation evidence flows into the live
-        decision. None when no cascade signal or no attestations were
-        produced.
+        Phase 3). Used differently depending on cascade_level — see below.
+
+        cascade_level: the depth the cascade reached (1=archetype prior,
+        2=category posterior, 3=bilateral edges, 4=inferential transfer,
+        5=full atom reasoning). Foundation §4.1 commits that L3 bilateral
+        edges override L1/L2 entirely when available.
+
+        Foundation §4.1 — L3 override semantics:
+
+          When cascade_level == 3 AND cascade_modulated_scores is present,
+          cascade_modulated_scores becomes the BASE for mechanism selection.
+          The mechanism_intelligence-derived archetype-effectiveness graph
+          priors do NOT contribute to the base — they are L2-equivalent
+          and the foundation says L3 overrides them entirely. Other
+          evidence layers (unified_three_layer_fusion, review_intelligence,
+          corpus_fusion, barrier_intelligence) apply as refinements on
+          top of the cascade base because they carry auxiliary signal
+          (review-derived predictions, cross-category corpus priors,
+          retargeting-derived barriers) that is not L1/L2 prior data.
+
+          When cascade_level != 3 (None / 1 / 2 / 4 / 5), fall back to
+          the legacy blend pattern: mechanism_intelligence-derived base,
+          cascade_modulated_scores blended at 0.6 weight alongside other
+          signals.
         """
 
         result = MechanismSelectionResult()
 
-        # Get mechanism scores from graph intelligence
-        mechanism_scores = {}
-        for mech in mechanism_intelligence.mechanisms:
-            score = mech.archetype_effectiveness.get(archetype, 0.5)
-            mechanism_scores[mech.mechanism_name.lower().replace(" ", "_")] = score
+        # Foundation §4.1 — L3 override gate
+        l3_override_active = (
+            cascade_level == 3
+            and cascade_modulated_scores is not None
+            and len(cascade_modulated_scores) > 0
+        )
+
+        if l3_override_active:
+            # L3 override path: cascade is base, mechanism_intelligence
+            # priors are NOT consulted (L1/L2 superseded by L3 evidence).
+            mechanism_scores = dict(cascade_modulated_scores)
+            result.priors_source = "cascade_l3_override"
+            logger.info(
+                "L3 override active — cascade is base (%d mechanisms); "
+                "archetype-effectiveness graph priors NOT consulted per "
+                "Foundation §4.1",
+                len(cascade_modulated_scores),
+            )
+        else:
+            # Legacy blend path: build base from graph priors.
+            mechanism_scores = {}
+            for mech in mechanism_intelligence.mechanisms:
+                score = mech.archetype_effectiveness.get(archetype, 0.5)
+                mechanism_scores[mech.mechanism_name.lower().replace(" ", "_")] = score
+            if cascade_level is not None and cascade_level != 3:
+                logger.debug(
+                    "L3 override NOT active (cascade_level=%s); using "
+                    "legacy blend with mechanism_intelligence as base",
+                    cascade_level,
+                )
 
         # Blend unified three-layer fusion if available (takes priority)
         if unified_intel and unified_intel.get("mechanisms"):
@@ -1234,23 +1292,22 @@ class CampaignOrchestrator:
                 f"layers: {unified_intel.get('layers_used', [])})"
             )
 
-        # Blend cascade chain-attestation-modulated scores (B3-LUXY Phase 3)
+        # Blend cascade chain-attestation-modulated scores (B3-LUXY Phase 3,
+        # legacy blend path only — L3 override path uses cascade as BASE
+        # above and skips this blend to avoid double-application).
         #
-        # cascade_modulated_scores carry: (a) the cascade's full L1→L3
-        # mechanism scoring for this archetype/category/asin, and (b) the
-        # multiplicative chain-attestation modulation from the just-run
-        # AtomDAG. This is the most decision-specific signal available —
-        # graph priors are population-level; this is THIS decision.
+        # When cascade reached L3 (l3_override_active==True), the cascade
+        # is already the base; this block is a no-op.
         #
-        # A14: CASCADE_MODULATED_BLEND_WEIGHT_PILOT_PENDING — blend weight
-        # 0.6 mirrors the unified_three_layer_fusion pattern (which is
-        # also the primary inferential signal in its own path). Pilot
-        # data may indicate the cascade's chain-modulated scores should
-        # OVERRIDE rather than blend with archetype-effectiveness priors,
-        # per Foundation §4.1's "L3 fully overrides L1/L2 when edges
-        # available" commitment. Retire when the LUXY pilot accumulates
-        # enough chain-attested decisions to compare blend-vs-override.
-        if cascade_modulated_scores:
+        # When cascade did NOT reach L3 (cascade_level <= 2 or >= 4 or
+        # None), cascade_modulated_scores is auxiliary evidence and
+        # blends at weight 0.6 alongside the mechanism_intelligence base.
+        #
+        # NOTE: A14 retirement of CASCADE_MODULATED_BLEND_WEIGHT_PILOT_PENDING
+        # was partial — at L3 the override path replaces the blend. The
+        # blend weight on the legacy path remains pilot-pending; the
+        # override decision (L3 vs blend) is now structural per Foundation §4.1.
+        if cascade_modulated_scores and not l3_override_active:
             for mech_key, cascade_score in cascade_modulated_scores.items():
                 if mech_key in mechanism_scores:
                     mechanism_scores[mech_key] = (
@@ -1261,7 +1318,7 @@ class CampaignOrchestrator:
             if not result.priors_source or result.priors_source == "cold_start":
                 result.priors_source = "cascade_chain_attested"
             logger.info(
-                "Applied cascade chain-attestation modulation (%d mechanisms)",
+                "Applied cascade chain-attestation modulation (%d mechanisms, legacy blend path)",
                 len(cascade_modulated_scores),
             )
 
