@@ -337,6 +337,24 @@ class ADAMMetrics:
                 ["direction"],  # positive, negative, zero
             )
 
+            # A14 calibration-pending flag exercise counter — counts each
+            # decision in which a given A14 flag was active on an atom's
+            # ChainProvenance. Drives the retirement-trigger dashboard:
+            # "Retire FOO_PILOT_PENDING when pilot accumulates ≥1000
+            # decisions" reads this counter directly. One increment per
+            # (decision × attesting_atom × active_flag) at decision time.
+            #
+            # Cardinality is bounded — the 9 redone B3-LUXY atoms produce
+            # ~23 unique flags total (see memory handoff 2026-04-28).
+            # Each flag is associated with one or two atoms; the
+            # (atom_id, a14_flag) tuple space is small enough for
+            # Prometheus.
+            self.a14_flag_active = Counter(
+                "adam_a14_flag_active_total",
+                "A14 calibration-pending flag exercises at decision time",
+                ["atom_id", "a14_flag"],
+            )
+
             # -----------------------------------------------------------------
             # MECHANISM SELECTION & POSTERIOR METRICS
             # -----------------------------------------------------------------

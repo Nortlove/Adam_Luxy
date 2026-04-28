@@ -305,3 +305,155 @@ class TestSelectMechanismsCascadeModulation:
         # priors_source labelled by the cascade path when no other signal
         # claimed the slot first
         assert result.priors_source == "cascade_chain_attested"
+
+
+# ============================================================================
+# A14 retirement-trigger counter emission (Phase 0.1 day-3)
+# ============================================================================
+
+
+def _make_attestation_with_flags(atom_id: str, a14_flags: list[str]) -> ChainAttestation:
+    """Build a ChainAttestation whose provenance carries the given A14 flags."""
+    chain = [
+        ConstructLink(
+            source_construct="src",
+            relation_type=RelationType.MODULATED_BY,
+            target_construct=f"target_{atom_id}",
+            evidence_value=0.5,
+            confidence=0.7,
+            citation="test_citation 1.0",
+        )
+    ]
+    final = TypedEvidence(
+        construct=f"construct_{atom_id}",
+        value=0.5,
+        confidence=0.7,
+        citation="test_citation 1.0",
+        calibration_status=CalibrationStatus.PILOT_PENDING,
+    )
+    provenance = ChainProvenance(
+        atom_id=atom_id,
+        a14_flags_active=list(a14_flags),
+    )
+    return ChainAttestation(
+        atom_id=atom_id,
+        request_id="req_test",
+        target_construct=f"construct_{atom_id}",
+        chain=chain,
+        final_assessment=final,
+        mechanism_adjustments=[],
+        provenance=provenance,
+    )
+
+
+class TestA14CounterEmission:
+    """The A14 counter increments per (decision × atom × active flag).
+
+    Drives the retirement-trigger dashboard: the counter is the input to
+    dashboards like "retire FOO_PILOT_PENDING when ≥1000 decisions
+    accumulate with the flag active." Without the counter, retirement
+    triggers can only be evaluated by hand against the per-decision
+    provenance traces — too slow to be useful.
+    """
+
+    def _emit_a14_counter_for_attestations(self, attestations):
+        """Direct-emit helper that mirrors the orchestrator's emission
+        block. Exercises the metric-emission contract in isolation from
+        the orchestrator's many other dependencies."""
+        from adam.infrastructure.prometheus.metrics import get_metrics
+        pm = get_metrics()
+        for att in attestations:
+            for flag in att.provenance.a14_flags_active:
+                pm.a14_flag_active.labels(
+                    atom_id=att.atom_id, a14_flag=flag,
+                ).inc()
+
+    def test_metric_attribute_exists_on_metrics_instance(self):
+        """The new counter is registered on the metrics singleton."""
+        from adam.infrastructure.prometheus.metrics import get_metrics
+        pm = get_metrics()
+        # Either the real Counter is present (when prometheus_client is
+        # installed) or _initialized is False (NoOp path) — in both
+        # cases the test must not error trying to access the attribute.
+        if pm._initialized:
+            assert hasattr(pm, "a14_flag_active")
+
+    def test_emission_does_not_raise_on_zero_flags(self):
+        """An attestation with no A14 flags produces no increments and
+        does not error."""
+        att = _make_attestation_with_flags("atom_test", [])
+        # Must not raise
+        self._emit_a14_counter_for_attestations([att])
+
+    def test_emission_does_not_raise_on_multiple_flags(self):
+        """Multiple flags on one attestation each get their own increment."""
+        att = _make_attestation_with_flags(
+            "atom_test",
+            ["FLAG_A_PILOT_PENDING", "FLAG_B_PILOT_PENDING"],
+        )
+        # Must not raise
+        self._emit_a14_counter_for_attestations([att])
+
+    def test_emission_per_atom_per_flag_combo(self):
+        """When two atoms each carry two flags, four increments are emitted
+        (no double-counting of identical labels within a single attestation)."""
+        from adam.infrastructure.prometheus.metrics import get_metrics
+        pm = get_metrics()
+        if not pm._initialized:
+            pytest.skip("prometheus_client not installed; counter emission is no-op")
+
+        atts = [
+            _make_attestation_with_flags(
+                "atom_alpha", ["FLAG_X_PILOT_PENDING", "FLAG_Y_PILOT_PENDING"],
+            ),
+            _make_attestation_with_flags(
+                "atom_beta", ["FLAG_X_PILOT_PENDING", "FLAG_Z_PILOT_PENDING"],
+            ),
+        ]
+
+        # Capture initial counter values for the four (atom_id, flag) tuples
+        # we are about to increment. Use ._value.get() to read a Counter
+        # value at a labelset.
+        def _read(atom_id, flag):
+            return pm.a14_flag_active.labels(
+                atom_id=atom_id, a14_flag=flag,
+            )._value.get()
+
+        before = {
+            ("atom_alpha", "FLAG_X_PILOT_PENDING"): _read("atom_alpha", "FLAG_X_PILOT_PENDING"),
+            ("atom_alpha", "FLAG_Y_PILOT_PENDING"): _read("atom_alpha", "FLAG_Y_PILOT_PENDING"),
+            ("atom_beta", "FLAG_X_PILOT_PENDING"): _read("atom_beta", "FLAG_X_PILOT_PENDING"),
+            ("atom_beta", "FLAG_Z_PILOT_PENDING"): _read("atom_beta", "FLAG_Z_PILOT_PENDING"),
+        }
+
+        self._emit_a14_counter_for_attestations(atts)
+
+        after = {k: _read(*k) for k in before}
+
+        for k in before:
+            assert after[k] == before[k] + 1.0, (
+                f"Counter at {k} increased by {after[k] - before[k]}, expected 1.0"
+            )
+
+    def test_repeated_emission_accumulates(self):
+        """Same atom+flag combo emitted twice yields two increments."""
+        from adam.infrastructure.prometheus.metrics import get_metrics
+        pm = get_metrics()
+        if not pm._initialized:
+            pytest.skip("prometheus_client not installed; counter emission is no-op")
+
+        att = _make_attestation_with_flags(
+            "atom_repeat", ["FLAG_REPEATED_PILOT_PENDING"],
+        )
+
+        def _read():
+            return pm.a14_flag_active.labels(
+                atom_id="atom_repeat",
+                a14_flag="FLAG_REPEATED_PILOT_PENDING",
+            )._value.get()
+
+        before = _read()
+        self._emit_a14_counter_for_attestations([att])
+        self._emit_a14_counter_for_attestations([att])
+        after = _read()
+        assert after == before + 2.0

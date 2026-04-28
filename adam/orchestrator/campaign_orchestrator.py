@@ -1071,6 +1071,28 @@ class CampaignOrchestrator:
             atom_result.chain_attestations = extract_chain_attestations_from_atom_outputs(
                 dag_result.atom_outputs,
             )
+
+            # B3-LUXY Phase 0.1 day-3: emit A14 retirement-trigger counter
+            # at decision time. One increment per (atom × active flag) so
+            # the dashboard reads "decisions where flag X was active on
+            # atom Y". Drives retirement triggers like "retire X when
+            # pilot accumulates ≥1000 decisions with the flag active."
+            # Non-fatal: metric emission must not break decision flow.
+            if atom_result.chain_attestations:
+                try:
+                    from adam.infrastructure.prometheus.metrics import get_metrics
+                    _pm = get_metrics()
+                    for _att in atom_result.chain_attestations:
+                        _atom_id = _att.atom_id
+                        for _flag in _att.provenance.a14_flags_active:
+                            _pm.a14_flag_active.labels(
+                                atom_id=_atom_id,
+                                a14_flag=_flag,
+                            ).inc()
+                except Exception as _e:
+                    logger.debug(
+                        "A14 flag-active metric emission failed: %s", _e,
+                    )
         
         # Extract final profile from mechanism activation atom
         mech_output = dag_result.atom_outputs.get("atom_mechanism_activation") if dag_result.atom_outputs else None
