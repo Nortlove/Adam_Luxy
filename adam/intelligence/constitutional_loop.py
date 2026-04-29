@@ -222,14 +222,28 @@ async def _critique_and_revise(
     brand_kb: Dict[str, Any],
     bilateral_edge: Dict[str, float],
     engine: Any,
+    *,
+    critic_config: Optional[Any] = None,
+    critic_engine: Optional[Any] = None,
+    iteration: int = 0,
 ) -> Tuple[CachedArgument, str]:
     """Run critique + revise against the rubric.
 
-    Critique surface uses the existing engine's FULL-regeneration with
-    a critique-augmented prompt. Cross-family critic (Opus critiques
-    Sonnet) is M6 follow-on; today's substrate uses the same engine
-    family for both (single-family critique). The TEST suite pins this
-    distinction explicitly.
+    When `critic_engine` and `critic_config` are both provided, the
+    critique step routes through the LLM-based cross-family critic
+    (`run_llm_critique` in `cai_cross_family_critic`). The structured
+    findings (CritiqueFinding records) are rendered into the
+    critique_text via templated formatting — NO free-form prose
+    composed in this module.
+
+    When the cross-family critic is not configured, the existing
+    heuristic path runs: string-match the argument against the
+    constitution's `what_fails` and `forbidden_substitutes` slices
+    and assemble the critique_text from concrete violation tags.
+
+    A14 flag emission: `record_critique_run` is invoked whenever the
+    cross-family critic is used; same-family configs surface
+    `M6_CROSS_FAMILY_CRITIC_PENDING` per the substrate's contract.
 
     Returns (revised_argument, critique_text). On engine failure,
     returns (original_argument, error_message) so the caller can
@@ -237,33 +251,94 @@ async def _critique_and_revise(
     """
     from adam.retargeting.engines.claude_argument_engine import ArgumentMode
 
-    failures: List[str] = []
     arch_slice = constitution.archetype_slice
     mech_slice = constitution.mechanism_slice
 
-    # Critique heuristic: identify which constitutional principles the
-    # current argument violates, build a one-paragraph critique
     text_for_check = " ".join((arg.headline, arg.body, arg.cta))
-    text_lower = text_for_check.lower()
 
-    for tag in arch_slice.what_fails:
-        token = tag.replace("_", " ")
-        if token in text_lower:
-            failures.append(
-                f"Archetype tone violation: '{token}' is forbidden for "
-                f"{arch_slice.archetype}"
+    use_llm_critic = (critic_engine is not None and critic_config is not None)
+
+    if use_llm_critic:
+        # Route through the cross-family LLM critic (M6 §6.5 Bai 2022).
+        from adam.intelligence.cai_cross_family_critic import (
+            record_critique_run,
+            run_llm_critique,
+        )
+
+        constitution_summary = (
+            f"Archetype tone principle: {arch_slice.tone_principle}. "
+            f"Forbidden archetype phrasings: "
+            f"{', '.join(arch_slice.what_fails) or '(none)'}. "
+            f"Mechanism must concretely invoke: "
+            f"{mech_slice.must_concretely_invoke}. "
+            f"Forbidden mechanism substitutes: "
+            f"{', '.join(mech_slice.forbidden_substitutes) or '(none)'}. "
+            f"Industry-default forbidden phrasings: "
+            f"compelling, break through the noise, stand out, attention-grabbing."
+        )
+        try:
+            llm_critique = await run_llm_critique(
+                argument_text=text_for_check,
+                constitution_summary=constitution_summary,
+                archetype=arch_slice.archetype,
+                mechanism=mech_slice.mechanism,
+                config=critic_config,
+                critic_engine=critic_engine,
+                argument_id=(
+                    f"cai_{arch_slice.archetype}_{mech_slice.mechanism}_iter{iteration}"
+                ),
+                iteration=iteration,
             )
-    for substitute in mech_slice.forbidden_substitutes:
-        token = substitute.replace("_", " ")
-        if token in text_lower:
-            failures.append(
-                f"Mechanism faithfulness violation: '{token}' is a "
-                f"forbidden substitute for {mech_slice.mechanism}"
+        except Exception as exc:
+            logger.warning("LLM critic invocation failed: %s", exc)
+            llm_critique = None
+
+        # Emit A14 flag (record_critique_run handles same-family vs
+        # cross-family per its substrate contract).
+        try:
+            record_critique_run(critic_config, atom_id="cai_critic")
+        except Exception as exc:
+            logger.debug("record_critique_run failed: %s", exc)
+
+        if llm_critique is None:
+            critique_text = "llm_critic_unavailable; falling back to heuristic"
+            use_llm_critic = False
+        elif llm_critique.findings:
+            # Templated rendering from structured findings — A12 defense.
+            critique_text = " | ".join(
+                f"[{f.severity}] {f.rule_id}: {f.explanation}"
+                for f in llm_critique.findings
+            )
+        else:
+            critique_text = (
+                f"LLM critic disposition={llm_critique.overall_disposition}; "
+                f"no structured findings"
             )
 
-    critique_text = (
-        " | ".join(failures) if failures else "No constitutional violations detected."
-    )
+    if not use_llm_critic:
+        # Heuristic path — existing behavior preserved.
+        failures: List[str] = []
+        text_lower = text_for_check.lower()
+
+        for tag in arch_slice.what_fails:
+            token = tag.replace("_", " ")
+            if token in text_lower:
+                failures.append(
+                    f"Archetype tone violation: '{token}' is forbidden for "
+                    f"{arch_slice.archetype}"
+                )
+        for substitute in mech_slice.forbidden_substitutes:
+            token = substitute.replace("_", " ")
+            if token in text_lower:
+                failures.append(
+                    f"Mechanism faithfulness violation: '{token}' is a "
+                    f"forbidden substitute for {mech_slice.mechanism}"
+                )
+
+        critique_text = (
+            " | ".join(failures) if failures
+            else "No constitutional violations detected."
+        )
 
     # Revise via FULL regeneration with critique appended to brand_data.
     # This is the canonical Bai et al. 2022 inference-time pattern:
@@ -322,6 +397,9 @@ async def run_constitutional_loop(
     write_to_cache: bool = True,
     archetype_fit_scorer=None,
     factscore_scorer=None,
+    *,
+    critic_config: Optional[Any] = None,
+    critic_engine: Optional[Any] = None,
 ) -> CAIResult:
     """Run the full generate → critique → revise loop.
 
@@ -333,6 +411,13 @@ async def run_constitutional_loop(
         write_to_cache: whether to put_cached_argument on success
         archetype_fit_scorer / factscore_scorer: injectable scorers.
             Default to interim heuristic substrate.
+        critic_config: Optional CrossFamilyCriticConfig from
+            cai_cross_family_critic. When set together with critic_engine,
+            the critique step uses the LLM-based cross-family critic
+            instead of the heuristic. M6 §6.5 self-preference-bias mitigation.
+        critic_engine: Optional duck-typed engine for the critic family
+            (must expose async .complete(prompt, max_tokens, temperature)
+            -> {"text": ...}). Build via cai_cross_family_critic.build_critic_engine.
 
     Returns CAIResult with converged flag, scores, iteration count.
     """
@@ -412,6 +497,9 @@ async def run_constitutional_loop(
         try:
             arg, critique_text = await _critique_and_revise(
                 arg, constitution, brand_kb, bilateral, engine,
+                critic_config=critic_config,
+                critic_engine=critic_engine,
+                iteration=iteration,
             )
             critique_log.append(critique_text)
         except Exception as exc:
