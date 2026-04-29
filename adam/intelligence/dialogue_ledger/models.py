@@ -116,6 +116,56 @@ class RecallabilityLabel(str, Enum):
     ABSENT = "absent"
 
 
+class DeviationAdjudicationOutcome(str, Enum):
+    """Result of comparing the user's override against the system's
+    original recommendation after the adjudication horizon.
+
+    HMT §11.5: every override is a HYPOTHESIS at write time about
+    "the system was wrong here." The lifecycle tracks the hypothesis
+    through to causal evidence.
+
+    States:
+      CONFIRMED_OVERRIDE       — observed outcome supported user's choice;
+                                 system's recommendation would have been
+                                 worse. The user's override is validated.
+      SYSTEM_VINDICATED        — observed outcome supported system's
+                                 recommendation; user's override produced
+                                 a worse result.
+      FALSE_CORRECTION         — observed outcome was indistinguishable
+                                 between system rec and user override
+                                 (no causal signal); the override was
+                                 not load-bearing for the outcome.
+      PENDING_INSUFFICIENT_DATA — adjudication horizon elapsed but data
+                                 quality / quantity below the threshold
+                                 needed for a verdict.
+    """
+
+    CONFIRMED_OVERRIDE = "confirmed_override"
+    SYSTEM_VINDICATED = "system_vindicated"
+    FALSE_CORRECTION = "false_correction"
+    PENDING_INSUFFICIENT_DATA = "pending_insufficient_data"
+
+
+class DeviationLifecycleState(str, Enum):
+    """Where a HumanDeviation sits in its lifecycle.
+
+    Valid transitions:
+        RECORDED → AWAITING_OUTCOME (auto on schedule_adjudication)
+        AWAITING_OUTCOME → ADJUDICATED (on adjudicate_deviation call
+                                        with sufficient data)
+        AWAITING_OUTCOME → PENDING (on adjudication call when data
+                                    insufficient; can re-attempt later)
+        PENDING → ADJUDICATED (on later successful adjudication)
+
+    No transitions return to RECORDED; lifecycle is monotonic forward.
+    """
+
+    RECORDED = "recorded"
+    AWAITING_OUTCOME = "awaiting_outcome"
+    ADJUDICATED = "adjudicated"
+    PENDING = "pending"
+
+
 # =============================================================================
 # NODE MODELS
 # =============================================================================
@@ -297,4 +347,182 @@ def make_claim(
         frame=frame,
         session_id=session_id,
         mood_index=mood_index,
+    )
+
+
+# =============================================================================
+# HumanDeviation — partner override of a system recommendation
+# =============================================================================
+
+
+class HumanDeviation(BaseModel):
+    """A partner override of a system recommendation (HMT §11.5).
+
+    HMT discipline rule 12 applied to overrides: every deviation is a
+    HYPOTHESIS at write time about "the system was wrong here." The
+    lifecycle tracks the hypothesis through to causal evidence via
+    the adjudication horizon.
+
+    Construction-time invariants:
+        - lifecycle_state is RECORDED at creation; transitions occur
+          only via the deviation_lifecycle service module.
+        - reason is required and templated (categorical reason tag +
+          optional free-text annotation). Free-form reason WITHOUT a
+          tag is rejected — the analytics loop needs a categorical
+          signal to aggregate, not free-form prose.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str = Field(default_factory=lambda: _new_id("deviation"))
+    user_id: str
+    claim_id: Optional[str] = None  # links back to a Claim if applicable
+    decision_id: str                # The system decision that was overridden
+    domain: str
+    system_recommendation: Dict[str, Any]   # Templated structured rec
+    user_substitute: Dict[str, Any]         # Templated structured override
+    reason_tag: str                          # Categorical reason (required)
+    reason_text: Optional[str] = None        # Optional free-text annotation
+    expected_outcome_tag: Optional[str] = None  # Categorical expected outcome
+    lifecycle_state: DeviationLifecycleState = DeviationLifecycleState.RECORDED
+    horizon_ends_at: Optional[datetime] = None
+    created_at: datetime = Field(default_factory=_now_utc)
+
+    @field_validator("lifecycle_state")
+    @classmethod
+    def _enforce_recorded_at_creation(
+        cls, v: DeviationLifecycleState,
+    ) -> DeviationLifecycleState:
+        if v != DeviationLifecycleState.RECORDED:
+            raise ValueError(
+                f"HumanDeviation must be created with "
+                f"lifecycle_state=RECORDED, got {v}. Use "
+                f"deviation_lifecycle.transition_state to advance."
+            )
+        return v
+
+    @field_validator("reason_tag")
+    @classmethod
+    def _validate_reason_tag_non_empty(cls, v: str) -> str:
+        v = (v or "").strip()
+        if not v:
+            raise ValueError(
+                "reason_tag is required (categorical signal for the "
+                "analytics loop). Free-form reason_text alone is "
+                "insufficient — A12 defense."
+            )
+        return v
+
+    def to_neo4j_props(self) -> Dict[str, Any]:
+        props: Dict[str, Any] = {
+            "id": self.id,
+            "user_id": self.user_id,
+            "decision_id": self.decision_id,
+            "domain": self.domain,
+            "reason_tag": self.reason_tag,
+            "lifecycle_state": self.lifecycle_state.value,
+            "created_at": self.created_at.isoformat(),
+            # Dicts persist as JSON strings on Neo4j properties.
+            "system_recommendation_json": _json_dumps_safe(
+                self.system_recommendation,
+            ),
+            "user_substitute_json": _json_dumps_safe(self.user_substitute),
+        }
+        if self.claim_id:
+            props["claim_id"] = self.claim_id
+        if self.reason_text:
+            props["reason_text"] = self.reason_text
+        if self.expected_outcome_tag:
+            props["expected_outcome_tag"] = self.expected_outcome_tag
+        if self.horizon_ends_at is not None:
+            props["horizon_ends_at"] = self.horizon_ends_at.isoformat()
+        return props
+
+
+class DeviationAdjudication(BaseModel):
+    """The adjudicated verdict on a HumanDeviation after horizon elapses.
+
+    Linked 1:1 to a HumanDeviation via deviation_id. Multiple
+    adjudication attempts may exist for the same deviation if the first
+    attempt produced PENDING_INSUFFICIENT_DATA — each later attempt is
+    a separate DeviationAdjudication record with iteration > 0.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str = Field(default_factory=lambda: _new_id("adjudication"))
+    deviation_id: str
+    outcome: DeviationAdjudicationOutcome
+    iteration: int = 0
+    observed_outcome_summary: Dict[str, Any] = Field(default_factory=dict)
+    adjudicator: str = "auto"  # "auto" | user_id of human reviewer
+    confidence: float = 0.0
+    rationale_tag: str = ""    # Templated reason for the verdict
+    adjudicated_at: datetime = Field(default_factory=_now_utc)
+
+    @field_validator("confidence")
+    @classmethod
+    def _validate_confidence_range(cls, v: float) -> float:
+        if not 0.0 <= v <= 1.0:
+            raise ValueError(f"confidence must be in [0, 1]; got {v}")
+        return v
+
+    def to_neo4j_props(self) -> Dict[str, Any]:
+        return {
+            "id": self.id,
+            "deviation_id": self.deviation_id,
+            "outcome": self.outcome.value,
+            "iteration": int(self.iteration),
+            "observed_outcome_summary_json": _json_dumps_safe(
+                self.observed_outcome_summary,
+            ),
+            "adjudicator": self.adjudicator,
+            "confidence": float(self.confidence),
+            "rationale_tag": self.rationale_tag,
+            "adjudicated_at": self.adjudicated_at.isoformat(),
+        }
+
+
+def _json_dumps_safe(payload: Dict[str, Any]) -> str:
+    """JSON-serialize a dict for Neo4j property storage.
+
+    Falls back to repr-rendered string when the payload contains
+    non-JSON-serializable objects (datetimes, etc.). The fallback is
+    audit-traceable, not silent — a non-empty payload that cannot be
+    JSON-rendered is still persisted, just as a string representation.
+    """
+    import json as _json
+    try:
+        return _json.dumps(payload, default=str, sort_keys=True)
+    except Exception:
+        return repr(payload)
+
+
+def make_deviation(
+    user_id: str,
+    decision_id: str,
+    domain: str,
+    system_recommendation: Dict[str, Any],
+    user_substitute: Dict[str, Any],
+    reason_tag: str,
+    *,
+    claim_id: Optional[str] = None,
+    reason_text: Optional[str] = None,
+    expected_outcome_tag: Optional[str] = None,
+) -> HumanDeviation:
+    """Convenience constructor for a HumanDeviation.
+
+    HMT discipline rule 12 enforced: lifecycle_state forced to RECORDED.
+    A12 defense enforced via reason_tag requirement.
+    """
+    return HumanDeviation(
+        user_id=user_id,
+        decision_id=decision_id,
+        domain=domain,
+        system_recommendation=system_recommendation,
+        user_substitute=user_substitute,
+        reason_tag=reason_tag,
+        claim_id=claim_id,
+        reason_text=reason_text,
+        expected_outcome_tag=expected_outcome_tag,
     )
