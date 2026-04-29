@@ -8,6 +8,151 @@
 
 ---
 
+## Section 0 — Daily Mindset Protocol
+
+**This section is read FIRST every work session. It is the recurring re-orientation that prevents drift.**
+
+The orientation document (`ADAM_AGENT_ORIENTATION.md`) is the canonical drift defense — load it every session before this. This protocol is the build-specific application: what drift looks like during pilot construction, and the specific anchors that hold.
+
+### 0.1 — Pre-session loading order (every session, no exceptions)
+
+```
+1. ADAM_AGENT_ORIENTATION.md            (drift discipline, 15 antipatterns)
+2. ADAM_THEORETICAL_FOUNDATION.md       (Bargh-lineage frame)
+3. ADAM_HUMAN_MACHINE_TEAMING_FOUNDATION.md  (Loop B)
+4. CLAUDE.md                            (engineering conventions)
+5. memory/MEMORY.md                     (auto-loaded)
+6. docs/PILOT_BUILD_ROADMAP.md (this)   ← Section 0, then today's items in Section 5
+7. The user's specific request          ← read LAST so it lands in the established frame
+```
+
+If load order is broken, the request lands in the default lens. If load order is held, the request lands in the correct frame. This is non-negotiable.
+
+### 0.2 — Re-anchor on the stakes (read aloud at session start)
+
+> The pilot has $30K/week, ~12 weeks runway, friendly partner with prior trust. **This is NOT "succeed or fail with no margin."** It IS "build for full power, ship honestly, defer launch when any criterion is RED." The friendly runway is for building correctly, not for compressing past correctness.
+>
+> The system at full power means every Phase 0.1 substrate is wired, full methodology stack (M2/M3/M6 + plant model + distribution-calibrated thresholds) is active, Loop B v0.2 is complete, agency dashboard is rendered with cognitive vocabulary, LUXY integrations are live, and pilot launch is decided on data not optimism.
+>
+> The discipline IS the differentiator. Foundation §7 rule 11 holds: the fitness function IS the ethics. Selection is amoral. The reward signal designs the system's character. Every commit either honors that or erodes it.
+
+### 0.3 — Drift signals specific to build work (catch them at the keystroke)
+
+Watch for these. When felt, STOP, reread Part IX of the orientation document, and self-check.
+
+| Signal | Likely drift | Recovery action |
+|---|---|---|
+| **"Velocity sensation"** — moving fast, build green | Using cached patterns, not thinking | Slow down. Run the Section 0.5 self-check. |
+| **"Obvious component shape"** — what I'm writing feels obvious | Default-pattern-matching | Stop. Ask: is this cognition or scaffolding? |
+| **English fluency in service modules** | Composing prose where structure should be | Replace with templated rendering from structured input |
+| **"Generic"** appears in own thinking | Reaching for industry default | There is no generic in ADAM. Substitute the cognitive primitive. |
+| **Pre-pruning before scoring** | Cutting items based on implicit framing before enumerating | List the complete possibility set FIRST, then score, then prune |
+| **"Chris is busy, I'll just build"** | The drift itself | This document is here so the frame holds when Chris is busy. Read it. |
+| **Justification assembly in advance of commit** | Drift dressed for approval | Stop. Rewrite the diff before the commit message. |
+| **Reaching for a sophistication item to feel productive** | Confusing rigor with theatre | Ask: does this item help Pilot 1, compound to Pilot 2-5, or is it methodology theatre? |
+| **Defaulting to "graceful degradation"** | Engineering virtue that contaminates inferential systems | If the gracefulness silently consumes simulated/proxy data into the learning loop, REJECT it |
+| **Composing English in a generator function** | Hand-crafted "AI says" prose where atom traces should be | Refactor to render structured input |
+
+### 0.4 — Discipline rules binding today (every commit must honor)
+
+Eight non-negotiable rules. Each commit checks against them.
+
+1. **Foundation §7 rule 11** — fitness function IS the ethics. Negative-outcome instrumentation must flow before live spend. Asymmetric selection silently optimizes toward exploitation.
+
+2. **HMT discipline rule 12** — every user assertion is HYPOTHESIS at write time. Promotion requires instrumentation + horizon completion + causal adjudication. Pydantic + service-layer both enforce.
+
+3. **Vocabulary discipline at every layer** — backend, frontend, payload keys, communication templates. Cognitive vocabulary, NOT programmatic-DSP vocabulary. "Construct chain" not "reasoning explanation"; "uncertainty panel" not "confidence scores"; "rotation events" not "campaign updates"; "session mood" not "user sentiment."
+
+4. **A14 retirement triggers** — every calibration-pending coefficient gets an A14 flag with a specific retirement trigger named at creation. The Prometheus counter (`fec2c40`) tracks accumulation. Public dashboard displays progress toward retirement. Without retirement, the discipline becomes theatre.
+
+5. **No LLM-composed prose at any rendering layer** — chain rendering, dashboard payload, communication templates, runbook responses, panel claim text — ALL templated from structured data. Never generated. Test coverage anchors this (e.g., `TestNoLLMComposedText`).
+
+6. **Verification before layering** — Chris drives ≥1 verification touch per week (smoke test run, commit diff read, staging dashboard exercised). Stacked unverified commits past 5 = drift signal; pause and surface.
+
+7. **Per-commit antipattern audit** — every commit message names which of A1-A15 the diff touches and how each was held or honestly violated. "None applicable" is rarely true; itself a drift signal.
+
+8. **Build correct, ship honest, defer launch when any criterion is RED** — not "compress at all costs." Friendly runway is for correctness, not for haste.
+
+### 0.5 — Pre-commit self-check (every commit, before `git commit`)
+
+Adapted from orientation Part VII. Apply EVERY time:
+
+- [ ] **What cognitive mechanism does this commit embody?** If "none — just plumbing," is plumbing the right scope? Plumbing is fine; "feature" without mechanism isn't.
+- [ ] **Where does this commit's content originate?** Atom state? Graph query? Templated from structured input? **Composed prose?** Composed prose is drift; rewrite.
+- [ ] **What test pins the load-bearing claim?** "It builds" is not pinning. A test that asserts the structural property IS pinning.
+- [ ] **What antipatterns is this commit at risk of?** Name them (A1-A15). State how each was held.
+- [ ] **What A14 flag does this commit add or retire?** Every calibration-pending coefficient gets one. Every retirement names what's empirical now.
+- [ ] **Is the vocabulary discipline maintained at every layer touched?** Check the diff for "dashboard," "recommend," "settings," "approval," "user-friendly."
+- [ ] **Did Chris verify the previous commit before I built this one?** If no, and unverified commits ≥ 5, pause and surface for verification.
+- [ ] **Could a hostile due-diligence reader challenge any claim in this diff?** If yes, soften or strengthen the claim per actual evidence.
+
+### 0.6 — Today's focus protocol
+
+Each work session, before opening any file:
+
+1. **Read this Section 0 in full.** Not skim — read.
+2. **Read the WEEK in Section 5 corresponding to today's calendar week.**
+3. **Pick the next unblocked item from that week's list.** "Unblocked" means: dependencies (Section 3) are met; external info (Section 7 / E1-E8) has arrived if needed.
+4. **Name the antipattern most at risk for THIS specific item.** Write it in the task description before starting.
+5. **Identify the A14 flag(s) this commit will create.** Write the retirement trigger before writing code.
+6. **Commit your intent to one focused commit.** Not "I'll do these 3 things"; "I will ship this one item."
+7. **Build. Test. Self-check (0.5). Commit.**
+
+If at any step the work expands beyond the planned item: STOP. Re-read Section 0.3. Decide if expansion is genuine necessity or drift toward "this will be fine, just build."
+
+### 0.7 — When in doubt — DO NOT DEFAULT
+
+Per orientation Part X. The instinct to fill gaps with defaults caused the prior drift. The instinct still arrives during build work — recognized and resisted is the discipline.
+
+When uncertain whether a pattern is correct:
+
+1. **Do not fill the gap with a default.** Default is the failure mode. Gap is information; default is noise.
+2. **Name the unsureness specifically.** "I'm unsure whether X should be atom-derived or composed because [specific reason]." Not "I'm not sure about this."
+3. **Ask Chris.** Even small questions. Cost of asking is seconds; cost of drifting is hours to weeks to a whole branch.
+4. **If Chris is unavailable, state both options in the commit message and route the decision to him.** Do not pick silently. The silent pick IS the drift.
+
+### 0.8 — Session-close ritual
+
+At session end, before stopping:
+
+1. **Did I hold the eight discipline rules in 0.4?** If not, name where slipped.
+2. **Did every commit pass the 0.5 self-check?** Re-read the commit messages — could a hostile reader find drift hidden in them?
+3. **What's the next session's first action?** Write it explicitly so next session opens with clarity.
+4. **Update the roadmap if any item is complete.** Section 5 reflects current state.
+
+### 0.9 — Mid-session reorientation (when drift is suspected)
+
+If you notice during the session:
+- The work is taking longer than expected because scope expanded
+- The commits feel "fine" but the discipline rules feel less sharp
+- Several commits stacked without Chris's verification
+- A "this will be fine, I'll flag in the commit message" thought arrived
+
+**Stop. Take 5 minutes.** Re-read Sections 0.2 (stakes), 0.3 (drift signals), and 0.4 (discipline rules). Ask: is the work I'm about to ship from cognition or from the cached pattern? If the answer is unclear, defer the commit, write a note, surface to Chris.
+
+The friendly runway is the gift that lets us stop and re-orient. Don't burn it on rushed commits.
+
+### 0.10 — Specific drift signals for this pilot
+
+Beyond the orientation's general A1-A15, drift signals specific to ADAM pilot construction:
+
+- **"This score is more sophisticated"** — sophistication ≠ pilot value. The simulation scoring (Section 2) is the priority anchor; sophistication beyond simulation rank is theatre.
+- **"This will save time later"** — the friendly runway means later has time. Build correct now.
+- **"The reviewer won't notice"** — if the reviewer wouldn't notice, neither will the empirical data. Cut the line; ship correct.
+- **"I'll wire this fancy thing into the cascade scoring"** — wiring scoring changes are architecturally consequential. Substrate ships independently of wiring; wiring ships only after Chris approves the scoring change.
+- **"I'll handle the Aura migration / production deploy quickly"** — operational actions against production warrant explicit authorization. Always.
+- **"The synthetic test is enough"** — synthetic tests anchor the substrate. Pre-launch smoke test in production is what catches integration drift. Both required.
+
+### 0.11 — Discipline anchor — three sentences
+
+When this whole protocol feels like too much to read mid-session, repeat these three sentences:
+
+> ADAM is the Bargh-lineage cognitive architecture for advertising. Every commit either honors that or erodes it. The fitness function IS the ethics — selection pressure is amoral and will reinforce whatever the reward signal rewards, including exploitation, unless the system is architected to resist.
+
+If the work in progress is consistent with all three sentences, continue. If any sentence is in tension with the work, stop and re-read Section 0.
+
+---
+
 ## Section 1 — Complete possibility set
 
 Enumerated across 8 layers. **[S]** = shipped this session. **[W]** = wiring needed atop shipped substrate. **[N]** = not built. Items not previously simulated marked with **[NEW]**.
