@@ -820,6 +820,611 @@ class RankOrderGenerator:
 
 
 # =============================================================================
+# SPIES — Subjective Probability Interval Estimates (v0.2)
+# =============================================================================
+
+
+@dataclass(frozen=True)
+class SPIESQuestion:
+    """Render-ready SPIES question payload.
+
+    Per directive Section 7.1: 'SPIES (Subjective Probability Interval
+    Estimates) — partner provides an interval estimate for an effect;
+    yields variance estimates needed for the precision-weighted active-
+    inference layer.'
+
+    Frontend renders prompt + dimension + response_unit; user provides
+    [lower, upper] bound on the estimated quantity.
+    """
+
+    question_id: str
+    prompt: str
+    dimension: str        # what's being estimated (e.g., "lift_for_authority_in_status_seekers")
+    response_unit: str    # "probability" | "rate" | "ratio"
+
+
+@dataclass(frozen=True)
+class SPIESResponse:
+    """Captured response to a SPIESQuestion.
+
+    `lower_bound` and `upper_bound` define the user's subjective
+    interval. Validation ensures monotonicity and unit-interval bounds.
+    """
+
+    question_id: str
+    lower_bound: float
+    upper_bound: float
+    latency_ms: int
+
+
+class SPIESGenerator:
+    """SPIES generator — interval estimates for variance elicitation.
+
+    HMT §8 v0.2 mode. Used to elicit user UNCERTAINTY (interval width)
+    on a target effect. The width feeds the precision-weighted active-
+    inference layer (Spine #5) — narrow intervals = high precision;
+    wide intervals = low precision.
+
+    Validation:
+        - response_unit in {"probability", "rate", "ratio"}
+        - 0 ≤ lower_bound ≤ upper_bound ≤ 1 for probability/rate
+        - lower_bound < upper_bound (zero-width intervals rejected)
+    """
+
+    mode = ElicitationMode.SPIES
+
+    _ALLOWED_UNITS: tuple = ("probability", "rate", "ratio")
+
+    def render(
+        self,
+        prompt: str,
+        dimension: str,
+        response_unit: str = "probability",
+    ) -> SPIESQuestion:
+        if not prompt.strip():
+            raise ValueError("prompt must be non-empty")
+        if not dimension.strip():
+            raise ValueError("dimension must be non-empty")
+        if response_unit not in self._ALLOWED_UNITS:
+            raise ValueError(
+                f"response_unit must be one of {self._ALLOWED_UNITS}; "
+                f"got {response_unit!r}"
+            )
+        return SPIESQuestion(
+            question_id=_new_question_id(),
+            prompt=prompt,
+            dimension=dimension,
+            response_unit=response_unit,
+        )
+
+    async def capture(
+        self,
+        context: ElicitationContext,
+        question: SPIESQuestion,
+        response: SPIESResponse,
+        ledger: DialogueLedgerService,
+    ) -> Claim:
+        if response.question_id != question.question_id:
+            raise ValueError(
+                f"response.question_id ({response.question_id}) does not "
+                f"match question.question_id ({question.question_id})"
+            )
+        if response.latency_ms < 0:
+            raise ValueError(
+                f"latency_ms must be non-negative; got {response.latency_ms}"
+            )
+        # Probability / rate constrained to [0, 1]; ratio is unconstrained.
+        if question.response_unit in ("probability", "rate"):
+            if not 0.0 <= response.lower_bound <= 1.0:
+                raise ValueError(
+                    f"lower_bound must be in [0, 1] for "
+                    f"{question.response_unit}; got {response.lower_bound}"
+                )
+            if not 0.0 <= response.upper_bound <= 1.0:
+                raise ValueError(
+                    f"upper_bound must be in [0, 1] for "
+                    f"{question.response_unit}; got {response.upper_bound}"
+                )
+        if response.lower_bound > response.upper_bound:
+            raise ValueError(
+                f"lower_bound ({response.lower_bound}) must be ≤ "
+                f"upper_bound ({response.upper_bound})"
+            )
+        if response.lower_bound == response.upper_bound:
+            raise ValueError(
+                "zero-width interval; SPIES requires a non-degenerate "
+                "interval to elicit variance"
+            )
+
+        width = response.upper_bound - response.lower_bound
+        midpoint = (response.upper_bound + response.lower_bound) / 2.0
+        claim_text = (
+            f"interval estimate on '{question.dimension}' "
+            f"({question.response_unit}): [{response.lower_bound:.3f}, "
+            f"{response.upper_bound:.3f}] (midpoint {midpoint:.3f}, "
+            f"width {width:.3f}) | prompt: {question.prompt}"
+        )
+
+        # stated_confidence is bounded [0, 1] in the Claim model.
+        # Probability/rate units → midpoint is a confidence; ratio
+        # units → midpoint is not a confidence (can be > 1), so omit.
+        stated_conf: Optional[float] = (
+            midpoint if question.response_unit in ("probability", "rate")
+            else None
+        )
+
+        claim = make_claim(
+            user_id=context.user_id,
+            text=claim_text,
+            elicitation_mode=self.mode,
+            domain=context.domain,
+            stated_confidence=stated_conf,
+            latency_ms=response.latency_ms,
+            frame=context.frame,
+            session_id=context.session_id,
+            mood_index=context.mood_index,
+        )
+        await ledger.record_claim(
+            claim,
+            capture_reason=f"spies: {question.question_id}",
+        )
+        return claim
+
+
+# =============================================================================
+# FourPoint — 4-percentile distribution-shape elicitation (v0.2)
+# =============================================================================
+
+
+@dataclass(frozen=True)
+class FourPointQuestion:
+    """Render-ready FourPoint question payload.
+
+    Per directive Section 7.1: 'FourPoint — partner provides four
+    anchor points for a probability distribution; yields full
+    distribution shape for prior elicitation.'
+
+    Standard percentile anchors: 10th, 25th, 75th, 90th. With 4 points
+    a partner can express asymmetric / skewed distributions that
+    SPIES (which only captures interval) cannot.
+    """
+
+    question_id: str
+    prompt: str
+    dimension: str
+    response_unit: str  # "probability" | "rate" | "ratio"
+
+
+@dataclass(frozen=True)
+class FourPointResponse:
+    """Captured response to a FourPointQuestion.
+
+    Four percentile anchors at 10/25/75/90. Must be monotonic non-
+    decreasing.
+    """
+
+    question_id: str
+    p10: float
+    p25: float
+    p75: float
+    p90: float
+    latency_ms: int
+
+
+class FourPointGenerator:
+    """FourPoint generator — 4-percentile distribution-shape elicitation.
+
+    HMT §8 v0.2 mode. Used to elicit FULL DISTRIBUTION SHAPE
+    (asymmetry / skew) on a target effect. The shape feeds prior
+    elicitation in Spine #1 (more informative than SPIES intervals).
+
+    Validation:
+        - response_unit in {"probability", "rate", "ratio"}
+        - p10 ≤ p25 ≤ p75 ≤ p90 (monotonic non-decreasing)
+        - For probability/rate: all four in [0, 1]
+    """
+
+    mode = ElicitationMode.FOUR_POINT
+
+    _ALLOWED_UNITS: tuple = ("probability", "rate", "ratio")
+
+    def render(
+        self,
+        prompt: str,
+        dimension: str,
+        response_unit: str = "probability",
+    ) -> FourPointQuestion:
+        if not prompt.strip():
+            raise ValueError("prompt must be non-empty")
+        if not dimension.strip():
+            raise ValueError("dimension must be non-empty")
+        if response_unit not in self._ALLOWED_UNITS:
+            raise ValueError(
+                f"response_unit must be one of {self._ALLOWED_UNITS}; "
+                f"got {response_unit!r}"
+            )
+        return FourPointQuestion(
+            question_id=_new_question_id(),
+            prompt=prompt,
+            dimension=dimension,
+            response_unit=response_unit,
+        )
+
+    async def capture(
+        self,
+        context: ElicitationContext,
+        question: FourPointQuestion,
+        response: FourPointResponse,
+        ledger: DialogueLedgerService,
+    ) -> Claim:
+        if response.question_id != question.question_id:
+            raise ValueError(
+                f"response.question_id ({response.question_id}) does not "
+                f"match question.question_id ({question.question_id})"
+            )
+        if response.latency_ms < 0:
+            raise ValueError(
+                f"latency_ms must be non-negative; got {response.latency_ms}"
+            )
+        # Range checks for probability / rate
+        anchors = (response.p10, response.p25, response.p75, response.p90)
+        if question.response_unit in ("probability", "rate"):
+            for label, val in zip(("p10", "p25", "p75", "p90"), anchors):
+                if not 0.0 <= val <= 1.0:
+                    raise ValueError(
+                        f"{label} must be in [0, 1] for "
+                        f"{question.response_unit}; got {val}"
+                    )
+        # Monotonicity (non-decreasing)
+        if not (response.p10 <= response.p25 <= response.p75 <= response.p90):
+            raise ValueError(
+                f"anchors must be monotonic non-decreasing "
+                f"(p10 ≤ p25 ≤ p75 ≤ p90); got "
+                f"p10={response.p10}, p25={response.p25}, "
+                f"p75={response.p75}, p90={response.p90}"
+            )
+
+        # Median approximated as average of p25 and p75
+        median_approx = (response.p25 + response.p75) / 2.0
+        # Inter-quartile-range proxy for spread
+        iqr = response.p75 - response.p25
+
+        claim_text = (
+            f"distribution shape on '{question.dimension}' "
+            f"({question.response_unit}): "
+            f"p10={response.p10:.3f}, p25={response.p25:.3f}, "
+            f"p75={response.p75:.3f}, p90={response.p90:.3f} "
+            f"(approx-median {median_approx:.3f}, IQR {iqr:.3f}) | "
+            f"prompt: {question.prompt}"
+        )
+
+        # stated_confidence bounded [0, 1] — only pass median_approx
+        # when response_unit is bounded (probability / rate).
+        stated_conf: Optional[float] = (
+            median_approx if question.response_unit in ("probability", "rate")
+            else None
+        )
+
+        claim = make_claim(
+            user_id=context.user_id,
+            text=claim_text,
+            elicitation_mode=self.mode,
+            domain=context.domain,
+            stated_confidence=stated_conf,
+            latency_ms=response.latency_ms,
+            frame=context.frame,
+            session_id=context.session_id,
+            mood_index=context.mood_index,
+        )
+        await ledger.record_claim(
+            claim,
+            capture_reason=f"four_point: {question.question_id}",
+        )
+        return claim
+
+
+# =============================================================================
+# CounterExample — heterogeneous-effect prior elicitation (v0.2)
+# =============================================================================
+
+
+# Per directive Section 7.1: "CounterExample — partner provides
+# counterexample cases ('here's a user who is in cohort X but I think
+# mechanism Y won't work for them'); yields heterogeneous-effect
+# priors."
+#
+# Closed vocabulary of breakdown reason tags — A12 defense.
+COUNTER_EXAMPLE_BREAKDOWN_TAGS: frozenset = frozenset({
+    "cohort_membership_uncertain",     # partner thinks user is borderline cohort
+    "prior_observation_contradicts",   # past result with this user/cohort
+    "context_mismatch",                # mechanism doesn't fit context the partner has seen
+    "mechanism_fatigue_observed",      # repeated exposure has degraded
+    "specific_user_history_argues_against",  # partner has direct knowledge
+    "category_atypical_response",      # category-specific anomaly
+})
+
+
+@dataclass(frozen=True)
+class CounterExampleQuestion:
+    """Render-ready CounterExample question payload."""
+
+    question_id: str
+    prompt: str
+    target_belief: str  # e.g., "authority works for status_seekers in luxury_transit"
+
+
+@dataclass(frozen=True)
+class CounterExampleResponse:
+    """Captured response to a CounterExampleQuestion.
+
+    Structured slots:
+        target_cohort: cohort the partner is naming as the counter-example
+        target_mechanism: mechanism the partner thinks won't work
+        breakdown_reason_tag: REQUIRED categorical reason from
+            COUNTER_EXAMPLE_BREAKDOWN_TAGS
+        annotation: optional free-text human-authored context
+    """
+
+    question_id: str
+    target_cohort: str
+    target_mechanism: str
+    breakdown_reason_tag: str
+    annotation: Optional[str] = None
+    latency_ms: int = 0
+
+
+class CounterExampleGenerator:
+    """CounterExample generator — heterogeneous-effect prior elicitation.
+
+    HMT §8 v0.2 mode. Per directive: yields heterogeneous-effect priors
+    (the partner's counter-example argues for a moderator on the
+    treatment effect).
+
+    Validation:
+        - target_cohort + target_mechanism non-empty
+        - breakdown_reason_tag REQUIRED + must be in vocabulary
+          (A12 defense — categorical signal for analytics loop)
+        - annotation optional, human-authored only
+    """
+
+    mode = ElicitationMode.COUNTER_EXAMPLE
+
+    def render(
+        self,
+        prompt: str,
+        target_belief: str,
+    ) -> CounterExampleQuestion:
+        if not prompt.strip():
+            raise ValueError("prompt must be non-empty")
+        if not target_belief.strip():
+            raise ValueError("target_belief must be non-empty")
+        return CounterExampleQuestion(
+            question_id=_new_question_id(),
+            prompt=prompt,
+            target_belief=target_belief,
+        )
+
+    async def capture(
+        self,
+        context: ElicitationContext,
+        question: CounterExampleQuestion,
+        response: CounterExampleResponse,
+        ledger: DialogueLedgerService,
+    ) -> Claim:
+        if response.question_id != question.question_id:
+            raise ValueError(
+                f"response.question_id ({response.question_id}) does not "
+                f"match question.question_id ({question.question_id})"
+            )
+        if response.latency_ms < 0:
+            raise ValueError(
+                f"latency_ms must be non-negative; got {response.latency_ms}"
+            )
+        if not response.target_cohort.strip():
+            raise ValueError("target_cohort must be non-empty")
+        if not response.target_mechanism.strip():
+            raise ValueError("target_mechanism must be non-empty")
+        # breakdown_reason_tag REQUIRED + categorical (A12 defense)
+        tag = (response.breakdown_reason_tag or "").strip()
+        if not tag:
+            raise ValueError(
+                "breakdown_reason_tag is required (categorical signal). "
+                "Free-form annotation alone is insufficient — A12 defense."
+            )
+        if tag not in COUNTER_EXAMPLE_BREAKDOWN_TAGS:
+            raise ValueError(
+                f"breakdown_reason_tag '{tag}' not in "
+                f"COUNTER_EXAMPLE_BREAKDOWN_TAGS. To add a tag, edit the "
+                f"constant; arbitrary tags rejected."
+            )
+
+        ann_part = (
+            f" | annotation: {response.annotation}"
+            if response.annotation else ""
+        )
+        claim_text = (
+            f"counter-example to '{question.target_belief}': "
+            f"cohort='{response.target_cohort}', "
+            f"mechanism='{response.target_mechanism}', "
+            f"reason='{tag}'{ann_part} | prompt: {question.prompt}"
+        )
+
+        claim = make_claim(
+            user_id=context.user_id,
+            text=claim_text,
+            elicitation_mode=self.mode,
+            domain=context.domain,
+            latency_ms=response.latency_ms,
+            frame=context.frame,
+            session_id=context.session_id,
+            mood_index=context.mood_index,
+        )
+        await ledger.record_claim(
+            claim,
+            capture_reason=f"counter_example: {question.question_id}",
+        )
+        return claim
+
+
+# =============================================================================
+# Scenario — conditional prior elicitation (v0.2)
+# =============================================================================
+
+
+# Per directive Section 7.1: "Scenario — partner provides scenario
+# descriptions; yields conditional priors ('in this situation, we'd
+# expect this outcome')."
+#
+# Closed vocabularies — A12 defense.
+SCENARIO_KIND_TAGS: frozenset = frozenset({
+    "morning_commute_pressure",
+    "leisure_evening_browse",
+    "expense_quarter_close",
+    "conference_season_intent",
+    "new_user_first_touch",
+    "repeat_user_steady_state",
+    "post_negative_outcome_re_engage",
+    "high_pressure_decision_window",
+    "researching_alternatives",
+    "weekend_personal_use",
+})
+
+
+SCENARIO_OUTCOME_TAGS: frozenset = frozenset({
+    "expected_higher_response",
+    "expected_lower_response",
+    "expected_indifferent",
+    "expected_backfire_risk",
+    "expected_delayed_response",
+})
+
+
+@dataclass(frozen=True)
+class ScenarioQuestion:
+    """Render-ready Scenario question payload."""
+
+    question_id: str
+    prompt: str
+    mechanism_under_consideration: str  # the mechanism the partner is reasoning about
+
+
+@dataclass(frozen=True)
+class ScenarioResponse:
+    """Captured response to a ScenarioQuestion.
+
+    Structured slots:
+        scenario_kind_tag: REQUIRED categorical from SCENARIO_KIND_TAGS
+        expected_outcome_tag: REQUIRED categorical from
+            SCENARIO_OUTCOME_TAGS
+        annotation: optional free-text context
+    """
+
+    question_id: str
+    scenario_kind_tag: str
+    expected_outcome_tag: str
+    annotation: Optional[str] = None
+    latency_ms: int = 0
+
+
+class ScenarioGenerator:
+    """Scenario generator — conditional prior elicitation.
+
+    HMT §8 v0.2 mode. Per directive: yields conditional priors. The
+    partner names a scenario class + the outcome they'd expect; the
+    resulting Claim conditions a prior on (scenario_kind, mechanism)
+    pair.
+
+    Validation:
+        - mechanism_under_consideration non-empty
+        - scenario_kind_tag REQUIRED + in vocabulary
+        - expected_outcome_tag REQUIRED + in vocabulary
+        - annotation optional, human-authored only
+    """
+
+    mode = ElicitationMode.SCENARIO
+
+    def render(
+        self,
+        prompt: str,
+        mechanism_under_consideration: str,
+    ) -> ScenarioQuestion:
+        if not prompt.strip():
+            raise ValueError("prompt must be non-empty")
+        if not mechanism_under_consideration.strip():
+            raise ValueError("mechanism_under_consideration must be non-empty")
+        return ScenarioQuestion(
+            question_id=_new_question_id(),
+            prompt=prompt,
+            mechanism_under_consideration=mechanism_under_consideration,
+        )
+
+    async def capture(
+        self,
+        context: ElicitationContext,
+        question: ScenarioQuestion,
+        response: ScenarioResponse,
+        ledger: DialogueLedgerService,
+    ) -> Claim:
+        if response.question_id != question.question_id:
+            raise ValueError(
+                f"response.question_id ({response.question_id}) does not "
+                f"match question.question_id ({question.question_id})"
+            )
+        if response.latency_ms < 0:
+            raise ValueError(
+                f"latency_ms must be non-negative; got {response.latency_ms}"
+            )
+        kind = (response.scenario_kind_tag or "").strip()
+        if not kind:
+            raise ValueError(
+                "scenario_kind_tag is required (categorical signal). "
+                "A12 defense."
+            )
+        if kind not in SCENARIO_KIND_TAGS:
+            raise ValueError(
+                f"scenario_kind_tag '{kind}' not in SCENARIO_KIND_TAGS. "
+                f"To add a tag, edit the constant; arbitrary tags rejected."
+            )
+        outcome = (response.expected_outcome_tag or "").strip()
+        if not outcome:
+            raise ValueError(
+                "expected_outcome_tag is required (categorical signal). "
+                "A12 defense."
+            )
+        if outcome not in SCENARIO_OUTCOME_TAGS:
+            raise ValueError(
+                f"expected_outcome_tag '{outcome}' not in "
+                f"SCENARIO_OUTCOME_TAGS. To add a tag, edit the constant."
+            )
+
+        ann_part = (
+            f" | annotation: {response.annotation}"
+            if response.annotation else ""
+        )
+        claim_text = (
+            f"scenario '{kind}' for mechanism "
+            f"'{question.mechanism_under_consideration}': "
+            f"outcome='{outcome}'{ann_part} | prompt: {question.prompt}"
+        )
+
+        claim = make_claim(
+            user_id=context.user_id,
+            text=claim_text,
+            elicitation_mode=self.mode,
+            domain=context.domain,
+            latency_ms=response.latency_ms,
+            frame=context.frame,
+            session_id=context.session_id,
+            mood_index=context.mood_index,
+        )
+        await ledger.record_claim(
+            claim,
+            capture_reason=f"scenario: {question.question_id}",
+        )
+        return claim
+
+
+# =============================================================================
 # Convenience: get all v0.1 generators
 # =============================================================================
 
@@ -838,20 +1443,31 @@ def all_v01_generators() -> List[object]:
 def all_v02_generators() -> List[object]:
     """Return one instance of each v0.2 generator added beyond v0.1.
 
-    Currently kAFC + RankOrder. The remaining v0.2 modes (CounterExample,
-    Scenario, SPIES, FourPoint) ship in subsequent commits.
+    Full v0.2 suite per directive Section 7.1: kAFC + RankOrder + SPIES
+    + FourPoint + CounterExample + Scenario.
     """
     return [
         KAFCGenerator(),
         RankOrderGenerator(),
+        SPIESGenerator(),
+        FourPointGenerator(),
+        CounterExampleGenerator(),
+        ScenarioGenerator(),
     ]
 
 
 __all__ = [
+    "COUNTER_EXAMPLE_BREAKDOWN_TAGS",
+    "CounterExampleGenerator",
+    "CounterExampleQuestion",
+    "CounterExampleResponse",
     "ElicitationContext",
     "ForcedPairGenerator",
     "ForcedPairQuestion",
     "ForcedPairResponse",
+    "FourPointGenerator",
+    "FourPointQuestion",
+    "FourPointResponse",
     "KAFCGenerator",
     "KAFCQuestion",
     "KAFCResponse",
@@ -861,6 +1477,14 @@ __all__ = [
     "RecallabilityProbeGenerator",
     "RecallabilityProbeQuestion",
     "RecallabilityProbeResponse",
+    "SCENARIO_KIND_TAGS",
+    "SCENARIO_OUTCOME_TAGS",
+    "SPIESGenerator",
+    "SPIESQuestion",
+    "SPIESResponse",
+    "ScenarioGenerator",
+    "ScenarioQuestion",
+    "ScenarioResponse",
     "StoryPromptGenerator",
     "StoryPromptQuestion",
     "StoryPromptResponse",
