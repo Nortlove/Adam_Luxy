@@ -558,6 +558,268 @@ class RecallabilityProbeGenerator:
 
 
 # =============================================================================
+# kAFC — k-alternative forced-choice (v0.2)
+# =============================================================================
+
+
+@dataclass(frozen=True)
+class KAFCQuestion:
+    """Render-ready k-alternative forced-choice payload.
+
+    Generalization of ForcedPair to k options (typically k=3..5). Used
+    for psychophysical-style discrimination where binary choice is too
+    coarse — e.g., "which of these four creative variants feels most
+    aligned with your audience?"
+
+    `options` is the ordered list of k options. `option_labels` is the
+    parallel list of single-character labels ("a", "b", "c", ...) for
+    response routing.
+    """
+
+    question_id: str
+    prompt: str
+    options: List[str]
+    option_labels: List[str]
+
+    def k(self) -> int:
+        return len(self.options)
+
+
+@dataclass(frozen=True)
+class KAFCResponse:
+    """Captured response to a KAFCQuestion."""
+
+    question_id: str
+    chosen_label: str  # one of question.option_labels
+    latency_ms: int
+
+
+class KAFCGenerator:
+    """k-alternative forced-choice generator (HMT §8 v0.2 mode).
+
+    Choose k=3 when binary is too coarse but the user is still expected
+    to converge fast. k=5 introduces material processing-depth cost and
+    is appropriate when System 2 deliberation is desired (per HMT
+    §8.4: kAFC's coarse-vs-fine tradeoff).
+
+    Validation:
+        - k MUST be in [3, 5] (HMT §8.4 boundary)
+        - All option strings non-empty + distinct
+        - chosen_label MUST be one of the option_labels
+    """
+
+    mode = ElicitationMode.K_AFC
+
+    _MIN_K = 3
+    _MAX_K = 5
+
+    def render(
+        self,
+        prompt: str,
+        options: List[str],
+    ) -> KAFCQuestion:
+        if not prompt.strip():
+            raise ValueError("prompt must be non-empty")
+        if not (self._MIN_K <= len(options) <= self._MAX_K):
+            raise ValueError(
+                f"kAFC requires k in [{self._MIN_K}, {self._MAX_K}]; "
+                f"got k={len(options)}"
+            )
+        cleaned = [o.strip() for o in options]
+        if any(not o for o in cleaned):
+            raise ValueError("every option must be non-empty")
+        if len(set(cleaned)) != len(cleaned):
+            raise ValueError("options must be distinct")
+        labels = [chr(ord("a") + i) for i in range(len(cleaned))]
+        return KAFCQuestion(
+            question_id=_new_question_id(),
+            prompt=prompt,
+            options=cleaned,
+            option_labels=labels,
+        )
+
+    async def capture(
+        self,
+        context: ElicitationContext,
+        question: KAFCQuestion,
+        response: KAFCResponse,
+        ledger: DialogueLedgerService,
+    ) -> Claim:
+        if response.question_id != question.question_id:
+            raise ValueError(
+                f"response.question_id ({response.question_id}) does not "
+                f"match question.question_id ({question.question_id})"
+            )
+        if response.chosen_label not in question.option_labels:
+            raise ValueError(
+                f"chosen_label must be one of {question.option_labels}; "
+                f"got {response.chosen_label!r}"
+            )
+        if response.latency_ms < 0:
+            raise ValueError(
+                f"latency_ms must be non-negative; got {response.latency_ms}"
+            )
+
+        idx = question.option_labels.index(response.chosen_label)
+        chosen_text = question.options[idx]
+        claim_text = (
+            f"selected '{chosen_text}' from {question.k()} alternatives "
+            f"for: {question.prompt}"
+        )
+
+        claim = make_claim(
+            user_id=context.user_id,
+            text=claim_text,
+            elicitation_mode=self.mode,
+            domain=context.domain,
+            latency_ms=response.latency_ms,
+            frame=context.frame,
+            session_id=context.session_id,
+            mood_index=context.mood_index,
+        )
+        await ledger.record_claim(
+            claim,
+            capture_reason=f"k_afc: {question.question_id}",
+        )
+        return claim
+
+
+# =============================================================================
+# RankOrder — full ordering of n items (v0.2)
+# =============================================================================
+
+
+@dataclass(frozen=True)
+class RankOrderQuestion:
+    """Render-ready rank-order question payload.
+
+    User orders n items from most-preferred (rank 1) to least-preferred
+    (rank n) along a stated psychological dimension.
+
+    `dimension` is the named psychological dimension being ranked
+    (e.g., "trustworthiness", "attention-grabbing-ness"). `items` is
+    the ordered list to be reordered.
+    """
+
+    question_id: str
+    prompt: str
+    dimension: str
+    items: List[str]
+
+    def n(self) -> int:
+        return len(self.items)
+
+
+@dataclass(frozen=True)
+class RankOrderResponse:
+    """Captured response to a RankOrderQuestion.
+
+    `ranking` is a list of indices into question.items, in the user's
+    order from most → least. Length must equal question.n().
+    """
+
+    question_id: str
+    ranking: List[int]
+    latency_ms: int
+
+
+class RankOrderGenerator:
+    """Full-ordering generator (HMT §8 v0.2 mode).
+
+    Captures more information per response than ForcedPair (n choose 2
+    pairwise inferences from one ranking) at the cost of higher
+    cognitive load for the user. HMT §8.5: use for n ≤ 5; beyond that
+    the response time and confabulation risk both spike.
+
+    Validation:
+        - n MUST be in [3, 5]
+        - All items distinct
+        - ranking MUST be a valid permutation of [0..n-1]
+    """
+
+    mode = ElicitationMode.RANK_ORDER
+
+    _MIN_N = 3
+    _MAX_N = 5
+
+    def render(
+        self,
+        prompt: str,
+        dimension: str,
+        items: List[str],
+    ) -> RankOrderQuestion:
+        if not prompt.strip():
+            raise ValueError("prompt must be non-empty")
+        if not dimension.strip():
+            raise ValueError("dimension must be non-empty")
+        if not (self._MIN_N <= len(items) <= self._MAX_N):
+            raise ValueError(
+                f"RankOrder requires n in [{self._MIN_N}, {self._MAX_N}]; "
+                f"got n={len(items)}"
+            )
+        cleaned = [i.strip() for i in items]
+        if any(not i for i in cleaned):
+            raise ValueError("every item must be non-empty")
+        if len(set(cleaned)) != len(cleaned):
+            raise ValueError("items must be distinct")
+        return RankOrderQuestion(
+            question_id=_new_question_id(),
+            prompt=prompt,
+            dimension=dimension,
+            items=cleaned,
+        )
+
+    async def capture(
+        self,
+        context: ElicitationContext,
+        question: RankOrderQuestion,
+        response: RankOrderResponse,
+        ledger: DialogueLedgerService,
+    ) -> Claim:
+        if response.question_id != question.question_id:
+            raise ValueError(
+                f"response.question_id ({response.question_id}) does not "
+                f"match question.question_id ({question.question_id})"
+            )
+        n = question.n()
+        if len(response.ranking) != n:
+            raise ValueError(
+                f"ranking length must equal n={n}; got {len(response.ranking)}"
+            )
+        if sorted(response.ranking) != list(range(n)):
+            raise ValueError(
+                f"ranking must be a permutation of [0..{n - 1}]; "
+                f"got {response.ranking}"
+            )
+        if response.latency_ms < 0:
+            raise ValueError(
+                f"latency_ms must be non-negative; got {response.latency_ms}"
+            )
+
+        ordered = [question.items[i] for i in response.ranking]
+        claim_text = (
+            f"ranked items by '{question.dimension}' (most→least): "
+            f"{' > '.join(ordered)} | prompt: {question.prompt}"
+        )
+
+        claim = make_claim(
+            user_id=context.user_id,
+            text=claim_text,
+            elicitation_mode=self.mode,
+            domain=context.domain,
+            latency_ms=response.latency_ms,
+            frame=context.frame,
+            session_id=context.session_id,
+            mood_index=context.mood_index,
+        )
+        await ledger.record_claim(
+            claim,
+            capture_reason=f"rank_order: {question.question_id}",
+        )
+        return claim
+
+
+# =============================================================================
 # Convenience: get all v0.1 generators
 # =============================================================================
 
@@ -573,11 +835,29 @@ def all_v01_generators() -> List[object]:
     ]
 
 
+def all_v02_generators() -> List[object]:
+    """Return one instance of each v0.2 generator added beyond v0.1.
+
+    Currently kAFC + RankOrder. The remaining v0.2 modes (CounterExample,
+    Scenario, SPIES, FourPoint) ship in subsequent commits.
+    """
+    return [
+        KAFCGenerator(),
+        RankOrderGenerator(),
+    ]
+
+
 __all__ = [
     "ElicitationContext",
     "ForcedPairGenerator",
     "ForcedPairQuestion",
     "ForcedPairResponse",
+    "KAFCGenerator",
+    "KAFCQuestion",
+    "KAFCResponse",
+    "RankOrderGenerator",
+    "RankOrderQuestion",
+    "RankOrderResponse",
     "RecallabilityProbeGenerator",
     "RecallabilityProbeQuestion",
     "RecallabilityProbeResponse",
@@ -588,4 +868,5 @@ __all__ = [
     "TimedPairQuestion",
     "TimedPairResponse",
     "all_v01_generators",
+    "all_v02_generators",
 ]
