@@ -19,6 +19,13 @@ anthropic>=0.39.0
 numpy>=1.26.0
 scipy>=1.13.0
 
+# Causal Inference (M2 — handoff §2.10 library pins)
+# CausalForestDML — Wager-Athey 2018, Athey-Tibshirani-Wager 2019
+# Soft-imported in adam.intelligence.causal_forest; missing libs raise
+# LibsMissingError rather than silently returning None (drift defense).
+scikit-learn>=1.4.0
+econml>=0.16.0
+
 # Monitoring
 prometheus-client>=0.21.0
 
