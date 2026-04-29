@@ -332,8 +332,20 @@ def register_sapid_for_decision(
     substituted by StackAdapt at impression-bid time and the sapid
     arrives back via the Pixel API. This linkage table is the round-
     trip anchor.
+
+    Increments the Phase 8 SapidRoundTripMonitor registration counter.
+    Non-fatal: monitor failures never break the registration itself.
     """
     _SAPID_REGISTRY[sapid] = (decision_id, user_id, list(feature_vector))
+    try:
+        from adam.intelligence.spine.phase_8_stackadapt_integration import (
+            get_default_monitor,
+        )
+        get_default_monitor().record_registration()
+    except Exception as exc:
+        logger.debug(
+            "Phase 8 monitor unavailable; registration not counted: %s", exc,
+        )
 
 
 def lookup_sapid(sapid: str) -> Optional[Tuple[str, str, List[float]]]:
@@ -366,12 +378,28 @@ def build_outcome_event(
     """Build an OutcomeEvent from a RawPixelEvent.
 
     Looks up the sapid in the registry to resolve user_id + decision_id.
-    Returns None when sapid is unknown — the caller increments the
-    "round-trip failure" counter and discards the event (the only
-    deterministic linkage is via sapid; without it we cannot route to
-    the originating posterior).
+    Returns None when sapid is unknown — the round-trip failure is
+    counted via Phase 8 SapidRoundTripMonitor (the only deterministic
+    linkage is via sapid; without it we cannot route to the originating
+    posterior).
+
+    Increments Phase 8 monitor's resolved or unresolved counter per
+    lookup result. Non-fatal: monitor failures never break event
+    construction.
     """
     linkage = lookup_sapid(raw.sapid)
+
+    # Phase 8 round-trip rate accounting — non-fatal.
+    try:
+        from adam.intelligence.spine.phase_8_stackadapt_integration import (
+            get_default_monitor,
+        )
+        get_default_monitor().record_resolution(resolved=linkage is not None)
+    except Exception as exc:
+        logger.debug(
+            "Phase 8 monitor unavailable; resolution not counted: %s", exc,
+        )
+
     if linkage is None:
         logger.debug(
             "sapid %s not in registry; round-trip failure",
