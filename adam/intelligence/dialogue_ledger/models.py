@@ -116,54 +116,20 @@ class RecallabilityLabel(str, Enum):
     ABSENT = "absent"
 
 
-class DeviationAdjudicationOutcome(str, Enum):
-    """Result of comparing the user's override against the system's
-    original recommendation after the adjudication horizon.
-
-    HMT §11.5: every override is a HYPOTHESIS at write time about
-    "the system was wrong here." The lifecycle tracks the hypothesis
-    through to causal evidence.
-
-    States:
-      CONFIRMED_OVERRIDE       — observed outcome supported user's choice;
-                                 system's recommendation would have been
-                                 worse. The user's override is validated.
-      SYSTEM_VINDICATED        — observed outcome supported system's
-                                 recommendation; user's override produced
-                                 a worse result.
-      FALSE_CORRECTION         — observed outcome was indistinguishable
-                                 between system rec and user override
-                                 (no causal signal); the override was
-                                 not load-bearing for the outcome.
-      PENDING_INSUFFICIENT_DATA — adjudication horizon elapsed but data
-                                 quality / quantity below the threshold
-                                 needed for a verdict.
-    """
-
-    CONFIRMED_OVERRIDE = "confirmed_override"
-    SYSTEM_VINDICATED = "system_vindicated"
-    FALSE_CORRECTION = "false_correction"
-    PENDING_INSUFFICIENT_DATA = "pending_insufficient_data"
-
-
 class DeviationLifecycleState(str, Enum):
     """Where a HumanDeviation sits in its lifecycle.
 
-    Valid transitions:
-        RECORDED → AWAITING_OUTCOME (auto on schedule_adjudication)
-        AWAITING_OUTCOME → ADJUDICATED (on adjudicate_deviation call
-                                        with sufficient data)
-        AWAITING_OUTCOME → PENDING (on adjudication call when data
-                                    insufficient; can re-attempt later)
-        PENDING → ADJUDICATED (on later successful adjudication)
+    Per directive Section 8.1, the verdict machinery (adjudication,
+    horizon scheduling, outcome states) was CUT — adjudication-without-
+    M2-counterfactuals is theatre at pilot N. What remains is log-and-
+    tag: every recorded deviation enters as RECORDED and stays there;
+    the offline pipeline (Spine #12) reads recorded deviations as
+    inputs to mechanism discovery.
 
-    No transitions return to RECORDED; lifecycle is monotonic forward.
+    `RECORDED` is the only legal state.
     """
 
     RECORDED = "recorded"
-    AWAITING_OUTCOME = "awaiting_outcome"
-    ADJUDICATED = "adjudicated"
-    PENDING = "pending"
 
 
 # =============================================================================
@@ -437,50 +403,6 @@ class HumanDeviation(BaseModel):
         if self.horizon_ends_at is not None:
             props["horizon_ends_at"] = self.horizon_ends_at.isoformat()
         return props
-
-
-class DeviationAdjudication(BaseModel):
-    """The adjudicated verdict on a HumanDeviation after horizon elapses.
-
-    Linked 1:1 to a HumanDeviation via deviation_id. Multiple
-    adjudication attempts may exist for the same deviation if the first
-    attempt produced PENDING_INSUFFICIENT_DATA — each later attempt is
-    a separate DeviationAdjudication record with iteration > 0.
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    id: str = Field(default_factory=lambda: _new_id("adjudication"))
-    deviation_id: str
-    outcome: DeviationAdjudicationOutcome
-    iteration: int = 0
-    observed_outcome_summary: Dict[str, Any] = Field(default_factory=dict)
-    adjudicator: str = "auto"  # "auto" | user_id of human reviewer
-    confidence: float = 0.0
-    rationale_tag: str = ""    # Templated reason for the verdict
-    adjudicated_at: datetime = Field(default_factory=_now_utc)
-
-    @field_validator("confidence")
-    @classmethod
-    def _validate_confidence_range(cls, v: float) -> float:
-        if not 0.0 <= v <= 1.0:
-            raise ValueError(f"confidence must be in [0, 1]; got {v}")
-        return v
-
-    def to_neo4j_props(self) -> Dict[str, Any]:
-        return {
-            "id": self.id,
-            "deviation_id": self.deviation_id,
-            "outcome": self.outcome.value,
-            "iteration": int(self.iteration),
-            "observed_outcome_summary_json": _json_dumps_safe(
-                self.observed_outcome_summary,
-            ),
-            "adjudicator": self.adjudicator,
-            "confidence": float(self.confidence),
-            "rationale_tag": self.rationale_tag,
-            "adjudicated_at": self.adjudicated_at.isoformat(),
-        }
 
 
 def _json_dumps_safe(payload: Dict[str, Any]) -> str:

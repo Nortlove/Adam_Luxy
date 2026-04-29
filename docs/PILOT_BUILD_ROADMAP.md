@@ -1,5 +1,14 @@
 # ADAM Pilot — Comprehensive Build Roadmap (Next Month) — v2
 
+> **⚠️ SUPERSEDED 2026-04-29.** This document was authored by Claude Code
+> and bakes in a documented measurement-over-innovation bias. **The
+> canonical build plan is now `docs/CLAUDE_CODE_DIRECTIVE_FULL_BUILD.md`
+> — a 13-primitive cognitive spine + 10-phase build with explicit cuts
+> of bias-leak items from this roadmap.** Section 8.1 of the directive
+> enumerates which items in this document are cut. Sections 9 of the
+> directive replaces the Week 1-4 sequence below. Retain this file for
+> historical reference only; do not execute against it.
+
 **Status today** (HEAD `e47e068`): 22 commits this session shipped Phase 0.1+ substrate; 409 tests passing; 16 simulation-derived tasks complete.
 
 **Why v2**: The earlier simulation scored 16 items but did NOT enumerate the complete possibility set. This revision enumerates ALL possible build items (~70 across 8 layers), re-runs the simulation scoring on items previously omitted, and orders the final roadmap by **(a) simulation priority + (b) dependency graph + (c) build efficiency**.
