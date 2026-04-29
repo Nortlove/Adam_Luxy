@@ -469,6 +469,73 @@ class OutcomeHandler:
             results["updates"]["per_atom_contribution"] = {"error": str(e)}
 
         # =====================================================================
+        # 7c. MECHANISM-TAXONOMY RUNTIME TAGGING (task A2)
+        #
+        # Foundation §2 attention-inversion test substrate. Tags the
+        # mechanism with its blend-compatible vs vigilance-activating
+        # category at outcome time, records the outcome conditional on
+        # (mechanism_category × page_attentional_posture) so the
+        # matched-vs-mismatched diagonal accumulator builds toward the
+        # Foundation §2 prediction's empirical test.
+        #
+        # page_attentional_posture comes from metadata when available
+        # (populated by A4 page intelligence wiring once it ships).
+        # Until A4 lands, page_posture is None — substrate handles
+        # gracefully (cell still accumulates but is excluded from
+        # matched/mismatched diagonal computation).
+        #
+        # A14: TAXONOMY_TAGGING_PAGE_POSTURE_PILOT_PENDING — matched/
+        # mismatched diagonal data flows ONLY when both A2 (this
+        # commit) and A4 (page-side wiring) are live.
+        #
+        # Non-fatal: tagging failure must not block outcome processing.
+        # See:
+        #   - adam/intelligence/mechanism_taxonomy.py (static registry)
+        #   - adam/intelligence/mechanism_taxonomy_runtime.py (tagging
+        #     + accumulator)
+        # =====================================================================
+        try:
+            from adam.intelligence.mechanism_taxonomy_runtime import (
+                get_taxonomy_accumulator,
+                tag_decision,
+            )
+            if mechanism_sent:
+                tagged = tag_decision(mechanism_sent)
+                page_posture = metadata.get("page_attentional_posture")
+                converted = success and outcome_value > 0.0
+                backfired = False
+                try:
+                    from adam.core.outcome_types import is_negative_ethics_signal
+                    backfired = is_negative_ethics_signal(outcome_type)
+                except Exception:
+                    pass
+                accumulator = get_taxonomy_accumulator()
+                accumulator.record_outcome(
+                    tagged,
+                    page_posture=page_posture,
+                    converted=converted,
+                    backfired=backfired,
+                )
+                results["updates"]["taxonomy_tagging"] = {
+                    "mechanism": mechanism_sent,
+                    "category": (
+                        tagged.category.value if tagged.category else None
+                    ),
+                    "was_known": tagged.was_known,
+                    "page_posture": page_posture,
+                }
+            else:
+                results["updates"]["taxonomy_tagging"] = {
+                    "skipped": "no mechanism_sent in metadata",
+                }
+        except Exception as e:
+            logger.warning(
+                "Mechanism-taxonomy tagging failed for %s: %s",
+                decision_id, e,
+            )
+            results["updates"]["taxonomy_tagging"] = {"error": str(e)}
+
+        # =====================================================================
         # 8. DSP IMPRESSION LEARNING
         #
         # When outcomes arrive from DSP impression enrichment, update:
