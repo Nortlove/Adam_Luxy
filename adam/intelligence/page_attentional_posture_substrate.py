@@ -62,7 +62,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 
 # =============================================================================
@@ -316,6 +316,70 @@ def reset_page_attentional_posture_accumulator() -> None:
     _accumulator = None
 
 
+def record_and_categorize_page_posture(
+    *,
+    page_url: str,
+    posture_float: float,
+    posture_confidence: float,
+    author_id: Optional[str] = None,
+    publication_id: Optional[str] = None,
+    section_id: Optional[str] = None,
+    accumulator: Optional[PageAttentionalPostureAccumulator] = None,
+) -> Dict[str, Any]:
+    """Decision-time helper for page-side posture wiring (task A4).
+
+    One-stop function that:
+      1. Categorizes the float posture into a string label per
+         `categorize_posture` thresholds
+      2. Records a PageObservation in the singleton accumulator
+         (or the test-supplied accumulator)
+      3. Returns a dict suitable for stamping on decision metadata
+         that the OutcomeHandler's task-A2 wiring consumes
+
+    Returns:
+        {
+          "page_attentional_posture": str,  // categorical label
+          "raw_posture": float,
+          "posture_confidence": float,
+          "page_url": str,
+        }
+
+    The dict's `page_attentional_posture` key matches exactly what
+    OutcomeHandler.process_outcome reads via
+    `metadata.get("page_attentional_posture")`. So caller stamps this
+    dict on the decision metadata at decision time; outcome handler
+    reads it at outcome time; the matched/mismatched diagonal
+    accumulator gets populated.
+
+    Foundation §2 attention-inversion test fully fires when:
+      - This helper is called at decision time (A4 wiring) — populates
+        the accumulator AND stamps the metadata
+      - OutcomeHandler tags the mechanism + reads the metadata at
+        outcome time (A2 wiring, already shipped) — records the
+        outcome to the conditional accumulator
+      - Both are wired → matched_vs_mismatched_diagonals returns
+        cells with data
+    """
+    if accumulator is None:
+        accumulator = get_page_attentional_posture_accumulator()
+
+    label = categorize_posture(posture_float, posture_confidence)
+    accumulator.record(PageObservation(
+        page_url=page_url,
+        posture_float=posture_float,
+        posture_confidence=posture_confidence,
+        author_id=author_id,
+        publication_id=publication_id,
+        section_id=section_id,
+    ))
+    return {
+        "page_attentional_posture": label,
+        "raw_posture": float(posture_float),
+        "posture_confidence": float(posture_confidence),
+        "page_url": page_url,
+    }
+
+
 __all__ = [
     "BLEND_FLOAT_THRESHOLD",
     "MIN_POSTURE_CONFIDENCE",
@@ -329,5 +393,6 @@ __all__ = [
     "VIGILANCE_FLOAT_THRESHOLD",
     "categorize_posture",
     "get_page_attentional_posture_accumulator",
+    "record_and_categorize_page_posture",
     "reset_page_attentional_posture_accumulator",
 ]

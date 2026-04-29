@@ -22,6 +22,7 @@ from adam.intelligence.page_attentional_posture_substrate import (
     VIGILANCE_FLOAT_THRESHOLD,
     categorize_posture,
     get_page_attentional_posture_accumulator,
+    record_and_categorize_page_posture,
     reset_page_attentional_posture_accumulator,
 )
 
@@ -297,3 +298,118 @@ class TestSingleton:
             assert a1 is a2
         finally:
             reset_page_attentional_posture_accumulator()
+
+
+# ============================================================================
+# A4 helper — record_and_categorize_page_posture
+# ============================================================================
+
+
+class TestRecordAndCategorize:
+    """Pin the A4 wiring helper: categorizes + records + returns
+    metadata-stamping dict."""
+
+    def test_returns_dict_with_required_keys(self):
+        acc = PageAttentionalPostureAccumulator()
+        result = record_and_categorize_page_posture(
+            page_url="https://luxyride.com/blog/post1",
+            posture_float=-0.5,
+            posture_confidence=0.7,
+            publication_id="pub:luxy_blog",
+            accumulator=acc,
+        )
+        assert "page_attentional_posture" in result
+        assert "raw_posture" in result
+        assert "posture_confidence" in result
+        assert "page_url" in result
+        assert result["raw_posture"] == -0.5
+        assert result["posture_confidence"] == 0.7
+        assert result["page_url"] == "https://luxyride.com/blog/post1"
+
+    def test_categorical_label_matches_categorize_posture(self):
+        acc = PageAttentionalPostureAccumulator()
+        result = record_and_categorize_page_posture(
+            page_url="x",
+            posture_float=-0.5,
+            posture_confidence=0.7,
+            accumulator=acc,
+        )
+        assert result["page_attentional_posture"] == POSTURE_BLEND
+
+        result_vig = record_and_categorize_page_posture(
+            page_url="y",
+            posture_float=0.6,
+            posture_confidence=0.8,
+            accumulator=acc,
+        )
+        assert result_vig["page_attentional_posture"] == POSTURE_VIGILANCE
+
+        result_unk = record_and_categorize_page_posture(
+            page_url="z",
+            posture_float=-0.5,
+            posture_confidence=0.1,  # below MIN_POSTURE_CONFIDENCE
+            accumulator=acc,
+        )
+        assert result_unk["page_attentional_posture"] == POSTURE_UNKNOWN
+
+    def test_observation_recorded_in_accumulator(self):
+        acc = PageAttentionalPostureAccumulator()
+        record_and_categorize_page_posture(
+            page_url="https://example.com/post",
+            posture_float=-0.5,
+            posture_confidence=0.8,
+            author_id="author:1",
+            publication_id="pub:1",
+            section_id="section:1",
+            accumulator=acc,
+        )
+        # Observation lands at all 3 hierarchy levels
+        assert acc.get_author_stats("author:1") is not None
+        assert acc.get_publication_stats("pub:1") is not None
+        assert acc.get_section_stats("section:1") is not None
+
+    def test_uses_default_singleton_when_no_accumulator_passed(self):
+        reset_page_attentional_posture_accumulator()
+        try:
+            result = record_and_categorize_page_posture(
+                page_url="https://example.com/x",
+                posture_float=-0.5,
+                posture_confidence=0.8,
+                publication_id="pub:default_test",
+            )
+            # Result is well-formed
+            assert result["page_attentional_posture"] == POSTURE_BLEND
+            # The singleton accumulator now has the observation
+            singleton = get_page_attentional_posture_accumulator()
+            assert singleton.get_publication_stats("pub:default_test") is not None
+        finally:
+            reset_page_attentional_posture_accumulator()
+
+    def test_metadata_stamping_round_trip_with_outcome_handler(self):
+        """The whole point of A4: stamp the dict on metadata at decision
+        time; OutcomeHandler reads `page_attentional_posture` at outcome
+        time. This test verifies the key matches what the outcome
+        handler's A2 wiring expects.
+
+        We simulate by building the metadata dict with the stamped
+        result and checking the key the OutcomeHandler reads:
+        `metadata.get("page_attentional_posture")`.
+        """
+        acc = PageAttentionalPostureAccumulator()
+        # Decision-time stamping
+        result = record_and_categorize_page_posture(
+            page_url="x",
+            posture_float=-0.5,
+            posture_confidence=0.7,
+            accumulator=acc,
+        )
+        decision_metadata = {
+            "mechanism_sent": "automatic_evaluation",
+            **result,  # spread the helper's return into metadata
+        }
+        # Outcome-time read (this is what OutcomeHandler does in A2)
+        page_posture = decision_metadata.get("page_attentional_posture")
+        assert page_posture == POSTURE_BLEND
+        # And it matches mechanism_taxonomy_runtime's expected value
+        from adam.intelligence.mechanism_taxonomy import MechanismRouteCategory
+        assert page_posture == MechanismRouteCategory.BLEND_COMPATIBLE.value
