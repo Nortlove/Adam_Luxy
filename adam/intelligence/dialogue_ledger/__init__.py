@@ -27,6 +27,14 @@ service writes refuse silently when constraints/indexes are missing
 and emit a descriptive error to logs.
 """
 
+from adam.intelligence.dialogue_ledger.elicitation import (
+    ElicitationContext,
+    ForcedPairGenerator,
+    RecallabilityProbeGenerator,
+    StoryPromptGenerator,
+    TimedPairGenerator,
+    all_v01_generators,
+)
 from adam.intelligence.dialogue_ledger.models import (
     Claim,
     ClaimStatus,
@@ -37,9 +45,18 @@ from adam.intelligence.dialogue_ledger.models import (
     LearningStatus,
     LearningStatusState,
 )
+from adam.intelligence.dialogue_ledger.mood_probe import (
+    MoodProbeGenerator,
+    SessionMoodState,
+)
 from adam.intelligence.dialogue_ledger.service import (
     DialogueLedgerService,
     get_dialogue_ledger_service,
+)
+from adam.intelligence.dialogue_ledger.uncertainty_panel import (
+    UncertaintyBucket,
+    UncertaintyPanel,
+    render_uncertainty_panel,
 )
 
 __all__ = [
@@ -48,9 +65,20 @@ __all__ = [
     "DialogueDomain",
     "DialogueLedgerService",
     "DialogueUser",
+    "ElicitationContext",
     "ElicitationMode",
+    "ForcedPairGenerator",
     "HorizonClass",
     "LearningStatus",
     "LearningStatusState",
+    "MoodProbeGenerator",
+    "RecallabilityProbeGenerator",
+    "SessionMoodState",
+    "StoryPromptGenerator",
+    "TimedPairGenerator",
+    "UncertaintyBucket",
+    "UncertaintyPanel",
+    "all_v01_generators",
     "get_dialogue_ledger_service",
+    "render_uncertainty_panel",
 ]
