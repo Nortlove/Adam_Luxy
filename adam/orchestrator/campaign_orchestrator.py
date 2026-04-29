@@ -523,7 +523,54 @@ class CampaignOrchestrator:
             confidence_breakdown["review_intelligence"] = customer_intelligence.overall_confidence
         
         overall_confidence = sum(confidence_breakdown.values()) / len(confidence_breakdown)
-        
+
+        # =====================================================================
+        # STEP 7b — Construct-chain rendering at orchestrator response (task A5)
+        #
+        # Foundation §4.3: every atom that emits a scalar must also emit
+        # the chain of construct activations that produced it. The
+        # ChainAttestation primitive carries that chain; chain_rendering
+        # converts it into the partner-facing JSON-serialized payload
+        # with citation-tagged construct steps + final assessment +
+        # mechanism adjustments + A14 flags.
+        #
+        # Without this rendering at the response level, the chain stays
+        # internal to the system. With it, every recommendation
+        # returned to Becca/LUXY includes the inferential chain — the
+        # differentiator vs correlational DSPs is now visible at the
+        # partner interface.
+        #
+        # Empty dict when no chain attestations exist (the 21 unchanged
+        # wrappers' DAG run; or when the cascade ran without the redone
+        # 9 atoms). The dict's shape is the
+        # `chain_rendering.recommendation_to_dict` schema.
+        #
+        # Non-fatal: rendering failure logs at debug; result still
+        # returns with construct_chain=None.
+        # =====================================================================
+        construct_chain_payload: Optional[Dict[str, Any]] = None
+        if atom_result and atom_result.chain_attestations:
+            try:
+                from adam.intelligence.chain_rendering import (
+                    recommendation_to_dict,
+                    render_recommendation,
+                )
+                _archetype_summary = primary_archetype or "<archetype>"
+                _mechanism_summary = primary_mechanism or "<mechanism>"
+                rendering = render_recommendation(
+                    atom_result.chain_attestations,
+                    recommendation_summary=(
+                        f"Recommend '{_mechanism_summary}' for '{_archetype_summary}'"
+                    ),
+                )
+                construct_chain_payload = recommendation_to_dict(rendering)
+            except Exception as e:
+                logger.debug(
+                    "Construct-chain rendering at response failed (non-fatal): %s",
+                    e,
+                )
+                construct_chain_payload = None
+
         result = CampaignAnalysisResult(
             request_id=request_id,
             timestamp=datetime.now(timezone.utc),
@@ -546,6 +593,7 @@ class CampaignOrchestrator:
             processing_time_ms=processing_time,
             components_used=components_used,
             channel_recommendations=channel_intelligence,
+            construct_chain=construct_chain_payload,
         )
         
         logger.info(

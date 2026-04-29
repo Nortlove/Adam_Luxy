@@ -370,6 +370,16 @@ class CampaignAnalysisResult(BaseModel):
     # Channel recommendations (iHeart integration)
     channel_recommendations: Optional["ChannelIntelligenceResult"] = None
 
+    # Construct-chain rendering (Foundation §4.3 in the response)
+    # Per task A5: every recommendation returned to partners includes
+    # the inferential chain that produced it, citation-tagged. The dict
+    # shape comes from `chain_rendering.recommendation_to_dict` and
+    # contains chain_steps + final_assessment + mechanism_adjustments
+    # + citations + a14_flags. Empty dict when no chain attestations
+    # were produced (e.g., DAG ran without the redone 9 atoms emitting
+    # attestations).
+    construct_chain: Optional[Dict[str, Any]] = None
+
 
 # =============================================================================
 # CHANNEL INTELLIGENCE (iHeart Integration)
