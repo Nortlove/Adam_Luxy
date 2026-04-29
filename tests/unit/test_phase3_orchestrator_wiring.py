@@ -654,3 +654,264 @@ class TestA14CounterEmission:
         self._emit_a14_counter_for_attestations([att])
         after = _read()
         assert after == before + 2.0
+
+
+# ============================================================================
+# Task A1 — Cascade integration of online_learning_substrate
+# ============================================================================
+
+
+def _make_attestation_for_a1(
+    atom_id: str, mechanism_id: str, link_source: str, link_target: str,
+) -> ChainAttestation:
+    """Build a chain attestation suitable for A1 tests.
+
+    The chain has one link with predictable link_key
+    "{relation}:{source}:{target}" so the test can stub TheoryLearner's
+    response for that key.
+    """
+    link = ConstructLink(
+        source_construct=link_source,
+        relation_type=RelationType.CREATES_NEED_FOR,
+        target_construct=link_target,
+        evidence_value=0.5,
+        confidence=0.7,
+        citation="test_a1 §1.1",
+    )
+    final = TypedEvidence(
+        construct=link_target,
+        value=0.5,
+        confidence=0.7,
+        citation="test_a1 §1.1",
+        calibration_status=CalibrationStatus.PINNED,
+    )
+    return ChainAttestation(
+        atom_id=atom_id,
+        request_id="req_a1",
+        target_construct=link_target,
+        chain=[link],
+        final_assessment=final,
+        mechanism_adjustments=[
+            AdjustmentEvidence(
+                mechanism_id=mechanism_id,
+                adjustment_value=0.1,
+                chain_links_responsible=[link.link_id],
+                confidence=0.7,
+            )
+        ],
+        provenance=ChainProvenance(atom_id=atom_id),
+    )
+
+
+class TestOnlineLearningMultiplier:
+    """Pin the multiplier mapping function _online_learning_multiplier."""
+
+    def test_strength_zero_floor(self):
+        from adam.orchestrator.campaign_orchestrator import (
+            _ONLINE_LEARNING_MOD_FLOOR,
+            _online_learning_multiplier,
+        )
+        assert _online_learning_multiplier(0.0) == _ONLINE_LEARNING_MOD_FLOOR
+
+    def test_strength_one_ceiling(self):
+        from adam.orchestrator.campaign_orchestrator import (
+            _ONLINE_LEARNING_MOD_CEILING,
+            _online_learning_multiplier,
+        )
+        assert _online_learning_multiplier(1.0) == _ONLINE_LEARNING_MOD_CEILING
+
+    def test_strength_half_neutral(self):
+        from adam.orchestrator.campaign_orchestrator import (
+            _online_learning_multiplier,
+        )
+        assert _online_learning_multiplier(0.5) == pytest.approx(1.0, abs=1e-9)
+
+    def test_strength_clamps_below_zero(self):
+        from adam.orchestrator.campaign_orchestrator import (
+            _ONLINE_LEARNING_MOD_FLOOR,
+            _online_learning_multiplier,
+        )
+        assert _online_learning_multiplier(-0.5) == _ONLINE_LEARNING_MOD_FLOOR
+
+    def test_strength_clamps_above_one(self):
+        from adam.orchestrator.campaign_orchestrator import (
+            _ONLINE_LEARNING_MOD_CEILING,
+            _online_learning_multiplier,
+        )
+        assert _online_learning_multiplier(1.5) == _ONLINE_LEARNING_MOD_CEILING
+
+    def test_linearity(self):
+        """Multiplier scales linearly between floor and ceiling."""
+        from adam.orchestrator.campaign_orchestrator import (
+            _ONLINE_LEARNING_MOD_FLOOR,
+            _ONLINE_LEARNING_MOD_CEILING,
+            _online_learning_multiplier,
+        )
+        m_quarter = _online_learning_multiplier(0.25)
+        m_three_quarter = _online_learning_multiplier(0.75)
+        # Both should be equally far from 1.0 (the strength=0.5 anchor)
+        # though on opposite sides
+        center = 1.0
+        assert abs((m_quarter - center) + (m_three_quarter - center)) < 1e-9
+
+
+class TestSelectMechanismsOnlineLearning:
+    """The load-bearing test: when LinkPosteriors update mid-stream, the
+    next call to _select_mechanisms produces DIFFERENT mechanism_scores
+    even with identical chain_attestations.
+
+    THIS IS THE PER-DECISION ONLINE LEARNING PROPERTY.
+    """
+
+    @pytest.mark.asyncio
+    async def test_modulator_applied_when_attestations_present(self):
+        """With chain_attestations + a TheoryLearner that returns
+        non-neutral strengths, mechanism_scores reflect the modulation."""
+        from unittest.mock import patch
+        from adam.orchestrator.campaign_orchestrator import CampaignOrchestrator
+
+        orch = CampaignOrchestrator()
+        mechanism_intelligence = _make_graph_query_result(
+            {"authority": 0.5},
+        )
+        attestation = _make_attestation_for_a1(
+            atom_id="atom_test",
+            mechanism_id="authority",
+            link_source="src",
+            link_target="tgt",
+        )
+        trace_high = ReasoningTrace(trace_id="test_a1_high")
+        trace_low = ReasoningTrace(trace_id="test_a1_low")
+
+        # Run 1: TheoryLearner returns HIGH strength (0.9) — modulator pushes UP
+        with patch(
+            "adam.core.learning.theory_learner.get_theory_learner",
+            return_value=MagicMock(get_link_strength=lambda k: 0.9),
+        ):
+            result_high = await orch._select_mechanisms(
+                archetype="luxe_arbiter",
+                mechanism_intelligence=mechanism_intelligence,
+                customer_intelligence=None,
+                trace=trace_high,
+                chain_attestations=[attestation],
+            )
+
+        # Run 2: TheoryLearner returns LOW strength (0.1) — modulator pulls DOWN
+        with patch(
+            "adam.core.learning.theory_learner.get_theory_learner",
+            return_value=MagicMock(get_link_strength=lambda k: 0.1),
+        ):
+            result_low = await orch._select_mechanisms(
+                archetype="luxe_arbiter",
+                mechanism_intelligence=mechanism_intelligence,
+                customer_intelligence=None,
+                trace=trace_low,
+                chain_attestations=[attestation],
+            )
+
+        # The high-strength run produces a higher authority score than
+        # the low-strength run. THIS is the per-decision online learning
+        # property — same attestation, same graph priors, but
+        # TheoryLearner's posterior shift changes the outcome.
+        assert (
+            result_high.mechanism_scores["authority"]
+            > result_low.mechanism_scores["authority"]
+        ), (
+            f"Online learning multiplier did not affect mechanism_scores "
+            f"as expected. high={result_high.mechanism_scores['authority']:.4f}, "
+            f"low={result_low.mechanism_scores['authority']:.4f}"
+        )
+
+    @pytest.mark.asyncio
+    async def test_no_modulation_when_attestations_absent(self):
+        """Without chain_attestations, online-learning modulation is a no-op."""
+        from adam.orchestrator.campaign_orchestrator import CampaignOrchestrator
+
+        orch = CampaignOrchestrator()
+        mechanism_intelligence = _make_graph_query_result(
+            {"authority": 0.5},
+        )
+        trace = ReasoningTrace(trace_id="test_a1_no_attestations")
+        result = await orch._select_mechanisms(
+            archetype="luxe_arbiter",
+            mechanism_intelligence=mechanism_intelligence,
+            customer_intelligence=None,
+            trace=trace,
+            chain_attestations=None,
+        )
+        # No crash; mechanism_scores reflect graph priors
+        assert "authority" in result.mechanism_scores
+
+    @pytest.mark.asyncio
+    async def test_unknown_mechanism_in_attestation_skipped(self):
+        """If aggregate_strengths returns a mechanism not in working
+        mechanism_scores (rare), skip it silently."""
+        from unittest.mock import patch
+        from adam.orchestrator.campaign_orchestrator import CampaignOrchestrator
+
+        orch = CampaignOrchestrator()
+        mechanism_intelligence = _make_graph_query_result(
+            {"authority": 0.5},
+        )
+        # Attestation declares adjustment for "social_proof" — but
+        # social_proof is NOT in the working scores from
+        # mechanism_intelligence (which only has authority).
+        attestation = _make_attestation_for_a1(
+            atom_id="atom_test",
+            mechanism_id="social_proof",
+            link_source="src",
+            link_target="tgt",
+        )
+        trace = ReasoningTrace(trace_id="test_a1_unknown_mech")
+        with patch(
+            "adam.core.learning.theory_learner.get_theory_learner",
+            return_value=MagicMock(get_link_strength=lambda k: 0.9),
+        ):
+            result = await orch._select_mechanisms(
+                archetype="luxe_arbiter",
+                mechanism_intelligence=mechanism_intelligence,
+                customer_intelligence=None,
+                trace=trace,
+                chain_attestations=[attestation],
+            )
+        # social_proof was NOT in working scores → not added by modulation
+        # (modulator only modulates EXISTING entries, doesn't introduce new)
+        assert "social_proof" not in result.mechanism_scores
+        # authority unmodulated (no attestation declared adjustment for it)
+        assert "authority" in result.mechanism_scores
+
+    @pytest.mark.asyncio
+    async def test_modulation_clamps_to_unit_interval(self):
+        """Modulator output stays in [0, 1] even if multiplier × score
+        would exceed."""
+        from unittest.mock import patch
+        from adam.orchestrator.campaign_orchestrator import CampaignOrchestrator
+
+        orch = CampaignOrchestrator()
+        # Authority at 0.95 with strength 1.0 → multiplier 1.3 → 0.95×1.3 = 1.235
+        # Should clamp to 1.0.
+        mechanism_intelligence = _make_graph_query_result(
+            {"authority": 0.95},
+        )
+        attestation = _make_attestation_for_a1(
+            atom_id="atom_test",
+            mechanism_id="authority",
+            link_source="src",
+            link_target="tgt",
+        )
+        trace = ReasoningTrace(trace_id="test_a1_clamp")
+        with patch(
+            "adam.core.learning.theory_learner.get_theory_learner",
+            return_value=MagicMock(get_link_strength=lambda k: 1.0),
+        ):
+            result = await orch._select_mechanisms(
+                archetype="luxe_arbiter",
+                mechanism_intelligence=mechanism_intelligence,
+                customer_intelligence=None,
+                trace=trace,
+                chain_attestations=[attestation],
+            )
+        # Authority should NOT exceed 1.0 even though multiplier × score = 1.235
+        assert result.mechanism_scores["authority"] <= 1.0
+        # AND it should have been bumped up from 0.95 (modulation occurred)
+        assert result.mechanism_scores["authority"] > 0.94

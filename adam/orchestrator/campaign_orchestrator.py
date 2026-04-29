@@ -50,6 +50,37 @@ from adam.orchestrator.graph_intelligence import (
 logger = logging.getLogger(__name__)
 
 
+# =============================================================================
+# Online learning multiplier — Phase 0.1 task A1 wiring
+#
+# A14: ONLINE_LEARNING_MODULATOR_BOUNDS_PILOT_PENDING — the multiplier bounds
+# [0.7, 1.3] are theoretical priors. Mapping: aggregate_strength=0 → mod=0.7;
+# aggregate_strength=0.5 → mod=1.0; aggregate_strength=1 → mod=1.3.
+# Retirement trigger: pilot accumulates ≥500 decisions where online learning
+# modulated mechanism scores AND empirical bound distribution observable.
+# =============================================================================
+
+_ONLINE_LEARNING_MOD_FLOOR: float = 0.7
+_ONLINE_LEARNING_MOD_CEILING: float = 1.3
+
+
+def _online_learning_multiplier(aggregate_strength: float) -> float:
+    """Map aggregate LinkPosterior strength in [0, 1] to a multiplier in
+    [_ONLINE_LEARNING_MOD_FLOOR, _ONLINE_LEARNING_MOD_CEILING].
+
+    Linear: floor + (ceiling - floor) * clamp(strength, 0, 1).
+
+    Used by `_select_mechanisms` as the final modulation step before
+    Thompson sampling. Closes the per-decision online learning loop:
+    posterior shifts that landed since the last decision affect THIS
+    decision's mechanism scoring.
+    """
+    s = max(0.0, min(1.0, aggregate_strength))
+    return _ONLINE_LEARNING_MOD_FLOOR + (
+        _ONLINE_LEARNING_MOD_CEILING - _ONLINE_LEARNING_MOD_FLOOR
+    ) * s
+
+
 class CampaignOrchestrator:
     """
     Unified orchestrator for campaign analysis.
@@ -413,6 +444,9 @@ class CampaignOrchestrator:
             barrier_intelligence=barrier_intelligence,
             cascade_modulated_scores=cascade_modulated_scores,
             cascade_level=cascade_level,
+            chain_attestations=(
+                atom_result.chain_attestations if atom_result else None
+            ),
         )
         components_used.append("MetaLearner")
         
@@ -1213,6 +1247,7 @@ class CampaignOrchestrator:
         barrier_intelligence: dict = None,
         cascade_modulated_scores: Optional[Dict[str, float]] = None,
         cascade_level: Optional[int] = None,
+        chain_attestations: Optional[List[Any]] = None,
     ) -> MechanismSelectionResult:
         """Select optimal mechanisms using MetaLearner, with three-layer fusion.
 
@@ -1394,6 +1429,62 @@ class CampaignOrchestrator:
                     "Barrier intelligence: boosted %d mechanisms from retargeting posteriors",
                     barrier_boost_applied,
                 )
+
+        # =====================================================================
+        # FINAL MODULATION — per-decision online learning loop (task A1)
+        #
+        # Foundation §4.4: theory chains compose multiplicatively. When
+        # outcomes accumulate, TheoryLearner's LinkPosteriors update at
+        # outcome time. The cascade reads them at the NEXT decision time
+        # via aggregate_mechanism_strengths_from_attestations — geometric
+        # mean of current LinkPosterior means across the chain links the
+        # decision's attestations declared responsible per mechanism.
+        #
+        # Each mechanism present in the aggregate_strengths dict gets a
+        # multiplicative modulator in [_ONLINE_LEARNING_MOD_FLOOR,
+        # _ONLINE_LEARNING_MOD_CEILING] applied to its working score.
+        # Mechanisms without attestation-driven aggregate strength are
+        # NOT modulated (no aggregate signal → no adjustment).
+        #
+        # This block runs LAST so it modulates the FINAL working scores
+        # before Thompson sampling. Order matters: earlier blends
+        # (unified, cascade, review, corpus, barrier) compose the
+        # working scores; this modulator captures the per-decision
+        # online learning closure on top of all of them.
+        #
+        # Non-fatal: failure here logs at debug and skips the modulation.
+        # =====================================================================
+        if chain_attestations:
+            try:
+                from adam.core.learning.theory_learner import get_theory_learner
+                from adam.intelligence.online_learning_substrate import (
+                    aggregate_mechanism_strengths_from_attestations,
+                )
+                learner = get_theory_learner()
+                aggregate_strengths = aggregate_mechanism_strengths_from_attestations(
+                    chain_attestations, learner,
+                )
+                modulated_count = 0
+                for mech, strength in aggregate_strengths.items():
+                    if mech not in mechanism_scores:
+                        continue
+                    multiplier = _online_learning_multiplier(strength)
+                    new_score = mechanism_scores[mech] * multiplier
+                    mechanism_scores[mech] = max(0.0, min(1.0, new_score))
+                    modulated_count += 1
+                if modulated_count > 0:
+                    logger.info(
+                        "Online learning modulation applied (task A1): %d "
+                        "mechanisms × multiplier ∈ [%.2f, %.2f]",
+                        modulated_count,
+                        _ONLINE_LEARNING_MOD_FLOOR,
+                        _ONLINE_LEARNING_MOD_CEILING,
+                    )
+            except Exception as e:
+                # Non-fatal: failure to modulate must not break mechanism
+                # selection. The cascade-derived scores still feed
+                # Thompson sampling unmodulated.
+                logger.debug("Online learning modulation skipped: %s", e)
 
         # Use real Thompson Sampler for mechanism selection
         from adam.cold_start.thompson.sampler import get_thompson_sampler
