@@ -22,6 +22,7 @@ The system gets STRONGER with every outcome it observes.
 
 import logging
 import time
+from datetime import datetime, timezone
 from typing import Dict, Any, Optional, List
 
 logger = logging.getLogger(__name__)
@@ -534,6 +535,70 @@ class OutcomeHandler:
                 decision_id, e,
             )
             results["updates"]["taxonomy_tagging"] = {"error": str(e)}
+
+        # =====================================================================
+        # 7d. MULTI-HORIZON COHORT REGISTRATION (task A3)
+        #
+        # HMT §9.5 + Foundation §7 rule 11: short-horizon CPA wins can
+        # hide long-horizon brand damage. The MultiHorizonAdjudicator
+        # tracks (decision_id, conversion_event) cohorts at 7/30/60-day
+        # horizons; at the end of each horizon window, computes per-arm
+        # return rates; flags discordance when treatment beats control
+        # at d7 but loses at d60 (the failure mode the platform exists
+        # to refute).
+        #
+        # This block registers a cohort EVERY TIME a conversion outcome
+        # fires. Skip / refund / non-conversion outcomes do NOT create
+        # cohorts (they're not eligible for return-visit tracking by
+        # definition).
+        #
+        # Return-visit pixel events route via the LUXY pixel handler
+        # (separate task, ships when LUXY pixel installs) directly to
+        # adjudicator.record_return_visit(user_id, visited_at) — that
+        # path doesn't touch this block.
+        #
+        # treatment_arm sourcing: metadata["treatment_arm"] (set by the
+        # decision-cache → webhook path). Default "bilateral" when
+        # absent (most decisions on the LUXY path are treatment-arm).
+        #
+        # Non-fatal: registration failure must not block outcome processing.
+        # See:
+        #   - adam/intelligence/multi_horizon_adjudication.py
+        # =====================================================================
+        if outcome_type == "conversion":
+            try:
+                from adam.intelligence.multi_horizon_adjudication import (
+                    get_multi_horizon_adjudicator,
+                )
+                adjudicator = get_multi_horizon_adjudicator()
+                user_id = (
+                    metadata.get("buyer_id")
+                    or metadata.get("user_id")
+                    or None
+                )
+                cohort = adjudicator.register_conversion(
+                    decision_id=decision_id,
+                    treatment_arm=metadata.get("treatment_arm", "bilateral"),
+                    converted_at=datetime.now(timezone.utc),
+                    user_id=user_id,
+                    archetype=archetype or None,
+                )
+                results["updates"]["multi_horizon_cohort"] = {
+                    "registered": True,
+                    "decision_id": decision_id,
+                    "treatment_arm": cohort.treatment_arm,
+                    "user_id_present": user_id is not None,
+                }
+            except Exception as e:
+                logger.warning(
+                    "Multi-horizon cohort registration failed for %s: %s",
+                    decision_id, e,
+                )
+                results["updates"]["multi_horizon_cohort"] = {"error": str(e)}
+        else:
+            results["updates"]["multi_horizon_cohort"] = {
+                "skipped": f"outcome_type={outcome_type} not eligible (only conversions create cohorts)",
+            }
 
         # =====================================================================
         # 8. DSP IMPRESSION LEARNING
