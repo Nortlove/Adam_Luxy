@@ -204,10 +204,15 @@ class TestRegistry:
         result = registry.dispatch({"random": "stuff"})
         assert result is None
 
-    def test_default_registry_has_three_adapters(self):
+    def test_default_registry_has_all_adapters(self):
+        """Default stack: LuxyRide, Stripe, Shopify, GenericJSON (4)."""
         reset_default_registry()
         registry = get_default_registry()
-        assert registry.adapter_count() == 3
+        assert registry.adapter_count() == 4
+        types = [a.__class__.__name__ for a in registry._adapters]
+        assert "LuxyRideAdapter" in types
+        # LUXY must dispatch BEFORE the catch-all
+        assert types.index("LuxyRideAdapter") < types.index("GenericJSONAdapter")
 
     def test_default_registry_singleton(self):
         reset_default_registry()

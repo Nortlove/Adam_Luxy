@@ -262,6 +262,93 @@ class ShopifyRefundAdapter:
 
 
 # =============================================================================
+# LUXY Ride adapter (pilot client — chauffeured-car booking system)
+# =============================================================================
+
+
+class LuxyRideAdapter:
+    """Translates LUXY Ride booking-system event payloads.
+
+    LUXY is the pilot client (chauffeured car / ride-share). Their
+    booking system emits events for negative outcomes that the
+    standard e-commerce adapters don't cover natively:
+
+      - ride_cancelled    — customer cancels post-booking, before pickup
+      - ride_no_show      — driver dispatched but customer absent at pickup
+      - ride_refunded     — refund issued post-trip (overlaps Stripe but
+                            booking system gets there first)
+      - ride_complaint    — complaint logged through support after trip
+      - chargeback        — bank-initiated reversal
+
+    Expected payload envelope:
+      {
+        "event_type": "ride_cancelled" | "ride_no_show" | ...,
+        "booking": {
+          "id": "...",
+          "decision_id": "...",          # stamped at decision-time
+          "rider_id": "...",
+          "fare_cents": 5000,
+          ...
+        },
+        "occurred_at": "2026-04-30T18:00:00Z",
+        ...
+      }
+
+    The decision_id is read from booking.decision_id — stamped during
+    the bid-response cycle (per Phase 8 stackadapt round-trip).
+
+    Outcome-type mapping reflects the directive's fitness-function
+    canon (Foundation §7 rule 11): all five LUXY events flow into
+    the negative-ethics-signal gate inside OutcomeHandler, so the
+    posteriors take magnitude-weighted evidence AGAINST whatever
+    mechanism produced the conversion.
+    """
+
+    source_id: str = "luxy_ride"
+
+    # LUXY event_type → ADAM canonical outcome_type
+    # (per adam.core.outcome_types — only KNOWN_OUTCOME_TYPES land
+    # in the negative-ethics-signal gate)
+    EVENT_TYPE_TO_OUTCOME_TYPE = {
+        "ride_cancelled": "regret_signal",     # post-booking pre-pickup → regret about decision
+        "ride_no_show":   "regret_signal",     # decided not to show up
+        "ride_refunded":  "refund",            # canonical refund
+        "ride_complaint": "complaint",         # canonical complaint
+        "chargeback":     "refund",            # bank-initiated reversal = forced refund
+    }
+
+    def normalize(
+        self, payload: Dict[str, Any],
+    ) -> Optional[NormalizedNegativeOutcome]:
+        if not isinstance(payload, dict):
+            return None
+        event_type = payload.get("event_type")
+        if event_type not in self.EVENT_TYPE_TO_OUTCOME_TYPE:
+            return None
+        booking = payload.get("booking")
+        if not isinstance(booking, dict):
+            return None
+        decision_id = booking.get("decision_id")
+        if not decision_id:
+            return None
+
+        outcome_type = self.EVENT_TYPE_TO_OUTCOME_TYPE[event_type]
+        return NormalizedNegativeOutcome(
+            decision_id=str(decision_id),
+            outcome_type=outcome_type,
+            outcome_value=0.0,
+            metadata={
+                "source_adapter": self.source_id,
+                "luxy_event_type": event_type,
+                "luxy_booking_id": booking.get("id"),
+                "luxy_rider_id": booking.get("rider_id"),
+                "luxy_fare_cents": booking.get("fare_cents"),
+                "occurred_at": payload.get("occurred_at"),
+            },
+        )
+
+
+# =============================================================================
 # Adapter registry + dispatch
 # =============================================================================
 
@@ -497,16 +584,19 @@ def get_default_registry() -> NegativeOutcomeAdapterRegistry:
     """Get or build the default registry with the production adapters.
 
     Default adapter stack (in dispatch order):
-      1. StripeRefundAdapter
-      2. ShopifyRefundAdapter
-      3. GenericJSONAdapter (catch-all)
+      1. LuxyRideAdapter        — pilot client, ride-booking event shapes
+      2. StripeRefundAdapter    — Stripe webhook (refund)
+      3. ShopifyRefundAdapter   — Shopify webhook (refund)
+      4. GenericJSONAdapter     — internal callers / catch-all
 
-    Wiring of LUXY-specific adapter happens here when LUXY's actual
-    payload shape is confirmed by Becca.
+    LUXY first because it's the most specific shape (event_type +
+    booking.decision_id keys) and won't false-positive on Stripe/
+    Shopify-shaped payloads.
     """
     global _default_registry
     if _default_registry is None:
         _default_registry = NegativeOutcomeAdapterRegistry()
+        _default_registry.register(LuxyRideAdapter())
         _default_registry.register(StripeRefundAdapter())
         _default_registry.register(ShopifyRefundAdapter())
         _default_registry.register(GenericJSONAdapter())
@@ -521,6 +611,7 @@ def reset_default_registry() -> None:
 
 __all__ = [
     "GenericJSONAdapter",
+    "LuxyRideAdapter",
     "NegativeOutcomeAdapterProtocol",
     "NegativeOutcomeAdapterRegistry",
     "NormalizedNegativeOutcome",

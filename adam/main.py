@@ -481,6 +481,14 @@ def register_routers(app: FastAPI) -> None:
     except ImportError as e:
         logger.debug("Signal intelligence routes not available: %s", e)
 
+    # Negative-outcome webhook (Spine #11 — directive Phase 1)
+    try:
+        from adam.api.negative_outcomes import negative_outcomes_router
+        app.include_router(negative_outcomes_router)
+        logger.info("Negative-outcome webhook routes registered")
+    except ImportError as e:
+        logger.warning("Negative-outcome routes not available: %s", e)
+
     # Dashboard API (HMT co-pilot — single-tenant pilot)
     try:
         from adam.api.dashboard.router import router as dashboard_router
