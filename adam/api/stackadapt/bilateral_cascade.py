@@ -2822,6 +2822,44 @@ def run_bilateral_cascade(
         except Exception as exc:
             logger.debug("Per-user posterior modulation skipped: %s", exc)
 
+    # ─── TRILATERAL EPISTEMIC BONUS (buyer × page-mech × buyer-page) ───
+    # Audit §6 fix: trilateral_epistemic_value() existed but had no
+    # caller. Replaces the cascade's single-source IV picture (buyer
+    # uncertainty only) with a three-source picture that captures
+    # what we'd learn about THIS PERSON × THIS MECHANISM × THIS PAGE.
+    # Bounded multiplicative bonus capped at ±15% so it can't
+    # dominate substantive scoring. Soft-fail by design.
+    if (
+        result.mechanism_scores
+        and buyer_id
+        and graph_cache
+        and "_page_edge_dims" in locals()
+        and _page_edge_dims
+    ):
+        try:
+            from adam.intelligence.trilateral_epistemic import (
+                apply_trilateral_epistemic_bonus,
+            )
+            tri_modulated = apply_trilateral_epistemic_bonus(
+                mechanism_scores=result.mechanism_scores,
+                buyer_id=buyer_id,
+                page_edge_dimensions=_page_edge_dims,
+                graph_cache=graph_cache,
+            )
+            if tri_modulated is not result.mechanism_scores:
+                tri_shifted = sum(
+                    1
+                    for m, v in tri_modulated.items()
+                    if abs(v - result.mechanism_scores.get(m, v)) > 1e-9
+                )
+                if tri_shifted:
+                    result.reasoning.append(
+                        f"Trilateral epistemic bonus: {tri_shifted} mechanisms shifted"
+                    )
+                result.mechanism_scores = tri_modulated
+        except Exception as exc:
+            logger.debug("Trilateral epistemic bonus skipped: %s", exc)
+
     # ─── F5: BLEND-VS-VIGILANCE STRATEGIC WEIGHTING ───
     # Apply the attention-inversion platform commitment as a soft
     # preference: blend-compatible mechanisms boosted, vigilance-
