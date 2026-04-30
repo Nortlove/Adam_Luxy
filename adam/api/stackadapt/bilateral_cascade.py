@@ -2992,6 +2992,38 @@ def run_bilateral_cascade(
         except Exception as exc:
             logger.debug("Route gate skipped: %s", exc)
 
+    # ─── REGRET-WEIGHTED RANK (audit Item 11 — bounded piece) ───
+    # Penalize high-regret mechanisms multiplicatively per Foundation
+    # §7 rule 11 (the fitness function IS the ethics). F5 binary-shifts
+    # by category (blend/vigilance); C2 zeros incompatible mechanisms;
+    # neither distinguishes WITHIN a category. The graded
+    # regret_correlation_prior on MECHANISM_TAXONOMY (BLEND 0.15-0.25;
+    # VIGILANCE 0.50-0.70) carries differential signal that should
+    # penalize the highest-regret mechanism within each band.
+    # Default weight = 0.20 (calibration-pending; max ~14% penalty on
+    # attention_dynamics). Soft-fail: any error → scores untouched.
+    if result.mechanism_scores:
+        try:
+            from adam.intelligence.regret_weighted_ranking import (
+                apply_regret_weighted_ranking,
+            )
+            regret_modulated = apply_regret_weighted_ranking(
+                result.mechanism_scores,
+            )
+            if regret_modulated is not result.mechanism_scores:
+                regret_shifted = sum(
+                    1
+                    for m, v in regret_modulated.items()
+                    if abs(v - result.mechanism_scores.get(m, v)) > 1e-9
+                )
+                if regret_shifted:
+                    result.reasoning.append(
+                        f"Regret-weighted rank: {regret_shifted} mechanisms penalized"
+                    )
+                result.mechanism_scores = regret_modulated
+        except Exception as exc:
+            logger.debug("Regret-weighted rank skipped: %s", exc)
+
     # ─── M1 LIVE-CASCADE REWIRE — bid-time p_t logging ───
     # All argmax decisions inside L1/L2/L3 have already shaped the final
     # mechanism_scores dict. The CANONICAL action selection happens here:
