@@ -397,6 +397,32 @@ class WithinSubjectDesign(BaseModel):
         description="Mechanisms that have been deployed for this user",
     )
 
+    # ---- Spine #2 (directive Phase 1 line 948-950) extended fields ----
+    # Carryover-clearance hours per inter-touch transition (length =
+    # max_touches - 1). Generators in adam.retargeting.scheduler populate
+    # this from MECHANISM_PROFILES half-lives × 3 (PK convention).
+    washout_hours_between_touches: List[float] = Field(
+        default_factory=list,
+        description="Carryover-floor hours per consecutive touch transition",
+    )
+    # ABAB realized assignment pattern (mechanism per touch, in order).
+    abab_pattern: List[str] = Field(default_factory=list)
+    abab_a: str = Field(default="")
+    abab_b: str = Field(default="")
+    # RAR pre-rolled pattern + per-touch sampling distributions.
+    rar_pattern: List[str] = Field(default_factory=list)
+    rar_per_touch_probabilities: List[Dict[str, float]] = Field(default_factory=list)
+    rar_candidates: List[str] = Field(default_factory=list)
+    # SMART branching specification.
+    smart_stage_1_mechanism: str = Field(default="")
+    smart_rescue_mechanism: str = Field(default="")
+    smart_trigger_position: int = Field(default=0)
+    smart_responder_threshold: float = Field(default=0.0)
+    smart_pattern_responder: List[str] = Field(default_factory=list)
+    smart_pattern_non_responder: List[str] = Field(default_factory=list)
+    smart_washout_responder: List[float] = Field(default_factory=list)
+    smart_washout_non_responder: List[float] = Field(default_factory=list)
+
     def is_exploration_slot(self, touch_position: int) -> bool:
         """Check if this touch position should explore a new mechanism."""
         if self.exploration_complete:
