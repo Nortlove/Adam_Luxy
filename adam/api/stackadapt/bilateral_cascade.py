@@ -2790,6 +2790,38 @@ def run_bilateral_cascade(
     # Synergy check
     result = check_mechanism_synergy(result, archetype)
 
+    # ─── PER-USER POSTERIOR MODULATION (N-of-1 shrinkage) ───
+    # Audit §0a fix: until now the cascade read cached archive priors
+    # at decision time. This call applies the buyer's accumulated
+    # BRAND_CONVERTED-edge evidence as an empirical-Bayes shrinkage on
+    # top of the cohort priors. New buyers (low total_interactions)
+    # bypass; well-characterized buyers shift toward their personal
+    # posterior. The mixing weight is calibration-pending under LUXY
+    # mSPRT. Soft-fail: any error → pass scores through unchanged.
+    if result.mechanism_scores and buyer_id and graph_cache:
+        try:
+            from adam.intelligence.per_user_posterior_modulation import (
+                apply_per_user_posterior_modulation,
+            )
+            modulated = apply_per_user_posterior_modulation(
+                mechanism_scores=result.mechanism_scores,
+                buyer_id=buyer_id,
+                graph_cache=graph_cache,
+            )
+            if modulated is not result.mechanism_scores:
+                shifted = sum(
+                    1
+                    for m, v in modulated.items()
+                    if abs(v - result.mechanism_scores.get(m, v)) > 1e-9
+                )
+                if shifted:
+                    result.reasoning.append(
+                        f"Per-user posterior modulation: {shifted} mechanisms shifted"
+                    )
+                result.mechanism_scores = modulated
+        except Exception as exc:
+            logger.debug("Per-user posterior modulation skipped: %s", exc)
+
     # ─── F5: BLEND-VS-VIGILANCE STRATEGIC WEIGHTING ───
     # Apply the attention-inversion platform commitment as a soft
     # preference: blend-compatible mechanisms boosted, vigilance-
