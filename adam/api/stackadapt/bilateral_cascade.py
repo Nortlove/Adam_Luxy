@@ -3052,6 +3052,28 @@ def run_bilateral_cascade(
             f"MRT-logged: mechanism={chosen_mech}, p_t={p_t:.4f}, ε={result.epsilon_floor}"
         )
 
+    # ─── Spine #6 — DecisionTrace emission for the explanation surface ───
+    # Sync emit to in-memory log; an async drain worker flushes to Redis
+    # (hot cache, 14d TTL) + Neo4j (long-term archival). Soft-fail:
+    # bid path must NEVER block on logging (handoff §1.10).
+    try:
+        from adam.intelligence.decision_trace_emitter import (
+            build_trace_from_cascade,
+            emit as _emit_decision_trace,
+        )
+        _trace = build_trace_from_cascade(
+            decision_id=f"cascade-{int(t0 * 1000)}-{buyer_id or 'anon'}",
+            user_id=buyer_id or "",
+            archetype=archetype,
+            category=category,
+            cascade_result=result,
+            chosen_mechanism=chosen_mech or result.primary_mechanism,
+            p_t=float(p_t),
+        )
+        _emit_decision_trace(_trace)
+    except Exception as _exc:
+        logger.debug("DecisionTrace emission skipped: %s", _exc)
+
     elapsed_ms = (time.monotonic() - t0) * 1000
     result.reasoning.append(f"Cascade complete: level={result.cascade_level}, elapsed={elapsed_ms:.1f}ms")
 
