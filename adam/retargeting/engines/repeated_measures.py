@@ -70,6 +70,18 @@ MAX_L1_PROFILES = 50_000
 REDIS_KEY_PREFIX = "adam:retargeting:user_profile"
 REDIS_TTL_SECONDS = 30 * 24 * 3600  # 30 days
 
+# L3 Neo4j tier — closes the directive's Phase 1 deliverable
+# "Storage schema in Neo4j (UserPosterior node), Redis hot cache."
+# Migration: 030_user_posterior_storage.cypher (creates :UserPosterior
+# node label + indexes on user_id+brand_id and last_updated_ts).
+#
+# Debounced writes — Neo4j gets a snapshot every Nth update (default
+# 5) instead of every touch. The L1+L2 tiers absorb the per-touch
+# write load; L3 is the durable long-term store the HMC reconcile
+# (Phase 1) and variational reconcile paths consume offline.
+NEO4J_DEBOUNCE_EVERY_N_UPDATES: int = 5
+USER_POSTERIOR_SCHEMA_VERSION: str = "1.0"
+
 
 class UserPosteriorManager:
     """Manages per-user mechanism posteriors for within-subject analysis.
@@ -89,9 +101,11 @@ class UserPosteriorManager:
         self,
         prior_manager: Optional[HierarchicalPriorManager] = None,
         redis_client=None,
+        neo4j_driver=None,
     ):
         self._prior_manager = prior_manager or HierarchicalPriorManager()
         self._redis = redis_client
+        self._neo4j_driver = neo4j_driver
 
         # L1: LRU cache of user profiles
         self._profiles: OrderedDict[str, UserPosteriorProfile] = OrderedDict()
@@ -99,6 +113,13 @@ class UserPosteriorManager:
 
         # Mixed-effects estimator (added in session 36-3)
         self._mixed_effects: Optional["MixedEffectsEstimator"] = None
+
+        # L3 Neo4j debounce counters — keyed by cache_key, value is
+        # how many updates have happened since the last Neo4j write.
+        # When the counter hits NEO4J_DEBOUNCE_EVERY_N_UPDATES, the
+        # next update_user_posterior triggers a Neo4j persist and
+        # the counter resets.
+        self._neo4j_debounce: Dict[str, int] = {}
 
     def set_mixed_effects(self, estimator: "MixedEffectsEstimator") -> None:
         """Wire the mixed-effects estimator after construction."""
@@ -133,6 +154,16 @@ class UserPosteriorManager:
         profile = self._load_from_redis(cache_key)
         if profile is not None:
             self._store_l1(cache_key, profile)
+            return profile
+
+        # L3: Neo4j — durable long-term tier. Hit when Redis evicted
+        # (TTL exceeded or memory pressure) but the user has prior
+        # observations the offline pipeline already persisted. Promotes
+        # back into L1+L2 on read.
+        profile = self._load_from_neo4j(user_id, brand_id)
+        if profile is not None:
+            self._store_l1(cache_key, profile)
+            self._store_to_redis(cache_key, profile)
             return profile
 
         # Cold start: create from population posteriors
@@ -243,6 +274,21 @@ class UserPosteriorManager:
         # Debounced Redis write (every 3rd update to reduce writes)
         if profile.total_touches_observed % 3 == 0 or reward > 0.5:
             self._store_to_redis(cache_key, profile)
+
+        # Debounced Neo4j L3 write — directive Phase 1 deliverable.
+        # Counter increments per update; when it crosses
+        # NEO4J_DEBOUNCE_EVERY_N_UPDATES, persist + reset.
+        with self._lock:
+            self._neo4j_debounce[cache_key] = (
+                self._neo4j_debounce.get(cache_key, 0) + 1
+            )
+            if self._neo4j_debounce[cache_key] >= NEO4J_DEBOUNCE_EVERY_N_UPDATES:
+                self._neo4j_debounce[cache_key] = 0
+                should_persist = True
+            else:
+                should_persist = False
+        if should_persist:
+            self._store_to_neo4j(cache_key, profile)
 
         return profile
 
@@ -486,6 +532,104 @@ class UserPosteriorManager:
             self._redis.setex(redis_key, REDIS_TTL_SECONDS, data)
         except Exception as e:
             logger.debug("Redis store failed for %s: %s", cache_key, e)
+
+    # -----------------------------------------------------------------
+    # L3 Neo4j storage (directive Phase 1 deliverable)
+    # -----------------------------------------------------------------
+
+    def _resolve_neo4j_driver(self):
+        """Return a Neo4j driver if available; None otherwise.
+
+        Soft-fails if no driver was injected and the lazy fallback to
+        the dependencies container fails. The L1+L2 tiers absorb the
+        load if L3 isn't reachable.
+        """
+        if self._neo4j_driver is not None:
+            return self._neo4j_driver
+        try:
+            from adam.core.dependencies import get_neo4j_driver
+            return get_neo4j_driver()
+        except Exception as exc:
+            logger.debug("Neo4j driver unavailable for L3 user-posterior: %s", exc)
+            return None
+
+    def _load_from_neo4j(
+        self, user_id: str, brand_id: str,
+    ) -> Optional[UserPosteriorProfile]:
+        """Load user profile from Neo4j L3 storage.
+
+        The persisted shape stores the Pydantic model as a JSON
+        property on the :UserPosterior node — Pydantic owns the
+        schema, Neo4j is the durable carrier. Returns None when no
+        node exists or when the JSON fails to parse (parse failure
+        falls back to cold-start, not a crash).
+        """
+        driver = self._resolve_neo4j_driver()
+        if driver is None:
+            return None
+        cypher = """
+        MATCH (up:UserPosterior {user_id: $user_id, brand_id: $brand_id})
+        RETURN up.posterior_json AS posterior_json
+        """
+        try:
+            with driver.session() as session:
+                rec = session.run(
+                    cypher, user_id=user_id, brand_id=brand_id,
+                ).single()
+                if rec is None:
+                    return None
+                payload = rec.get("posterior_json")
+                if not payload:
+                    return None
+                return UserPosteriorProfile.model_validate_json(payload)
+        except Exception as exc:
+            logger.debug(
+                "Neo4j L3 load failed for user=%s brand=%s: %s",
+                user_id, brand_id, exc,
+            )
+            return None
+
+    def _store_to_neo4j(
+        self, cache_key: str, profile: UserPosteriorProfile,
+    ) -> None:
+        """Persist user profile to Neo4j L3 storage.
+
+        Idempotent MERGE on (user_id, brand_id). Stores the full
+        Pydantic JSON payload + denormalized aggregate fields
+        (total_touches, total_reward, last_updated_ts) so HMC
+        reconcile can find stale rows without parsing the JSON.
+        """
+        driver = self._resolve_neo4j_driver()
+        if driver is None:
+            return
+        cypher = """
+        MERGE (up:UserPosterior {user_id: $user_id, brand_id: $brand_id})
+        SET up.archetype_id = $archetype_id,
+            up.posterior_json = $posterior_json,
+            up.total_touches = $total_touches,
+            up.total_reward = $total_reward,
+            up.last_updated_ts = $last_updated_ts,
+            up.schema_version = $schema_version
+        """
+        try:
+            payload = profile.model_dump_json()
+            with driver.session() as session:
+                session.run(
+                    cypher,
+                    user_id=profile.user_id,
+                    brand_id=profile.brand_id,
+                    archetype_id=profile.archetype_id,
+                    posterior_json=payload,
+                    total_touches=profile.total_touches_observed,
+                    total_reward=profile.total_reward_sum,
+                    last_updated_ts=int(time.time()),
+                    schema_version=USER_POSTERIOR_SCHEMA_VERSION,
+                )
+        except Exception as exc:
+            logger.debug(
+                "Neo4j L3 persist failed for %s: %s",
+                cache_key, exc,
+            )
 
     # -----------------------------------------------------------------
     # Observability
