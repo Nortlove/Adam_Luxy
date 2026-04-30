@@ -2822,6 +2822,63 @@ def run_bilateral_cascade(
         except Exception as exc:
             logger.debug("Per-user posterior modulation skipped: %s", exc)
 
+    # ─── PREDICTIVE-PROCESSING CURIOSITY BONUS ───
+    # Drift correction: this wire previously sat in
+    # realtime_decision_engine.compute_persuasion_decision, where its
+    # output flowed into a metadata field (`persuasion_intelligence`)
+    # that no downstream code consumed. Relocated here so the curiosity
+    # bonus actually modulates `result.mechanism_scores` — the value
+    # that becomes the bid mechanism returned to StackAdapt.
+    # Bounded multiplicative bonus capped at ±15%. Soft-fail by design.
+    if result.mechanism_scores and buyer_id:
+        try:
+            from adam.intelligence.predictive_processing import (
+                get_predictive_processing_engine,
+            )
+            from adam.intelligence.per_user_posterior_modulation import (
+                MECHANISM_DIMENSION_MAP,
+            )
+
+            engine = get_predictive_processing_engine()
+            # Use the canonical 20-dim BONG dimension space for the
+            # engine's feature input. Primary dims of each mechanism
+            # carry signal; non-primary dims set to 0.5 so the engine's
+            # |x-0.5|*2 strength term zeros them out.
+            from adam.intelligence.bong import DEFAULT_DIMENSIONS as _BONG_DIMS
+            applied = 0
+            for mech_id in list(result.mechanism_scores.keys()):
+                primary_dims = MECHANISM_DIMENSION_MAP.get(mech_id)
+                if not primary_dims:
+                    continue
+                # Build features in BONG-dim names so cohort-side primary
+                # dims align (no_score/no_match suffix translation).
+                ad_features = {}
+                for d in _BONG_DIMS:
+                    cohort_name = d
+                    if cohort_name.endswith("_score"):
+                        cohort_name = cohort_name[:-len("_score")]
+                    if cohort_name.endswith("_match"):
+                        cohort_name = cohort_name[:-len("_match")]
+                    if cohort_name == "personality_brand_alignment":
+                        cohort_name = "personality_alignment"
+                    ad_features[d] = (
+                        1.0 if cohort_name in primary_dims else 0.5
+                    )
+                bonus = engine.get_curiosity_score(buyer_id, ad_features)
+                capped = max(-0.15, min(0.15, float(bonus)))
+                if abs(capped) > 1e-6:
+                    result.mechanism_scores[mech_id] = max(
+                        0.0,
+                        min(1.0, result.mechanism_scores[mech_id] * (1.0 + capped)),
+                    )
+                    applied += 1
+            if applied:
+                result.reasoning.append(
+                    f"Predictive curiosity bonus: {applied} mechanisms shifted"
+                )
+        except Exception as exc:
+            logger.debug("Predictive curiosity bonus skipped: %s", exc)
+
     # ─── TRILATERAL EPISTEMIC BONUS (buyer × page-mech × buyer-page) ───
     # Audit §6 fix: trilateral_epistemic_value() existed but had no
     # caller. Replaces the cascade's single-source IV picture (buyer

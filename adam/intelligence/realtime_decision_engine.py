@@ -269,48 +269,6 @@ def compute_persuasion_decision(
 
     decision.environmental_mods = env_mods
 
-    # 2d. Curiosity bonus from the predictive-processing engine.
-    # Per audit §6: the engine was registered in container.py but had
-    # no consumer in the realtime decision flow. Adding a bounded
-    # multiplicative bonus here connects the per-user belief state
-    # (prediction errors + dimension precisions) to mechanism scoring.
-    # The bonus is the engine's own curiosity_bonus = epistemic_value
-    # × decayed_curiosity_weight × total_uncertainty, mapped onto
-    # each mechanism's primary dimensions. Capped at ±15% so it can't
-    # swamp the substantive scoring above. Soft-fail by design.
-    if buyer_id:
-        try:
-            from adam.intelligence.predictive_processing import (
-                get_predictive_processing_engine,
-            )
-            from adam.intelligence.per_user_posterior_modulation import (
-                MECHANISM_DIMENSION_MAP,
-            )
-
-            engine = get_predictive_processing_engine()
-            applied = 0
-            for mech in list(mechanism_scores.keys()):
-                primary_dims = MECHANISM_DIMENSION_MAP.get(mech)
-                if not primary_dims:
-                    continue
-                # Mechanism feature signature: 1.0 on primary dims,
-                # 0.5 elsewhere (neutral for the engine's |x-0.5|*2
-                # feature_strength term — only primary dims contribute).
-                ad_features = {
-                    dim: (1.0 if dim in primary_dims else 0.5)
-                    for dim in EDGE_DIMENSIONS
-                }
-                bonus = engine.get_curiosity_score(buyer_id, ad_features)
-                # Cap ±15% so curiosity can't dominate substantive scoring.
-                capped = max(-0.15, min(0.15, float(bonus)))
-                if abs(capped) > 1e-6:
-                    mechanism_scores[mech] *= 1.0 + capped
-                    applied += 1
-            if applied:
-                evidence.append(f"predictive_curiosity({applied})")
-        except Exception:
-            pass
-
     # ═══════════════════════════════════════════════════════════════
     # STEP 3: DECIDE — What's the optimal creative direction?
     # ═══════════════════════════════════════════════════════════════
