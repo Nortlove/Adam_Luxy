@@ -291,6 +291,183 @@ def build_hierarchical_model(
 
 
 # -----------------------------------------------------------------------------
+# Phase 3 δ_iac — horseshoe-shrunk trait × state × context interaction tensor
+# -----------------------------------------------------------------------------
+#
+# Directive Phase 3 line 985-988: extend the cell-level partial-pooling
+# model with sparse interaction terms `delta_iac[i]` for the small
+# subset of (archetype, mechanism, category) triples where the
+# interaction is materially non-zero. Horseshoe prior (Carvalho, Polson,
+# Scott 2009; Piironen & Vehtari 2017) shrinks the irrelevant
+# interactions toward zero while preserving the few that are real.
+#
+# Per directive line 987 — "Pre-specified interaction list (~10–15
+# interactions Chris believes exist)" — the build function accepts a
+# pre_specified_interactions argument: each pre-specified triple gets a
+# wider Normal(0, 1.0) prior (no shrinkage), so the horseshoe doesn't
+# fight against domain knowledge. Other triples present in the data go
+# through the horseshoe.
+
+# Horseshoe scale defaults — Piironen-Vehtari recommend tau_scale = (s/(D-s)) * (sigma/sqrt(N))
+# where D = total interactions, s = expected non-zero count. Conservative:
+# tau_scale=0.1 works well for D ≈ 100 and expected s ≈ 5-15.
+_HORSESHOE_TAU_SCALE: float = 0.1
+# Wide non-shrinkage prior for pre-specified interactions
+_PRESPECIFIED_INTERACTION_SCALE: float = 1.0
+
+
+def build_hierarchical_model_with_interactions(
+    observations: List[HierarchicalObservation],
+    pre_specified_interactions: Optional[List[Tuple[str, str, str]]] = None,
+    priors: Optional[Dict[str, float]] = None,
+    tau_scale: float = _HORSESHOE_TAU_SCALE,
+) -> Tuple[Any, Dict[str, List[str]], List[Tuple[str, str, str]]]:
+    """Build the M3 hierarchical model + δ_iac horseshoe interaction layer.
+
+    Returns (model, coords, interaction_index) where interaction_index
+    is the ordered list of (archetype, mechanism, category) triples
+    that have at least one observation in the data — these are the
+    candidate interaction slots; the horseshoe shrinks them toward zero
+    unless evidence supports them.
+
+    Args:
+        observations: same as build_hierarchical_model
+        pre_specified_interactions: list of (archetype, mechanism,
+            category) triples Chris/the team believes exist a priori;
+            these get the wide Normal(0, 1.0) prior instead of the
+            horseshoe. Triples outside the observed data are silently
+            dropped — you cannot pre-specify an interaction with zero
+            data.
+        priors: same as build_hierarchical_model
+        tau_scale: horseshoe global shrinkage scale (Piironen-Vehtari
+            2017 default 0.1 for moderate D)
+
+    Raises:
+        HierarchyLibsMissingError if PyMC isn't available
+        ValueError if observations is empty
+    """
+    if not observations:
+        raise ValueError("build_hierarchical_model_with_interactions: empty observations")
+
+    pymc = _try_import_pymc()
+    if pymc is None:
+        raise HierarchyLibsMissingError(
+            "PyMC not installed. δ_iac horseshoe model requires pymc>=5.16."
+        )
+
+    try:
+        import pymc as pm
+        import numpy as np
+    except ImportError as exc:
+        raise HierarchyLibsMissingError(f"PyMC deps missing: {exc}")
+
+    p = {**_HIERARCHY_PRIORS, **(priors or {})}
+    pre_specified = set(pre_specified_interactions or [])
+
+    archetypes = sorted({o.archetype for o in observations})
+    mechanisms = sorted({o.mechanism for o in observations})
+    categories = sorted({o.category for o in observations})
+    arch_idx = {a: i for i, a in enumerate(archetypes)}
+    mech_idx = {m: i for i, m in enumerate(mechanisms)}
+    cat_idx = {c: i for i, c in enumerate(categories)}
+
+    # Interaction slot = unique (archetype, mechanism, category) triple
+    # observed in the data. Each slot gets one delta_iac coefficient.
+    observed_triples: List[Tuple[str, str, str]] = sorted({
+        (o.archetype, o.mechanism, o.category) for o in observations
+    })
+    n_iac = len(observed_triples)
+    triple_to_iac_idx = {t: i for i, t in enumerate(observed_triples)}
+
+    # Mask: 1 if pre-specified (no shrinkage), 0 if horseshoe-shrunk
+    is_prespecified = np.array(
+        [1 if t in pre_specified else 0 for t in observed_triples],
+        dtype=np.int32,
+    )
+    n_prespecified = int(is_prespecified.sum())
+    n_horseshoe = n_iac - n_prespecified
+
+    a_idx = np.asarray([arch_idx[o.archetype] for o in observations])
+    m_idx = np.asarray([mech_idx[o.mechanism] for o in observations])
+    c_idx = np.asarray([cat_idx[o.category] for o in observations])
+    iac_idx = np.asarray([
+        triple_to_iac_idx[(o.archetype, o.mechanism, o.category)]
+        for o in observations
+    ])
+    y = np.asarray([o.success for o in observations])
+
+    coords = {
+        "archetype": archetypes,
+        "mechanism": mechanisms,
+        "category": categories,
+        "interaction": [
+            f"{a}|{m}|{c}" for (a, m, c) in observed_triples
+        ],
+    }
+
+    with pm.Model(coords=coords) as model:
+        # --- Existing partial-pooling backbone (unchanged) ---
+        mu_pop = pm.Normal("mu_pop", p["mu_pop_loc"], p["mu_pop_scale"])
+        sigma_archetype = pm.HalfNormal(
+            "sigma_archetype", p["sigma_archetype_scale"],
+        )
+        z_archetype = pm.Normal("z_archetype", 0, 1, dims="archetype")
+        alpha_archetype = pm.Deterministic(
+            "alpha_archetype",
+            mu_pop + sigma_archetype * z_archetype,
+            dims="archetype",
+        )
+        sigma_ctx = pm.HalfNormal("sigma_ctx", p["sigma_ctx_scale"])
+        z_ctx = pm.Normal(
+            "z_ctx", 0, 1,
+            dims=("archetype", "mechanism", "category"),
+        )
+        gamma_ctx = pm.Deterministic(
+            "gamma_ctx",
+            alpha_archetype[:, None, None] + sigma_ctx * z_ctx,
+            dims=("archetype", "mechanism", "category"),
+        )
+
+        # --- Phase 3 δ_iac — horseshoe + pre-specified slots ---
+        # Global scale (only relevant for horseshoe-shrunk slots)
+        if n_horseshoe > 0:
+            tau = pm.HalfCauchy("tau_iac", beta=tau_scale)
+            # Local shrinkage per slot
+            lam = pm.HalfCauchy("lambda_iac", beta=1.0, dims="interaction")
+            # Per-slot scale combines global tau, local lambda, and the
+            # pre-specified mask. Pre-specified slots use the wider
+            # _PRESPECIFIED_INTERACTION_SCALE.
+            mask_pre = pm.Data("is_prespecified", is_prespecified.astype(np.float64))
+            scale = pm.Deterministic(
+                "delta_iac_scale",
+                mask_pre * _PRESPECIFIED_INTERACTION_SCALE
+                + (1.0 - mask_pre) * tau * lam,
+                dims="interaction",
+            )
+        else:
+            # Pure pre-specified — no horseshoe needed
+            scale = pm.Deterministic(
+                "delta_iac_scale",
+                pm.math.constant(
+                    np.full(n_iac, _PRESPECIFIED_INTERACTION_SCALE),
+                ),
+                dims="interaction",
+            )
+
+        # Non-centered parameterization of delta to avoid Neal's funnel
+        z_iac = pm.Normal("z_iac", 0, 1, dims="interaction")
+        delta_iac = pm.Deterministic(
+            "delta_iac", scale * z_iac, dims="interaction",
+        )
+
+        # eta = backbone + interaction term
+        eta = gamma_ctx[a_idx, m_idx, c_idx] + delta_iac[iac_idx]
+        pm.Bernoulli("y_obs", logit_p=eta, observed=y)
+
+    return model, coords, observed_triples
+
+
+# -----------------------------------------------------------------------------
 # Sampler driver — runs NUTS, returns posterior summary
 # -----------------------------------------------------------------------------
 
