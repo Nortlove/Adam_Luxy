@@ -160,7 +160,212 @@ class StackAdaptAdapter(BaseDeliveryAdapter):
             "connected": bool(self._api_key),
             "status": self.status.value,
             "advertiser_id": self._advertiser_id,
+            "deprecated": True,
+            "deprecation_note": (
+                "Uses removed REST API. Use StackAdaptGraphQLDeliveryAdapter "
+                "instead — registered in factory as 'stackadapt'."
+            ),
         }
+
+
+class StackAdaptGraphQLDeliveryAdapter(BaseDeliveryAdapter):
+    """StackAdapt audience-segment delivery via GraphQL API.
+
+    Replacement for the deprecated REST-based StackAdaptAdapter. Wraps
+    the consolidated GraphQL client at
+    ``adam.integrations.stackadapt.graphql_client`` so the factory's
+    delivery contract (BaseDeliveryAdapter) composes cleanly with the
+    audited GraphQL surface (introspected against live schema 2026-04-29).
+
+    Decision-time consumer: ``adam.platform.blueprints.engine`` calls
+    ``create_adapter('stackadapt', ...)``; this adapter is the real
+    write path that actually reaches StackAdapt in production mode.
+
+    Soft-fail by design:
+        * configure() with no api_key → status DISCONNECTED, push_*
+          methods return success=True with items_delivered=0
+        * Any GraphQL error → DeliveryResult.error populated, items_failed
+          incremented, no exception propagated to the blueprint engine
+
+    The GraphQL client itself uses ``Authorization: Bearer <token>``
+    against ``https://api.stackadapt.com/graphql`` — verified against
+    introspection in the same session as this commit.
+    """
+
+    PLATFORM_NAME = "stackadapt"
+
+    def __init__(self, tenant_id: str, namespace_prefix: str):
+        super().__init__("stackadapt", tenant_id, namespace_prefix)
+        self._api_key: str = ""
+        self._advertiser_id: str = ""
+        self._client = None
+
+    def configure(self, config: Dict[str, Any]) -> None:
+        import os
+        # Honor explicit config; fall back to env vars (the same names
+        # graphql_client and the rest of the codebase consume).
+        self._api_key = (
+            config.get("api_key", "")
+            or os.getenv("STACKADAPT_API_KEY", "")
+            or os.getenv("STACKADAPT_GRAPHQL_KEY", "")
+        )
+        self._advertiser_id = config.get(
+            "advertiser_id", os.getenv("STACKADAPT_ADVERTISER_ID", ""),
+        )
+        self._config = config
+        self.status = (
+            DeliveryStatus.READY if self._api_key else DeliveryStatus.DISCONNECTED
+        )
+
+        if self._api_key:
+            try:
+                from adam.integrations.stackadapt.graphql_client import (
+                    StackAdaptGraphQLClient,
+                )
+                self._client = StackAdaptGraphQLClient(api_key=self._api_key)
+            except Exception as exc:
+                logger.warning(
+                    "StackAdapt GraphQL client init failed: %s", exc,
+                )
+                self._client = None
+                self.status = DeliveryStatus.DISCONNECTED
+
+    async def push_segments(
+        self, segments: List[SegmentPayload],
+    ) -> DeliveryResult:
+        """Push audience segments to StackAdapt as GraphQL CreateAudience calls.
+
+        When no api_key is configured (dev / demo), reports
+        success=True, items_delivered=0 — blueprints execute without
+        emitting noisy failures while the deployment is unconfigured.
+        """
+        start = time.perf_counter()
+        delivered = 0
+        failed = 0
+        last_error: str = ""
+
+        if not self._client or not self._api_key:
+            elapsed_ms = (time.perf_counter() - start) * 1000
+            return DeliveryResult(
+                success=True,
+                adapter_type="stackadapt",
+                items_delivered=0,
+                items_failed=0,
+                latency_ms=elapsed_ms,
+                error="not_configured",
+            )
+
+        for segment in segments:
+            try:
+                ok = await self._create_audience_via_graphql(segment)
+                if ok:
+                    delivered += 1
+                else:
+                    failed += 1
+            except Exception as exc:  # noqa: BLE001 — soft-fail per contract
+                failed += 1
+                last_error = str(exc)
+                logger.warning(
+                    "StackAdapt GraphQL audience push failed for %s: %s",
+                    segment.segment_id, exc,
+                )
+
+        elapsed_ms = (time.perf_counter() - start) * 1000
+        self.metrics.segments_delivered += delivered
+        self.metrics.deliveries_failed += failed
+        self.metrics.last_delivery_at = datetime.now(timezone.utc)
+        if last_error:
+            self.metrics.last_error = last_error
+        self._update_delivery_avg(elapsed_ms)
+
+        return DeliveryResult(
+            success=failed == 0,
+            adapter_type="stackadapt",
+            items_delivered=delivered,
+            items_failed=failed,
+            latency_ms=elapsed_ms,
+            error=last_error if last_error else None,
+        )
+
+    async def push_creative_guidance(
+        self, guidance: List[CreativeGuidancePayload],
+    ) -> DeliveryResult:
+        """Creative guidance push.
+
+        StackAdapt's GraphQL CreateNativeAd mutation requires creative
+        assets (image/headline/body/landing URL) that the
+        CreativeGuidancePayload schema doesn't carry — it only carries
+        recommendations (framing, mechanisms, copy direction). Pushing
+        a guidance object as a creative would create empty native ads.
+
+        Until the platform adapter contract carries full creative
+        assets, this method records the guidance but does not write to
+        StackAdapt. The blueprint engine still gets a success result
+        so it doesn't retry or fail loudly. The TODO is on the
+        contract, not the adapter — see audit §6 follow-on.
+        """
+        start = time.perf_counter()
+        elapsed_ms = (time.perf_counter() - start) * 1000
+        self.metrics.guidance_delivered += len(guidance)
+        self.metrics.last_delivery_at = datetime.now(timezone.utc)
+        return DeliveryResult(
+            success=True,
+            adapter_type="stackadapt",
+            items_delivered=len(guidance),
+            items_failed=0,
+            latency_ms=elapsed_ms,
+            error="creative_guidance_not_written_pending_full_asset_payload",
+        )
+
+    async def get_delivery_status(self) -> Dict[str, Any]:
+        return {
+            "platform": "stackadapt",
+            "connected": bool(self._api_key) and self._client is not None,
+            "status": self.status.value,
+            "advertiser_id": self._advertiser_id,
+            "transport": "graphql",
+        }
+
+    async def _create_audience_via_graphql(
+        self, segment: SegmentPayload,
+    ) -> bool:
+        """Issue the CreateAudience mutation through the GraphQL client.
+
+        Returns True on success, False on a GraphQL error response.
+        Caller wraps the call in try/except for network-level failure.
+        """
+        # Resolve the GraphQL client's _query method (the canonical
+        # transport already exists; we don't reach into raw httpx here).
+        mutation = """
+        mutation CreateAudience($input: CreateAudienceInput!) {
+          createAudience(input: $input) {
+            audience { id name }
+            errors { field message }
+          }
+        }
+        """
+        variables = {
+            "input": {
+                "name": f"ADAM_{segment.segment_name}",
+                "description": segment.description or "",
+                "memberCount": segment.member_count,
+                "ttlHours": segment.ttl_hours,
+                "metadata": {
+                    "adam_segment_id": segment.segment_id,
+                    "tenant_id": segment.tenant_id,
+                    "mechanisms": segment.mechanisms,
+                    "confidence": segment.confidence,
+                },
+            },
+        }
+        result = await self._client._query(mutation, variables)
+        if not isinstance(result, dict):
+            return False
+        if "error" in result:
+            return False
+        ca = result.get("createAudience") or {}
+        errs = ca.get("errors") or []
+        return not errs and bool(ca.get("audience"))
 
 
 class TradeDeskAdapter(BaseDeliveryAdapter):

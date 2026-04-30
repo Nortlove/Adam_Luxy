@@ -21,6 +21,7 @@ from adam.platform.delivery.audio_adapter import (
 from adam.platform.delivery.dsp_adapter import (
     DV360Adapter,
     StackAdaptAdapter,
+    StackAdaptGraphQLDeliveryAdapter,
     TradeDeskAdapter,
 )
 from adam.platform.delivery.ssp_adapter import MagniteAdapter, PrebidAdapter
@@ -36,8 +37,12 @@ ADAPTER_REGISTRY: Dict[str, Type[BaseDeliveryAdapter]] = {
     "index_exchange": MagniteAdapter,
     "prebid": PrebidAdapter,
 
-    # DSP
-    "stackadapt": StackAdaptAdapter,
+    # DSP — StackAdapt now uses the GraphQL-backed adapter (audit §6).
+    # The legacy REST-based StackAdaptAdapter remains importable for
+    # blueprint backward compat but the registry-resolved 'stackadapt'
+    # is the live GraphQL writer that respects the .env-set API token.
+    "stackadapt": StackAdaptGraphQLDeliveryAdapter,
+    "stackadapt_legacy_rest": StackAdaptAdapter,
     "ttd": TradeDeskAdapter,
     "dv360": DV360Adapter,
     "amazon_dsp": DV360Adapter,     # Amazon DSP follows similar pattern
@@ -52,7 +57,7 @@ ADAPTER_REGISTRY: Dict[str, Type[BaseDeliveryAdapter]] = {
     "springserve": MagniteAdapter,
 
     # Retail
-    "retail_media_api": StackAdaptAdapter,
+    "retail_media_api": StackAdaptGraphQLDeliveryAdapter,
 
     # Social
     "meta_api": DV360Adapter,
