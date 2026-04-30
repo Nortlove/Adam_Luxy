@@ -56,12 +56,16 @@ logger = logging.getLogger(__name__)
 # -----------------------------------------------------------------------------
 
 
+PROCESSING_FLUENCY_FLOOR: float = 0.3
+
+
 def predict_processing_depth_heuristic(
     page_cognitive_load: Optional[float] = None,
     page_remaining_bandwidth: Optional[float] = None,
     page_attention_competition: Optional[float] = None,
     page_processing_mode: Optional[str] = None,
     device_type: Optional[str] = None,
+    page_processing_fluency: Optional[float] = None,
 ) -> ProcessingDepth:
     """Predict the user's likely processing depth on this impression.
 
@@ -79,10 +83,29 @@ def predict_processing_depth_heuristic(
         page_processing_mode: pre-classified mode if available
                               ("peripheral", "central", etc.)
         device_type: "desktop" / "mobile" / "tablet" / etc.
+        page_processing_fluency: 0..1, Reber's processing-fluency
+            (hard → easy). Below PROCESSING_FLUENCY_FLOOR (0.3),
+            collapses depth to UNPROCESSED — pages that are hard to
+            process leave NO cognitive room for ad engagement.
+            Acts as the audit-flagged "fluency floor" hard constraint
+            via the existing depth-gated route compatibility table:
+            UNPROCESSED → blend-compatible only, vigilance-activating
+            mechanisms are zeroed downstream by the C2 gate.
 
     Returns:
         ProcessingDepth — UNPROCESSED, PERIPHERAL, EVALUATED, or REJECTED.
     """
+    # Hard fluency floor — cheapest, strictest gate. Per Reber (1989)
+    # processing fluency, pages below the floor leave no cognitive
+    # bandwidth for any ad engagement; depth collapses regardless of
+    # other signals. Routed through UNPROCESSED so the existing C2
+    # mechanism-route compatibility table does the actual gating.
+    if (
+        page_processing_fluency is not None
+        and page_processing_fluency < PROCESSING_FLUENCY_FLOOR
+    ):
+        return ProcessingDepth.UNPROCESSED
+
     # Pre-classified processing mode wins when present — the page
     # profiler already did the work.
     if page_processing_mode:
@@ -269,12 +292,14 @@ def route_mechanism_scores_by_predicted_depth(
     bandwidth = None
     competition = None
     mode = None
+    fluency = None
     if page_profile is not None:
         try:
             cog_load = getattr(page_profile, "cognitive_load", None)
             bandwidth = getattr(page_profile, "remaining_bandwidth", None)
             competition = getattr(page_profile, "attention_competition", None)
             mode = getattr(page_profile, "processing_mode", None)
+            fluency = getattr(page_profile, "processing_fluency", None)
         except Exception as exc:
             logger.debug("Page profile feature extraction failed: %s", exc)
 
@@ -284,5 +309,6 @@ def route_mechanism_scores_by_predicted_depth(
         page_attention_competition=competition,
         page_processing_mode=mode,
         device_type=device_type,
+        page_processing_fluency=fluency,
     )
     return gate_mechanism_scores(scores, depth)

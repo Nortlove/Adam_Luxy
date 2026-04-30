@@ -272,3 +272,105 @@ def test_route_path_extraction_failure_passes_through():
     )
     # Cascade still gets a usable scores dict
     assert "social_proof" in gated
+
+
+# -----------------------------------------------------------------------------
+# Fluency floor (audit §6 hard constraint)
+# -----------------------------------------------------------------------------
+
+
+def test_fluency_below_floor_collapses_to_unprocessed():
+    """processing_fluency < PROCESSING_FLUENCY_FLOOR (0.3) MUST force
+    UNPROCESSED depth — the audit-flagged hard constraint."""
+    from adam.intelligence.processing_depth_router import (
+        PROCESSING_FLUENCY_FLOOR,
+    )
+    assert PROCESSING_FLUENCY_FLOOR == 0.3
+    d = predict_processing_depth_heuristic(
+        page_processing_fluency=0.2,
+        # Even with high bandwidth + central mode, fluency floor wins:
+        page_remaining_bandwidth=1.0,
+        page_processing_mode="central",
+    )
+    assert d == ProcessingDepth.UNPROCESSED
+
+
+def test_fluency_at_floor_does_not_collapse():
+    """fluency exactly at the floor (0.3) is NOT below — strict <
+    threshold per the canonical Reber rule."""
+    d = predict_processing_depth_heuristic(
+        page_processing_fluency=0.3,
+        page_processing_mode="central",
+    )
+    # central mode wins because fluency check did not trigger
+    assert d == ProcessingDepth.EVALUATED
+
+
+def test_fluency_above_floor_does_not_force_collapse():
+    """High fluency leaves all other signals authoritative."""
+    d = predict_processing_depth_heuristic(
+        page_processing_fluency=0.9,
+        page_processing_mode="central",
+    )
+    assert d == ProcessingDepth.EVALUATED
+
+
+def test_fluency_none_does_not_short_circuit():
+    """None fluency must not affect the predictor's other paths."""
+    d = predict_processing_depth_heuristic(
+        page_processing_fluency=None,
+        page_processing_mode="central",
+    )
+    assert d == ProcessingDepth.EVALUATED
+
+
+def test_route_path_low_fluency_filters_vigilance():
+    """End-to-end: low fluency → UNPROCESSED → vigilance mechanisms zeroed.
+
+    Uses Cialdini names whose atom counterparts ARE in MECHANISM_TAXONOMY:
+        loss_aversion → temporal_construal (BLEND_COMPATIBLE)
+        authority → identity_construction (VIGILANCE_ACTIVATING)
+        curiosity → attention_dynamics (VIGILANCE_ACTIVATING)
+    Mechanisms whose atom counterpart is NOT in the taxonomy
+    (social_proof, scarcity) are conservatively included regardless of
+    depth — that's the canonical contract; testing them here would be
+    testing the wrong thing.
+    """
+    profile = SimpleNamespace(
+        cognitive_load=0.5,
+        remaining_bandwidth=1.0,         # high — would normally give EVALUATED
+        attention_competition=0.0,        # low
+        processing_mode=None,
+        processing_fluency=0.15,          # below the 0.3 floor
+    )
+    scores = {
+        "loss_aversion": 0.7,   # blend-compatible (via temporal_construal)
+        "authority": 0.7,        # vigilance-activating (via identity_construction)
+        "curiosity": 0.7,        # vigilance-activating (via attention_dynamics)
+    }
+    gated = route_mechanism_scores_by_predicted_depth(
+        scores=scores, page_profile=profile,
+    )
+    # Blend-compatible survives; vigilance mechanisms zeroed
+    assert gated["loss_aversion"] == 0.7
+    assert gated["authority"] == 0.0
+    assert gated["curiosity"] == 0.0
+
+
+def test_route_path_high_fluency_allows_vigilance():
+    """Sanity inverse: high fluency on a high-bandwidth page → EVALUATED →
+    vigilance mechanisms remain eligible."""
+    profile = SimpleNamespace(
+        cognitive_load=0.4,
+        remaining_bandwidth=1.0,
+        attention_competition=0.0,
+        processing_mode=None,
+        processing_fluency=0.85,
+    )
+    scores = {"loss_aversion": 0.7, "authority": 0.7}
+    gated = route_mechanism_scores_by_predicted_depth(
+        scores=scores, page_profile=profile,
+    )
+    # Both routes preserved at full score
+    assert gated["loss_aversion"] == 0.7
+    assert gated["authority"] == 0.7
