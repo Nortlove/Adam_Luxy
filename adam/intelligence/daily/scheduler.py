@@ -292,6 +292,28 @@ def _register_all_tasks() -> None:
     except Exception as e:
         logger.debug("Task 32 (rollback monitor) not available: %s", e)
 
+    # Task 34 — Hierarchical Bayes nightly refit. Without this scheduled,
+    # per-cell (archetype × mechanism × category) posteriors stay frozen
+    # and the cascade reads stale priors. Per audit §6 + handoff §3.5.
+    try:
+        from adam.intelligence.daily.task_34_hierarchical_bayes_refit import (
+            HierarchicalBayesRefitTask,
+        )
+        tasks.append(HierarchicalBayesRefitTask())
+    except Exception as e:
+        logger.debug("Task 34 (hierarchical Bayes refit) not available: %s", e)
+
+    # Task 35 — Causal Forest weekly CATE fit. Without this scheduled,
+    # heterogeneous treatment effects stay frozen and the cascade reads
+    # stale per-cell CATEs. Per audit §6 + handoff §2.10.
+    try:
+        from adam.intelligence.daily.task_35_causal_forest_fit import (
+            CausalForestFitTask,
+        )
+        tasks.append(CausalForestFitTask())
+    except Exception as e:
+        logger.debug("Task 35 (causal forest weekly fit) not available: %s", e)
+
     for task in tasks:
         _task_registry[task.name] = task
 
