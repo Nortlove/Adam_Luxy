@@ -2,12 +2,18 @@
 # Per-User HMC Posterior Reconcile — Spine #1 offline path
 # Location: adam/intelligence/user_posterior_hmc_reconcile.py
 # =============================================================================
-"""HMC offline reconcile for per-user posteriors — directive Phase 1.
+"""HMC + Variational offline reconcile for per-user posteriors —
+directive Phase 1.
 
-Closes the directive's third Spine #1 update path:
+Closes the directive's second + third Spine #1 update paths:
   1. BONG online conjugate update path (shipped — Track 2)
-  2. Variational batch reconcile path (future slice)
-  3. HMC offline reconcile path  ← THIS MODULE
+  2. Variational batch reconcile path  ← THIS MODULE (SVI entry)
+  3. HMC offline reconcile path        ← THIS MODULE (NUTS entry)
+
+Both paths share the same NumPyro model (per-mechanism Beta + random
+intercept + AR(1) ρ) — they differ only in the inference algorithm:
+HMC for precise nightly per-user, Variational (SVI) for batch sweeps
+where throughput dominates precision.
 
 WHY THIS EXISTS
 
@@ -313,4 +319,176 @@ def _reconcile_per_mechanism_only(profile, mechanisms, draws, tune, chains):
             mech_post.alpha = alpha
             mech_post.beta = beta
 
+    return profile
+
+
+# =============================================================================
+# Variational Batch Reconcile — Spine #1 second update path
+# =============================================================================
+# Directive Phase 1 line 944: "Variational batch reconcile path."
+# Mirrors HMC's model + gates; differs in inference algorithm.
+# SVI with AutoNormal guide is 10-30x faster than NUTS at the cost of
+# a Gaussian-family approximation to the true posterior.
+# Real consumer: a future batch sweep task that processes the entire
+# user population (e.g., quarterly post-pilot full-population reconcile)
+# where throughput dominates per-user precision.
+
+DEFAULT_SVI_NUM_STEPS: int = 2000
+DEFAULT_SVI_LEARNING_RATE: float = 0.005
+# SVI samples the posterior K times to extract moments after fit.
+DEFAULT_SVI_POSTERIOR_SAMPLES: int = 500
+
+
+def reconcile_user_posterior_variational(
+    profile,
+    num_steps: int = DEFAULT_SVI_NUM_STEPS,
+    learning_rate: float = DEFAULT_SVI_LEARNING_RATE,
+    posterior_samples: int = DEFAULT_SVI_POSTERIOR_SAMPLES,
+):
+    """Variational batch reconcile — same model as HMC, faster inference.
+
+    SVI fits an AutoNormal guide (Gaussian family approximation to the
+    true posterior). Returns refined posterior moments via posterior
+    sampling from the trained guide. Soft-fail at every gate matches
+    the HMC path.
+
+    Why a separate entry point (not a `method=` parameter on
+    reconcile_user_posterior): the directive lists the two paths
+    explicitly. Treating them as named primitives keeps the call
+    sites diagnostic — "this batch sweep used SVI" vs "this nightly
+    reconcile used NUTS" — and lets ops profile each independently.
+
+    Returns the (mutated) profile. Soft-fail at every layer.
+    """
+    # --- Gate 1: enough observations to reconcile ---
+    total_obs = sum(
+        len(mp.outcomes) for mp in profile.mechanism_posteriors.values()
+    )
+    if total_obs < MIN_OBSERVATIONS_FOR_RECONCILE:
+        logger.debug(
+            "SVI reconcile no-op for user=%s brand=%s: %d obs < %d minimum",
+            profile.user_id, profile.brand_id, total_obs,
+            MIN_OBSERVATIONS_FOR_RECONCILE,
+        )
+        return profile
+
+    # --- Gate 2: lib import ---
+    try:
+        import jax
+        import jax.numpy as jnp
+        import numpy as np
+        import numpyro
+        from numpyro import distributions as dist
+        from numpyro.infer import SVI, Trace_ELBO
+        from numpyro.infer.autoguide import AutoNormal
+        from numpyro.optim import Adam
+    except ImportError as exc:
+        logger.warning(
+            "SVI reconcile skipped — NumPyro/JAX not installed: %s", exc,
+        )
+        return profile
+
+    mechanisms: List[str] = sorted(profile.mechanism_posteriors.keys())
+    if not mechanisms:
+        return profile
+    mech_to_idx: Dict[str, int] = {m: i for i, m in enumerate(mechanisms)}
+
+    seq_mechs: List[int] = []
+    seq_outcomes: List[float] = []
+    for m_name, out in zip(profile.all_mechanisms, profile.all_outcomes):
+        if m_name in mech_to_idx:
+            seq_mechs.append(mech_to_idx[m_name])
+            seq_outcomes.append(float(out))
+    if len(seq_outcomes) < MIN_OBSERVATIONS_FOR_RECONCILE:
+        # Fallback shares HMC's per-mechanism path
+        return _reconcile_per_mechanism_only(
+            profile, mechanisms,
+            draws=DEFAULT_DRAWS, tune=DEFAULT_TUNE, chains=DEFAULT_CHAINS,
+        )
+
+    seq_mechs_arr = jnp.array(seq_mechs, dtype=jnp.int32)
+    seq_outcomes_arr = jnp.array(seq_outcomes, dtype=jnp.float32)
+    n_mechs = len(mechanisms)
+    use_ar1 = len(seq_outcomes) >= MIN_OBSERVATIONS_FOR_AR1
+
+    # Same model as HMC — SVI fits it with a different inference
+    # algorithm. Closure pattern matches reconcile_user_posterior.
+    def model():
+        p = numpyro.sample(
+            "p", dist.Beta(2.0 * jnp.ones(n_mechs), 2.0 * jnp.ones(n_mechs)),
+        )
+        random_intercept = numpyro.sample(
+            "random_intercept", dist.Normal(0.0, 0.5),
+        )
+        if use_ar1:
+            rho = numpyro.sample("rho", dist.Uniform(-0.95, 0.95))
+        logits = jnp.log(p[seq_mechs_arr] / (1.0 - p[seq_mechs_arr])) + random_intercept
+        if use_ar1:
+            prev_out = jnp.concatenate([jnp.zeros(1), seq_outcomes_arr[:-1]])
+            prev_mech_p = jnp.concatenate([jnp.array([0.5]), p[seq_mechs_arr[:-1]]])
+            ar_term = rho * (prev_out - prev_mech_p)
+            logits = logits + ar_term
+        adjusted_p = 1.0 / (1.0 + jnp.exp(-logits))
+        numpyro.sample(
+            "y", dist.Bernoulli(probs=adjusted_p), obs=seq_outcomes_arr,
+        )
+
+    # --- Run SVI ---
+    try:
+        guide = AutoNormal(model)
+        optim = Adam(step_size=learning_rate)
+        svi = SVI(model, guide, optim, loss=Trace_ELBO())
+        rng_key = jax.random.PRNGKey(int(time.time()) % (2**31 - 1))
+        svi_result = svi.run(rng_key, num_steps, progress_bar=False)
+        params = svi_result.params
+
+        # Sample from the trained guide to extract posterior moments
+        rng_key2 = jax.random.PRNGKey(
+            (int(time.time()) + 1) % (2**31 - 1),
+        )
+        posterior = guide.sample_posterior(
+            rng_key2, params, sample_shape=(posterior_samples,),
+        )
+    except Exception as exc:
+        logger.warning(
+            "SVI reconcile failed for user=%s: %s", profile.user_id, exc,
+        )
+        return profile
+
+    # --- Extract refined posterior moments + write back ---
+    p_samples = np.asarray(posterior["p"])  # shape (samples, n_mechs)
+    p_mean = p_samples.mean(axis=0)
+    p_var = p_samples.var(axis=0)
+
+    for i, m_name in enumerate(mechanisms):
+        mech_post = profile.mechanism_posteriors.get(m_name)
+        if mech_post is None:
+            continue
+        m, v = float(p_mean[i]), float(p_var[i])
+        if v <= 1e-9 or m <= 0.0 or m >= 1.0:
+            continue
+        common = m * (1.0 - m) / v - 1.0
+        if common <= 0.0:
+            continue
+        alpha = m * common
+        beta = (1.0 - m) * common
+        if alpha > 0.5 and beta > 0.5:
+            mech_post.alpha = alpha
+            mech_post.beta = beta
+
+    if "random_intercept" in posterior:
+        ri = float(np.asarray(posterior["random_intercept"]).mean())
+        profile.random_intercept = ri
+
+    if "rho" in posterior:
+        rho_mean = float(np.asarray(posterior["rho"]).mean())
+        profile.within_user_correlation = rho_mean
+
+    logger.info(
+        "SVI reconcile complete: user=%s brand=%s mechs=%d obs=%d "
+        "rho=%.3f random_intercept=%.3f num_steps=%d",
+        profile.user_id, profile.brand_id, n_mechs, len(seq_outcomes),
+        profile.within_user_correlation, profile.random_intercept,
+        num_steps,
+    )
     return profile

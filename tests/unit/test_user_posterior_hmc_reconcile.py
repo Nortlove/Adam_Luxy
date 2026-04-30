@@ -194,3 +194,83 @@ def test_task_36_schedule_is_nightly_at_04_utc():
     assert task.schedule_hours == [4]
     assert task.frequency_hours == 24
     assert task.name == "hmc_user_posterior_reconcile"
+
+
+# -----------------------------------------------------------------------------
+# Variational batch reconcile path — directive Phase 1 line 944
+# -----------------------------------------------------------------------------
+
+
+def test_svi_below_min_observations_returns_unchanged():
+    """SVI mirrors HMC's gating — < MIN observations returns unchanged."""
+    from adam.intelligence.user_posterior_hmc_reconcile import (
+        reconcile_user_posterior_variational,
+    )
+    seq = [("social_proof", 1.0), ("authority", 0.0)]  # 2 obs
+    profile = _profile_with_observations("u_low_svi", seq)
+    pre_alpha = profile.mechanism_posteriors["social_proof"].alpha
+    refined = reconcile_user_posterior_variational(profile)
+    assert refined.mechanism_posteriors["social_proof"].alpha == pre_alpha
+
+
+def test_svi_numpyro_import_failure_returns_unchanged():
+    """SVI soft-fails on missing libs same as HMC."""
+    from adam.intelligence.user_posterior_hmc_reconcile import (
+        reconcile_user_posterior_variational,
+    )
+    seq = [("social_proof", 1.0)] * 6 + [("authority", 0.0)] * 6
+    profile = _profile_with_observations("u_no_libs_svi", seq)
+    pre_alpha = profile.mechanism_posteriors["social_proof"].alpha
+
+    import builtins
+    real_import = builtins.__import__
+
+    def fake_import(name, *args, **kwargs):
+        if name in ("jax", "numpyro"):
+            raise ImportError(f"simulated absence of {name}")
+        return real_import(name, *args, **kwargs)
+
+    with patch("builtins.__import__", side_effect=fake_import):
+        refined = reconcile_user_posterior_variational(profile)
+    assert refined.mechanism_posteriors["social_proof"].alpha == pre_alpha
+
+
+def test_svi_constants_canonical():
+    """If SVI hyperparams change, force a manual recalibration check."""
+    from adam.intelligence.user_posterior_hmc_reconcile import (
+        DEFAULT_SVI_NUM_STEPS,
+        DEFAULT_SVI_LEARNING_RATE,
+        DEFAULT_SVI_POSTERIOR_SAMPLES,
+    )
+    assert DEFAULT_SVI_NUM_STEPS == 2000
+    assert DEFAULT_SVI_LEARNING_RATE == 0.005
+    assert DEFAULT_SVI_POSTERIOR_SAMPLES == 500
+
+
+@pytest.mark.slow
+def test_synthetic_high_response_user_shifts_via_svi():
+    """SVI should also shift the high-response user's social_proof
+    posterior above their authority posterior — same direction-test
+    as HMC, faster execution."""
+    from adam.intelligence.user_posterior_hmc_reconcile import (
+        reconcile_user_posterior_variational,
+    )
+    random.seed(123)
+    seq = []
+    for _ in range(16):
+        seq.append(("social_proof", 1.0 if random.random() < 0.75 else 0.0))
+    for _ in range(12):
+        seq.append(("authority", 1.0 if random.random() < 0.25 else 0.0))
+    profile = _profile_with_observations("u_high_sp_svi", seq)
+
+    refined = reconcile_user_posterior_variational(
+        profile, num_steps=1000, posterior_samples=300,
+    )
+    sp_post = refined.mechanism_posteriors["social_proof"]
+    auth_post = refined.mechanism_posteriors["authority"]
+    sp_mean = sp_post.alpha / (sp_post.alpha + sp_post.beta)
+    auth_mean = auth_post.alpha / (auth_post.alpha + auth_post.beta)
+    assert sp_mean > auth_mean, (
+        f"SVI direction wrong: sp_mean={sp_mean:.3f} "
+        f"auth_mean={auth_mean:.3f}"
+    )
