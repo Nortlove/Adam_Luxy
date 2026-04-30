@@ -374,3 +374,110 @@ def test_route_path_high_fluency_allows_vigilance():
     # Both routes preserved at full score
     assert gated["loss_aversion"] == 0.7
     assert gated["authority"] == 0.7
+
+
+# -----------------------------------------------------------------------------
+# Attentional posture (audit Item 6 — categorize_posture wire into C2)
+# -----------------------------------------------------------------------------
+
+
+def test_posture_blend_compatible_returns_peripheral():
+    """Confident blend_compatible posture → PERIPHERAL depth (autopilot)."""
+    d = predict_processing_depth_heuristic(
+        page_attentional_posture_label="blend_compatible",
+    )
+    assert d == ProcessingDepth.PERIPHERAL
+
+
+def test_posture_vigilance_activating_returns_evaluated():
+    """Confident vigilance_activating posture → EVALUATED depth."""
+    d = predict_processing_depth_heuristic(
+        page_attentional_posture_label="vigilance_activating",
+    )
+    assert d == ProcessingDepth.EVALUATED
+
+
+def test_posture_neutral_falls_through():
+    """neutral posture does NOT short-circuit; mode/bandwidth wins."""
+    d = predict_processing_depth_heuristic(
+        page_attentional_posture_label="neutral",
+        page_processing_mode="central",  # would give EVALUATED on its own
+    )
+    assert d == ProcessingDepth.EVALUATED  # mode wins, posture didn't override
+
+
+def test_posture_unknown_falls_through():
+    """unknown posture (sub-confidence-floor) does NOT short-circuit."""
+    d = predict_processing_depth_heuristic(
+        page_attentional_posture_label="unknown",
+        page_processing_mode="central",
+    )
+    assert d == ProcessingDepth.EVALUATED
+
+
+def test_posture_none_does_not_break_other_paths():
+    """None posture must not affect existing predictor paths."""
+    d = predict_processing_depth_heuristic(
+        page_attentional_posture_label=None,
+        page_processing_mode="peripheral",
+    )
+    assert d == ProcessingDepth.PERIPHERAL
+
+
+def test_fluency_floor_beats_vigilance_posture():
+    """Order discipline: fluency floor < 0.3 → UNPROCESSED REGARDLESS of
+    asserted vigilance posture. A hard-to-process page leaves no
+    cognitive room for any route, posture or not."""
+    d = predict_processing_depth_heuristic(
+        page_processing_fluency=0.15,             # below floor
+        page_attentional_posture_label="vigilance_activating",  # would say EVALUATED
+    )
+    assert d == ProcessingDepth.UNPROCESSED
+
+
+def test_route_path_reads_posture_from_page_profile():
+    """End-to-end: route_mechanism_scores_by_predicted_depth reads
+    attentional_posture + confidence from page_profile, translates via
+    categorize_posture, and gates accordingly."""
+    # Strong vigilance posture (well above thresholds)
+    profile = SimpleNamespace(
+        cognitive_load=0.5,
+        remaining_bandwidth=0.3,           # would normally give PERIPHERAL
+        attention_competition=0.0,
+        processing_mode=None,
+        processing_fluency=0.85,
+        attentional_posture=0.7,            # > 0.20 vigilance threshold
+        attentional_posture_confidence=0.9,  # > 0.40 min confidence
+    )
+    scores = {
+        "loss_aversion": 0.7,    # blend (via temporal_construal)
+        "authority": 0.7,         # vigilance (via identity_construction)
+    }
+    gated = route_mechanism_scores_by_predicted_depth(
+        scores=scores, page_profile=profile,
+    )
+    # Vigilance posture → EVALUATED → both routes eligible
+    assert gated["loss_aversion"] == 0.7
+    assert gated["authority"] == 0.7
+
+
+def test_route_path_low_confidence_posture_falls_through_to_bandwidth():
+    """Confidence below MIN_POSTURE_CONFIDENCE (0.40) → posture label
+    becomes 'unknown' → predictor falls through to bandwidth path."""
+    profile = SimpleNamespace(
+        cognitive_load=0.5,
+        remaining_bandwidth=0.2,          # < 0.3 → UNPROCESSED
+        attention_competition=0.0,
+        processing_mode=None,
+        processing_fluency=0.85,
+        attentional_posture=0.9,           # strong float
+        attentional_posture_confidence=0.1, # but very low confidence → "unknown"
+    )
+    scores = {"loss_aversion": 0.7, "authority": 0.7}
+    gated = route_mechanism_scores_by_predicted_depth(
+        scores=scores, page_profile=profile,
+    )
+    # Posture label = "unknown" → falls through → bandwidth 0.2 → UNPROCESSED
+    # → vigilance gated
+    assert gated["loss_aversion"] == 0.7
+    assert gated["authority"] == 0.0

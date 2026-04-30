@@ -66,6 +66,7 @@ def predict_processing_depth_heuristic(
     page_processing_mode: Optional[str] = None,
     device_type: Optional[str] = None,
     page_processing_fluency: Optional[float] = None,
+    page_attentional_posture_label: Optional[str] = None,
 ) -> ProcessingDepth:
     """Predict the user's likely processing depth on this impression.
 
@@ -91,6 +92,19 @@ def predict_processing_depth_heuristic(
             via the existing depth-gated route compatibility table:
             UNPROCESSED → blend-compatible only, vigilance-activating
             mechanisms are zeroed downstream by the C2 gate.
+        page_attentional_posture_label: Categorical posture from
+            ``page_attentional_posture_substrate.categorize_posture``
+            ("blend_compatible" / "vigilance_activating" / "neutral" /
+            "unknown"). When the page profiler asserts a posture with
+            sufficient confidence (>= MIN_POSTURE_CONFIDENCE = 0.40),
+            the categorical short-circuits depth prediction:
+                "blend_compatible" → PERIPHERAL (autopilot context)
+                "vigilance_activating" → EVALUATED (evaluation context)
+                "neutral" / "unknown" / None → fall through
+            Per the attention-inversion platform commitment. Posture
+            check runs AFTER the fluency floor (low fluency wins
+            regardless of posture — a hard-to-process page leaves no
+            cognitive room for any route).
 
     Returns:
         ProcessingDepth — UNPROCESSED, PERIPHERAL, EVALUATED, or REJECTED.
@@ -105,6 +119,20 @@ def predict_processing_depth_heuristic(
         and page_processing_fluency < PROCESSING_FLUENCY_FLOOR
     ):
         return ProcessingDepth.UNPROCESSED
+
+    # Categorical attentional posture (post-fluency, pre-everything-else):
+    # a confidently-asserted posture is more direct evidence than the
+    # cognitive_load/bandwidth proxies that follow. Honors the
+    # attention-inversion platform commitment: blend-compatible context
+    # routes peripheral (autopilot); vigilance-activating context
+    # routes evaluated (active deliberation).
+    if page_attentional_posture_label:
+        label = page_attentional_posture_label.lower()
+        if label == "vigilance_activating":
+            return ProcessingDepth.EVALUATED
+        if label == "blend_compatible":
+            return ProcessingDepth.PERIPHERAL
+        # "neutral" / "unknown" / anything else → fall through
 
     # Pre-classified processing mode wins when present — the page
     # profiler already did the work.
@@ -293,6 +321,7 @@ def route_mechanism_scores_by_predicted_depth(
     competition = None
     mode = None
     fluency = None
+    posture_label: Optional[str] = None
     if page_profile is not None:
         try:
             cog_load = getattr(page_profile, "cognitive_load", None)
@@ -300,6 +329,26 @@ def route_mechanism_scores_by_predicted_depth(
             competition = getattr(page_profile, "attention_competition", None)
             mode = getattr(page_profile, "processing_mode", None)
             fluency = getattr(page_profile, "processing_fluency", None)
+            # Attentional posture: read float + confidence and translate
+            # to the canonical categorical label via the substrate's
+            # categorize_posture helper. Below MIN_POSTURE_CONFIDENCE
+            # the label is "unknown" — depth predictor falls through.
+            posture_float = getattr(page_profile, "attentional_posture", None)
+            posture_conf = getattr(
+                page_profile, "attentional_posture_confidence", None,
+            )
+            if posture_float is not None and posture_conf is not None:
+                try:
+                    from adam.intelligence.page_attentional_posture_substrate import (
+                        categorize_posture,
+                    )
+                    posture_label = categorize_posture(
+                        float(posture_float), float(posture_conf),
+                    )
+                except Exception as exc:
+                    logger.debug(
+                        "Posture categorization failed: %s", exc,
+                    )
         except Exception as exc:
             logger.debug("Page profile feature extraction failed: %s", exc)
 
@@ -310,5 +359,6 @@ def route_mechanism_scores_by_predicted_depth(
         page_processing_mode=mode,
         device_type=device_type,
         page_processing_fluency=fluency,
+        page_attentional_posture_label=posture_label,
     )
     return gate_mechanism_scores(scores, depth)
