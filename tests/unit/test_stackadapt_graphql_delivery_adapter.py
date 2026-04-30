@@ -75,7 +75,7 @@ def test_configure_no_api_key_disconnected(monkeypatch):
     a = _adapter()
     a.configure({})
     assert a.status == DeliveryStatus.DISCONNECTED
-    assert a._client is None
+    assert a._consolidated_adapter is None
 
 
 def test_configure_reads_api_key_env(monkeypatch):
@@ -84,7 +84,7 @@ def test_configure_reads_api_key_env(monkeypatch):
     a = _adapter()
     a.configure({})
     assert a.status == DeliveryStatus.READY
-    assert a._client is not None
+    assert a._consolidated_adapter is not None
 
 
 def test_configure_reads_graphql_key_fallback(monkeypatch):
@@ -126,61 +126,62 @@ async def test_push_segments_no_api_key_soft_fails(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_push_segments_calls_graphql_client(monkeypatch):
+async def test_push_segments_calls_consolidated_adapter(monkeypatch):
+    """Each SegmentPayload triggers a sync_segment call on the consolidated
+    adapter. No GraphQL mutation strings live in this delivery class —
+    the canonical mutation is owned by integrations/stackadapt/adapter.py."""
     monkeypatch.setenv("STACKADAPT_API_KEY", "tok")
     a = _adapter()
     a.configure({})
-    # Replace the GraphQL client with a mock
-    fake_client = MagicMock()
-    fake_client._query = AsyncMock(return_value={
-        "createAudience": {
-            "audience": {"id": "aud_001", "name": "ADAM_name_s1"},
-            "errors": [],
-        },
-    })
-    a._client = fake_client
+
+    from adam.integrations.base.adapter import SyncedSegment
+    fake_consolidated = MagicMock()
+    fake_consolidated.sync_segment = AsyncMock(return_value=SyncedSegment(
+        adam_segment_id="s1", platform_segment_id="aud_001",
+        platform_name="stackadapt", size=1000, status="active",
+    ))
+    a._consolidated_adapter = fake_consolidated
 
     result = await a.push_segments([_segment("s1"), _segment("s2")])
     assert result.success is True
     assert result.items_delivered == 2
     assert result.items_failed == 0
-    assert fake_client._query.await_count == 2
-
-
-# -----------------------------------------------------------------------------
-# push_segments() — GraphQL error path
-# -----------------------------------------------------------------------------
+    assert fake_consolidated.sync_segment.await_count == 2
 
 
 @pytest.mark.asyncio
-async def test_push_segments_graphql_error_increments_failed(monkeypatch):
+async def test_push_segments_no_platform_id_increments_failed(monkeypatch):
+    """A SyncedSegment with empty platform_segment_id (i.e., the
+    consolidated adapter's mutation didn't return an audience id)
+    counts as a failure."""
     monkeypatch.setenv("STACKADAPT_API_KEY", "tok")
     a = _adapter()
     a.configure({})
-    fake_client = MagicMock()
-    fake_client._query = AsyncMock(return_value={
-        "createAudience": {
-            "audience": None,
-            "errors": [{"field": "name", "message": "bad"}],
-        },
-    })
-    a._client = fake_client
+
+    from adam.integrations.base.adapter import SyncedSegment
+    fake_consolidated = MagicMock()
+    fake_consolidated.sync_segment = AsyncMock(return_value=SyncedSegment(
+        adam_segment_id="s1", platform_segment_id="",  # empty → failed
+        platform_name="stackadapt",
+    ))
+    a._consolidated_adapter = fake_consolidated
 
     result = await a.push_segments([_segment()])
     assert result.success is False
-    assert result.items_delivered == 0
     assert result.items_failed == 1
 
 
 @pytest.mark.asyncio
 async def test_push_segments_network_exception_soft_fails(monkeypatch):
-    """A raised exception inside the GraphQL call must NOT propagate."""
+    """A raised exception inside sync_segment must NOT propagate."""
     monkeypatch.setenv("STACKADAPT_API_KEY", "tok")
     a = _adapter()
     a.configure({})
-    fake_client = MagicMock()
-    fake_client._query = AsyncMock(side_effect=RuntimeError("network"))
-    a._client = fake_client
+    fake_consolidated = MagicMock()
+    fake_consolidated.sync_segment = AsyncMock(
+        side_effect=RuntimeError("network"),
+    )
+    a._consolidated_adapter = fake_consolidated
 
     # MUST NOT RAISE
     result = await a.push_segments([_segment()])
@@ -226,6 +227,23 @@ async def test_status_reports_graphql_transport(monkeypatch):
     status = await a.get_delivery_status()
     assert status["transport"] == "graphql"
     assert status["connected"] is True
+
+
+def test_segment_payload_duck_type_exposes_consolidated_attrs():
+    """The duck-type adapter MUST expose the attributes that the
+    consolidated adapter reads via getattr — segment_id, name,
+    description, defining_constructs."""
+    from adam.platform.delivery.dsp_adapter import _SegmentPayloadDuckType
+    payload = _segment("s_abc", member_count=500)
+    duck = _SegmentPayloadDuckType(payload)
+    assert duck.segment_id == "s_abc"
+    assert duck.name == "name_s_abc"
+    assert duck.description == "desc_s_abc"
+    # ndf_profile maps to defining_constructs (same shape: Dict[str, float])
+    assert duck.defining_constructs == payload.ndf_profile
+    # The fallback fields are exposed with documented defaults
+    assert duck.regulatory_orientation == "balanced"
+    assert duck.processing_style == "moderate"
 
 
 # -----------------------------------------------------------------------------

@@ -171,11 +171,18 @@ class StackAdaptAdapter(BaseDeliveryAdapter):
 class StackAdaptGraphQLDeliveryAdapter(BaseDeliveryAdapter):
     """StackAdapt audience-segment delivery via GraphQL API.
 
-    Replacement for the deprecated REST-based StackAdaptAdapter. Wraps
-    the consolidated GraphQL client at
-    ``adam.integrations.stackadapt.graphql_client`` so the factory's
-    delivery contract (BaseDeliveryAdapter) composes cleanly with the
-    audited GraphQL surface (introspected against live schema 2026-04-29).
+    Replacement for the deprecated REST-based StackAdaptAdapter. This
+    adapter is a THIN BRIDGE between the factory's delivery contract
+    (BaseDeliveryAdapter — push_segments / push_creative_guidance over
+    SegmentPayload / CreativeGuidancePayload) and the canonical GraphQL
+    write surface at ``adam.integrations.stackadapt.adapter`` (which
+    inherits BasePlatformAdapter and owns the GraphQL mutations).
+
+    The bridge AVOIDS duplicating GraphQL mutations: every audience
+    write resolves to the consolidated adapter's
+    ``sync_segment(segment)`` public entry, which dispatches to its
+    ``_sync_segment_impl`` in PRODUCTION mode. A SegmentPayload is
+    duck-typed into the shape that helper expects.
 
     Decision-time consumer: ``adam.platform.blueprints.engine`` calls
     ``create_adapter('stackadapt', ...)``; this adapter is the real
@@ -186,10 +193,6 @@ class StackAdaptGraphQLDeliveryAdapter(BaseDeliveryAdapter):
           methods return success=True with items_delivered=0
         * Any GraphQL error → DeliveryResult.error populated, items_failed
           incremented, no exception propagated to the blueprint engine
-
-    The GraphQL client itself uses ``Authorization: Bearer <token>``
-    against ``https://api.stackadapt.com/graphql`` — verified against
-    introspection in the same session as this commit.
     """
 
     PLATFORM_NAME = "stackadapt"
@@ -198,7 +201,7 @@ class StackAdaptGraphQLDeliveryAdapter(BaseDeliveryAdapter):
         super().__init__("stackadapt", tenant_id, namespace_prefix)
         self._api_key: str = ""
         self._advertiser_id: str = ""
-        self._client = None
+        self._consolidated_adapter = None
 
     def configure(self, config: Dict[str, Any]) -> None:
         import os
@@ -219,21 +222,38 @@ class StackAdaptGraphQLDeliveryAdapter(BaseDeliveryAdapter):
 
         if self._api_key:
             try:
-                from adam.integrations.stackadapt.graphql_client import (
-                    StackAdaptGraphQLClient,
+                from adam.integrations.stackadapt.adapter import (
+                    StackAdaptAdapter as _ConsolidatedAdapter,
                 )
-                self._client = StackAdaptGraphQLClient(api_key=self._api_key)
+                from adam.integrations.base.adapter import (
+                    AdapterMode,
+                    PlatformCredentials,
+                )
+                creds = PlatformCredentials(
+                    api_key=self._api_key,
+                    account_id=self._advertiser_id,
+                )
+                self._consolidated_adapter = _ConsolidatedAdapter(
+                    credentials=creds,
+                    mode=AdapterMode.PRODUCTION,
+                )
             except Exception as exc:
                 logger.warning(
-                    "StackAdapt GraphQL client init failed: %s", exc,
+                    "Consolidated StackAdapt adapter init failed: %s", exc,
                 )
-                self._client = None
+                self._consolidated_adapter = None
                 self.status = DeliveryStatus.DISCONNECTED
 
     async def push_segments(
         self, segments: List[SegmentPayload],
     ) -> DeliveryResult:
-        """Push audience segments to StackAdapt as GraphQL CreateAudience calls.
+        """Push audience segments through the consolidated GraphQL adapter.
+
+        Each SegmentPayload is duck-typed into the shape the
+        consolidated adapter's ``sync_segment`` expects, then handed
+        off. No GraphQL mutation strings live in this class — the
+        canonical mutation is the consolidated adapter's
+        ``_sync_segment_impl``.
 
         When no api_key is configured (dev / demo), reports
         success=True, items_delivered=0 — blueprints execute without
@@ -244,7 +264,7 @@ class StackAdaptGraphQLDeliveryAdapter(BaseDeliveryAdapter):
         failed = 0
         last_error: str = ""
 
-        if not self._client or not self._api_key:
+        if not self._consolidated_adapter or not self._api_key:
             elapsed_ms = (time.perf_counter() - start) * 1000
             return DeliveryResult(
                 success=True,
@@ -257,8 +277,9 @@ class StackAdaptGraphQLDeliveryAdapter(BaseDeliveryAdapter):
 
         for segment in segments:
             try:
-                ok = await self._create_audience_via_graphql(segment)
-                if ok:
+                ducked = _SegmentPayloadDuckType(segment)
+                synced = await self._consolidated_adapter.sync_segment(ducked)
+                if synced and getattr(synced, "platform_segment_id", ""):
                     delivered += 1
                 else:
                     failed += 1
@@ -266,7 +287,7 @@ class StackAdaptGraphQLDeliveryAdapter(BaseDeliveryAdapter):
                 failed += 1
                 last_error = str(exc)
                 logger.warning(
-                    "StackAdapt GraphQL audience push failed for %s: %s",
+                    "StackAdapt sync_segment failed for %s: %s",
                     segment.segment_id, exc,
                 )
 
@@ -292,8 +313,8 @@ class StackAdaptGraphQLDeliveryAdapter(BaseDeliveryAdapter):
     ) -> DeliveryResult:
         """Creative guidance push.
 
-        StackAdapt's GraphQL CreateNativeAd mutation requires creative
-        assets (image/headline/body/landing URL) that the
+        StackAdapt's CreateNativeAd mutation requires creative assets
+        (image/headline/body/landing URL) that the
         CreativeGuidancePayload schema doesn't carry — it only carries
         recommendations (framing, mechanisms, copy direction). Pushing
         a guidance object as a creative would create empty native ads.
@@ -320,52 +341,36 @@ class StackAdaptGraphQLDeliveryAdapter(BaseDeliveryAdapter):
     async def get_delivery_status(self) -> Dict[str, Any]:
         return {
             "platform": "stackadapt",
-            "connected": bool(self._api_key) and self._client is not None,
+            "connected": bool(self._api_key) and self._consolidated_adapter is not None,
             "status": self.status.value,
             "advertiser_id": self._advertiser_id,
             "transport": "graphql",
         }
 
-    async def _create_audience_via_graphql(
-        self, segment: SegmentPayload,
-    ) -> bool:
-        """Issue the CreateAudience mutation through the GraphQL client.
 
-        Returns True on success, False on a GraphQL error response.
-        Caller wraps the call in try/except for network-level failure.
-        """
-        # Resolve the GraphQL client's _query method (the canonical
-        # transport already exists; we don't reach into raw httpx here).
-        mutation = """
-        mutation CreateAudience($input: CreateAudienceInput!) {
-          createAudience(input: $input) {
-            audience { id name }
-            errors { field message }
-          }
-        }
-        """
-        variables = {
-            "input": {
-                "name": f"ADAM_{segment.segment_name}",
-                "description": segment.description or "",
-                "memberCount": segment.member_count,
-                "ttlHours": segment.ttl_hours,
-                "metadata": {
-                    "adam_segment_id": segment.segment_id,
-                    "tenant_id": segment.tenant_id,
-                    "mechanisms": segment.mechanisms,
-                    "confidence": segment.confidence,
-                },
-            },
-        }
-        result = await self._client._query(mutation, variables)
-        if not isinstance(result, dict):
-            return False
-        if "error" in result:
-            return False
-        ca = result.get("createAudience") or {}
-        errs = ca.get("errors") or []
-        return not errs and bool(ca.get("audience"))
+class _SegmentPayloadDuckType:
+    """Adapts a SegmentPayload to the attribute shape the consolidated
+    StackAdaptAdapter._sync_segment_impl expects.
+
+    The consolidated adapter reads (segment_id, name, description,
+    defining_constructs, regulatory_orientation, processing_style)
+    via getattr — so we expose those names mapped from SegmentPayload's
+    schema. Anything not present on SegmentPayload returns the
+    consolidated adapter's documented defaults.
+    """
+
+    def __init__(self, payload: SegmentPayload):
+        self.segment_id = payload.segment_id
+        self.name = payload.segment_name
+        self.description = payload.description
+        # SegmentPayload's ndf_profile is a Dict[str, float]; the
+        # consolidated adapter calls .items() on defining_constructs
+        # to pick the top 5. ndf_profile fits the same shape.
+        self.defining_constructs = payload.ndf_profile
+        # Optional fields the consolidated adapter reads with sensible
+        # fallbacks; we expose them as None and let getattr default.
+        self.regulatory_orientation = "balanced"
+        self.processing_style = "moderate"
 
 
 class TradeDeskAdapter(BaseDeliveryAdapter):
