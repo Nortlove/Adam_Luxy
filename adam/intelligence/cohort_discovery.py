@@ -534,23 +534,29 @@ class CohortDiscoveryService:
         RETURN count(*) AS persisted
         """
 
+        # Atomic per Weakness #2 (audit Item 14): user assignments and
+        # cohort metadata MUST commit together. Partial failure (user
+        # assignment commits, cohort metadata does not) leaves
+        # User.cohort_id pointing at a UserCohort node that doesn't
+        # exist, which silently breaks
+        # graph_cache.get_cohort_priors → cascade boost reads {} as
+        # "no cohort data" rather than as an error.
+        async def _persist_tx(tx) -> int:
+            result = await tx.run(user_query, assignments=assignments)
+            record = await result.single()
+            updated = record["updated"] if record else 0
+            if cohort_metadata:
+                await tx.run(cohort_query, cohort_metadata=cohort_metadata)
+            return updated
+
         try:
             async with self._driver.session() as session:
-                result = await session.run(user_query, assignments=assignments)
-                record = await result.single()
-                updated = record["updated"] if record else 0
-
-                if cohort_metadata:
-                    await session.run(
-                        cohort_query, cohort_metadata=cohort_metadata,
-                    )
-
+                updated = await session.execute_write(_persist_tx)
                 logger.info(
                     f"Persisted {updated} cohort assignments + "
-                    f"{len(cohort_metadata)} cohort metadata nodes"
+                    f"{len(cohort_metadata)} cohort metadata nodes (atomic)"
                 )
                 return updated
-
         except Exception as e:
             logger.error(f"Failed to persist cohort assignments: {e}")
             return 0
