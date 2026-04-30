@@ -53,10 +53,13 @@ events with realistic timing and rates. Used for:
 
 from __future__ import annotations
 
+import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Protocol
+
+logger = logging.getLogger(__name__)
 
 
 # =============================================================================
@@ -282,12 +285,36 @@ class NegativeOutcomeAdapterRegistry:
     def dispatch(
         self, payload: Dict[str, Any],
     ) -> Optional[NormalizedNegativeOutcome]:
-        """Try each adapter in order; return the first non-None result."""
+        """Try each adapter in order; return the first non-None result.
+
+        Side-effect: records the dispatch outcome with the
+        SapidRoundTripMonitor (Phase 8). A non-None normalize() result
+        means the adapter matched the payload AND extracted a known
+        decision_id (sapid) — that's a successful round-trip resolution.
+        A None result means no adapter recognized the payload — the
+        sapid is unknown to this codepath, an unresolved event.
+
+        Per CODEBASE_AUDIT_2026_04_29.md §6 — Phase D real gap. Without
+        this wire, the SapidRoundTripMonitor only counts registrations
+        (bid time) and never resolutions (outcome time), so its rate
+        is structurally 0% and the Phase 10 RED check trips spuriously.
+        Soft-fail by design: any monitor error → swallow + log.
+        """
+        result: Optional[NormalizedNegativeOutcome] = None
         for adapter in self._adapters:
             result = adapter.normalize(payload)
             if result is not None:
-                return result
-        return None
+                break
+
+        try:
+            from adam.intelligence.spine.phase_8_stackadapt_integration import (
+                get_default_monitor,
+            )
+            get_default_monitor().record_resolution(resolved=result is not None)
+        except Exception as exc:  # noqa: BLE001 — soft-fail
+            logger.debug("Sapid round-trip monitor record_resolution failed: %s", exc)
+
+        return result
 
     def adapter_count(self) -> int:
         return len(self._adapters)

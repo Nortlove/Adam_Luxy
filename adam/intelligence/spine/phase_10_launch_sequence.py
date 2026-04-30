@@ -343,6 +343,138 @@ def evaluate_launch_gate(
     )
 
 
+@dataclass(frozen=True)
+class LaunchGateInputs:
+    """Observed values for all 8 RED-criteria checks.
+
+    Field shapes follow each check function's canonical signature
+    (counts where the check uses counts; categorical strings where
+    the check uses strings). Any field set to None means the caller
+    has no data yet — that criterion is skipped (no check appended,
+    not falsely set to "not triggered").
+
+    The sole exception is sapid_round_trip_rate: when None, the
+    runner pulls from the Phase 8 SapidRoundTripMonitor singleton —
+    the canonical in-process source.
+    """
+
+    # check_fluency_floor_violation(n_decisions, n_floor_violations)
+    n_decisions: Optional[int] = None
+    n_floor_violations: Optional[int] = None
+
+    # check_decision_trace_emission(n_bids, n_traces_emitted)
+    n_bids: Optional[int] = None
+    n_traces_emitted: Optional[int] = None
+
+    # check_posterior_pathology(n_users_active, n_users_with_collapsed_identity_stability)
+    n_users_active: Optional[int] = None
+    n_users_with_collapsed_identity_stability: Optional[int] = None
+
+    # check_msprt_lower_crossed(msprt_decision: str)
+    msprt_decision: Optional[str] = None
+
+    # check_cmo_uncomfortable(cmo_review_disposition: str)
+    cmo_review_disposition: Optional[str] = None
+
+    # check_metaphor_coherence_failed(n_creatives_in_rotation, n_creatives_failed_spot_check)
+    n_creatives_in_rotation: Optional[int] = None
+    n_creatives_failed_spot_check: Optional[int] = None
+
+    # check_bid_time_latency_p99(p99_latency_ms, stackadapt_budget_ms)
+    p99_latency_ms: Optional[float] = None
+    stackadapt_budget_ms: float = 100.0
+
+    # check_sapid_round_trip(sapid_round_trip_rate)
+    # When None, the runner pulls from the Phase 8 monitor singleton.
+    sapid_round_trip_rate: Optional[float] = None
+
+
+def run_launch_gate_evaluation(
+    inputs: LaunchGateInputs,
+) -> LaunchGateResult:
+    """Run all 8 RED-criteria checks against observed inputs.
+
+    Per CODEBASE_AUDIT_2026_04_29.md §6 — Phase D real gap: the 8
+    individual check functions existed plus the aggregator
+    ``evaluate_launch_gate``, but no runner read each input from the
+    spine state and composed the full evaluation. This function is
+    the missing integration.
+
+    Decision-time consumer: launch-gate evaluation is read at every
+    phase-transition decision (daily soft-launch monitoring tick +
+    week-boundary advance/defer decision). Per directive Section 9
+    Phase 10: "ANY ONE [of the 8 criteria] triggers a launch
+    deferral." A daily task or admin endpoint reads the result and
+    feeds it into ``should_advance_phase``.
+
+    Skip-when-no-data discipline: a criterion's check is appended
+    ONLY when the caller provided non-None inputs for it. Missing
+    data does NOT silently produce a "not triggered" check — that
+    would let pre-launch operate as if every gate has been evaluated.
+    """
+    checks: List[CriterionCheck] = []
+
+    if inputs.n_decisions is not None and inputs.n_floor_violations is not None:
+        checks.append(check_fluency_floor_violation(
+            inputs.n_decisions, inputs.n_floor_violations,
+        ))
+    if inputs.n_bids is not None and inputs.n_traces_emitted is not None:
+        checks.append(check_decision_trace_emission(
+            inputs.n_bids, inputs.n_traces_emitted,
+        ))
+    if (
+        inputs.n_users_active is not None
+        and inputs.n_users_with_collapsed_identity_stability is not None
+    ):
+        checks.append(check_posterior_pathology(
+            inputs.n_users_active,
+            inputs.n_users_with_collapsed_identity_stability,
+        ))
+    if inputs.msprt_decision is not None:
+        checks.append(check_msprt_lower_crossed(inputs.msprt_decision))
+    if inputs.cmo_review_disposition is not None:
+        checks.append(check_cmo_uncomfortable(inputs.cmo_review_disposition))
+    if (
+        inputs.n_creatives_in_rotation is not None
+        and inputs.n_creatives_failed_spot_check is not None
+    ):
+        checks.append(check_metaphor_coherence_failed(
+            inputs.n_creatives_in_rotation,
+            inputs.n_creatives_failed_spot_check,
+        ))
+    if inputs.p99_latency_ms is not None:
+        checks.append(check_bid_time_latency_p99(
+            p99_latency_ms=inputs.p99_latency_ms,
+            stackadapt_budget_ms=inputs.stackadapt_budget_ms,
+        ))
+
+    # Sapid round-trip — pull from Phase 8 monitor when not provided.
+    sapid_rate = inputs.sapid_round_trip_rate
+    monitor_total_events = 0
+    try:
+        from adam.intelligence.spine.phase_8_stackadapt_integration import (
+            get_default_monitor,
+        )
+        monitor = get_default_monitor()
+        monitor_total_events = (
+            monitor.n_sapids_resolved + monitor.n_sapids_unresolved
+        )
+        if sapid_rate is None and monitor_total_events > 0:
+            sapid_rate = monitor.round_trip_rate()
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("Sapid monitor read failed in runner: %s", exc)
+
+    # Append the sapid check when we have either an explicit rate OR
+    # at least one real event in the monitor. Otherwise skip — not yet
+    # evaluable.
+    if inputs.sapid_round_trip_rate is not None:
+        checks.append(check_sapid_round_trip(inputs.sapid_round_trip_rate))
+    elif sapid_rate is not None and monitor_total_events > 0:
+        checks.append(check_sapid_round_trip(sapid_rate))
+
+    return evaluate_launch_gate(checks)
+
+
 # =============================================================================
 # Phase progression (SOFT_10 → RAMP_50 → FULL_100)
 # =============================================================================
@@ -476,5 +608,7 @@ __all__ = [
     "check_posterior_pathology",
     "check_sapid_round_trip",
     "evaluate_launch_gate",
+    "LaunchGateInputs",
+    "run_launch_gate_evaluation",
     "should_advance_phase",
 ]
