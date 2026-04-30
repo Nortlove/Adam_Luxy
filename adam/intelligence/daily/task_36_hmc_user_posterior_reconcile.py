@@ -92,6 +92,33 @@ class HMCUserPosteriorReconcileTask(DailyStrengtheningTask):
             result.details["skipped"] = "no_driver"
             return result
 
+        # --- Load population δ_iac prior once for the whole run ---
+        # Phase 3 Slice 2: directive line 985-998 closes "δ_iac flow into
+        # per-user reconcile." When the population horseshoe posterior is
+        # available, every user's reconcile gets the informative prior on
+        # mech_slope; otherwise we soft-fall to the prior path.
+        iac_prior = None
+        try:
+            from adam.intelligence.iac_prior import load_iac_prior_from_neo4j
+            iac_prior = load_iac_prior_from_neo4j(driver=driver)
+            if iac_prior.is_empty():
+                # Treat empty as None so per-user reconcile takes the
+                # exact pre-Slice-2 fast path (regression-preserved).
+                iac_prior = None
+                result.details["iac_prior"] = "empty"
+            else:
+                result.details["iac_prior_triples"] = iac_prior.n_triples
+                result.details["iac_prior_fitted_at_ts"] = (
+                    iac_prior.fitted_at_ts
+                )
+        except Exception as exc:
+            logger.warning(
+                "iac_prior load failed in Task 36; proceeding without "
+                "informative prior: %s", exc,
+            )
+            iac_prior = None
+            result.details["iac_prior"] = f"load_failed: {exc}"
+
         cutoff_ts = int(time.time()) - STALENESS_CUTOFF_SECONDS
         candidates: List[tuple[str, str]] = []
         try:
@@ -149,7 +176,9 @@ class HMCUserPosteriorReconcileTask(DailyStrengtheningTask):
                     len(mp.outcomes)
                     for mp in profile.mechanism_posteriors.values()
                 )
-                refined = reconcile_user_posterior(profile)
+                refined = reconcile_user_posterior(
+                    profile, iac_prior=iac_prior,
+                )
                 # If observations meet threshold, refined != profile
                 # in spirit; check whether posteriors actually moved
                 obs_after = sum(
@@ -180,6 +209,7 @@ class HMCUserPosteriorReconcileTask(DailyStrengtheningTask):
                 "no_op": n_no_op,
                 "failed": n_failed,
                 "cutoff_ts": cutoff_ts,
+                "iac_prior_active": iac_prior is not None,
             }
         )
 

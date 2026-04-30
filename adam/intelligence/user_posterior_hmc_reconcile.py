@@ -65,13 +65,33 @@ DISCIPLINE (B3-LUXY a/b/c/d)
       slopes (per-mechanism deviation from baseline) are a separate
       Phase 3 slice (δ_iac with horseshoe priors). Marked
       explicitly in the docstring of reconcile_user_posterior.
+
+PHASE 3 EXTENSION (Slice 2 — δ_iac flow into per-user reconcile)
+
+The successor named at line 113-114 ("Mechanism slopes — Phase 3 δ_iac
+with horseshoe priors") is now wired. ``reconcile_user_posterior``
+accepts an optional ``iac_prior`` parameter (``IacPriorMoments`` from
+``adam/intelligence/iac_prior.py``); when supplied with non-empty
+moments, the model adds a ``mech_slope`` term per mechanism with
+informative ``Normal(mu_iac[m], sigma_iac[m])`` priors derived from
+the population horseshoe posterior. When ``iac_prior=None`` (or empty),
+the model is byte-identical to the current path — regression preserved.
+
+Per-mechanism posterior-mean of ``mech_slope`` is written back to
+``profile.mechanism_slopes`` (the field has been waiting for this
+slice since the ``UserPosteriorProfile`` model definition).
+
+Citation for the informative-priors-from-population-posterior move:
+van de Schoot et al. 2014, "A Gentle Introduction to Bayesian Analysis"
+§"Informative priors from prior data" — combines with horseshoe
+substrate (Carvalho/Polson/Scott 2010, Piironen/Vehtari 2017) shipped 4e02e5b.
 """
 
 from __future__ import annotations
 
 import logging
 import time
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -90,12 +110,21 @@ MIN_OBSERVATIONS_FOR_AR1: int = 5
 # path is correct in low-N regime.
 MIN_OBSERVATIONS_FOR_RECONCILE: int = 8
 
+# Diffuse fallback prior for mechanism_slope when the population-level
+# δ_iac posterior has no signal for a mechanism in the user's archetype
+# column (or when iac_prior is None / empty entirely). Matches the
+# Normal(0, 0.5) slack used elsewhere in the model — adds mild slack
+# but does not push the posterior in any direction.
+_MECH_SLOPE_FALLBACK_MEAN: float = 0.0
+_MECH_SLOPE_FALLBACK_STD: float = 0.5
+
 
 def reconcile_user_posterior(
     profile,  # UserPosteriorProfile (avoid hard import for soft fallback)
     draws: int = DEFAULT_DRAWS,
     tune: int = DEFAULT_TUNE,
     chains: int = DEFAULT_CHAINS,
+    iac_prior: Optional[Any] = None,  # IacPriorMoments, optional
 ):
     """Run HMC reconcile over a user's accumulated observations.
 
@@ -104,14 +133,32 @@ def reconcile_user_posterior(
     from the AR(1) estimate, refines ``profile.random_intercept`` from
     the joint posterior shift.
 
+    Args:
+        profile: ``UserPosteriorProfile`` (mutated in place + returned).
+        draws/tune/chains: NUTS hyperparameters (calibration-pending).
+        iac_prior: optional ``IacPriorMoments`` carrying the population
+            horseshoe posterior. When provided with non-empty moments
+            covering at least one of the user's mechanisms in the user's
+            archetype column, the model adds a ``mech_slope`` term per
+            mechanism with informative ``Normal(mu_iac[m], sigma_iac[m])``
+            priors and writes the per-mechanism posterior mean back to
+            ``profile.mechanism_slopes[m]``. When ``None`` or empty,
+            the model is byte-identical to the prior path (regression
+            preserved).
+
     Returns the (mutated) profile. Soft-fail at every layer:
       * MIN_OBSERVATIONS_FOR_RECONCILE not met → returns profile unchanged
       * NumPyro / JAX import failure → returns profile unchanged + logs
       * MCMC sampling exception → returns profile unchanged + logs
+      * iac_prior empty / no archetype coverage → silently degrades to
+        the no-iac_prior path
 
     NOT in this slice (named successors):
-      * Mechanism slopes (per-mechanism deviation from baseline) —
-        Phase 3 δ_iac with horseshoe priors.
+      * Per-mechanism × page_cluster slopes — would lift δ_iac into the
+        ``page_mechanism_posteriors`` finer grid.
+      * Joint sampling from population posterior at user reconcile time
+        (we collapse to moments — the Gaussian summary suffices for the
+        first slice).
       * Cross-user shrinkage (population → user partial pooling) —
         composes with hierarchical_bayes.py's cell-level HMC.
 
@@ -170,11 +217,39 @@ def reconcile_user_posterior(
     n_mechs = len(mechanisms)
     use_ar1 = len(seq_outcomes) >= MIN_OBSERVATIONS_FOR_AR1
 
+    # --- δ_iac informative-prior arrays (Phase 3 Slice 2) ---
+    # Resolved from iac_prior.iac_prior_for_user(profile, iac_prior).
+    # use_iac_prior True ⇔ at least one mechanism has population
+    # coverage in the user's archetype column. False ⇔ model
+    # byte-identical to the prior path (regression preserved).
+    iac_per_mech = _resolve_iac_per_mechanism(profile, iac_prior)
+    use_iac_prior = bool(iac_per_mech)
+    if use_iac_prior:
+        iac_mu_arr = jnp.array(
+            [
+                iac_per_mech.get(
+                    m, (_MECH_SLOPE_FALLBACK_MEAN, _MECH_SLOPE_FALLBACK_STD),
+                )[0]
+                for m in mechanisms
+            ],
+            dtype=jnp.float32,
+        )
+        iac_sigma_arr = jnp.array(
+            [
+                iac_per_mech.get(
+                    m, (_MECH_SLOPE_FALLBACK_MEAN, _MECH_SLOPE_FALLBACK_STD),
+                )[1]
+                for m in mechanisms
+            ],
+            dtype=jnp.float32,
+        )
+
     # --- NumPyro model ---
     def model():
-        # Per-mechanism conversion probability — Beta(2, 2) prior
-        # (uninformative; the population posterior would be the
-        # informative prior in a future Phase 3 slice).
+        # Per-mechanism conversion probability — Beta(2, 2) prior.
+        # Population-derived informative prior on the slope deviation
+        # arrives via the optional `mech_slope` term below; `p` itself
+        # remains the user-level posterior on per-mechanism level.
         p = numpyro.sample(
             "p", dist.Beta(2.0 * jnp.ones(n_mechs), 2.0 * jnp.ones(n_mechs)),
         )
@@ -182,12 +257,21 @@ def reconcile_user_posterior(
         random_intercept = numpyro.sample(
             "random_intercept", dist.Normal(0.0, 0.5),
         )
+        # δ_iac informative slope per mechanism (only when iac_prior
+        # is supplied with archetype coverage; otherwise byte-identical
+        # to prior model).
+        if use_iac_prior:
+            mech_slope = numpyro.sample(
+                "mech_slope", dist.Normal(iac_mu_arr, iac_sigma_arr),
+            )
         # AR(1) correlation across sequential touches.
         if use_ar1:
             rho = numpyro.sample("rho", dist.Uniform(-0.95, 0.95))
         # Likelihood: each touch's outcome conditional on its mechanism's p
         # Apply random intercept on logit scale, then re-map.
         logits = jnp.log(p[seq_mechs_arr] / (1.0 - p[seq_mechs_arr])) + random_intercept
+        if use_iac_prior:
+            logits = logits + mech_slope[seq_mechs_arr]
         # AR(1): expected logit = base + rho * (prev_outcome - p_at_prev_mech)
         if use_ar1:
             # Shift previous-outcome residuals by rho — first obs no shift
@@ -252,13 +336,52 @@ def reconcile_user_posterior(
         rho_mean = float(np.asarray(samples["rho"]).mean())
         profile.within_user_correlation = rho_mean
 
+    # Refined per-mechanism slopes (Phase 3 Slice 2 — only present when
+    # iac_prior was supplied with archetype coverage).
+    if "mech_slope" in samples:
+        mech_slope_arr = np.asarray(samples["mech_slope"])  # (chains*draws, n_mechs)
+        mech_slope_mean = mech_slope_arr.mean(axis=0)
+        for i, m_name in enumerate(mechanisms):
+            try:
+                profile.mechanism_slopes[m_name] = float(mech_slope_mean[i])
+            except Exception:
+                continue
+
     logger.info(
         "HMC reconcile complete: user=%s brand=%s mechs=%d obs=%d "
-        "rho=%.3f random_intercept=%.3f",
+        "rho=%.3f random_intercept=%.3f iac_prior=%s",
         profile.user_id, profile.brand_id, n_mechs, len(seq_outcomes),
         profile.within_user_correlation, profile.random_intercept,
+        "on" if "mech_slope" in samples else "off",
     )
     return profile
+
+
+def _resolve_iac_per_mechanism(
+    profile,
+    iac_prior: Optional[Any],
+) -> Dict[str, Tuple[float, float]]:
+    """Resolve population δ_iac moments → per-mechanism (mean, std) for user.
+
+    Soft-imports ``iac_prior_for_user`` so this module doesn't pull
+    iac_prior at import time (preserves the existing soft-fail discipline
+    for environments that don't have the population posterior wired).
+    Returns ``{}`` whenever the prior cannot be resolved — caller treats
+    empty as "fall back to no informative prior" (regression-preserving).
+    """
+    if iac_prior is None:
+        return {}
+    try:
+        from adam.intelligence.iac_prior import iac_prior_for_user
+    except Exception as exc:
+        logger.debug("iac_prior module unavailable: %s", exc)
+        return {}
+    try:
+        return iac_prior_for_user(profile, iac_prior)
+    except Exception as exc:
+        logger.debug("iac_prior resolution failed for user=%s: %s",
+                     getattr(profile, "user_id", "?"), exc)
+        return {}
 
 
 def _reconcile_per_mechanism_only(profile, mechanisms, draws, tune, chains):
