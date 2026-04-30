@@ -314,6 +314,19 @@ def _register_all_tasks() -> None:
     except Exception as e:
         logger.debug("Task 35 (causal forest weekly fit) not available: %s", e)
 
+    # Task 36 — Spine #1 HMC offline user-posterior reconcile. Per
+    # CLAUDE_CODE_DIRECTIVE_FULL_BUILD.md Phase 1 line 945. Refines the
+    # online BONG path's per-mechanism Beta posteriors with AR(1)
+    # carryover + random intercept via NumPyro NUTS. Without this
+    # scheduled, the HMC path exists but never runs.
+    try:
+        from adam.intelligence.daily.task_36_hmc_user_posterior_reconcile import (
+            HMCUserPosteriorReconcileTask,
+        )
+        tasks.append(HMCUserPosteriorReconcileTask())
+    except Exception as e:
+        logger.debug("Task 36 (HMC user-posterior reconcile) not available: %s", e)
+
     for task in tasks:
         _task_registry[task.name] = task
 
