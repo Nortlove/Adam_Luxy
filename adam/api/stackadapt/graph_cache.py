@@ -87,6 +87,12 @@ class GraphIntelligenceCache:
         # Buyer uncertainty profiles keyed by buyer_id
         self._buyer_profiles: Dict[str, Any] = {}
 
+        # Cohort priors keyed by buyer_id — sync read of
+        # User.cohort_id + UserCohort.mechanism_effectiveness.
+        # Empty dict means "no cohort data for this buyer."
+        # Cached per-buyer with TTL to avoid hot-path Neo4j reads.
+        self._cohort_priors: Dict[str, Tuple[Dict[str, float], float]] = {}
+
         self._initialized = False
 
     # ── Connection ──────────────────────────────────────────────────────
@@ -982,6 +988,83 @@ class GraphIntelligenceCache:
         self._save_buyer_profile_to_redis(buyer_id, profile)
 
         return variance_deltas
+
+    # ── Cohort priors ────────────────────────────────────────────────────
+
+    _COHORT_PRIOR_TTL = 60 * 30  # 30 minutes
+
+    def get_cohort_priors(self, buyer_id: str) -> Dict[str, float]:
+        """Sync read of cohort mechanism_effectiveness for a buyer.
+
+        Pipeline:
+            (User {user_id: $buyer_id}).cohort_id →
+                (UserCohort {id: cohort_id}).mechanism_effectiveness_json
+                  → JSON-decoded {mechanism_id: effectiveness ∈ [0, 1]}
+
+        Returns {} when:
+            * no Neo4j driver available
+            * the buyer has no cohort_id assigned
+            * the cohort metadata node doesn't exist
+            * the cohort's mechanism_effectiveness JSON is empty/invalid
+
+        The empty-dict case is a normal pre-pilot state — cohort
+        discovery hasn't run yet OR this buyer hasn't been clustered.
+        Callers should treat empty as "no cohort prior to apply,"
+        not as an error.
+
+        Cached per-buyer in-memory with TTL to keep cascade hot path
+        Redis/Neo4j-free after first lookup. Refresh happens lazily
+        when the entry exceeds COHORT_PRIOR_TTL.
+        """
+        if not buyer_id:
+            return {}
+
+        now = time.time()
+        cached = self._cohort_priors.get(buyer_id)
+        if cached is not None:
+            priors, ts = cached
+            if now - ts < self._COHORT_PRIOR_TTL:
+                return priors
+
+        priors: Dict[str, float] = {}
+        driver = self._get_driver()
+        if driver is None:
+            with self._lock:
+                self._cohort_priors[buyer_id] = (priors, now)
+            return priors
+
+        cypher = """
+        MATCH (u:User {user_id: $buyer_id})
+        WHERE u.cohort_id IS NOT NULL
+        OPTIONAL MATCH (uc:UserCohort {id: u.cohort_id})
+        RETURN u.cohort_id AS cohort_id,
+               u.cohort_score AS cohort_score,
+               uc.mechanism_effectiveness_json AS me_json
+        """
+        try:
+            with driver.session() as session:
+                record = session.run(cypher, buyer_id=buyer_id).single()
+                if record:
+                    me_json = record.get("me_json")
+                    if me_json:
+                        import json
+                        try:
+                            decoded = json.loads(me_json)
+                            if isinstance(decoded, dict):
+                                priors = {
+                                    str(k): float(v)
+                                    for k, v in decoded.items()
+                                    if isinstance(v, (int, float))
+                                }
+                        except (json.JSONDecodeError, TypeError, ValueError):
+                            priors = {}
+        except Exception as exc:
+            logger.debug("Cohort priors query failed for %s: %s", buyer_id, exc)
+            priors = {}
+
+        with self._lock:
+            self._cohort_priors[buyer_id] = (priors, now)
+        return priors
 
     # ── Public API ──────────────────────────────────────────────────────
 

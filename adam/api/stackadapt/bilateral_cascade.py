@@ -2822,6 +2822,34 @@ def run_bilateral_cascade(
         except Exception as exc:
             logger.debug("Per-user posterior modulation skipped: %s", exc)
 
+    # ─── COHORT PRIOR BOOST ───
+    # Audit §6 fix: cohort_discovery shipped a full Louvain + mechanism-
+    # effectiveness service but no caller read its output at decision
+    # time. This adds a bounded boost from the buyer's cohort's
+    # empirical mechanism effectiveness. New / un-clustered buyers
+    # (empty priors) → no-op. Soft-fail by design.
+    if result.mechanism_scores and buyer_id and graph_cache:
+        try:
+            from adam.intelligence.cohort_modulation import apply_cohort_priors
+            cohort_modulated = apply_cohort_priors(
+                mechanism_scores=result.mechanism_scores,
+                buyer_id=buyer_id,
+                graph_cache=graph_cache,
+            )
+            if cohort_modulated is not result.mechanism_scores:
+                cohort_shifted = sum(
+                    1
+                    for m, v in cohort_modulated.items()
+                    if abs(v - result.mechanism_scores.get(m, v)) > 1e-9
+                )
+                if cohort_shifted:
+                    result.reasoning.append(
+                        f"Cohort prior boost: {cohort_shifted} mechanisms shifted"
+                    )
+                result.mechanism_scores = cohort_modulated
+        except Exception as exc:
+            logger.debug("Cohort prior boost skipped: %s", exc)
+
     # ─── PREDICTIVE-PROCESSING CURIOSITY BONUS ───
     # Drift correction: this wire previously sat in
     # realtime_decision_engine.compute_persuasion_decision, where its

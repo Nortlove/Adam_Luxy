@@ -472,19 +472,21 @@ class CohortDiscoveryService:
     # =========================================================================
     
     async def persist_cohort_assignments(self) -> int:
-        """Persist cohort assignments back to Neo4j."""
+        """Persist cohort assignments and cohort metadata back to Neo4j.
+
+        Two writes per call:
+            1. User.cohort_id / cohort_score (per-user assignment)
+            2. UserCohort node with mechanism_effectiveness as a JSON
+               string property (per-cohort metadata, queryable from
+               sync paths like graph_cache.get_cohort_priors)
+
+        Without (2) the cascade has no way to read cohort-level
+        mechanism priors at decision time — the per-user assignment
+        alone is just a label.
+        """
         if not self._driver:
             return 0
-        
-        query = """
-        UNWIND $assignments AS a
-        MATCH (u:User {user_id: a.user_id})
-        SET u.cohort_id = a.cohort_id,
-            u.cohort_score = a.score,
-            u.cohort_assigned_at = datetime()
-        RETURN count(*) AS updated
-        """
-        
+
         assignments = [
             {
                 "user_id": m.user_id,
@@ -493,19 +495,62 @@ class CohortDiscoveryService:
             }
             for m in self._user_cohorts.values()
         ]
-        
+
         if not assignments:
             return 0
-        
+
+        # Per-cohort metadata: write each known cohort's
+        # mechanism_effectiveness as a JSON-string property on a
+        # UserCohort node. JSON keeps the query simple (no fan-out
+        # over a Mechanism relationship) and round-trips cleanly to
+        # the sync reader.
+        import json
+        cohort_metadata = [
+            {
+                "cohort_id": c.cohort_id,
+                "size": c.size,
+                "mechanism_effectiveness_json": json.dumps(
+                    c.mechanism_effectiveness or {},
+                ),
+            }
+            for c in self._cohorts.values()
+        ]
+
+        user_query = """
+        UNWIND $assignments AS a
+        MATCH (u:User {user_id: a.user_id})
+        SET u.cohort_id = a.cohort_id,
+            u.cohort_score = a.score,
+            u.cohort_assigned_at = datetime()
+        RETURN count(*) AS updated
+        """
+
+        cohort_query = """
+        UNWIND $cohort_metadata AS c
+        MERGE (uc:UserCohort {id: c.cohort_id})
+        SET uc.size = c.size,
+            uc.mechanism_effectiveness_json = c.mechanism_effectiveness_json,
+            uc.updated_at = datetime()
+        RETURN count(*) AS persisted
+        """
+
         try:
             async with self._driver.session() as session:
-                result = await session.run(query, assignments=assignments)
+                result = await session.run(user_query, assignments=assignments)
                 record = await result.single()
-                
                 updated = record["updated"] if record else 0
-                logger.info(f"Persisted {updated} cohort assignments")
+
+                if cohort_metadata:
+                    await session.run(
+                        cohort_query, cohort_metadata=cohort_metadata,
+                    )
+
+                logger.info(
+                    f"Persisted {updated} cohort assignments + "
+                    f"{len(cohort_metadata)} cohort metadata nodes"
+                )
                 return updated
-                
+
         except Exception as e:
             logger.error(f"Failed to persist cohort assignments: {e}")
             return 0
