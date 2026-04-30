@@ -715,3 +715,865 @@ The following sections of this document are surface-summary only and need a per-
 - When a DEPTH-2-NEEDED section gets a deeper read, replace the surface summary with the per-module detail.
 - When a wire ships, update the relevant subsystem section to mark the integration as wired.
 - Treat this document as canonical — if it's wrong, fix it; don't work around it.
+
+---
+
+# APPENDIX A — DEEP MODULE INVENTORY (per-module purpose strings)
+
+**Methodology:** Direct reads of every Python file's docstring across the codebase. LOC and one-line purpose for each. Compiled 2026-04-29/30 after the agent-fork approach hit server-side rate limits — this was generated from local file reads, the only reliable approach.
+
+## A.1 — `adam/intelligence/` top-level (157 modules)
+
+### Per-user posteriors / Bayesian
+| Module | LOC | Purpose |
+|---|---:|---|
+| `bong.py` | 735 | Multivariate Gaussian posteriors with diagonal + low-rank precision (BONG) |
+| `bong_promotion.py` | 159 | Tracks criteria for promoting BONG from additive to authoritative |
+| `hierarchical_bayes.py` | 512 | PyMC + NumPyro non-centered partial pooling — Handoff §3.2 |
+| `predictive_processing.py` | 622 | PredictiveProcessingEngine + BeliefState + CuriosityEngine + FreeEnergyCalculator |
+| `bayesian_fusion.py` | 528 | Bayesian Fusion Engine — The Compounding Flywheel |
+| `information_value.py` | 991 | BuyerUncertaintyProfile + Information Value Bidding |
+| `gradient_fields.py` | 727 | Psychological Gradient Fields — ∂P(conv)/∂align_dim per cell |
+| `per_user_posterior_modulation.py` | 270 | Cascade N-of-1 posterior modulator (NEW 2026-04-29) |
+| `cohort_modulation.py` | 118 | Cohort-prior boost adapter for cascade (NEW 2026-04-29) |
+| `decision_probability.py` | 602 | Decision Probability Engine — Core Equation |
+
+### Causal inference (Seven-Component §2)
+| Module | LOC | Purpose |
+|---|---:|---|
+| `causal_forest.py` | 483 | EconML CausalForestDML; `run_weekly_causal_forest_fit()` (Task 35 wraps) |
+| `causal_conformal.py` | 243 | Distribution-free conformal lift wrap (lib-gated) |
+| `causal_discovery.py` | 762 | PC/FCI algorithms + ATE |
+| `causal_decomposition.py` | 492 | Decomposes a conversion into causal ingredients |
+| `causal_dag_ensemble.py` | 347 | M7 ensemble: PC + FCI + GES + DAGMA + DoWhy refutation |
+| `causal_adjudicator.py` | 919 | Loop A→B; reads horizon-closed Deviations; writes WhyLibraryEntry |
+| `causal_learning.py` | 550 | Every Impression Is A Micro-Experiment |
+| `causal_structure_learner.py` | 234 | Learns causal structure between alignment dimensions |
+| `m2_pipeline.py` | 392 | M2 causal pipeline orchestrator |
+| `ope.py` | 663 | IPS, SNIPS, DR, SwitchDR, DRos, MIPS + `policy_gate()` (handoff §4.4) |
+
+### Page intelligence + processing depth + posture
+| Module | LOC | Purpose |
+|---|---:|---|
+| `page_intelligence.py` | 2161 | Page-Level Psychological Intelligence (largest non-cascade module) |
+| `page_attentional_posture_substrate.py` | 398 | Categorical posture (blend/vigilance/neutral) + Bayesian shrinkage |
+| `page_conditioned_query.py` | 764 | Trilateral evidence engine — filter 6.7M edges by page-state |
+| `page_crawl_scheduler.py` | 944 | Async page crawl (started in main.py at startup) |
+| `page_edge_bridge.py` | 724 | Page → Edge bridge (A14 ADDITIVE_PAGE_SHIFT_FALLBACK fallback path) |
+| `page_edge_scoring.py` | 679 | Full-Width Page Edge Scoring (20-dim) |
+| `page_gradient_fields.py` | 217 | Per-page-dim conversion impact accumulator |
+| `page_similarity_index.py` | 223 | Find pages with similar psychological fields |
+| `processing_depth_router.py` | 314 | C2 depth predictor + route gate (FLUENCY FLOOR added 2026-04-29) |
+| `impression_state_resolver.py` | 566 | Composes bid-request signals into reader position |
+| `landing_page_barrier_detector.py` | 230 | Landing page barrier detection |
+| `luxy_page_populator.py` | 241 | Hand-curated 73-URL × 6-pattern LUXY page population |
+| `url_intelligence.py` | 545 | Maximum signal from every URL |
+
+### Cohort + non-stationarity + mechanism taxonomy
+| Module | LOC | Purpose |
+|---|---:|---|
+| `cohort_discovery.py` | 587 | Louvain community detection + cohort metadata (extended 2026-04-29) |
+| `mechanism_rotation.py` | 551 | Pre-registered mechanism rotation |
+| `online_learning_substrate.py` | 177 | Per-decision online learning (LinkPosterior) |
+| `mechanism_taxonomy.py` | 375 | BLEND_COMPATIBLE / VIGILANCE_ACTIVATING canonical taxonomy |
+| `mechanism_taxonomy_runtime.py` | 315 | Per-(mechanism × posture) outcome counts |
+
+### Trilateral / metaphor / argument constitution
+| Module | LOC | Purpose |
+|---|---:|---|
+| `trilateral_epistemic.py` | 256 | Buyer × page × mechanism epistemic value + cascade adapter |
+| `metaphor_alignment.py` | 184 | Buyer-natural metaphor frame alignment |
+| `metaphor_storage.py` | 204 | Cascade hot path metaphor bundle storage |
+| `creative_metaphor_scoring.py` | 463 | Sprint F primary-metaphor track |
+| `brand_copy_metaphor_scoring.py` | 277 | Brand copy metaphor scoring (F2 — Task 29.8) |
+| `buyer_metaphor_scoring.py` | 310 | Buyer review metaphor scoring (F1 — Task 29.7) |
+| `argument_constitution.py` | 485 | Source-of-truth text driving CAI critique-revise |
+| `argument_cache.py` | 294 | Cascade hot-path argument cache |
+| `argument_ranking.py` | 165 | B4 production gate — RANKING operating mode |
+| `constitutional_loop.py` | 523 | Generate→critique→revise CAI loop offline |
+| `cai_cross_family_critic.py` | 616 | CAI cross-family critique |
+
+### Defensive reasoning / WhyLibrary / chain rendering / counterfactual
+| Module | LOC | Purpose |
+|---|---:|---|
+| `why_library.py` | 430 | WhyEntry + record_why + query_why_for_recommendation (in-process) |
+| `defensive_reasoning.py` | 359 | Partner-facing defensive reasoning view |
+| `chain_rendering.py` | 495 | Construct-chain narrative renderer (Spine #6) |
+| `counterfactual_tracker.py` | 206 | Per-impression counterfactual tracking ("if we hadn't shown X…") |
+| `counterfactual_learner.py` | 193 | Counterfactual learning — estimate effect for non-deployed mechanisms |
+| `counterfactual_mechanisms.py` | 172 | Counterfactual mechanism analysis |
+
+### Decision-time + propensity logging + MRT
+| Module | LOC | Purpose |
+|---|---:|---|
+| `realtime_decision_engine.py` | 580 | `compute_persuasion_decision()` parallel path (output → response metadata) |
+| `mrt_logging.py` | 532 | Seven-Component §1.2 MRT propensity logging |
+| `mrt_producer.py` | 132 | MRT singleton producer (cascade calls into this) |
+| `evidence_grading.py` | 503 | OPE/WCLS/CF effect-size grading |
+| `synthetic_ab_simulation.py` | 664 | Synthetic A/B with planted treatment effect |
+| `dimension_compressor.py` | 173 | Reduce 25 alignment dims → 7 PCs |
+
+### Per-atom contribution + plant-model
+| Module | LOC | Purpose |
+|---|---:|---|
+| `per_atom_contribution.py` | 561 | Per-atom contribution measurement (B3-LUXY Phase 3 deliverable 3) |
+| `per_atom_contribution_ingestion.py` | 196 | Per-atom contribution ingestion (consumed by main.py) |
+
+### Outcomes + recommendations
+| Module | LOC | Purpose |
+|---|---:|---|
+| `negative_outcome_adapters.py` | 533 | Stripe/Shopify/Generic negative outcome adapters (sapid wire NEW 2026-04-29) |
+| `multi_horizon_adjudication.py` | 426 | Short- vs long-horizon outcome adjudication |
+| `deviation_lifecycle.py` | 80 | Deviation lifecycle states (per directive Section 8.1) |
+
+### Inferential learning + knowledge propagation
+| Module | LOC | Purpose |
+|---|---:|---|
+| `inferential_learning_agent.py` | 943 | 6-level theory builder (OBSERVE → VALIDATE → HYPOTHESIZE → DESIGN → APPLY) |
+| `inferential_hypothesis_engine.py` | 559 | Generate, test, validate, transfer inferential hypotheses |
+| `knowledge_propagation.py` | 979 | Hebbian-style cross-system propagation network |
+| `cognitive_learning_system.py` | 993 | ADAM cognitive learning system |
+| `prediction_engine.py` | 443 | Validated causal hypotheses → predict where conversion will occur |
+| `goal_activation.py` | 1211 | Nonconscious Goal Activation Model — Active Learning System |
+
+### Brand / customer / review intelligence (large set — many shared with corpus side)
+| Module | LOC | Purpose |
+|---|---:|---|
+| `brand_copy_extractor.py` | 562 | Brand copy intelligence extractor |
+| `brand_copy_intelligence.py` | 621 | Brand copy intelligence aggregator |
+| `brand_persuasion_analyzer.py` | 685 | Brand persuasion analyzer |
+| `brand_trait_extraction.py` | 1051 | ADAM brand trait extraction framework |
+| `customer_ad_alignment.py` | 879 | Customer-Advertisement Alignment Service |
+| `customer_influence_graph.py` | 527 | Customer Influence Graph |
+| `customer_types.py` | 844 | Purchase-Predictive Customer Type System |
+| `granular_type_detector.py` | 627 | Granular customer type detector |
+| `granular_type_enrichment.py` | 653 | Granular type enrichment service |
+| `helpful_vote_intelligence.py` | 569 | Helpful vote intelligence |
+| `helpful_vote_weighting.py` | 555 | Helpful vote weighted learning |
+| `review_analyzer.py` | 677 | Psychological analyzer for customer reviews |
+| `review_orchestrator.py` | 536 | Review intelligence orchestrator |
+| `review_learnings_service.py` | 1093 | Review learnings service |
+| `unified_review_aggregator.py` | 689 | Unified review aggregator |
+| `enhanced_review_analyzer.py` | 1184 | Enhanced psychological analyzer (35 constructs from #27) |
+| `deep_review_analyzer.py` | 665 | Deep review psychological analysis |
+| `claude_summarizer.py` | 399 | Claude-powered review intelligence summarization |
+| `database_review_matcher.py` | 403 | Database-backed review matcher |
+| `smart_review_matcher.py` | 727 | Smart review matcher |
+| `asin_review_matcher.py` | 506 | ASIN-based review matcher |
+| `hierarchical_product_matcher.py` | 650 | Hierarchical product matcher |
+| `product_analyzer.py` | 723 | Claude-powered product understanding |
+| `deep_product_analyzer.py` | 1054 | Deep product page psychological analysis |
+| `deep_page_scoring.py` | 968 | Deep page psychology scoring |
+| `unified_product_intelligence.py` | 1010 | Unified product intelligence |
+| `purchase_journey_analyzer.py` | 656 | Purchase journey analyzer |
+| `journey_intelligence.py` | 686 | Journey intelligence |
+| `unified_review_aggregator.py` | 689 | Unified review aggregator |
+| `corpus_builder.py` | 531 | Deep review corpus builder |
+| `annotation_engine.py` | 328 | Deep bilateral annotation engine |
+| `complete_psychological_analyzer.py` | 424 | ADAM complete psychological analyzer |
+| `unified_psychological_intelligence.py` | 1927 | Unified psychological intelligence — Central Integration Hub |
+| `unified_construct_integration.py` | 543 | Unified construct integration |
+| `unified_intelligence_service.py` | 876 | Unified Intelligence Service — three-layer Bayesian fusion (orchestrator imports this) |
+
+### Frameworks (large reference modules)
+| Module | LOC | Purpose |
+|---|---:|---|
+| `psychological_frameworks.py` | 2378 | ADAM psychological frameworks |
+| `psychological_frameworks_extended.py` | 1894 | ADAM psychological frameworks extended |
+| `empirical_psychology_framework.py` | 1891 | Empirical psychology framework |
+| `advertisement_psychology_framework.py` | 1601 | Advertisement & brand psychology framework |
+| `deep_psycholinguistic_framework.py` | 1672 | Deep psycholinguistic analysis framework |
+| `construct_taxonomy.py` | 1587 | ADAM Psychological Construct Taxonomy v2.0 |
+| `persuasion_susceptibility.py` | 1328 | ADAM persuasion susceptibility framework |
+| `temporal_psychology.py` | 768 | Temporal psychology module |
+| `financial_psychology.py` | 727 | ADAM financial psychology intelligence |
+| `domain_taxonomy.py` | 950 | Domain taxonomy & hierarchical psychological intelligence |
+
+### Other intelligence modules
+| Module | LOC | Purpose |
+|---|---:|---|
+| `agency_dashboard.py` | 388 | Agency-facing dashboard JSON payload aggregator |
+| `amazon_data_registry.py` | 484 | Amazon data registry |
+| `atom_intelligence_injector.py` | 875 | Atom intelligence injector |
+| `attribution_intelligence.py` | 811 | Attribution intelligence module |
+| `bidirectional_bridge.py` | 505 | Bidirectional bridge |
+| `blend_fit.py` | 413 | Blend fit primitive (attention-inversion implication #1) |
+| `blend_vigilance_weighting.py` | 139 | F5 cascade weighting (attention-inversion implication #2) |
+| `campaign_ingestion.py` | 1276 | External Campaign Analytics Ingestion Process (ECAIP) |
+| `campaign_report.py` | 281 | Campaign performance report generator |
+| `campaign_simulator.py` | 426 | Pre-campaign performance simulation |
+| `channel_capacity.py` | 311 | Channel capacity × message complexity matching |
+| `clv_model.py` | 419 | Long-horizon CLV piece of E3 |
+| `complete_psychological_analyzer.py` | 424 | Complete psychological analyzer |
+| `construct_matching.py` | 843 | ADAM construct matching engine |
+| `context_intelligence.py` | 741 | Context intelligence module |
+| `cross_platform_validation.py` | 746 | Cross-platform validation module |
+| `ctv_intelligence.py` | 775 | CTV (connected TV) content intelligence |
+| `daily_intelligence_brief.py` | 241 | Daily intelligence brief generator |
+| `deep_archetype_detection.py` | 1925 | Deep archetype detection system |
+| `emergence_engine.py` | 1209 | Emergence engine |
+| `exposure_response.py` | 400 | Exposure-response model — therapeutic window |
+| `expanded_type_integration.py` | 519 | Expanded type integration service |
+| `full_intelligence_integration.py` | 846 | Full intelligence integration |
+| `graph_construct_service.py` | 625 | Graph construct service — runtime construct graph interface |
+| `graph_edge_service.py` | 911 | Graph edge intelligence service |
+| `graph_maintenance.py` | 540 | Graph maintenance & intelligence activation |
+| `heterogeneous_gnn.py` | 278 | M5 GNN — replace 27 hand-engineered dims with learned (handoff §5) |
+| `historical_data_reprocessor.py` | 1010 | Historical data reprocessor |
+| `integration_service.py` | 474 | Maximum impact intelligence integration service |
+| `langgraph_alignment_integration.py` | 863 | LangGraph alignment integration |
+| `mechanism_adme.py` | 359 | Pharmacokinetic mechanism profiles |
+| `mmm_model.py` | 293 | Channel-ROI piece of E3 (MMM) |
+| `ndf_extractor.py` | 503 | Nonconscious Decision Fingerprint (NDF) extractor |
+| `persuadability_intelligence.py` | 708 | Persuadability intelligence module |
+| `persuasive_patterns.py` | 661 | Persuasive pattern extractor |
+| `psychological_arbitrage.py` | 234 | Psychological arbitrage scoring |
+| `public_labels.py` | 371 | Translates internal taxonomy to public-facing labels |
+| `reaction_intelligence.py` | 610 | Audience reaction intelligence |
+| `segment_depletion.py` | 241 | Segment depletion detector |
+| `session_state.py` | 313 | Session psychological state estimation |
+
+## A.2 — `adam/intelligence/` subdirectories
+
+### `intelligence/daily/` — 39 scheduled tasks (above; full list in main inventory)
+
+### `intelligence/spine/` — 4 modules (above)
+
+### `intelligence/recommendation_class/` — Weakness #4 RecommendationClass primitive (12 files)
+- `a14_compromises.py` — A14 calibration-pending compromises
+- `adjudicator.py` — RecommendationClass adjudicator
+- `archetype_compression.py` — archetype compression
+- `chain_attribution.py` — chain attribution
+- `conformal.py` — conformal prediction
+- `graph.py` — RecommendationClass graph
+- `inferential_chain.py` — inferential chain
+- `plant_model.py` — plant model (long-pole pilot dependency per memory)
+- `pre_registration.py` — pre-registration
+- `processing_depth_priors.py` — processing depth priors
+- `projected_impact.py` — projected impact
+- `sequential_schedule.py` — sequential schedule
+
+### `intelligence/campaign_intelligence/` — DCIL pipeline (8 files)
+- `audit_log.py` — DCIL audit log
+- `coherence_validator.py` — coherence validation (Task 29)
+- `config.py` — DCIL config
+- `directive_generator.py` — directive generation (Task 28)
+- `execution_engine.py` — campaign execution (Task 30)
+- `generalizability.py` — generalizability scoring
+- `hypothesis_battery.py` — hypothesis battery (Task 25)
+- `models.py` — DCIL pydantic models
+
+### `intelligence/dialogue_ledger/` — HMT v0.1 (5 files)
+- `elicitation.py` — 4 elicitation format generators
+- `mood_probe.py` — mood probe
+- `service.py` — dialogue ledger service
+- `uncertainty_panel.py` — uncertainty panel rendering
+- `models.py` — HMT pydantic models
+
+### `intelligence/graph/` — 5 files
+- `gds_runtime.py` — Neo4j GDS runtime service
+- `reasoning_chain_generator.py` — reasoning chain generator
+- `theory_schema.py` — theory schema
+- `unified_psychological_schema.py` — unified psychological schema
+- `zero_shot_transfer.py` — zero-shot transfer
+
+### `intelligence/knowledge_graph/` — 5 files
+- `brand_graph_builder.py`
+- `persuasion_susceptibility_graph.py`
+- `populate_psychological_graph.py`
+- `review_graph_builder.py`
+- `review_learnings_embedder.py`
+
+### `intelligence/relationship/` — 5 files (detector, graph_builder, models, patterns, schema)
+
+### `intelligence/scrapers/` — 12 files (amazon_playwright, amazon_reviews, base, brand_positioning_analyzer, enterprise_scraper, google_reviews, oxylabs_ai_client, oxylabs_client, product_page, social_scraper, unified_scraper, aggregator)
+
+### `intelligence/pages/` — 2 files (claude_feature_scoring, entity_graph)
+
+### `intelligence/learning/` — 1 file (psychological_learning_integration)
+
+### `intelligence/models/` — 2 files (brand_personality, customer_intelligence)
+
+### `intelligence/outcome_simulation/` — 1 file (theory_based_simulator)
+
+### `intelligence/pattern_discovery/` — 1 file (brand_pattern_learner)
+
+### `intelligence/review_intelligence/` — orchestrator + base_extractor + extractors/ subdir
+
+### `intelligence/sources/` + `intelligence/storage/` — empty placeholders
+
+---
+
+## A.3 — `adam/atoms/` (33 atoms + DAG infra)
+
+### B3-LUXY canonical atoms (9, verified by `canonical, B3-LUXY` docstring tag)
+1. `ambiguity_attitude.py` (632 LOC) — Phase 2 atom 8 (Ellsberg)
+2. `autonomy_reactance.py` (741 LOC) — Phase 0
+3. `mimetic_desire_atom.py` (711 LOC) — Phase 1 atom 3
+4. `persuasion_pharmacology.py` (861 LOC) — Phase 1 atom 2 (ADME-style)
+5. `regret_anticipation.py` (735 LOC) — Phase 2 atom 7 (Loomes & Sugden)
+6. `regulatory_focus.py` (812 LOC) — Phase 2 atom 9 (Higgins)
+7. `signal_credibility.py` (762 LOC) — Phase 2 atom 6 (Spence signaling)
+8. `strategic_awareness.py` (681 LOC) — Phase 1 atom 4
+9. `temporal_self.py` (687 LOC) — Phase 1 atom 5
+
+### Other atoms (24, wrapper-status pending B3-LUXY-style canonical refits)
+- `ad_selection.py` (777) — AD SELECTION ATOM (terminal-adjacent; integrates with mechanism_activation)
+- `brand_personality.py` (557)
+- `channel_selection.py` (301)
+- `cognitive_load.py` (299)
+- `coherence_optimization.py` (361)
+- `construal_level.py` (302)
+- `construct_resolver.py` (726) — psychological construct resolver
+- `cooperative_framing.py` (270)
+- `decision_entropy.py` (268)
+- `dsp_integration.py` (348) — DSP graph intelligence integration layer
+- `information_asymmetry.py` (323)
+- `interoceptive_style.py` (236)
+- `mechanism_activation.py` (2627) — TERMINAL ATOM, emits final mechanism_scores (largest atom by far)
+- `mechanism_registry.py` (338) — mechanism effectiveness registry
+- `message_framing.py` (684)
+- `motivational_conflict.py` (290)
+- `narrative_identity.py` (347)
+- `personality_expression.py` (538)
+- `predictive_error.py` (262)
+- `query_order.py` (339)
+- `relationship_intelligence.py` (1132)
+- `review_intelligence.py` (363) — atom-side review intelligence
+- `strategic_timing.py` (301)
+- `user_state.py` (598)
+
+### Atom DAG infrastructure
+- `dag.py` (808 LOC) — `AtomDAG` execution engine
+- `emergence_detector.py` (778 LOC) — emergence detection engine
+- `intelligence_sources.py` (425 LOC) — 10 intelligence sources used by AtomDAG atoms
+- `models/atom_io.py` (249) — atom input/output models
+- `models/chain_attestation.py` (438) — `ChainAttestation` typed evidence
+- `models/evidence.py` (301) — intelligence evidence models
+- `orchestration/construct_dag.py` (489) — taxonomy-domain → atom mapping
+- `orchestration/dag_executor.py` (1082) — enhanced DAG executor with LangGraph
+- `orchestration/langgraph_feedback.py` (545) — LangGraph ↔ AoT bidirectional feedback
+- `review_intelligence_source.py` (819) — review intelligence source
+
+---
+
+## A.4 — `adam/api/` (9 routers + admin + admin services)
+
+### `api/stackadapt/` (8 modules — production bid path)
+- `attribution_bridge.py` (161) — webhook → outcome handler attribution
+- `bilateral_cascade.py` (3110) — main cascade (modulation chain)
+- `decision_cache.py` (367) — links decisions to outcomes
+- `graph_cache.py` (1101) — `GraphIntelligenceCache` sync read backbone
+- `models.py` (556) — request/response pydantic models
+- `router.py` (203) — FastAPI router
+- `service.py` (1317) — `CreativeIntelligenceService`
+- `webhook.py` (609) — outcome webhook (HMAC + dedup + dispatch)
+
+### `api/dashboard/` (7 modules)
+- `auth.py` (65) — pilot hard-coded user
+- `client_decisions_service.py` (527) — client acknowledge/decline persistence
+- `client_report_service.py` (549) — client report assembly
+- `models.py` (891) — HMT dashboard pydantic models
+- `router.py` (1792) — endpoints (very large)
+- `service.py` (1783) — fetches live StackAdapt data
+- `system_insights_service.py` (289) — Enhancement #33 retargeting learning aggregation
+
+### `api/decision/router.py` (1615) — DECISION API
+### `api/intelligence/router.py` (794) — INTELLIGENCE API
+### `api/universal/router.py` (3290) — UNIVERSAL INTELLIGENCE API ⚠ **largest router in repo**
+### `api/fusion/router.py` (418), `api/health/router.py` (526), `api/monitoring/router.py` (321)
+### `api/signals/router.py` (374) — site telemetry ingestion
+### `api/behavioral/desktop_router.py` (453) + `media_router.py` (485)
+### `api/auth/middleware.py` (79) — API key auth
+
+### `api/admin/` (24 files, 3044 LOC) — full RBAC admin surface
+- `auth.py` (127), `db.py` (405) PostgreSQL, `dependencies.py` (93)
+- `routers/auth_router.py`, `org_router.py`, `campaign_router.py`, `client_router.py`
+- `services/pilot_bootstrap.py` (called at startup)
+- `models/{user, organization, domain, campaign, creative, archetype, directive, tracker, report}.py`
+- `migrations/002_seed_super_admin.py`
+
+---
+
+## A.5 — `adam/orchestrator/` (12 modules, 8752 LOC)
+
+- `campaign_orchestrator.py` (2570) — master orchestrator
+- `graph_intelligence.py` (1044) — graph intelligence layer
+- `intelligence_prefetch.py` (1213) — intelligence prefetch service
+- `models.py` (518) — orchestrator pydantic models
+
+### `orchestrator/adaptive/` — **self-evolving brain (6 modules, ~3300 LOC) — substantial subsystem**
+- `episodic_memory.py` (716) — Cross-Session Retrieval-Augmented Reasoning
+- `graph_rewriter.py` (409) — Adaptive Graph Rewriter
+- `meta_orchestrator.py` (445) — Meta-Orchestrator (orchestrator of orchestrators)
+- `neural_routing.py` (696) — Neural Attention Routing (LangGraph extension)
+- `runtime_edges.py` (376) — Runtime edge factory
+- `self_improvement.py` (691) — Recursive Self-Improvement Engine
+
+---
+
+## A.6 — `adam/core/` (22 files, 19441 LOC)
+
+### `core/learning/` (15 modules)
+- `outcome_handler.py` (2818) — production outcome write path (largest core module)
+- `learned_priors_integration.py` (3886) — ⚠ **largest core file by far**
+- `unified_learning_hub.py` (799)
+- `theory_learner.py` (837) — construct-level learning from outcomes
+- `universal_learning_interface.py` (717)
+- `quality_audit.py` (992)
+- `thompson_warmstart.py` (486) — called at startup
+- `effect_size_correction.py` (502) — consumed by stackadapt service
+- `event_bus.py` (365)
+- `signal_router.py` (281)
+- `construct_learning_loop.py` (253)
+- `atom_learning_integrations.py` (879)
+- `component_integrations.py` (1433)
+- `orchestrator_learning_integration.py` (470)
+- `learning/__init__.py` (52) — note: explains "FOUR learning-named packages" hierarchy
+
+### `core/` top-level
+- `container.py` (937) — DI container
+- `decision_mode.py` (410) — Epistemic Status of Intelligence Produced by ADAM
+- `dependencies.py` (1246) — DI registry (large)
+- `outcome_types.py` (322) — `OutcomeType` enum + reward semantics
+
+### `core/synthesis/` (referenced but not detailed here)
+
+---
+
+## A.7 — `adam/platform/` (delivery + blueprints)
+
+### `platform/delivery/` (5 modules)
+- `base.py` (139) — `BaseDeliveryAdapter` ABC
+- `factory.py` (97) — `ADAPTER_REGISTRY` + `create_adapter()`
+- `dsp_adapter.py` (468) — DV360, TradeDesk, two StackAdapt classes (deprecated REST + new GraphQL bridge)
+- `audio_adapter.py` (178) — Megaphone, Triton, SpotifyAdStudio
+- `ssp_adapter.py` (177) — Magnite, Prebid
+
+### `platform/blueprints/` (3 modules)
+- `engine.py` (363) — blueprint engine (calls `create_adapter` at line 247)
+- `registry.py` (341) — blueprint registry
+- `router.py` (140) — blueprint API router
+
+---
+
+## A.8 — `adam/integrations/` (13 files — ⚠ THREE StackAdapt files at this level)
+
+### `integrations/base/`
+- `base/adapter.py` (359) — `BasePlatformAdapter` ABC + `PlatformCredentials`, `AdapterMode`, `SyncedSegment`, `SyncedCreative`
+
+### `integrations/stackadapt/` (canonical GraphQL surface)
+- `adapter.py` (359) — `StackAdaptAdapter(BasePlatformAdapter)` — GraphQL mutations
+- `graphql_client.py` (326) — `StackAdaptGraphQLClient` (schema-corrected 2026-04-29)
+- `data_taxonomy_client.py` (309)
+- `outcome_mapper.py` (153) — webhook event → outcome mapping (consumed by webhook.py)
+- `taxonomy_generator.py` (661) — INFORMATIV audience taxonomy generator
+
+### `integrations/` top-level (multiple StackAdapt files at this level — review for dedup)
+- `stackadapt_graphql.py` (588) — older GraphQL integration layer (uses `X-AUTHORIZATION` header — legacy, ZERO callers)
+- `stackadapt_monitor.py` (341) — StackAdapt campaign monitor
+
+### `integrations/audioboom/` 
+- `adapter.py` (225) — Audioboom platform adapter
+
+---
+
+## A.9 — `adam/retargeting/` (77 files, 24824 LOC) — ⚠ Large, sophisticated retargeting subsystem
+
+### `retargeting/engines/` (30+ engines)
+- `barrier_diagnostic.py` (895) — conversion barrier diagnostic engine
+- `barrier_self_report.py` (336) — extracts barrier from post-click behavior
+- `causal_mediation.py` (330) — causal mediation analysis (Task 22 consumer)
+- `claude_argument_engine.py` (479) — Claude argument generation
+- `click_latency.py` (210) — approach-avoidance conflict from click latency
+- `device_compat.py` (154) — processing-mode → mechanism effectiveness
+- `diagnostic_reasoner.py` (1358) — diagnostic deduction engine
+- `dimensionality_compressor.py` (253) — Information Bottleneck / PCA profile compression
+- `frequency_decay.py` (146) — reactance onset via Bayesian changepoint
+- `frustration.py` (215) — frustration score from bilateral alignment
+- `graph_embeddings.py` (234) — Neo4j GDS embeddings
+- `impression_classifier.py` (257) — non-click outcome classifier
+- `intervention_emitter.py` (119) — emits enriched intervention records
+- `learning_dimensions.py` (483) — 8 dimensions of learning
+- `learning_loop.py` (431) — retargeting learning loop
+- `mechanism_observation_models.py` (200) — 16 therapeutic mechanisms × 20-dim observation vectors
+- `mechanism_selector.py` (529) — Bayesian mechanism selection
+- `narrative_arc.py` (268) — episodic story structure for sequences
+- `neural_linucb.py` (474) — Neural LinUCB bandit
+- `nonconscious_profile.py` (317) — 6 nonconscious behavioral signals composite
+- `options_framework.py` (320) — TTM-based options
+- `organic_return.py` (136) — internal motivation detection
+- `prior_manager.py` (663) — 5-Level Hierarchical Bayesian Prior Manager (orchestrator imports)
+- `processing_depth.py` (179) — POST-impression depth (extends C2 with viewability)
+- `prospect_theory.py` (222) — prospect theory value function
+- `puzzle_solver.py` (699) — per-person experiment solver (treats each user as unique experiment)
+- `recalibration.py` (472) — periodic recalibration of composite alignment weights
+- `repeated_measures.py` (1177) — ⚠ **WITHIN-SUBJECT REPEATED MEASURES — this is Spine #2**
+- `rupture_detector.py` (353) — confrontation/withdrawal/decay detection
+- `sequence_orchestrator.py` (785) — therapeutic sequence orchestrator (brain of retargeting)
+- `signal_collector.py` (640) — site telemetry → nonconscious signal accumulator
+- `signal_processors.py` (311) — preprocessing for stage classification + barrier diagnosis
+- `stage_classifier.py` (238) — TTM-derived conversion stage classifier
+- `suppression_controller.py` (206) — when to STOP retargeting
+- `temporal_dynamics.py` (301) — retargeting timing optimization
+- `tensor_decomposition.py` (358) — CP decomposition for archetype discovery
+- `touch_builder.py` (294) — TherapeuticTouch from diagnosis + narrative position
+- `unified_puzzle.py` (786) — ONE model, ALL signals simultaneously
+- `annotation_quality.py` (339) — annotation quality via self-consistency + conformal
+
+### `retargeting/resonance/` — RESONANCE ENGINEERING SUBSYSTEM (12 files) — ⚠ Parallel architecture
+- `browsing_momentum.py` (247) — compound priming from multiple page visits
+- `cold_start.py` (284) — theory-driven mechanism ideal vectors
+- `competitive_displacement.py` (259) — detects competitive ad environments
+- `creative_adaptation.py` (178) — lightweight creative adaptation at impression-time (<5ms)
+- `creative_adapter.py` (248) — real-time creative adaptation to page context
+- `evolutionary_engine.py` (668) — active self-improvement
+- `mindstate_vector.py` (190) — `PageMindstateVector` from `PagePsychologicalProfile`
+- `models.py` (246) — resonance data models
+- `placement_optimizer.py` (364) — dynamic placement optimization
+- `resonance_cache.py` (142) — Redis-backed resonance cache
+- `resonance_gradient.py` (125) — ∂P(conv)/∂page_mindstate per mechanism
+- `resonance_learner.py` (307) — closed-loop resonance learning
+- `resonance_model.py` (369) — `R(buyer, seller, page) = base × resonance_multiplier`
+
+### `retargeting/integrations/` — StackAdapt translator + exporter
+- `stackadapt_api_exporter.py` (653) — produces StackAdapt-executable campaign configs
+- `stackadapt_translator.py` (297) — therapeutic sequences → StackAdapt configs
+
+### `retargeting/models/` — diagnostic_assessment, diagnostics, enums, intervention_record, learning, sequences, site_profiles, telemetry, within_subject
+
+### `retargeting/prompts/` — argument_generation
+### `retargeting/schema/` — queries (Cypher templates)
+### `retargeting/workflows/therapeutic_workflow.py` (257) — LangGraph therapeutic loop
+### `retargeting/personality_mechanism_matrix.py` (70), `research_priors.py` (339), `api.py` (439), `events.py` (51)
+
+---
+
+## A.10 — `adam/cold_start/` (23 files, 6207 LOC)
+
+- `service.py` (1398) — main cold start service
+- `unified_learning.py` (787) — unified cold start learning
+- `__init__.py` (213) — cold start strategy
+- `archetypes/definitions.py` (384) — 8 research-grounded archetype definitions
+- `archetypes/detector.py` (292) — archetype detection
+- `cache/prior_cache.py` (234) — Redis prior cache
+- `events/contracts.py` (188) — event contracts
+- `learning/gradient_bridge.py` (252) — integration with Gradient Bridge
+- `models/archetypes.py` (251), `decisions.py` (217), `enums.py` (162), `priors.py` (426), `user.py` (262)
+- `priors/demographic.py` (254) — demographic priors
+- `priors/population.py` (220) — population-level priors
+- `thompson/sampler.py` (310) — Thompson sampling
+
+### NOTE: `adam/coldstart/` (no underscore, 31 LOC) — separate empty/abandoned directory. Investigate for deletion.
+
+---
+
+## A.11 — `adam/blackboard/` (10 files, 2882 LOC) — 5-zone shared-state architecture
+
+- `service.py` (612) — blackboard service
+- `memory_blackboard.py` (371) — in-memory blackboard
+- `models/core.py` (307) — core blackboard models
+- `models/zone1_context.py` (242) — request context
+- `models/zone2_reasoning.py` (446) — atom reasoning spaces
+- `models/zone3_synthesis.py` (327) — synthesis workspace
+- `models/zone4_decision.py` (207) — decision state
+- `models/zone5_learning.py` (281) — learning signals
+
+---
+
+## A.12 — `adam/embeddings/` (13 files, 8178 LOC)
+
+- `service.py` (790) — embedding service
+- `pipeline.py` (885) — embedding pipelines
+- `generator.py` (832) — embedding generator
+- `models.py` (636) — embedding models
+- `pgvector.py` (738) — pgvector backend
+- `store.py` (784) — vector store
+- `monitoring.py` (554) — embedding monitoring dashboard
+- `maintenance.py` (685) — embedding maintenance
+- `finetuning/dataset.py` (687), `pipeline.py` (700), `trainer.py` (636) — fine-tuning subsystem
+
+---
+
+## A.13 — `adam/graph_reasoning/` (11 files, 4862 LOC)
+
+- `bridge/interaction_bridge.py` (794) — `InteractionBridge` (orchestrator imports)
+- `bridge/context_queries.py` (1240) — context query executor
+- `bridge/bidirectional_integration.py` (498)
+- `conflict_resolution.py` (492)
+- `models/intelligence_sources.py` (573) — the 10 intelligence sources
+- `models/graph_context.py` (402)
+- `models/reasoning_output.py` (364)
+- `update_tiers.py` (350)
+
+---
+
+## A.14 — `adam/workflows/` (8 files, 6809 LOC) — LangGraph workflows
+
+- `synergy_orchestrator.py` (2690) — ⚠ **largest workflow file**
+- `holistic_decision_workflow.py` (1636)
+- `dsp_impression_workflow.py` (692)
+- `intelligence_prefetch_nodes.py` (662)
+- `susceptibility_intelligence_node.py` (540)
+- `unified_intelligence_node.py` (379)
+- `config.py` (209)
+
+---
+
+## A.15 — `adam/services/` (7 files, 2587 LOC)
+
+- `archetype_service.py` (492)
+- `bandit_service.py` (418)
+- `brand_library.py` (256)
+- `competitive_intel.py` (300)
+- `graph_intelligence.py` (681)
+- `temporal_patterns.py` (362)
+
+---
+
+## A.16 — `adam/dsp/` (15 files, 7660 LOC) — DSP enrichment engine
+
+- `construct_registry.py` (919) — psychological construct registry
+- `dimension_inference.py` (607)
+- `edge_registry.py` (1153) — causal/inferential edge registry
+- `ethical_boundary.py` (170)
+- `graph_population.py` (522) — Neo4j graph population
+- `graph_state_inference.py` (609) — graph-based state inference
+- `graph_type_inference.py` (424)
+- `inventory_scoring.py` (219)
+
+---
+
+## A.17 — `adam/output/` (8 files, 3103 LOC)
+
+- `copy_generation/service.py` (2045) — ⚠ copy generation service (large)
+- `copy_generation/copy_learner.py` (347) — learns which copy params work
+- `copy_generation/models.py` (171)
+- `brand_intelligence/service.py` (329), `models.py` (140)
+
+---
+
+## A.18 — `adam/ops/` (8 files, 3373 LOC) — autonomous ops + StackAdapt executor
+
+- `autonomous.py` (533) — makes decisions and acts without human
+- `intelligence.py` (647) — `start_ops_intelligence` (called at startup, hourly)
+- `intelligence_report.py` (557) — actionable StackAdapt optimization instructions every 4 hours
+- `smart_optimizer.py` (621) — campaign brain
+- `campaign_actions.py` (292) — translates recommendations → executable changes
+- `stackadapt_executor.py` (312) — executes approved campaign changes via GraphQL
+- `router.py` (411) — ops API endpoints
+
+---
+
+## A.19 — Other large subsystems (one-line each)
+
+### `adam/identity/` (21 files, 3951 LOC) — Cross-platform identity resolution
+- `service.py` (332) — main identity resolution
+- `graph/neo4j_graph.py` (498) — Neo4j-backed identity graph
+- `household/resolver.py` (340)
+- `matching/deterministic.py` (170), `probabilistic.py` (273)
+- `partners/iheart.py` (211), `rampid.py` (215), `uid2.py` (220)
+- `privacy/bloom_filter.py` (236), `differential_privacy.py` (306)
+
+### `adam/data/amazon/` (8+ files) — Amazon data ingestion
+- `client.py` (804), `ingestion.py` (708), `enhanced_ingestion.py` (627), `loader.py` (574), `indexer.py` (645), `features.py` (448), `cross_domain_pipeline.py` (487), `media_product_graph.py` (831)
+
+### `adam/signals/` (10 files, 4433 LOC)
+- `linguistic/service.py` (658), `nonconscious/analysis.py` (698), `capture.py` (651), `service.py` (619), `models.py` (585)
+- `learning_integration.py` (752)
+
+### `adam/temporal/` (3 files) — `state_trajectory.py` (580), `learning_integration.py` (662)
+
+### `adam/fusion/` (8 files, 4485 LOC) — Corpus intelligence fusion (4 layers)
+- `prior_extraction.py` (987) — Layer 1
+- `creative_patterns.py` (673) — Layer 2
+- `platform_calibration.py` (489) — Layer 3
+- `bidirectional_learning.py` (565) — Layer 4
+- `resonance_index.py` (645) — Persuasion Resonance Index (Layer 5)
+- `product_intelligence.py` (512), `models.py` (574)
+
+### `adam/gradient_bridge/` (8 files, 3373 LOC) — Cross-component learning signals
+- `service.py` (1267), `attribution.py` (897) — credit attribution
+- `models/credit.py` (229), `features.py` (281), `signals.py` (426)
+
+### `adam/meta_learner/` (6 files, 2576 LOC)
+- `service.py` (733) — meta-learner service
+- `neural_thompson.py` (555), `thompson.py` (365)
+- `models.py` (510)
+
+### `adam/ml/` (7 files, 3752 LOC) — Custom AI models
+- `foundation_model.py` (853) — ADAM foundation model
+- `training_pipeline.py` (868)
+- `online_learner.py` (751) — online RL from ad outcomes
+- `ndf_predictor.py` (439), `hybrid_extractor.py` (425), `weak_supervisor.py` (381)
+
+### `adam/monitoring/` (8 files, 3193 LOC)
+- `learning_metrics.py` (551), `synthetic_tester.py` (461), `alerting.py` (464), `health_service.py` (451), `drift_detection.py` (416), `learning_loop_monitor.py` (410), `system_health.py` (388)
+
+### `adam/infrastructure/` (26 files, 7952 LOC) — Kafka, Redis, Neo4j client, Prometheus, alerting, resilience, health
+
+### `adam/behavioral_analytics/` (43 files, 26545 LOC) — large reference subsystem; classifiers + knowledge + extensions
+- `atom_interface.py` (1317) — Atom of Thought interface for behavioral analytics
+
+### `adam/corpus/` (34 files, 9035 LOC) — annotation corpus + Neo4j ingestion
+- `edge_builders/match_calculators.py` (1221) — match score calculators (Phases 5-7)
+- `annotators/{ad_side, base, dual, prompt_templates}.py`
+
+### `adam/segments/engine.py` (836) — psychological segment engine
+
+### `adam/experimentation/` (5 files, 1183 LOC) — A/B testing
+- `service.py` (398), `analysis.py` (339), `assignment.py` (235), `models.py` (174)
+
+### `adam/verification/` (11 files, 2405 LOC) — 4-layer verification
+- `service.py` (493), `learning_integration.py` (639)
+- `layers/calibration.py`, `consistency.py`, `grounding.py`, `safety.py`
+
+### `adam/validity/` (4 files) — psychological validity checks
+- `checks.py` (511), `service.py` (300), `models.py` (214)
+
+### `adam/testing/` — e2e_tests, integration_test_runner (1159), simulation, synthetic_data_framework (827)
+
+### Smaller subsystems
+- `adam/audio/` (5 files) — audio service + SSML
+- `adam/podcast/` (4 files) — host briefings + intelligence + matching
+- `adam/multimodal/` (4 files)
+- `adam/synthesis/streaming_synthesis.py` (513)
+- `adam/simulation/engine.py` (522)
+- `adam/competitive/intelligence.py` (752)
+- `adam/performance/` — cache_manager, circuit_breaker, fast_path, latency
+- `adam/privacy/` — privacy service
+- `adam/creative/` — construct_creative_engine (645), personality_creative (504)
+- `adam/explanation/` — explanation generation
+- `adam/inference/engine.py` (503) — latency-optimized inference engine
+- `adam/llm/` — Claude client + fusion + prompts + service
+- `adam/observability/` — correlation, debug, tracing
+- `adam/features/` — feature store
+- `adam/integration/decision_enrichment.py` (426)
+
+---
+
+# APPENDIX B — STACKADAPT INTEGRATION FULL MAP
+
+There are FOUR places "StackAdapt" appears in the codebase. Map of all of them:
+
+1. **`adam/api/stackadapt/`** — 8 modules. Production HTTP surface (router, webhook, service, bilateral_cascade, graph_cache, decision_cache, attribution_bridge, models). This is the LIVE BID PATH.
+
+2. **`adam/integrations/stackadapt/`** — 5 modules (CANONICAL). GraphQL adapter + GraphQL client + data taxonomy + outcome mapper + taxonomy generator. This is the canonical write surface that wraps the GraphQL API.
+
+3. **`adam/integrations/stackadapt_graphql.py` (588 LOC) + `stackadapt_monitor.py` (341 LOC)** — top-level files at integrations/. The graphql one uses LEGACY `X-AUTHORIZATION` header pattern with ZERO callers in the codebase. **Candidate for deletion.** The monitor.py status is unverified.
+
+4. **`adam/platform/delivery/dsp_adapter.py`** — Two StackAdapt classes:
+   - `StackAdaptAdapter` — DEPRECATED REST adapter (kept reachable as `stackadapt_legacy_rest`)
+   - `StackAdaptGraphQLDeliveryAdapter` — NEW 2026-04-29; thin bridge from `BaseDeliveryAdapter` to `integrations/stackadapt/adapter.py.StackAdaptAdapter`
+
+5. **`adam/retargeting/integrations/stackadapt_api_exporter.py` + `stackadapt_translator.py`** — Therapeutic-sequence → StackAdapt-config translation (separate from #1-4 — concerned with retargeting sequence export, not bid path).
+
+6. **`adam/ops/stackadapt_executor.py`** — Ops-layer executor that runs approved campaign changes via GraphQL. Reads `STACKADAPT_API_KEY` env.
+
+**The GraphQL token added to `.env` 2026-04-29** is read by:
+- `integrations/stackadapt/graphql_client.py` (reads `STACKADAPT_API_KEY` OR `STACKADAPT_GRAPHQL_KEY`) ✓
+- `integrations/stackadapt_graphql.py` (reads `STACKADAPT_GRAPHQL_KEY` only — but ZERO callers, so irrelevant)
+- `ops/stackadapt_executor.py` (reads `STACKADAPT_API_KEY` only)
+- `platform/delivery/dsp_adapter.py.StackAdaptGraphQLDeliveryAdapter.configure()` (reads BOTH names)
+
+**Discipline going forward:** all new StackAdapt write code goes through `integrations/stackadapt/adapter.py` (the canonical wrapper). The factory `'stackadapt'` entry resolves to the GraphQL bridge. The legacy paths exist for backward compat only.
+
+---
+
+# APPENDIX C — CRITICAL CROSS-CUTTING OBSERVATIONS
+
+These are integration-fragility surfaces that were not visible in the first pass:
+
+1. **TWO cold-start subsystems exist:**
+   - `adam/cold_start/` (23 files, 6207 LOC) — canonical, orchestrator imports from here
+   - `adam/coldstart/` (2 files, 31 LOC) — empty/abandoned, candidate for deletion
+   - `adam/user/cold_start/` — yet ANOTHER cold-start surface (archetypes.py 344, service.py 386). Overlap with `adam/cold_start/`.
+
+2. **TWO Thompson samplers:**
+   - `adam/cold_start/thompson/sampler.py` (310 LOC) — production Thompson sampler (orchestrator imports)
+   - `adam/meta_learner/thompson.py` (365) + `neural_thompson.py` (555) — meta-learner Thompson variants
+
+3. **TWO outcome handlers (?):**
+   - `adam/core/learning/outcome_handler.py` (2818 LOC) — production canonical
+   - `adam/api/stackadapt/webhook.py` (609 LOC) calls into `core/learning/outcome_handler.handle_outcome` so they ARE wired correctly. But it's worth verifying the full event path.
+
+4. **MULTIPLE learning packages** per `core/learning/__init__.py`: "FOUR learning-named packages serving distinct roles":
+   - `adam/core/learning/` — the canonical
+   - `adam/intelligence/learning/` — psychological learning integration
+   - `adam/cold_start/learning/` — cold start learning
+   - `adam/retargeting/engines/learning_loop.py` + `learning_dimensions.py` — retargeting learning
+   - PLUS `adam/services/bandit_service.py` and `adam/meta_learner/`
+
+5. **Resonance Engineering subsystem** (`adam/retargeting/resonance/`, 12 files) is a parallel architecture with its own resonance_model + resonance_learner + creative_adapter. This needs explicit reconciliation with the cascade modulation chain — does the cascade consume resonance signals, or is resonance a downstream layer?
+
+6. **Self-evolving brain** (`adam/orchestrator/adaptive/`, 6 modules ~3300 LOC) — episodic memory + neural routing + self-improvement + meta-orchestrator + graph rewriter. NOT yet referenced in this session's wires. Substantial substrate; needs investigation for production wiring status.
+
+7. **Foundation model** (`adam/ml/foundation_model.py`, 853 LOC) — "ADAM Foundation Model — Our Own AI Model." Status unknown; needs verification.
+
+8. **Universal API** (`adam/api/universal/router.py`, 3290 LOC) — largest router in the repo. Function unknown from this pass.
+
+9. **Workflow surface** (`adam/workflows/`, 8 files, 6809 LOC) — Holistic decision workflow + Synergy orchestrator + DSP impression workflow. May parallel campaign_orchestrator in places.
+
+10. **Behavioral analytics** (`adam/behavioral_analytics/`, 43 files, 26545 LOC) — `atom_interface.py` (1317) is large; classifiers cover advertising_effectiveness, approach_avoidance, cognitive_load, cognitive_state_estimator, decision_confidence, emotional_state. Distinguishing data libraries from active decision-time primitives needs DEPTH-3 read.
+
+---
+
+# APPENDIX D — INTEGRATION RULES (codified)
+
+When building NEW code, observe these integration patterns to avoid silos:
+
+## D.1 — Decision-time work belongs in the cascade
+
+If your work modulates which mechanism gets selected, the wire goes into `bilateral_cascade.run_bilateral_cascade()` between L4 (inferential transfer) and the final ε-floor sampler. Insert at the appropriate stage in the modulation chain (per Section "Cascade modulation chain"). Mutate `result.mechanism_scores`. Soft-fail any error to identity-passthrough. Add a `result.reasoning.append(...)` line for observability.
+
+## D.2 — Outcome-time work belongs in outcome_handler
+
+If your work updates state on conversion / click / refund / regret events, your update goes into `adam/core/learning/outcome_handler.py`. Add an import for your update function in `handle_outcome()`. Do not run as a separate event listener that bypasses `outcome_handler` — that creates a silo.
+
+## D.3 — Sync-readable state belongs in graph_cache
+
+If decision-time code needs to read your data, your data lives in `GraphIntelligenceCache`. Add a method, document its TTL, document its read-through fallback. Async-only sources need a sync bridge (see `cohort_modulation.py` for the canonical pattern).
+
+## D.4 — Batch jobs belong in the daily scheduler
+
+If your work is a periodic recompute / refit / audit, register it as a `DailyStrengtheningTask` in `adam/intelligence/daily/` and add to `_register_all_tasks()` in `scheduler.py`. Pick the right schedule_hours + frequency_hours.
+
+## D.5 — Atom DAG work plugs in via construct_dag
+
+New atoms inherit from `BaseAtom` (`adam/atoms/core/base.py`), register their dependencies in `adam/atoms/orchestration/construct_dag.py`, emit a `ChainAttestation` if they produce mechanism evidence. Terminal node is `mechanism_activation.py`.
+
+## D.6 — Platform writes go through factory + integrations/stackadapt
+
+New DSP write paths inherit from `BaseDeliveryAdapter`, register in `ADAPTER_REGISTRY` in `adam/platform/delivery/factory.py`. StackAdapt-specific writes wrap `adam/integrations/stackadapt/adapter.py` rather than redefining mutations.
+
+## D.7 — Blackboard for atom-shared state
+
+If atoms need to share intermediate state, write to one of the 5 blackboard zones (zone1_context / zone2_reasoning / zone3_synthesis / zone4_decision / zone5_learning). Don't pass state through ad-hoc mechanisms.
+
+## D.8 — Gradient Bridge for cross-component credit
+
+Cross-component learning signals route through `adam/gradient_bridge/`. Use `GradientBridgeService` + `SignalPackage` + `LearningSignal`. The orchestrator already wires this.
+
+---
+
+# APPENDIX E — AGGRESSIVE NEXT-SESSION READS (DEPTH-3)
+
+When time permits, the following files merit deep reads to fill remaining gaps:
+
+1. `adam/orchestrator/campaign_orchestrator.py` (2570 LOC) — full decision graph stages
+2. `adam/api/dashboard/router.py` (1792 LOC) — every endpoint + intelligence/ consumer
+3. `adam/api/universal/router.py` (3290 LOC) — what does Universal API serve?
+4. `adam/api/decision/router.py` (1615 LOC) — decision endpoints
+5. `adam/orchestrator/adaptive/self_improvement.py` (691 LOC) + `meta_orchestrator.py` (445) — production wiring status of self-evolving brain
+6. `adam/workflows/synergy_orchestrator.py` (2690 LOC) + `holistic_decision_workflow.py` (1636) — overlap with campaign_orchestrator?
+7. `adam/output/copy_generation/service.py` (2045 LOC) — copy generation production wiring
+8. `adam/core/learning/learned_priors_integration.py` (3886 LOC) — what does this actually do?
+9. `adam/core/learning/outcome_handler.py` (2818 LOC) — full per-update mapping
+10. `adam/atoms/core/mechanism_activation.py` (2627 LOC) — terminal atom logic
+11. `adam/api/stackadapt/bilateral_cascade.py` (3110 LOC) — just verify post-session wire integrity
+12. `adam/intelligence/page_intelligence.py` (2161 LOC) — page profiler internals
+13. `adam/intelligence/unified_psychological_intelligence.py` (1927 LOC) — central integration hub
+14. `adam/intelligence/deep_archetype_detection.py` (1925 LOC)
+15. `adam/intelligence/psychological_frameworks.py` (2378 LOC)
+
+These are the largest files; reading them gives the densest understanding-per-token.
