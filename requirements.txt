@@ -26,6 +26,18 @@ scipy>=1.13.0
 scikit-learn>=1.4.0
 econml>=0.16.0
 
+# Hierarchical Bayes (M3 — handoff §3.6 library pins)
+# Non-centered partial pooling per Papaspiliopoulos-Roberts-Sköld 2007.
+# Soft-imported in adam.intelligence.hierarchical_bayes; missing libs
+# raise HierarchyLibsMissingError. Task 34 (nightly refit) requires both.
+pymc>=5.16
+numpyro>=0.16,<0.20  # numpyro>=0.20 requires jax>=0.5 with new API
+jax>=0.4.30,<0.5     # numpyro 0.16.x compat band
+jaxlib>=0.4.30,<0.5
+
+# statsmodels — econml transitive dep; >=0.14.5 needed for scipy>=1.13 compat
+statsmodels>=0.14.5
+
 # Monitoring
 prometheus-client>=0.21.0
 

@@ -38,6 +38,18 @@ pandas = "^2.1.4"
 scikit-learn = "^1.4.0"
 econml = "^0.16.0"
 
+# Hierarchical Bayes (M3 — handoff §3.6 library pins)
+# pymc>=5.16, numpyro>=0.16 — required by Task 34 nightly refit.
+# numpyro>=0.20 broke API compat with jax>=0.5; pin numpyro to 0.16-0.19.
+# Pin jax<0.5 + jaxlib<0.5 for compat with numpyro 0.16.x band.
+pymc = "^5.16"
+numpyro = ">=0.16,<0.20"
+jax = ">=0.4.30,<0.5"
+jaxlib = ">=0.4.30,<0.5"
+
+# statsmodels — econml transitive dep; >=0.14.5 needed for scipy>=1.13 compat
+statsmodels = "^0.14.5"
+
 # Monitoring
 prometheus-client = "^0.19.0"
 
