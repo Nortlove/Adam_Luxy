@@ -170,8 +170,13 @@ def compatibility_prior(posture: str, mechanism: str) -> float:
         posture: one of ``POSTURE_BLEND``, ``POSTURE_VIGILANCE``,
             ``POSTURE_NEUTRAL``, ``POSTURE_UNKNOWN``. Unknown strings
             are soft-failed to MID with a debug log.
-        mechanism: one of the keys in ``MECHANISM_TAXONOMY``. Unknown
-            strings are soft-failed to MID with a debug log.
+        mechanism: a canonical taxonomy mechanism (in
+            ``MECHANISM_TAXONOMY``) OR a cohort-side mechanism (in
+            ``MECHANISM_DIMENSION_MAP`` — Cialdini-style: social_proof,
+            scarcity, etc.). Cohort-side names are translated to their
+            canonical equivalent via ``mechanism_vocab.to_canonical``
+            before the taxonomy lookup. Genuinely unknown strings
+            soft-fail to MID with a debug log.
 
     Returns:
         prior in {COMPATIBILITY_HIGH, COMPATIBILITY_LOW,
@@ -184,6 +189,13 @@ def compatibility_prior(posture: str, mechanism: str) -> float:
             "compatibility_prior: unknown posture %r → MID", posture,
         )
         return COMPATIBILITY_MID
+
+    # Slice 11: translate cohort-side names (social_proof, scarcity,
+    # authority, etc.) to canonical taxonomy names before lookup.
+    # Canonical names pass through unchanged. Genuinely unknown names
+    # also pass through and fall through to the MID soft-fail below.
+    from adam.intelligence.mechanism_vocab import to_canonical
+    mechanism = to_canonical(mechanism)
 
     if mechanism not in MECHANISM_TAXONOMY:
         logger.debug(
