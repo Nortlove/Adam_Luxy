@@ -480,6 +480,23 @@ async def receive_conversion(request: Request, event: PixelEvent):
             decision_id,
         )
 
+    # Sapid round-trip monitor — resolution side for the conversion path.
+    # negative_outcome_adapters already records resolution on the negative-
+    # outcome dispatcher path; this closes the symmetric resolution wire
+    # for the conversion-event path that hits the webhook directly.
+    # Audit §D1 + directive Section 3.7. Soft-fail by design.
+    try:
+        from adam.intelligence.spine.phase_8_stackadapt_integration import (
+            get_default_monitor,
+        )
+        get_default_monitor().record_resolution(
+            resolved=decision_ctx is not None,
+        )
+    except Exception as exc:  # noqa: BLE001 — soft-fail
+        logger.debug(
+            "Sapid round-trip monitor record_resolution failed: %s", exc,
+        )
+
     handler = _get_outcome_handler()
     updates = {}
     if handler:

@@ -227,6 +227,14 @@ class DecisionCache:
 
         Writes to both in-memory cache (fast) and Neo4j (durable) so that
         outcomes arriving after an app restart can still find their context.
+
+        Also increments the SapidRoundTripMonitor's registration counter —
+        per directive Section 3.7 ("treat the round-trip as sacred") +
+        Phase 10 RED-criterion (round-trip rate ≥ 95% required for launch).
+        Without this counter increment, the monitor only saw resolutions
+        (via negative_outcome_adapters.dispatch) and the registration
+        side stayed structurally 0. Soft-fail: any monitor error →
+        swallow + log; never blocks the persist.
         """
         key = ctx.decision_id
 
@@ -239,6 +247,18 @@ class DecisionCache:
 
         # Async write-through to Neo4j (fire-and-forget)
         self._persist_to_neo4j(ctx)
+
+        # Sapid round-trip monitor — registration side. Audit §D1.
+        try:
+            from adam.intelligence.spine.phase_8_stackadapt_integration import (
+                get_default_monitor,
+            )
+            get_default_monitor().record_registration()
+        except Exception as exc:  # noqa: BLE001 — soft-fail
+            logger.debug(
+                "Sapid round-trip monitor record_registration failed: %s",
+                exc,
+            )
 
         logger.debug(
             "Decision persisted: id=%s arch=%s mech=%s level=%d",
