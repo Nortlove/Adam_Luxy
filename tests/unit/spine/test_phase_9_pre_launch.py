@@ -34,6 +34,7 @@ from adam.intelligence.spine.phase_9_pre_launch import (
     is_red_criterion_triggered,
     lock_plan,
     msprt_step,
+    msprt_step_continuous,
     rank_architectures_by_metric,
 )
 
@@ -118,6 +119,147 @@ class TestMSPRTDecisions:
         )
         assert state.decision == MSPRTDecision.CONTINUE
         assert state.lower_boundary < state.log_likelihood_ratio < state.upper_boundary
+
+
+# -----------------------------------------------------------------------------
+# Slice 7 — continuous-outcome mSPRT (Howard et al. 2021 v0.1)
+# -----------------------------------------------------------------------------
+
+
+class TestMSPRTContinuous:
+    """Pin Slice 7 — Gaussian-likelihood mSPRT with caller-provided σ.
+
+    Discipline: same Wald α/β boundaries as the binary mSPRT (since
+    boundaries are α/β-derived, not distribution-dependent). The LLR
+    formula uses the harmonic-pooled n_pooled and the difference of
+    sample means under known σ.
+    """
+
+    def test_zero_data_continues(self):
+        state = msprt_step_continuous(
+            n_treatment=0, n_control=0,
+            sum_treatment=0.0, sum_control=0.0,
+            expected_lift=0.05,
+            sub_gaussian_sigma=0.10,
+        )
+        assert state.decision == MSPRTDecision.CONTINUE
+        assert state.log_likelihood_ratio == pytest.approx(0.0)
+
+    def test_one_arm_empty_continues(self):
+        """No control yet → can't form a difference → LLR=0 / CONTINUE."""
+        state = msprt_step_continuous(
+            n_treatment=100, n_control=0,
+            sum_treatment=10.0, sum_control=0.0,
+            expected_lift=0.05,
+            sub_gaussian_sigma=0.10,
+        )
+        assert state.decision == MSPRTDecision.CONTINUE
+        assert state.log_likelihood_ratio == pytest.approx(0.0)
+
+    def test_strong_continuous_lift_rejects_null(self):
+        """Treatment mean strongly above control mean by ≥ δ → LLR ≥ upper."""
+        # σ=0.10; mean_T=0.20; mean_C=0.05; diff=0.15 = expected_lift.
+        # n_T = n_C = 200 → n_pooled = 100. LLR = 0.15 · 0.15 · 100 / 0.01 - 100 · 0.0225 / 0.02
+        #     = 225 - 112.5 = 112.5. Way above upper ≈ 2.77.
+        state = msprt_step_continuous(
+            n_treatment=200, n_control=200,
+            sum_treatment=40.0,  # mean 0.20
+            sum_control=10.0,    # mean 0.05
+            expected_lift=0.15,
+            sub_gaussian_sigma=0.10,
+        )
+        assert state.decision == MSPRTDecision.REJECT_NULL
+        assert state.log_likelihood_ratio > state.upper_boundary
+
+    def test_no_lift_continuous_accepts_null(self):
+        """Treatment mean equals control mean (zero diff) → LLR ≤ lower
+        once n is large enough that the rejection cost outweighs the
+        zero-evidence baseline."""
+        # diff_obs = 0; LLR = 0 · ... - n_pooled · δ²/(2σ²)
+        # n_T = n_C = 500 → n_pooled = 250 → LLR = -250 · 0.0025 / 0.02 = -31.25
+        # Way below lower ≈ -1.558.
+        state = msprt_step_continuous(
+            n_treatment=500, n_control=500,
+            sum_treatment=25.0,  # mean 0.05
+            sum_control=25.0,    # mean 0.05
+            expected_lift=0.05,
+            sub_gaussian_sigma=0.10,
+        )
+        assert state.decision == MSPRTDecision.ACCEPT_NULL
+        assert state.log_likelihood_ratio < state.lower_boundary
+
+    def test_intermediate_signal_continues(self):
+        """Small lift, small n → LLR between boundaries → CONTINUE."""
+        state = msprt_step_continuous(
+            n_treatment=20, n_control=20,
+            sum_treatment=1.0,   # mean 0.05
+            sum_control=0.9,     # mean 0.045
+            expected_lift=0.05,
+            sub_gaussian_sigma=0.10,
+        )
+        assert state.decision == MSPRTDecision.CONTINUE
+        assert state.lower_boundary < state.log_likelihood_ratio < state.upper_boundary
+
+    def test_negative_sums_handled_signed_outcome(self):
+        """Continuous outcomes can be negative (signed scales like
+        time-since-baseline shifts). LLR formula handles it correctly."""
+        # Treatment mean = -0.02; Control mean = -0.10; diff = +0.08
+        state = msprt_step_continuous(
+            n_treatment=100, n_control=100,
+            sum_treatment=-2.0,
+            sum_control=-10.0,
+            expected_lift=0.08,
+            sub_gaussian_sigma=0.10,
+        )
+        # Diff observed matches expected_lift → strong evidence for H_1
+        assert state.log_likelihood_ratio > 0
+
+    def test_invalid_sigma_rejected(self):
+        with pytest.raises(ValueError, match="sub_gaussian_sigma"):
+            msprt_step_continuous(
+                n_treatment=10, n_control=10,
+                sum_treatment=0.5, sum_control=0.4,
+                expected_lift=0.05,
+                sub_gaussian_sigma=0.0,
+            )
+
+    def test_invalid_negative_counts_rejected(self):
+        with pytest.raises(ValueError, match="counts"):
+            msprt_step_continuous(
+                n_treatment=-1, n_control=10,
+                sum_treatment=0.5, sum_control=0.4,
+                expected_lift=0.05,
+                sub_gaussian_sigma=0.10,
+            )
+
+    def test_canonical_thresholds_match_binary(self):
+        """Continuous uses the same Wald α/β boundaries as binary."""
+        state_continuous = msprt_step_continuous(
+            n_treatment=10, n_control=10,
+            sum_treatment=0.5, sum_control=0.45,
+            expected_lift=0.05,
+            sub_gaussian_sigma=0.10,
+            alpha=0.05, beta=0.20,
+        )
+        state_binary = msprt_step(
+            n_treatment=10, n_control=10,
+            sum_treatment=0.5, sum_control=0.45,
+            expected_lift=0.05,
+            alpha=0.05, beta=0.20,
+        )
+        assert state_continuous.upper_boundary == state_binary.upper_boundary
+        assert state_continuous.lower_boundary == state_binary.lower_boundary
+
+    def test_red_criterion_works_for_continuous_state(self):
+        """is_red_criterion_triggered uses the same MSPRTState shape."""
+        state = msprt_step_continuous(
+            n_treatment=500, n_control=500,
+            sum_treatment=25.0,  # zero lift
+            sum_control=25.0,
+            expected_lift=0.05,
+            sub_gaussian_sigma=0.10,
+        )
+        assert is_red_criterion_triggered(state) is True
 
 
 class TestREDCriterion:

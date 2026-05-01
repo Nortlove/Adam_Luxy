@@ -228,6 +228,147 @@ def msprt_step(
     )
 
 
+# =============================================================================
+# mSPRT for sub-Gaussian / Gaussian continuous outcomes (Slice 7)
+# =============================================================================
+#
+# Closes the named-successor slice from msprt_outcome_aggregation
+# (line 75-77): "continuous-outcome mSPRT (Howard et al. 2021 sub-
+# gaussian extension) is a sibling slice when LUXY pilot data shows
+# binary collapses too much information."
+#
+# WHY THIS EXISTS
+# ---------------
+#
+# The binary mSPRT (msprt_step above) collapses every continuous
+# outcome (viewable dwell, scroll depth, time-on-site, value-conversion)
+# to {0, 1}. For a campaign that genuinely produces graded effects
+# (e.g., LUXY's premium-tier conversion has dollar-value variance,
+# not just yes/no), this loses information — small lifts on
+# continuous outcomes never reach the binary boundary in feasible
+# time, and the test stays at CONTINUE long after a sub-Gaussian
+# test would have decided.
+#
+# This v0.1 ships Gaussian-likelihood mSPRT with caller-provided
+# sub-Gaussian σ. The full Howard et al. 2021 nonparametric time-
+# uniform boundary (empirical-Bernstein with running variance
+# estimator, no σ assumption) is the v1.0 sibling.
+#
+# ALGORITHM
+# ---------
+#
+# Two-sample mSPRT for difference of means, sub-Gaussian (or Gaussian)
+# observations with known σ.
+#
+#   H_0: μ_T - μ_C = 0
+#   H_1: μ_T - μ_C = δ   (the expected_lift)
+#
+# Per-obs LLR for treatment observation X_T (with sample mean of
+# control μ̂_C plugged in for the nuisance parameter):
+#
+#   LLR_per_obs(X_T) = (X_T - μ̂_C) · δ / σ² - δ² / (2σ²)
+#
+# Cumulative LLR over both arms collapses (under H_0 vs H_1 the
+# control LLR is 0 by symmetry — μ_C is unchanged) to a function of
+# the difference of sample means, weighted by the harmonic-pooled n:
+#
+#   n_pooled = (n_T · n_C) / (n_T + n_C)         [variance of difference of means]
+#   diff_obs = μ̂_T - μ̂_C
+#   LLR     = δ · diff_obs · n_pooled / σ²  -  n_pooled · δ² / (2σ²)
+#
+# Wald boundaries (same α/β-derived constants as binary):
+#   upper = log((1 - β) / α)        REJECT_NULL when LLR ≥ upper
+#   lower = log(β / (1 - α))        ACCEPT_NULL when LLR ≤ lower
+#
+# Either arm with n=0 → LLR=0 / CONTINUE (no signal yet).
+
+
+def msprt_step_continuous(
+    n_treatment: int,
+    n_control: int,
+    sum_treatment: float,
+    sum_control: float,
+    expected_lift: float,
+    sub_gaussian_sigma: float,
+    *,
+    alpha: float = DEFAULT_MSPRT_ALPHA,
+    beta: float = DEFAULT_MSPRT_BETA,
+) -> MSPRTState:
+    """One step of the mSPRT for sub-Gaussian / Gaussian continuous outcomes.
+
+    v0.1 of the directive's Howard et al. 2021 sub-Gaussian mSPRT.
+    Uses Gaussian-likelihood LLR with a caller-provided sub-Gaussian
+    σ upper bound; full nonparametric empirical-Bernstein boundary
+    (running σ̂ estimator) is a sibling slice.
+
+    Args:
+        n_treatment, n_control: cumulative arm counts.
+        sum_treatment, sum_control: cumulative outcome sums (continuous).
+        expected_lift: H_1 effect on the difference of means (δ).
+        sub_gaussian_sigma: known / upper-bound sub-Gaussian parameter
+            for per-obs noise. Continuous outcomes are NOT bounded to
+            [0, 1] like the binary mSPRT — caller is responsible for
+            providing a σ that conservatively bounds the per-obs
+            sub-Gaussian noise. Conservative = larger σ = slower test
+            but valid; underestimating σ inflates type-I error.
+        alpha, beta: error rates (default α=0.05, β=0.20).
+
+    Returns MSPRTState with decision (CONTINUE / REJECT_NULL /
+    ACCEPT_NULL) and the boundaries.
+
+    Raises ValueError on negative counts / non-positive σ / out-of-
+    range α/β. Sums may be negative (some outcome scales are signed,
+    e.g., time-since-baseline).
+    """
+    if n_treatment < 0 or n_control < 0:
+        raise ValueError("counts must be non-negative")
+    if sub_gaussian_sigma <= 0:
+        raise ValueError(
+            f"sub_gaussian_sigma must be positive; got {sub_gaussian_sigma}"
+        )
+    if not 0.0 < alpha < 1.0:
+        raise ValueError(f"alpha must be in (0, 1); got {alpha}")
+    if not 0.0 < beta < 1.0:
+        raise ValueError(f"beta must be in (0, 1); got {beta}")
+
+    upper = _wald_upper_boundary(alpha, beta)
+    lower = _wald_lower_boundary(alpha, beta)
+    sigma_sq = sub_gaussian_sigma ** 2
+
+    # When either arm has no observations, the difference of means is
+    # undefined — LLR is 0 and we stay in CONTINUE.
+    if n_treatment == 0 or n_control == 0:
+        cumulative_llr = 0.0
+    else:
+        mean_t = sum_treatment / n_treatment
+        mean_c = sum_control / n_control
+        diff_obs = mean_t - mean_c
+        # Harmonic-pooled n for the variance of the difference of means
+        n_pooled = (n_treatment * n_control) / (n_treatment + n_control)
+        cumulative_llr = (
+            expected_lift * diff_obs * n_pooled / sigma_sq
+            - n_pooled * (expected_lift ** 2) / (2.0 * sigma_sq)
+        )
+
+    if cumulative_llr >= upper:
+        decision = MSPRTDecision.REJECT_NULL
+    elif cumulative_llr <= lower:
+        decision = MSPRTDecision.ACCEPT_NULL
+    else:
+        decision = MSPRTDecision.CONTINUE
+
+    return MSPRTState(
+        n_treatment=n_treatment,
+        n_control=n_control,
+        sum_treatment=sum_treatment,
+        sum_control=sum_control,
+        log_likelihood_ratio=cumulative_llr,
+        decision=decision,
+        upper_boundary=upper,
+        lower_boundary=lower,
+    )
+
+
 def is_red_criterion_triggered(state: MSPRTState) -> bool:
     """Return True iff the mSPRT has crossed the LOWER boundary.
 
