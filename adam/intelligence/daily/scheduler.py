@@ -327,6 +327,19 @@ def _register_all_tasks() -> None:
     except Exception as e:
         logger.debug("Task 36 (HMC user-posterior reconcile) not available: %s", e)
 
+    # Task 38 — Spine #6 DecisionTrace daily drain. Per
+    # CLAUDE_CODE_DIRECTIVE_FULL_BUILD.md line 248. Hourly consumer
+    # of the in-memory trace log produced by the cascade producer
+    # wiring (ab10f26). Without this scheduled, traces accumulate
+    # in memory and never reach Redis hot cache or Neo4j archival.
+    try:
+        from adam.intelligence.daily.task_38_decision_trace_drain import (
+            DecisionTraceDrainTask,
+        )
+        tasks.append(DecisionTraceDrainTask())
+    except Exception as e:
+        logger.debug("Task 38 (DecisionTrace drain) not available: %s", e)
+
     for task in tasks:
         _task_registry[task.name] = task
 
