@@ -283,6 +283,28 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
     except Exception as e:
         logger.warning("Pilot bootstrap failed (non-blocking): %s", e)
 
+    # Spine #5 dual-eval context warm — load labels, train B + C,
+    # register the winning model as primary. Cold start (no labels yet)
+    # → passthrough primary stays in place via fallback. Soft-fails;
+    # cascade still emits valid F() values via passthrough.
+    try:
+        from adam.intelligence.free_energy_dual_eval import (
+            warm_dual_eval_from_neo4j,
+        )
+        neo4j_driver = getattr(infra, "neo4j_driver", None)
+        warm_status = await warm_dual_eval_from_neo4j(neo4j_driver)
+        logger.info(
+            "Spine #5 dual-eval warm: outcome=%s n_labels=%d "
+            "trained=%s winner=%s reason=%s",
+            warm_status["outcome"],
+            warm_status["n_labels"],
+            ",".join(warm_status["trained_models"]) or "-",
+            warm_status["winner"] or "-",
+            warm_status["reason"] or "-",
+        )
+    except Exception as e:
+        logger.debug("Dual-eval warm skipped: %s", e)
+
     logger.info("ADAM Platform Ready")
     logger.info(f"API available at http://{settings.api.host}:{settings.api.port}")
     logger.info(f"Docs available at http://{settings.api.host}:{settings.api.port}/docs")

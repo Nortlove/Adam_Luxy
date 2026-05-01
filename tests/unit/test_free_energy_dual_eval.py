@@ -41,7 +41,7 @@ Discipline anchors (B3-LUXY a/b/c/d):
 from __future__ import annotations
 
 from typing import Any, Dict
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -340,3 +340,193 @@ def test_register_with_none_primary_falls_back_to_passthrough():
 
 def test_default_top_k_pinned():
     assert DEFAULT_TOP_K_GOALS_LOGGED == 5
+
+
+# -----------------------------------------------------------------------------
+# Slice 20 — warm_dual_eval_from_neo4j
+# -----------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_warm_no_driver_returns_skipped():
+    """No driver → soft-fail; passthrough primary preserved."""
+    from adam.intelligence.free_energy_dual_eval import (
+        warm_dual_eval_from_neo4j,
+    )
+    status = await warm_dual_eval_from_neo4j(driver=None)
+    assert status["outcome"] == "skipped"
+    assert status["reason"] == "no_driver"
+
+
+@pytest.mark.asyncio
+async def test_warm_cold_start_when_below_threshold():
+    """Fewer labels than min_label_count → cold_start; passthrough primary."""
+    from adam.intelligence.free_energy_dual_eval import (
+        warm_dual_eval_from_neo4j,
+    )
+    from adam.intelligence.goal_state_label_generator import GoalStateLabel
+
+    fake_labels = [
+        GoalStateLabel(
+            label_id=f"l-{i}", page_url="x", page_features={},
+            active_goal_state_ids=["airport_transfer"], confidence=0.85,
+        )
+        for i in range(5)
+    ]
+
+    with patch(
+        "adam.intelligence.goal_state_label_generator.load_labels_from_neo4j",
+        return_value=fake_labels,
+    ):
+        status = await warm_dual_eval_from_neo4j(
+            driver=MagicMock(), min_label_count=20,
+        )
+    assert status["outcome"] == "cold_start"
+    assert status["n_labels"] == 5
+    assert "5 labels" in status["reason"]
+
+
+@pytest.mark.asyncio
+async def test_warm_load_labels_failure_returns_skipped():
+    """If load_labels_from_neo4j raises, return skipped."""
+    from adam.intelligence.free_energy_dual_eval import (
+        warm_dual_eval_from_neo4j,
+    )
+
+    with patch(
+        "adam.intelligence.goal_state_label_generator.load_labels_from_neo4j",
+        side_effect=RuntimeError("neo4j down"),
+    ):
+        status = await warm_dual_eval_from_neo4j(driver=MagicMock())
+    assert status["outcome"] == "skipped"
+    assert "load_labels_failed" in status["reason"]
+
+
+@pytest.mark.asyncio
+async def test_warm_both_models_fail_returns_skipped():
+    """If train_models_from_labels returns (None, None), return skipped."""
+    from adam.intelligence.free_energy_dual_eval import (
+        warm_dual_eval_from_neo4j,
+    )
+    from adam.intelligence.goal_state_label_generator import GoalStateLabel
+
+    fake_labels = [
+        GoalStateLabel(
+            label_id=f"l-{i}", page_url="x", page_features={},
+            active_goal_state_ids=["airport_transfer"], confidence=0.85,
+        )
+        for i in range(50)
+    ]
+
+    with patch(
+        "adam.intelligence.goal_state_label_generator.load_labels_from_neo4j",
+        return_value=fake_labels,
+    ), patch(
+        "adam.intelligence.goal_state_label_generator.train_models_from_labels",
+        return_value=(None, None),
+    ):
+        status = await warm_dual_eval_from_neo4j(driver=MagicMock())
+    assert status["outcome"] == "skipped"
+    assert "both_models_failed_to_train" in status["reason"]
+
+
+@pytest.mark.asyncio
+async def test_warm_only_one_model_trains_registers_it_as_primary():
+    """If only B trains (C lib missing), register B as primary."""
+    from adam.intelligence.free_energy_dual_eval import (
+        warm_dual_eval_from_neo4j,
+    )
+    from adam.intelligence.goal_state_label_generator import GoalStateLabel
+
+    fake_labels = [
+        GoalStateLabel(
+            label_id=f"l-{i}", page_url="x", page_features={},
+            active_goal_state_ids=["airport_transfer"], confidence=0.85,
+        )
+        for i in range(50)
+    ]
+
+    class _FakeB:
+        @property
+        def model_name(self): return "logistic_v1"
+        def predict_p(self, page_features, user_state=None):
+            return _uniform_posterior("logistic_v1")
+        def predict_q(self, p, m): return p
+
+    with patch(
+        "adam.intelligence.goal_state_label_generator.load_labels_from_neo4j",
+        return_value=fake_labels,
+    ), patch(
+        "adam.intelligence.goal_state_label_generator.train_models_from_labels",
+        return_value=(_FakeB(), None),
+    ):
+        status = await warm_dual_eval_from_neo4j(driver=MagicMock())
+
+    assert status["outcome"] == "registered"
+    assert status["winner"] == "logistic_v1"
+    assert status["reason"] == "only_one_model_trained"
+
+    # Verify the singleton was actually swapped
+    ctx = get_dual_eval_context()
+    assert ctx.primary_model.model_name == "logistic_v1"
+    assert ctx.shadow_model is None
+
+
+@pytest.mark.asyncio
+async def test_warm_both_trained_picks_winner_by_evaluator():
+    """When both train, the winner is determined by the evaluator."""
+    from adam.intelligence.free_energy_dual_eval import (
+        warm_dual_eval_from_neo4j,
+    )
+    from adam.intelligence.goal_state_label_generator import GoalStateLabel
+
+    fake_labels = [
+        GoalStateLabel(
+            label_id=f"l-{i}", page_url=f"https://x.com/{i}",
+            page_features={"posture_class": "blend_compatible"},
+            active_goal_state_ids=["airport_transfer"], confidence=0.85,
+        )
+        for i in range(50)
+    ]
+
+    # B concentrates on the right answer (will win)
+    class _FakeB:
+        @property
+        def model_name(self): return "logistic_v1"
+        def predict_p(self, page_features, user_state=None):
+            n = len(list_goal_states())
+            probs = {g.id: 0.01 for g in list_goal_states()}
+            probs["airport_transfer"] = 1.0 - 0.01 * (n - 1)
+            return GoalStatePosterior(
+                probabilities=probs, model_name="logistic_v1",
+            )
+        def predict_q(self, p, m): return p
+
+    # C is uniform (will lose)
+    class _FakeC:
+        @property
+        def model_name(self): return "hierarchical_v1"
+        def predict_p(self, page_features, user_state=None):
+            return _uniform_posterior("hierarchical_v1")
+        def predict_q(self, p, m): return p
+
+    with patch(
+        "adam.intelligence.goal_state_label_generator.load_labels_from_neo4j",
+        return_value=fake_labels,
+    ), patch(
+        "adam.intelligence.goal_state_label_generator.train_models_from_labels",
+        return_value=(_FakeB(), _FakeC()),
+    ):
+        status = await warm_dual_eval_from_neo4j(driver=MagicMock())
+
+    assert status["outcome"] == "registered"
+    assert status["winner"] == "logistic_v1"  # B wins
+    assert "logistic_v1" in status["trained_models"]
+    assert "hierarchical_v1" in status["trained_models"]
+
+    ctx = get_dual_eval_context()
+    assert ctx.primary_model.model_name == "logistic_v1"
+    assert ctx.shadow_model.model_name == "hierarchical_v1"
+
+
+from adam.intelligence.free_energy import GoalStatePosterior

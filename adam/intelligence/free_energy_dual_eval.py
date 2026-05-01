@@ -365,3 +365,150 @@ def reset_dual_eval_for_tests() -> None:
         primary_model=PassthroughGoalStateModel(),
         shadow_model=None,
     )
+
+
+# =============================================================================
+# Slice 20 — startup wire (load labels → train B+C → register winner)
+# =============================================================================
+
+
+async def warm_dual_eval_from_neo4j(
+    driver: Optional[Any],
+    *,
+    min_label_count: int = 20,
+) -> Dict[str, Any]:
+    """Application-startup composer.
+
+    Composes:
+        load_labels_from_neo4j(driver)
+            ↓
+        train_models_from_labels(labels)  → (B, C)
+            ↓
+        compare_models_on_labels(labels, primary, shadow)
+            ↓
+        recommend_primary(report)  → winner_name
+            ↓
+        register_dual_eval_context(primary=winner, shadow=other)
+
+    Returns a status dict for the startup log:
+        {
+            "outcome": "registered" | "cold_start" | "skipped",
+            "n_labels": int,
+            "trained_models": list of names,
+            "winner": str | None,
+            "reason": str (when skipped/cold_start),
+        }
+
+    Soft-fail discipline: ANY exception in the chain returns
+    outcome="skipped" with reason. The default DualEvalContext
+    singleton (passthrough primary, no shadow) stays in place.
+    Production cascade still emits valid F() values via passthrough
+    fallback while operators investigate.
+
+    Cold start: when fewer than ``min_label_count`` labels exist,
+    skip training. Default 20 — both LogisticRegression and
+    NumPyro SVI need a minimum sample for the fit to be meaningful.
+
+    Idempotent: calling repeatedly re-runs the chain; the singleton
+    is replaced on each call. Designed for FastAPI startup but also
+    safe to call from a Daily Task that retrains nightly.
+    """
+    status: Dict[str, Any] = {
+        "outcome": "skipped",
+        "n_labels": 0,
+        "trained_models": [],
+        "winner": None,
+        "reason": "",
+    }
+
+    if driver is None:
+        status["reason"] = "no_driver"
+        return status
+
+    try:
+        from adam.intelligence.goal_state_label_generator import (
+            load_labels_from_neo4j,
+            train_models_from_labels,
+        )
+        labels = await load_labels_from_neo4j(driver)
+    except Exception as exc:
+        status["reason"] = f"load_labels_failed: {exc}"
+        return status
+
+    status["n_labels"] = len(labels)
+
+    if len(labels) < min_label_count:
+        status["outcome"] = "cold_start"
+        status["reason"] = (
+            f"only {len(labels)} labels (< {min_label_count} required); "
+            f"keeping passthrough primary"
+        )
+        return status
+
+    try:
+        b_model, c_model = train_models_from_labels(labels)
+    except Exception as exc:
+        status["reason"] = f"train_failed: {exc}"
+        return status
+
+    if b_model is None and c_model is None:
+        status["reason"] = "both_models_failed_to_train"
+        return status
+
+    if b_model is not None:
+        status["trained_models"].append(b_model.model_name)
+    if c_model is not None:
+        status["trained_models"].append(c_model.model_name)
+
+    # If only one model trained, register it as primary directly.
+    if b_model is None or c_model is None:
+        primary = b_model if b_model is not None else c_model
+        register_dual_eval_context(primary_model=primary, shadow_model=None)
+        status["outcome"] = "registered"
+        status["winner"] = primary.model_name
+        status["reason"] = "only_one_model_trained"
+        return status
+
+    # Both trained — score them and pick the winner.
+    try:
+        from adam.intelligence.dual_eval_evaluator import (
+            compare_models_on_labels,
+            recommend_primary,
+        )
+        report = compare_models_on_labels(labels, b_model, c_model)
+    except Exception as exc:
+        # Evaluator failed — register B as primary by default
+        register_dual_eval_context(
+            primary_model=b_model, shadow_model=c_model,
+        )
+        status["outcome"] = "registered"
+        status["winner"] = b_model.model_name
+        status["reason"] = f"evaluator_failed_b_default: {exc}"
+        return status
+
+    if report is None:
+        register_dual_eval_context(
+            primary_model=b_model, shadow_model=c_model,
+        )
+        status["outcome"] = "registered"
+        status["winner"] = b_model.model_name
+        status["reason"] = "evaluator_returned_none_b_default"
+        return status
+
+    winner_name = recommend_primary(report)
+
+    if winner_name == c_model.model_name:
+        register_dual_eval_context(
+            primary_model=c_model, shadow_model=b_model,
+        )
+        status["winner"] = c_model.model_name
+    else:
+        # Default to B as primary on ties / unknown winner — the Logistic
+        # model is the simpler / more interpretable / faster of the two.
+        register_dual_eval_context(
+            primary_model=b_model, shadow_model=c_model,
+        )
+        status["winner"] = b_model.model_name
+
+    status["outcome"] = "registered"
+    return status
