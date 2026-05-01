@@ -2846,6 +2846,79 @@ def run_bilateral_cascade(
         except Exception as exc:
             logger.debug("Posture × mechanism modulation skipped: %s", exc)
 
+    # ─── FREE-ENERGY MODULATION (Spine #5 — directive line 521) ───
+    # Slice 17d: subtract λ_F · F(a) from each mechanism score per
+    # the active-inference free-energy objective (Spine #5 lines
+    # 199-222). The DualEvalContext singleton holds primary +
+    # optional shadow goal-state models (Slices 17a/b/c). Default
+    # primary is PassthroughGoalStateModel (heuristic v0.1) until
+    # trained Logistic / Hierarchical models register at startup.
+    # Soft-fail: any error → scores pass through unchanged.
+    if result.mechanism_scores and page_url:
+        try:
+            from adam.intelligence.free_energy_dual_eval import (
+                apply_free_energy_modulation,
+                get_dual_eval_context,
+            )
+            from adam.intelligence.page_attentional_posture_substrate import (
+                categorize_posture,
+            )
+            from adam.intelligence.page_intelligence import (
+                get_page_intelligence_cache,
+            )
+
+            _ctx = get_dual_eval_context()
+            if _ctx.has_primary:
+                # Build minimal page_features from the page intelligence
+                # cache. The shape MUST match
+                # goal_state_logistic_model.extract_feature_vector's
+                # expectations so trained B/C models work.
+                _ppc = get_page_intelligence_cache()
+                _profile = _ppc.lookup(page_url)
+                _page_features: Dict[str, Any] = {}
+                _posture_conf_local = 0.0
+                if _profile is not None:
+                    _attn_post = float(
+                        getattr(_profile, "attentional_posture", 0.0)
+                        or 0.0
+                    )
+                    _posture_conf_local = float(
+                        getattr(
+                            _profile, "attentional_posture_confidence", 0.0,
+                        ) or 0.0
+                    )
+                    _page_features["posture_class"] = categorize_posture(
+                        _attn_post, _posture_conf_local,
+                    )
+                    _page_features["posture_confidence"] = _posture_conf_local
+                    _ed = getattr(_profile, "edge_dimensions", None)
+                    if _ed is not None and isinstance(_ed, dict):
+                        # Convert dict to list (sklearn-compatible
+                        # ordering would need dimension_names; use
+                        # dict.values() for v0.1 — order stable
+                        # across calls because Python 3.7+ dicts).
+                        _page_features["edge_dimensions"] = list(_ed.values())
+                _fe_modulated = apply_free_energy_modulation(
+                    mechanism_scores=result.mechanism_scores,
+                    page_features=_page_features,
+                    context=_ctx,
+                    posture_confidence=_posture_conf_local,
+                )
+                if _fe_modulated is not result.mechanism_scores:
+                    _shifted = sum(
+                        1
+                        for m, v in _fe_modulated.items()
+                        if abs(v - result.mechanism_scores.get(m, v)) > 1e-9
+                    )
+                    if _shifted:
+                        result.reasoning.append(
+                            f"Free-energy modulation: {_shifted} "
+                            f"mechanisms shifted"
+                        )
+                    result.mechanism_scores = _fe_modulated
+        except Exception as exc:
+            logger.debug("Free-energy modulation skipped: %s", exc)
+
     # ─── PER-USER POSTERIOR MODULATION (N-of-1 shrinkage) ───
     # Audit §0a fix: until now the cascade read cached archive priors
     # at decision time. This call applies the buyer's accumulated
@@ -3197,6 +3270,42 @@ def run_bilateral_cascade(
         except Exception as _exc:
             logger.debug("Posture lookup skipped: %s", _exc)
 
+        # Slice 17d — dual-eval logging. Primary's posterior + F per
+        # mechanism logged for the Defensive Reasoning surface;
+        # shadow's logged for offline B-vs-C comparison (Slice 19
+        # evaluator). Both flow into user_posterior_snapshot via
+        # namespaced keys ('gs_primary.*', 'gs_shadow.*').
+        _dual_eval_log: Dict[str, float] = {}
+        try:
+            from adam.intelligence.free_energy_dual_eval import (
+                compute_dual_eval_log,
+                get_dual_eval_context,
+            )
+            _dual_ctx = get_dual_eval_context()
+            if _dual_ctx.has_primary or _dual_ctx.shadow_model is not None:
+                _dual_page_features: Dict[str, Any] = {}
+                if _posture_class:
+                    _dual_page_features["posture_class"] = _posture_class
+                if _posture_confidence is not None:
+                    _dual_page_features["posture_confidence"] = (
+                        _posture_confidence
+                    )
+                _dual_eval_log = compute_dual_eval_log(
+                    mechanism_scores=result.mechanism_scores or {},
+                    page_features=_dual_page_features,
+                    context=_dual_ctx,
+                    posture_confidence=_posture_confidence or 0.0,
+                )
+        except Exception as _exc:
+            logger.debug("Dual-eval log skipped: %s", _exc)
+
+        # Merge dual-eval log into the confidence snapshot dict —
+        # both flow into user_posterior_snapshot via the emitter's
+        # numeric-merge path. Namespaced keys prevent collision
+        # with the confidence snapshot's keys.
+        _snapshot_for_emitter = dict(_confidence_snapshot or {})
+        _snapshot_for_emitter.update(_dual_eval_log)
+
         _trace = build_trace_from_cascade(
             decision_id=f"cascade-{int(t0 * 1000)}-{buyer_id or 'anon'}",
             user_id=buyer_id or "",
@@ -3205,7 +3314,7 @@ def run_bilateral_cascade(
             cascade_result=result,
             chosen_mechanism=chosen_mech or result.primary_mechanism,
             p_t=float(p_t),
-            confidence_snapshot=_confidence_snapshot,
+            confidence_snapshot=_snapshot_for_emitter,
             posture_class=_posture_class,
             posture_confidence=_posture_confidence,
             page_posture_vector=_posture_vector,
