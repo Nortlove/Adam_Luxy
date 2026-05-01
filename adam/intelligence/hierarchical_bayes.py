@@ -476,12 +476,28 @@ def fit_hierarchical_model(
     observations: List[HierarchicalObservation],
     nuts_params: Optional[Dict[str, Any]] = None,
     priors: Optional[Dict[str, float]] = None,
+    pre_specified_interactions: Optional[List[Tuple[str, str, str]]] = None,
 ) -> Tuple[List[CellPosterior], FitDiagnostics]:
     """Fit the hierarchical model and recover Beta(α, β) per cell.
 
     Returns (cell_posteriors, diagnostics). The diagnostics include
     r_hat_max + ess_bulk_min + divergence count — handoff §3.7
     requires r̂ < 1.01 and ESS > 400 with zero divergences post-warmup.
+
+    Args:
+        observations: per-cell observation rows.
+        nuts_params: optional NUTS sampler overrides.
+        priors: optional partial-pooling prior overrides.
+        pre_specified_interactions: optional list of (archetype,
+            mechanism, category) triples that should bypass the
+            horseshoe shrinkage with a wider Normal(0, 1.0) prior.
+            When None (default), the simpler partial-pooling-only
+            model is used. When non-None (even empty list), the
+            δ_iac interaction-aware model is built — see
+            ``build_hierarchical_model_with_interactions`` (directive
+            line 988 + 1055). Typical caller: Task 34 passing the
+            FDR-selected triples from
+            ``iac_fdr_selection.select_pre_specified_for_next_fit``.
 
     Raises:
         HierarchyLibsMissingError if PyMC/NumPyro isn't available
@@ -507,7 +523,19 @@ def fit_hierarchical_model(
     except ImportError as exc:
         raise HierarchyLibsMissingError(f"PyMC deps missing: {exc}")
 
-    model, coords = build_hierarchical_model(observations, priors=priors)
+    if pre_specified_interactions is not None:
+        # Interaction-aware model: pre-specified triples bypass horseshoe.
+        # Returns a 3-tuple; the third element (observed_triples) is the
+        # δ_iac extraction key used by sibling slices, not by this fit.
+        model, coords, _observed_triples = (
+            build_hierarchical_model_with_interactions(
+                observations,
+                pre_specified_interactions=pre_specified_interactions,
+                priors=priors,
+            )
+        )
+    else:
+        model, coords = build_hierarchical_model(observations, priors=priors)
     nuts = {**_NUTS_PARAMS, **(nuts_params or {})}
 
     try:
@@ -655,6 +683,7 @@ def write_cell_posterior_to_neo4j(
 def run_nightly_hierarchical_refit(
     driver: Optional[Any] = None,
     days_lookback: int = 90,
+    pre_specified_interactions: Optional[List[Tuple[str, str, str]]] = None,
 ) -> FitDiagnostics:
     """Drive the nightly fit + writeback. Handoff §3.5 cadence.
 
@@ -662,6 +691,18 @@ def run_nightly_hierarchical_refit(
     divergences > 0 means the fit didn't converge — the writeback
     still happens (better than stale priors) but the diagnostic
     surface flags it.
+
+    Args:
+        driver: Neo4j driver. None resolves via dependencies.
+        days_lookback: observation window.
+        pre_specified_interactions: optional FDR-selected triple list
+            from the prior horseshoe fit
+            (``iac_fdr_selection.select_pre_specified_for_next_fit``).
+            When provided, the fit uses the interaction-aware model so
+            the system's belief about which interactions exist
+            iteratively tightens (directive line 988 + 1055). When
+            None (default), the existing partial-pooling-only fit
+            runs — backward compatible.
     """
     obs = load_observations_from_neo4j(
         driver=driver, days_lookback=days_lookback,
@@ -671,7 +712,10 @@ def run_nightly_hierarchical_refit(
         diag.errors.append("no observations available")
         return diag
 
-    cells, diag = fit_hierarchical_model(obs)
+    cells, diag = fit_hierarchical_model(
+        obs,
+        pre_specified_interactions=pre_specified_interactions,
+    )
 
     written = 0
     for cell in cells:
