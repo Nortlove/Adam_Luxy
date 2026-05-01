@@ -410,13 +410,15 @@ def test_observation_batch_rejects_negative_counts():
         )
 
 
-def test_observation_batch_rejects_negative_sums():
-    from pydantic import ValidationError
-    with pytest.raises(ValidationError):
-        ObservationBatch(
-            treatment_n=10, treatment_sum=-1.0,
-            control_n=10, control_sum=0.0,
-        )
+def test_observation_batch_accepts_negative_sums_for_continuous_outcomes():
+    """Slice 10: continuous-outcome support means sums CAN be negative
+    (signed-scale outcomes such as time-since-baseline shifts).
+    Counts still cannot be negative; sums are unconstrained."""
+    batch = ObservationBatch(
+        treatment_n=10, treatment_sum=-1.0,
+        control_n=10, control_sum=0.0,
+    )
+    assert batch.treatment_sum == -1.0
 
 
 def test_state_extra_fields_forbidden():
@@ -433,3 +435,195 @@ def test_config_extra_fields_forbidden():
         MSPRTCampaignConfig(
             campaign_id="c", unknown_field=1,  # type: ignore[call-arg]
         )
+
+
+# -----------------------------------------------------------------------------
+# Slice 10 — outcome_mode dispatch (continuous mSPRT wire)
+# -----------------------------------------------------------------------------
+
+
+def test_default_outcome_mode_is_binary():
+    """Backward-compatible default: existing callers see binary mode."""
+    config = MSPRTCampaignConfig(campaign_id="c")
+    assert config.outcome_mode == "binary"
+    assert config.sub_gaussian_sigma is None
+
+
+@pytest.mark.asyncio
+async def test_step_continuous_mode_seeds_initial_state():
+    """First step on a continuous-mode campaign carries outcome_mode +
+    sigma into the persisted state."""
+    driver = FakeAsyncNeo4jDriver()
+    config = MSPRTCampaignConfig(
+        campaign_id="cont-1",
+        expected_lift=0.05,
+        outcome_mode="continuous",
+        sub_gaussian_sigma=0.10,
+    )
+    batch = ObservationBatch(
+        treatment_n=10, treatment_sum=1.0,
+        control_n=10, control_sum=0.5,
+    )
+    state = await step_campaign_monitor(config, batch, driver=driver)
+
+    assert state.outcome_mode == "continuous"
+    assert state.sub_gaussian_sigma == pytest.approx(0.10)
+    # State was persisted with the new fields
+    persisted = driver.states["cont-1"]
+    assert persisted["outcome_mode"] == "continuous"
+    assert persisted["sub_gaussian_sigma"] == pytest.approx(0.10)
+
+
+@pytest.mark.asyncio
+async def test_step_continuous_strong_lift_rejects_null():
+    """Continuous outcome — strong lift accumulates to REJECT_NULL."""
+    driver = FakeAsyncNeo4jDriver()
+    config = MSPRTCampaignConfig(
+        campaign_id="cont-strong",
+        expected_lift=0.15,
+        outcome_mode="continuous",
+        sub_gaussian_sigma=0.10,
+    )
+    # Treatment mean 0.20; control mean 0.05; diff 0.15 = expected_lift.
+    # n=200 each → big LLR.
+    batch = ObservationBatch(
+        treatment_n=200, treatment_sum=40.0,  # mean 0.20
+        control_n=200, control_sum=10.0,      # mean 0.05
+    )
+    state = await step_campaign_monitor(config, batch, driver=driver)
+    assert state.decision == "reject_null"
+
+
+@pytest.mark.asyncio
+async def test_step_continuous_no_lift_accepts_null():
+    """Continuous outcome — zero diff with large n accumulates to
+    ACCEPT_NULL (RED-criterion launch deferral)."""
+    driver = FakeAsyncNeo4jDriver()
+    config = MSPRTCampaignConfig(
+        campaign_id="cont-null",
+        expected_lift=0.05,
+        outcome_mode="continuous",
+        sub_gaussian_sigma=0.10,
+    )
+    batch = ObservationBatch(
+        treatment_n=500, treatment_sum=25.0,  # mean 0.05
+        control_n=500, control_sum=25.0,      # mean 0.05
+    )
+    state = await step_campaign_monitor(config, batch, driver=driver)
+    assert state.decision == "accept_null"
+    assert is_red_criterion_triggered(state) is True
+
+
+@pytest.mark.asyncio
+async def test_step_continuous_negative_outcomes_supported():
+    """Signed-scale continuous outcomes (e.g., time-since-baseline)
+    flow through without ObservationBatch validation errors."""
+    driver = FakeAsyncNeo4jDriver()
+    config = MSPRTCampaignConfig(
+        campaign_id="cont-signed",
+        expected_lift=0.08,
+        outcome_mode="continuous",
+        sub_gaussian_sigma=0.10,
+    )
+    batch = ObservationBatch(
+        treatment_n=100, treatment_sum=-2.0,  # mean -0.02
+        control_n=100, control_sum=-10.0,     # mean -0.10
+    )
+    # diff = +0.08 (matches expected_lift) → positive LLR
+    state = await step_campaign_monitor(config, batch, driver=driver)
+    assert state.log_likelihood_ratio > 0
+
+
+@pytest.mark.asyncio
+async def test_step_continuous_mode_persists_across_loads():
+    """Reload after a continuous step preserves outcome_mode + sigma."""
+    driver = FakeAsyncNeo4jDriver()
+    config = MSPRTCampaignConfig(
+        campaign_id="cont-persist",
+        expected_lift=0.05,
+        outcome_mode="continuous",
+        sub_gaussian_sigma=0.12,
+    )
+    batch1 = ObservationBatch(
+        treatment_n=50, treatment_sum=5.0,
+        control_n=50, control_sum=4.0,
+    )
+    state1 = await step_campaign_monitor(config, batch1, driver=driver)
+
+    # Second step — config is now redundant (loaded state takes over)
+    batch2 = ObservationBatch(
+        treatment_n=50, treatment_sum=5.0,
+        control_n=50, control_sum=4.0,
+    )
+    state2 = await step_campaign_monitor(config, batch2, driver=driver)
+
+    assert state2.outcome_mode == "continuous"
+    assert state2.sub_gaussian_sigma == pytest.approx(0.12)
+    # Cumulative grew
+    assert state2.n_treatment == 100
+    assert state2.n_control == 100
+
+
+@pytest.mark.asyncio
+async def test_step_continuous_missing_sigma_raises():
+    """outcome_mode='continuous' with sub_gaussian_sigma=None raises
+    when the dispatch reaches msprt_step_continuous."""
+    driver = FakeAsyncNeo4jDriver()
+    config = MSPRTCampaignConfig(
+        campaign_id="cont-bad",
+        outcome_mode="continuous",
+        sub_gaussian_sigma=None,  # explicit
+    )
+    batch = ObservationBatch(
+        treatment_n=10, treatment_sum=1.0,
+        control_n=10, control_sum=0.5,
+    )
+    with pytest.raises(ValueError, match="sub_gaussian_sigma"):
+        await step_campaign_monitor(config, batch, driver=driver)
+
+
+@pytest.mark.asyncio
+async def test_step_binary_default_path_unchanged():
+    """The original binary-mode behavior is preserved for callers
+    that don't set outcome_mode."""
+    driver = FakeAsyncNeo4jDriver()
+    config = MSPRTCampaignConfig(
+        campaign_id="bin-default",
+        expected_lift=0.10,
+        null_baseline_rate=0.05,
+    )
+    batch = ObservationBatch(
+        treatment_n=50, treatment_sum=10.0,  # 20% rate
+        control_n=50, control_sum=2.5,
+    )
+    state = await step_campaign_monitor(config, batch, driver=driver)
+    assert state.outcome_mode == "binary"
+    assert state.sub_gaussian_sigma is None
+    # binary REJECT_NULL on strong-signal accumulation
+    assert state.decision == "reject_null"
+
+
+@pytest.mark.asyncio
+async def test_load_pre_slice_10_state_defaults_to_binary():
+    """Reloading a state persisted before Slice 10 (no outcome_mode
+    property in record) defaults to binary mode for backward compat."""
+    driver = FakeAsyncNeo4jDriver()
+    # Manually plant a state row that lacks outcome_mode / sub_gaussian_sigma
+    driver.states["legacy"] = {
+        "campaign_id": "legacy",
+        "n_treatment": 10, "n_control": 10,
+        "sum_treatment": 1.0, "sum_control": 0.5,
+        "expected_lift": 0.05,
+        "alpha": 0.05, "beta": 0.20,
+        "null_baseline_rate": 0.05,
+        "log_likelihood_ratio": 0.0,
+        "decision": "continue",
+        "upper_boundary": 2.77,
+        "lower_boundary": -1.56,
+        "last_updated_ts": 1.0,
+        # no outcome_mode, no sub_gaussian_sigma
+    }
+    loaded = await load_campaign_state("legacy", driver=driver)
+    assert loaded is not None
+    assert loaded.outcome_mode == "binary"
+    assert loaded.sub_gaussian_sigma is None

@@ -145,7 +145,28 @@ from adam.intelligence.spine.phase_9_pre_launch import (
     MSPRTDecision,
     MSPRTState,
     msprt_step,
+    msprt_step_continuous,
 )
+
+
+# =============================================================================
+# Outcome modes
+# =============================================================================
+
+OUTCOME_MODE_BINARY: str = "binary"
+"""Default outcome mode — Bernoulli on conversion. Calls ``msprt_step``
+with ``null_baseline_rate``."""
+
+OUTCOME_MODE_CONTINUOUS: str = "continuous"
+"""Sub-Gaussian / Gaussian-likelihood outcome mode. Calls
+``msprt_step_continuous`` with ``sub_gaussian_sigma``. Use when the
+outcome is graded (viewable dwell, scroll depth, time-on-site, value-
+conversion) rather than binary conversion."""
+
+_RECOGNIZED_OUTCOME_MODES = frozenset({
+    OUTCOME_MODE_BINARY,
+    OUTCOME_MODE_CONTINUOUS,
+})
 
 logger = logging.getLogger(__name__)
 
@@ -183,22 +204,32 @@ class MSPRTCampaignConfig(BaseModel):
     beta: float = DEFAULT_MSPRT_BETA
     null_baseline_rate: float = DEFAULT_NULL_BASELINE_RATE
 
+    # Slice 10 — outcome-mode dispatch. "binary" preserves the
+    # original Bernoulli path (msprt_step); "continuous" routes to
+    # msprt_step_continuous (Howard et al. 2021 v0.1) and requires
+    # a non-None sub_gaussian_sigma. Default "binary" is backward-
+    # compatible.
+    outcome_mode: str = OUTCOME_MODE_BINARY
+    sub_gaussian_sigma: Optional[float] = None
+
 
 class ObservationBatch(BaseModel):
     """Observations to add to the cumulative state in one step.
 
-    Binary outcomes only (sum = success count, n = total). The
-    aggregator (sibling slice) produces these from the prior day's
-    :DecisionContext + :AdOutcome rows partitioned by
-    ``treatment_arm``.
+    For binary outcomes: sum = success count, n = total. For continuous
+    outcomes (Slice 10 / Howard et al. 2021): sum = cumulative outcome
+    sum, n = observation count; sums may be negative on signed-scale
+    outcomes (e.g., time-since-baseline shifts). The aggregator
+    (sibling slice) produces these from the prior day's
+    :DecisionContext + :AdOutcome rows partitioned by ``treatment_arm``.
     """
 
     model_config = ConfigDict(extra="forbid")
 
     treatment_n: int = Field(ge=0)
-    treatment_sum: float = Field(ge=0.0)
+    treatment_sum: float = 0.0
     control_n: int = Field(ge=0)
-    control_sum: float = Field(ge=0.0)
+    control_sum: float = 0.0
 
 
 class MSPRTCampaignState(BaseModel):
@@ -213,9 +244,13 @@ class MSPRTCampaignState(BaseModel):
 
     campaign_id: str
     n_treatment: int = Field(ge=0, default=0)
+    # n_control / sum_control are non-negative for binary outcomes;
+    # continuous outcomes can be negative (signed-scale outcomes such
+    # as time-since-baseline shifts). Drop the ge constraint on sum_*
+    # to support continuous mode; n_* counts stay non-negative.
     n_control: int = Field(ge=0, default=0)
-    sum_treatment: float = Field(ge=0.0, default=0.0)
-    sum_control: float = Field(ge=0.0, default=0.0)
+    sum_treatment: float = 0.0
+    sum_control: float = 0.0
     expected_lift: float = DEFAULT_EXPECTED_LIFT
     alpha: float = DEFAULT_MSPRT_ALPHA
     beta: float = DEFAULT_MSPRT_BETA
@@ -225,6 +260,11 @@ class MSPRTCampaignState(BaseModel):
     upper_boundary: float = 0.0
     lower_boundary: float = 0.0
     last_updated_ts: float = 0.0
+
+    # Slice 10 — outcome-mode persistence. Required so reload
+    # preserves the dispatch decision across step calls.
+    outcome_mode: str = OUTCOME_MODE_BINARY
+    sub_gaussian_sigma: Optional[float] = None
 
 
 # =============================================================================
@@ -246,7 +286,9 @@ _PERSIST_CYPHER: str = (
     "    s.decision = $decision, "
     "    s.upper_boundary = $upper_boundary, "
     "    s.lower_boundary = $lower_boundary, "
-    "    s.last_updated_ts = $last_updated_ts"
+    "    s.last_updated_ts = $last_updated_ts, "
+    "    s.outcome_mode = $outcome_mode, "
+    "    s.sub_gaussian_sigma = $sub_gaussian_sigma"
 )
 
 _LOAD_CYPHER: str = (
@@ -263,7 +305,9 @@ _LOAD_CYPHER: str = (
     "       s.decision AS decision, "
     "       s.upper_boundary AS upper_boundary, "
     "       s.lower_boundary AS lower_boundary, "
-    "       s.last_updated_ts AS last_updated_ts "
+    "       s.last_updated_ts AS last_updated_ts, "
+    "       s.outcome_mode AS outcome_mode, "
+    "       s.sub_gaussian_sigma AS sub_gaussian_sigma "
     "LIMIT 1"
 )
 
@@ -308,6 +352,12 @@ async def save_campaign_state(
                 upper_boundary=float(state.upper_boundary),
                 lower_boundary=float(state.lower_boundary),
                 last_updated_ts=float(state.last_updated_ts),
+                outcome_mode=str(state.outcome_mode),
+                sub_gaussian_sigma=(
+                    float(state.sub_gaussian_sigma)
+                    if state.sub_gaussian_sigma is not None
+                    else None
+                ),
             )
     except Exception as exc:
         logger.warning(
@@ -345,6 +395,10 @@ async def load_campaign_state(
         return None
 
     try:
+        # Slice 10: outcome_mode / sub_gaussian_sigma are optional on
+        # the loaded record so pre-Slice-10 persisted states (no
+        # outcome_mode property) reload as binary mode by default.
+        sigma_raw = record.get("sub_gaussian_sigma")
         return MSPRTCampaignState(
             campaign_id=campaign_id,
             n_treatment=int(record.get("n_treatment") or 0),
@@ -367,6 +421,12 @@ async def load_campaign_state(
             upper_boundary=float(record.get("upper_boundary") or 0.0),
             lower_boundary=float(record.get("lower_boundary") or 0.0),
             last_updated_ts=float(record.get("last_updated_ts") or 0.0),
+            outcome_mode=str(
+                record.get("outcome_mode") or OUTCOME_MODE_BINARY
+            ),
+            sub_gaussian_sigma=(
+                float(sigma_raw) if sigma_raw is not None else None
+            ),
         )
     except Exception as exc:
         logger.warning(
@@ -403,6 +463,8 @@ def _initial_state(config: MSPRTCampaignConfig) -> MSPRTCampaignState:
         alpha=config.alpha,
         beta=config.beta,
         null_baseline_rate=config.null_baseline_rate,
+        outcome_mode=config.outcome_mode,
+        sub_gaussian_sigma=config.sub_gaussian_sigma,
     )
 
 
@@ -444,17 +506,38 @@ async def step_campaign_monitor(
     new_sum_treatment = prior.sum_treatment + batch.treatment_sum
     new_sum_control = prior.sum_control + batch.control_sum
 
-    # Re-run msprt_step on the cumulative totals
-    msprt_state: MSPRTState = msprt_step(
-        n_treatment=new_n_treatment,
-        n_control=new_n_control,
-        sum_treatment=new_sum_treatment,
-        sum_control=new_sum_control,
-        expected_lift=prior.expected_lift,
-        alpha=prior.alpha,
-        beta=prior.beta,
-        null_baseline_rate=prior.null_baseline_rate,
-    )
+    # Slice 10 — dispatch by outcome_mode. The persisted state's
+    # outcome_mode (loaded above OR seeded by _initial_state) is the
+    # source of truth across step calls; once a campaign is configured
+    # for continuous outcomes, every subsequent step routes through
+    # msprt_step_continuous.
+    if prior.outcome_mode == OUTCOME_MODE_CONTINUOUS:
+        if prior.sub_gaussian_sigma is None:
+            raise ValueError(
+                f"campaign {config.campaign_id} configured "
+                f"outcome_mode='continuous' but sub_gaussian_sigma is None"
+            )
+        msprt_state: MSPRTState = msprt_step_continuous(
+            n_treatment=new_n_treatment,
+            n_control=new_n_control,
+            sum_treatment=new_sum_treatment,
+            sum_control=new_sum_control,
+            expected_lift=prior.expected_lift,
+            sub_gaussian_sigma=prior.sub_gaussian_sigma,
+            alpha=prior.alpha,
+            beta=prior.beta,
+        )
+    else:
+        msprt_state = msprt_step(
+            n_treatment=new_n_treatment,
+            n_control=new_n_control,
+            sum_treatment=new_sum_treatment,
+            sum_control=new_sum_control,
+            expected_lift=prior.expected_lift,
+            alpha=prior.alpha,
+            beta=prior.beta,
+            null_baseline_rate=prior.null_baseline_rate,
+        )
 
     new_state = MSPRTCampaignState(
         campaign_id=config.campaign_id,
@@ -471,6 +554,8 @@ async def step_campaign_monitor(
         upper_boundary=msprt_state.upper_boundary,
         lower_boundary=msprt_state.lower_boundary,
         last_updated_ts=time.time(),
+        outcome_mode=prior.outcome_mode,
+        sub_gaussian_sigma=prior.sub_gaussian_sigma,
     )
 
     # Best-effort persist
