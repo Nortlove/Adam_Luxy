@@ -3080,6 +3080,27 @@ def run_bilateral_cascade(
         except Exception as _exc:
             logger.debug("Confidence snapshot skipped: %s", _exc)
 
+        # Bid composer inputs — pull BONG posterior from the buyer
+        # profile and posture label from the cascade result (when the
+        # cascade carries one). Either being None leaves the bid slots
+        # at None per the composer's soft-fail contract.
+        _bong_posterior: Any = None
+        _posture_class: Optional[str] = None
+        try:
+            if buyer_id and graph_cache and hasattr(
+                graph_cache, "get_buyer_profile",
+            ):
+                _profile = graph_cache.get_buyer_profile(buyer_id=buyer_id)
+                if _profile is not None:
+                    _bong_posterior = getattr(_profile, "bong_posterior", None)
+        except Exception as _exc:
+            logger.debug("Bid-composer BONG read skipped: %s", _exc)
+
+        # Posture is carried on the cascade result when the page-
+        # attentional-posture substrate has tagged it; otherwise None
+        # → bid composer skips (slots stay None).
+        _posture_class = getattr(result, "page_posture_class", None) or None
+
         _trace = build_trace_from_cascade(
             decision_id=f"cascade-{int(t0 * 1000)}-{buyer_id or 'anon'}",
             user_id=buyer_id or "",
@@ -3089,6 +3110,8 @@ def run_bilateral_cascade(
             chosen_mechanism=chosen_mech or result.primary_mechanism,
             p_t=float(p_t),
             confidence_snapshot=_confidence_snapshot,
+            posture_class=_posture_class,
+            bong_posterior=_bong_posterior,
         )
         _emit_decision_trace(_trace)
     except Exception as _exc:

@@ -384,6 +384,86 @@ def test_builder_handles_none_confidence_snapshot():
 
 
 # -----------------------------------------------------------------------------
+# build_trace_from_cascade — bid-composer wiring (Slice 2)
+# -----------------------------------------------------------------------------
+
+
+def test_builder_no_bong_or_posture_leaves_alternatives_unchanged():
+    """Without bong_posterior + posture_class, AlternativeCandidate
+    bid slots stay None (composer skipped)."""
+    kw = _example_trace_dict()
+    trace = build_trace_from_cascade(**kw)
+    for alt in trace.alternatives:
+        assert alt.fluency_score is None
+        assert alt.mechanism_compatibility_score is None
+        assert alt.epistemic_bonus is None
+        assert alt.bid_value is None
+    assert trace.bid_value is None
+
+
+def test_builder_only_bong_no_posture_skips_composer():
+    """Posture missing → composer skipped (the soft gate is on both
+    inputs)."""
+    kw = _example_trace_dict()
+    kw["bong_posterior"] = "any_value"  # not None
+    # posture_class stays None
+    trace = build_trace_from_cascade(**kw)
+    for alt in trace.alternatives:
+        assert alt.fluency_score is None
+
+
+def test_builder_only_posture_no_bong_skips_composer():
+    """BONG missing → composer skipped (mirror condition)."""
+    kw = _example_trace_dict()
+    kw["posture_class"] = "POSTURE_BLEND"
+    trace = build_trace_from_cascade(**kw)
+    for alt in trace.alternatives:
+        assert alt.fluency_score is None
+
+
+def test_builder_with_bong_and_posture_invokes_composer():
+    """When both are present, composer populates per-alternative slots
+    (verified via fluency_score being non-None)."""
+    from unittest.mock import patch
+
+    import numpy as np
+
+    from adam.intelligence.page_attentional_posture_substrate import POSTURE_BLEND
+
+    class _FakeUpdater:
+        def __init__(self) -> None:
+            # social_proof maps to ['social_proof_sensitivity', 'mimetic_desire']
+            self.dimension_names = [
+                "social_proof_sensitivity", "mimetic_desire",
+            ]
+            self.prior_eta = np.zeros(2)
+
+        def get_mean(self, _ind: object) -> np.ndarray:
+            return np.array([0.6, 0.4])
+
+        def get_per_dimension_variance(self, _ind: object) -> np.ndarray:
+            return np.array([0.04, 0.04])
+
+    kw = _example_trace_dict()
+    kw["bong_posterior"] = object()  # opaque marker; fake updater ignores
+    kw["posture_class"] = POSTURE_BLEND
+
+    with patch(
+        "adam.intelligence.bong.get_bong_updater",
+        return_value=_FakeUpdater(),
+    ):
+        trace = build_trace_from_cascade(**kw)
+
+    # Every alternative gets a fluency_score (= compatibility_prior)
+    # for its mechanism × posture pair.
+    assert all(
+        alt.fluency_score is not None for alt in trace.alternatives
+    )
+    # The chosen mechanism's bid_value at the trace level is populated.
+    assert trace.bid_value is not None
+
+
+# -----------------------------------------------------------------------------
 # drain_to_storage
 # -----------------------------------------------------------------------------
 

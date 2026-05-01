@@ -250,6 +250,7 @@ def build_trace_from_cascade(
     posture_confidence: Optional[float] = None,
     max_alternatives: int = DEFAULT_MAX_ALTERNATIVES,
     confidence_snapshot: Optional[dict] = None,
+    bong_posterior: Any = None,
 ) -> DecisionTrace:
     """Build a ``DecisionTrace`` from a cascade output.
 
@@ -272,6 +273,13 @@ def build_trace_from_cascade(
     canonical producer is
     ``adam.intelligence.confidence_snapshot.compute_confidence_snapshot``.
     Empty / None → no merge; archetype presence marker is preserved.
+
+    bong_posterior, when provided alongside posture_class, triggers the
+    bid composer (``adam.intelligence.bid_composer``) to populate
+    AlternativeCandidate.{fluency_score, mechanism_compatibility_score,
+    epistemic_bonus, bid_value} per the directive's dual-control bid
+    formulation (lines 273-313 + Phase 4 lines 1011-1024). When either
+    is None, the slots stay None and the renderer correctly omits them.
     """
     scores = getattr(cascade_result, "mechanism_scores", {}) or {}
     chosen_score = float(scores.get(chosen_mechanism, 0.0))
@@ -322,6 +330,34 @@ def build_trace_from_cascade(
             except (TypeError, ValueError):
                 continue
 
+    # Bid composer — populate AlternativeCandidate.{fluency_score,
+    # mechanism_compatibility_score, epistemic_bonus, bid_value} +
+    # trace-level bid_value. Composes Spine #8 + Spine #9 + Phase 2
+    # at decision time (directive lines 273-313 + 1011-1024). Each
+    # leg is gated: if bong_posterior is None or posture_class missing,
+    # the slots stay None and the renderer omits them. Soft-fail by
+    # design — bid path must NEVER block on logging (handoff §1.10).
+    chosen_bid_value: Optional[float] = None
+    if bong_posterior is not None and posture_class:
+        try:
+            from adam.intelligence.bid_composer import (
+                compose_alternatives,
+                compose_chosen_bid_value,
+            )
+            alternatives = compose_alternatives(
+                alternatives,
+                posture=posture_class,
+                bong_posterior=bong_posterior,
+            )
+            chosen_bid_value = compose_chosen_bid_value(
+                chosen_mechanism=chosen_mechanism,
+                chosen_score=chosen_score,
+                posture=posture_class,
+                bong_posterior=bong_posterior,
+            )
+        except Exception as exc:
+            logger.debug("bid_composer skipped: %s", exc)
+
     return build_decision_trace(
         decision_id=decision_id,
         user_id=user_id,
@@ -334,6 +370,7 @@ def build_trace_from_cascade(
         page_posture_vector=page_posture_vector,
         posture_class=posture_class,
         posture_confidence=posture_confidence,
+        bid_value=chosen_bid_value,
     )
 
 
