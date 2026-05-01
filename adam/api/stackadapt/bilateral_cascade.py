@@ -2790,6 +2790,62 @@ def run_bilateral_cascade(
     # Synergy check
     result = check_mechanism_synergy(result, archetype)
 
+    # ─── POSTURE × MECHANISM MODULATION (Phase 2 trilateral promotion) ───
+    # Slice 8 / directive Phase 2 line 971-973: "Promote A4
+    # page_attentional_posture from helper to first-class conditioning
+    # variable." The posture × mechanism compatibility prior was
+    # previously consumed only by bid_composer (writing DecisionTrace
+    # fluency_score). Now applied to mechanism_scores as a soft
+    # multiplicative modulation (±10% calibration-pending band).
+    # Hard structural enforcement (LOW → epistemic_bonus=0) stays in
+    # bid_composer per directive line 220.
+    if result.mechanism_scores and page_url:
+        try:
+            from adam.intelligence.page_attentional_posture_substrate import (
+                categorize_posture,
+            )
+            from adam.intelligence.page_intelligence import (
+                get_page_intelligence_cache,
+            )
+            from adam.intelligence.posture_modulation import (
+                apply_posture_modulation,
+            )
+            _ppc = get_page_intelligence_cache()
+            _profile = _ppc.lookup(page_url)
+            if _profile is not None:
+                _conf = float(
+                    getattr(_profile, "attentional_posture_confidence", 0.0)
+                    or 0.0
+                )
+                if _conf > 0.0:
+                    _label = categorize_posture(
+                        float(
+                            getattr(_profile, "attentional_posture", 0.0)
+                            or 0.0
+                        ),
+                        _conf,
+                    )
+                    posture_modulated = apply_posture_modulation(
+                        mechanism_scores=result.mechanism_scores,
+                        posture=_label,
+                    )
+                    if posture_modulated is not result.mechanism_scores:
+                        shifted = sum(
+                            1
+                            for m, v in posture_modulated.items()
+                            if abs(v - result.mechanism_scores.get(m, v))
+                            > 1e-9
+                        )
+                        if shifted:
+                            result.reasoning.append(
+                                f"Posture×mechanism modulation: "
+                                f"{shifted} mechanisms shifted "
+                                f"(posture={_label})"
+                            )
+                        result.mechanism_scores = posture_modulated
+        except Exception as exc:
+            logger.debug("Posture × mechanism modulation skipped: %s", exc)
+
     # ─── PER-USER POSTERIOR MODULATION (N-of-1 shrinkage) ───
     # Audit §0a fix: until now the cascade read cached archive priors
     # at decision time. This call applies the buyer's accumulated
