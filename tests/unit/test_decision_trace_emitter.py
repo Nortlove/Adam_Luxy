@@ -318,6 +318,72 @@ def test_builder_max_alternatives_override():
 
 
 # -----------------------------------------------------------------------------
+# build_trace_from_cascade — confidence_snapshot merge (Slice 1)
+# -----------------------------------------------------------------------------
+
+
+def test_builder_merges_confidence_snapshot_into_user_posterior_snapshot():
+    """confidence_snapshot keys flow into user_posterior_snapshot for the
+    DR renderer (defensive_reasoning_renderer._render_confidence)."""
+    kw = _example_trace_dict()
+    kw["confidence_snapshot"] = {
+        "point_estimate": 0.62,
+        "ci_lower_90": 0.45,
+        "ci_upper_90": 0.79,
+    }
+    trace = build_trace_from_cascade(**kw)
+    snap = trace.user_posterior_snapshot
+    assert snap["point_estimate"] == pytest.approx(0.62)
+    assert snap["ci_lower_90"] == pytest.approx(0.45)
+    assert snap["ci_upper_90"] == pytest.approx(0.79)
+    # Archetype presence marker is preserved alongside.
+    assert snap.get("archetype") == 1.0
+
+
+def test_builder_preserves_snapshot_when_confidence_snapshot_omitted():
+    """No confidence_snapshot → no CI keys added; existing surface
+    (status="not_available" in renderer) preserved."""
+    kw = _example_trace_dict()
+    trace = build_trace_from_cascade(**kw)
+    snap = trace.user_posterior_snapshot
+    assert "ci_lower_90" not in snap
+    assert "ci_upper_90" not in snap
+    assert "point_estimate" not in snap
+
+
+def test_builder_skips_non_numeric_snapshot_values():
+    """Soft-fail: malformed values are skipped, not raised."""
+    kw = _example_trace_dict()
+    kw["confidence_snapshot"] = {
+        "point_estimate": 0.5,
+        "ci_lower_90": "not a number",
+        "ci_upper_90": None,
+    }
+    trace = build_trace_from_cascade(**kw)
+    snap = trace.user_posterior_snapshot
+    assert snap["point_estimate"] == pytest.approx(0.5)
+    assert "ci_lower_90" not in snap
+    assert "ci_upper_90" not in snap
+
+
+def test_builder_handles_empty_confidence_snapshot_dict():
+    """Empty dict → no merge, no exception, archetype preserved."""
+    kw = _example_trace_dict()
+    kw["confidence_snapshot"] = {}
+    trace = build_trace_from_cascade(**kw)
+    assert "ci_lower_90" not in trace.user_posterior_snapshot
+    assert trace.user_posterior_snapshot.get("archetype") == 1.0
+
+
+def test_builder_handles_none_confidence_snapshot():
+    """None (default) → no merge, no exception."""
+    kw = _example_trace_dict()
+    kw["confidence_snapshot"] = None
+    trace = build_trace_from_cascade(**kw)
+    assert "ci_lower_90" not in trace.user_posterior_snapshot
+
+
+# -----------------------------------------------------------------------------
 # drain_to_storage
 # -----------------------------------------------------------------------------
 

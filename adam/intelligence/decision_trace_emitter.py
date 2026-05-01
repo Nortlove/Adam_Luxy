@@ -249,6 +249,7 @@ def build_trace_from_cascade(
     posture_class: Optional[str] = None,
     posture_confidence: Optional[float] = None,
     max_alternatives: int = DEFAULT_MAX_ALTERNATIVES,
+    confidence_snapshot: Optional[dict] = None,
 ) -> DecisionTrace:
     """Build a ``DecisionTrace`` from a cascade output.
 
@@ -263,6 +264,14 @@ def build_trace_from_cascade(
     until a typed creative-resolution layer ships — the cascade picks
     a mechanism with creative parameters, not a specific creative id.
     Documented honest tag.
+
+    confidence_snapshot, when provided, is merged into the trace's
+    ``user_posterior_snapshot`` dict. Conventional keys consumed by
+    ``defensive_reasoning_renderer._render_confidence`` are
+    ``point_estimate`` / ``ci_lower_90`` / ``ci_upper_90``. The
+    canonical producer is
+    ``adam.intelligence.confidence_snapshot.compute_confidence_snapshot``.
+    Empty / None → no merge; archetype presence marker is preserved.
     """
     scores = getattr(cascade_result, "mechanism_scores", {}) or {}
     chosen_score = float(scores.get(chosen_mechanism, 0.0))
@@ -301,6 +310,17 @@ def build_trace_from_cascade(
     user_posterior_snapshot: dict = {}
     if archetype:
         user_posterior_snapshot["archetype"] = 1.0  # presence marker
+
+    # Confidence snapshot — merge ci_lower_90 / ci_upper_90 /
+    # point_estimate when the producer (confidence_snapshot.
+    # compute_confidence_snapshot) supplied them. Absent keys leave
+    # the renderer in status="not_available" by design.
+    if confidence_snapshot:
+        for key, value in confidence_snapshot.items():
+            try:
+                user_posterior_snapshot[key] = float(value)
+            except (TypeError, ValueError):
+                continue
 
     return build_decision_trace(
         decision_id=decision_id,

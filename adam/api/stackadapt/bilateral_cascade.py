@@ -3061,6 +3061,25 @@ def run_bilateral_cascade(
             build_trace_from_cascade,
             emit as _emit_decision_trace,
         )
+
+        # Confidence-snapshot helper — populates ci_lower_90 /
+        # ci_upper_90 / point_estimate keys consumed by the DR renderer
+        # (Spine #13 Layer 4). Empty dict on missing BONG / unknown
+        # mechanism leaves the renderer at status="not_available" —
+        # the contract preserves the prior surface.
+        _confidence_snapshot: Dict[str, float] = {}
+        try:
+            from adam.intelligence.confidence_snapshot import (
+                compute_confidence_snapshot,
+            )
+            _confidence_snapshot = compute_confidence_snapshot(
+                buyer_id=buyer_id or "",
+                graph_cache=graph_cache,
+                chosen_mechanism=chosen_mech or result.primary_mechanism,
+            )
+        except Exception as _exc:
+            logger.debug("Confidence snapshot skipped: %s", _exc)
+
         _trace = build_trace_from_cascade(
             decision_id=f"cascade-{int(t0 * 1000)}-{buyer_id or 'anon'}",
             user_id=buyer_id or "",
@@ -3069,6 +3088,7 @@ def run_bilateral_cascade(
             cascade_result=result,
             chosen_mechanism=chosen_mech or result.primary_mechanism,
             p_t=float(p_t),
+            confidence_snapshot=_confidence_snapshot,
         )
         _emit_decision_trace(_trace)
     except Exception as _exc:
