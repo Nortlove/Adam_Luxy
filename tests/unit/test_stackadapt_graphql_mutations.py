@@ -373,3 +373,192 @@ def test_is_configured_false_without_key():
     # check via direct attr.
     if not client._api_key:
         assert client.is_configured is False
+
+
+# -----------------------------------------------------------------------------
+# Slice 16 — rewritten reading queries (campaignDelivery, conversionPath,
+# adDelivery)
+# -----------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_get_campaign_performance_constructs_query():
+    captured: Dict[str, Any] = {}
+
+    async def _capture_post(url: str, json: Dict[str, Any]) -> _FakeResponse:
+        captured["json"] = json
+        return _FakeResponse({"data": {"campaignDelivery": {"rows": [
+            {"campaignId": "c-1", "date": "2026-05-01",
+             "impressions": 1000, "clicks": 25, "conversions": 2,
+             "spend": 50.0, "ctr": 0.025, "cpa": 25.0},
+        ]}}})
+
+    client = StackAdaptGraphQLClient(api_key="test-key")
+    client._client = MagicMock()  # type: ignore[assignment]
+    client._client.post = _capture_post  # type: ignore[assignment]
+
+    rows = await client.get_campaign_performance(
+        campaign_ids=["c-1", "c-2"],
+        start_date="2026-04-01",
+        end_date="2026-04-30",
+    )
+    assert len(rows) == 1
+    assert rows[0]["campaignId"] == "c-1"
+    # Query carried the filterBy
+    sent_vars = captured["json"]["variables"]
+    assert sent_vars["filterBy"]["campaignIds"] == ["c-1", "c-2"]
+    assert sent_vars["filterBy"]["startDate"] == "2026-04-01"
+    assert sent_vars["filterBy"]["endDate"] == "2026-04-30"
+    assert sent_vars["granularity"] == "DAILY"
+
+
+@pytest.mark.asyncio
+async def test_get_campaign_performance_no_filter_when_unscoped():
+    captured: Dict[str, Any] = {}
+
+    async def _capture_post(url: str, json: Dict[str, Any]) -> _FakeResponse:
+        captured["json"] = json
+        return _FakeResponse({"data": {"campaignDelivery": {"rows": []}}})
+
+    client = StackAdaptGraphQLClient(api_key="test-key")
+    client._client = MagicMock()  # type: ignore[assignment]
+    client._client.post = _capture_post  # type: ignore[assignment]
+
+    rows = await client.get_campaign_performance()
+    assert rows == []
+    sent_vars = captured["json"]["variables"]
+    # No filterBy when unscoped
+    assert "filterBy" not in sent_vars
+
+
+@pytest.mark.asyncio
+async def test_get_conversion_events_paginates():
+    captured: Dict[str, Any] = {}
+
+    async def _capture_post(url: str, json: Dict[str, Any]) -> _FakeResponse:
+        captured["json"] = json
+        return _FakeResponse({"data": {"conversionPath": {
+            "edges": [
+                {"node": {"id": "e-1", "sapid": "SAP-1",
+                          "conversionAt": "2026-05-01T10:00:00Z",
+                          "campaignId": "c-1", "adId": "a-1",
+                          "conversionValue": 75.0, "conversionType": "purchase"}},
+                {"node": {"id": "e-2", "sapid": "SAP-2",
+                          "conversionAt": "2026-05-01T11:00:00Z",
+                          "campaignId": "c-1", "adId": "a-2",
+                          "conversionValue": 50.0, "conversionType": "purchase"}},
+            ],
+            "pageInfo": {"hasNextPage": True, "endCursor": "cursor-2"},
+        }}})
+
+    client = StackAdaptGraphQLClient(api_key="test-key")
+    client._client = MagicMock()  # type: ignore[assignment]
+    client._client.post = _capture_post  # type: ignore[assignment]
+
+    events = await client.get_conversion_events(
+        start_date="2026-05-01",
+        end_date="2026-05-01",
+        first=50,
+        after="cursor-1",
+    )
+    assert len(events) == 2
+    assert events[0]["sapid"] == "SAP-1"
+    sent_vars = captured["json"]["variables"]
+    assert sent_vars["first"] == 50
+    assert sent_vars["after"] == "cursor-1"
+    assert sent_vars["filterBy"]["startDate"] == "2026-05-01"
+
+
+@pytest.mark.asyncio
+async def test_get_conversion_events_no_after_when_first_page():
+    captured: Dict[str, Any] = {}
+
+    async def _capture_post(url: str, json: Dict[str, Any]) -> _FakeResponse:
+        captured["json"] = json
+        return _FakeResponse({"data": {"conversionPath": {
+            "edges": [], "pageInfo": {"hasNextPage": False, "endCursor": None},
+        }}})
+
+    client = StackAdaptGraphQLClient(api_key="test-key")
+    client._client = MagicMock()  # type: ignore[assignment]
+    client._client.post = _capture_post  # type: ignore[assignment]
+
+    events = await client.get_conversion_events()
+    assert events == []
+    sent_vars = captured["json"]["variables"]
+    assert "after" not in sent_vars
+
+
+@pytest.mark.asyncio
+async def test_get_domain_performance_requires_campaign_id():
+    """Domain breakdown requires a scope."""
+    client = StackAdaptGraphQLClient(api_key="test-key")
+    rows = await client.get_domain_performance(campaign_id="")
+    assert rows == []
+
+
+@pytest.mark.asyncio
+async def test_get_domain_performance_constructs_query():
+    captured: Dict[str, Any] = {}
+
+    async def _capture_post(url: str, json: Dict[str, Any]) -> _FakeResponse:
+        captured["json"] = json
+        return _FakeResponse({"data": {"adDelivery": {"rows": [
+            {"domain": "luxy.example", "impressions": 5000,
+             "clicks": 50, "conversions": 5, "spend": 100.0,
+             "ctr": 0.01, "viewability": 0.78},
+            {"domain": "competitor.example", "impressions": 3000,
+             "clicks": 25, "conversions": 1, "spend": 60.0,
+             "ctr": 0.0083, "viewability": 0.65},
+        ]}}})
+
+    client = StackAdaptGraphQLClient(api_key="test-key")
+    client._client = MagicMock()  # type: ignore[assignment]
+    client._client.post = _capture_post  # type: ignore[assignment]
+
+    rows = await client.get_domain_performance(
+        campaign_id="c-luxy",
+        start_date="2026-04-01",
+        end_date="2026-04-30",
+    )
+    assert len(rows) == 2
+    assert rows[0]["domain"] == "luxy.example"
+    sent_vars = captured["json"]["variables"]
+    assert sent_vars["filterBy"]["campaignId"] == "c-luxy"
+    assert sent_vars["filterBy"]["startDate"] == "2026-04-01"
+
+
+@pytest.mark.asyncio
+async def test_reading_queries_handle_empty_response():
+    """All three queries return [] on empty / null responses."""
+    client = _make_client_with_response({"data": {"campaignDelivery": None}})
+    assert await client.get_campaign_performance() == []
+
+    client = _make_client_with_response({"data": {"conversionPath": None}})
+    assert await client.get_conversion_events() == []
+
+    client = _make_client_with_response({"data": {"adDelivery": None}})
+    assert await client.get_domain_performance(campaign_id="x") == []
+
+
+@pytest.mark.asyncio
+async def test_reading_queries_filter_null_rows():
+    """Defensive — null entries in rows / edges are filtered out."""
+    client = _make_client_with_response({"data": {"campaignDelivery": {
+        "rows": [None, {"campaignId": "c"}, None],
+    }}})
+    rows = await client.get_campaign_performance()
+    assert len(rows) == 1
+
+
+@pytest.mark.asyncio
+async def test_reading_queries_handle_no_api_key():
+    """Without API key, queries return empty list (consistent with
+    _query soft-fail returning {'error': 'No API key'})."""
+    client = StackAdaptGraphQLClient(api_key="")
+    rows = await client.get_campaign_performance()
+    assert rows == []
+    events = await client.get_conversion_events()
+    assert events == []
+    domains = await client.get_domain_performance(campaign_id="x")
+    assert domains == []

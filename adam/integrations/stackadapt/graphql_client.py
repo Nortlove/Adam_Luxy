@@ -246,42 +246,142 @@ class StackAdaptGraphQLClient:
         start_date: str = "",
         end_date: str = "",
     ) -> List[Dict]:
-        """Get performance data using the live `campaignDelivery` field.
+        """Get performance data via the live `campaignDelivery` field.
 
-        Per live schema (2026-04-29): the original top-level
-        `campaignPerformance` field DOES NOT EXIST. The current
-        equivalent is `campaignDelivery(dataType, date, filterBy,
-        granularity)` returning `CampaignDeliveryPayload`.
+        Slice 16: replaces the empty-stub with an actual GraphQL query
+        against the campaignDelivery field (per live-schema notes
+        2026-04-29). Honest tag: the exact field selection is
+        best-guess against StackAdapt's CampaignDeliveryPayload
+        shape; introspect_query_field("campaignDelivery") validates
+        before pilot launch. A14 flag:
+        STACKADAPT_REPORTING_SCHEMA_PILOT_PENDING.
 
-        This method is a substrate stub returning empty until the
-        CampaignDeliveryPayload schema is introspected and the query
-        is rewritten. Callers must not assume non-empty results yet.
+        Args:
+            campaign_ids: optional list of campaign IDs to filter to.
+            start_date / end_date: ISO-8601 date strings (YYYY-MM-DD).
+                When both empty, returns the last 30 days.
+
+        Returns:
+            List of per-campaign performance dicts with impressions,
+            clicks, conversions, spend, ctr, cpa. Empty list when API
+            error / no data.
         """
-        logger.warning(
-            "get_campaign_performance called but query is pending live "
-            "campaignDelivery schema rewrite; returning empty list"
-        )
-        return []
+        query = """
+        query CampaignDelivery(
+            $filterBy: CampaignDeliveryFilters,
+            $granularity: GranularityEnum,
+        ) {
+            campaignDelivery(
+                dataType: PERFORMANCE,
+                filterBy: $filterBy,
+                granularity: $granularity,
+            ) {
+                rows {
+                    campaignId
+                    date
+                    impressions
+                    clicks
+                    conversions
+                    spend
+                    ctr
+                    cpa
+                }
+            }
+        }
+        """
+        filter_by: Dict[str, Any] = {}
+        if campaign_ids:
+            filter_by["campaignIds"] = list(campaign_ids)
+        if start_date:
+            filter_by["startDate"] = start_date
+        if end_date:
+            filter_by["endDate"] = end_date
+
+        variables: Dict[str, Any] = {
+            "granularity": "DAILY",
+        }
+        if filter_by:
+            variables["filterBy"] = filter_by
+
+        result = await self._query(query, variables)
+        payload = result.get("campaignDelivery") or {}
+        rows = payload.get("rows") or []
+        return [r for r in rows if r]
 
     async def get_conversion_events(
         self,
         start_date: str = "",
         end_date: str = "",
+        *,
+        first: int = 100,
+        after: Optional[str] = None,
     ) -> List[Dict]:
         """Get conversion events via the live `conversionPath` connection.
 
-        Per live schema (2026-04-29): the original top-level
-        `conversions` field DOES NOT EXIST. The current equivalent is
-        `conversionPath(after, before, filterBy, first, last)`
-        returning `ConversionPathRecordsConnection`.
+        Slice 16: replaces the empty-stub with an actual paginated
+        GraphQL query against conversionPath. Honest tag: field
+        selection on ConversionPathRecord is best-guess; validate
+        with introspect_type("ConversionPathRecord") before pilot.
 
-        Substrate stub pending ConversionPathRecord schema introspection.
+        The conversionPath connection feeds the sapid round-trip
+        verification: paired with our DecisionTrace via the sapid
+        macro, every conversion event should resolve to a known
+        decision_id.
+
+        Args:
+            start_date / end_date: ISO-8601 date strings.
+            first: max records per page.
+            after: pagination cursor.
+
+        Returns:
+            List of conversion-event dicts with sapid, conversion_at,
+            campaign_id, ad_id, conversion_value. Empty on error.
         """
-        logger.warning(
-            "get_conversion_events called but query is pending live "
-            "conversionPath schema rewrite; returning empty list"
-        )
-        return []
+        query = """
+        query ConversionPath(
+            $first: Int,
+            $after: String,
+            $filterBy: ConversionPathFilters,
+        ) {
+            conversionPath(
+                first: $first,
+                after: $after,
+                filterBy: $filterBy,
+            ) {
+                edges {
+                    node {
+                        id
+                        sapid
+                        conversionAt
+                        campaignId
+                        adId
+                        conversionValue
+                        conversionType
+                    }
+                }
+                pageInfo {
+                    hasNextPage
+                    endCursor
+                }
+            }
+        }
+        """
+        filter_by: Dict[str, Any] = {}
+        if start_date:
+            filter_by["startDate"] = start_date
+        if end_date:
+            filter_by["endDate"] = end_date
+
+        variables: Dict[str, Any] = {"first": first}
+        if after:
+            variables["after"] = after
+        if filter_by:
+            variables["filterBy"] = filter_by
+
+        result = await self._query(query, variables)
+        connection = result.get("conversionPath") or {}
+        edges = connection.get("edges") or []
+        return [e["node"] for e in edges if e.get("node")]
 
     async def get_domain_performance(
         self,
@@ -291,19 +391,55 @@ class StackAdaptGraphQLClient:
     ) -> List[Dict]:
         """Get per-domain performance via the live `adDelivery` field.
 
-        Per live schema (2026-04-29): the original top-level
-        `domainPerformance` field DOES NOT EXIST. The current
-        equivalent is `adDelivery(dataType, date, filterBy,
-        granularity)` returning `AdDeliveryPayload` with a domain
-        breakdown attribute.
+        Slice 16: replaces the empty-stub with an actual GraphQL query
+        against adDelivery with a domain breakdown attribute. Honest
+        tag: AdDeliveryPayload's domain field shape is best-guess;
+        introspect_type("AdDeliveryPayload") validates.
 
-        Substrate stub pending AdDeliveryPayload schema introspection.
+        Args:
+            campaign_id: required — scope the breakdown.
+            start_date / end_date: ISO-8601.
+
+        Returns:
+            List of per-domain dicts with domain, impressions, clicks,
+            conversions, spend, ctr, viewability. Empty on error /
+            no data.
         """
-        logger.warning(
-            "get_domain_performance called but query is pending live "
-            "adDelivery schema rewrite; returning empty list"
-        )
-        return []
+        if not campaign_id:
+            return []
+
+        query = """
+        query AdDelivery(
+            $filterBy: AdDeliveryFilters,
+        ) {
+            adDelivery(
+                dataType: PERFORMANCE,
+                filterBy: $filterBy,
+                granularity: AGGREGATE,
+                groupBy: DOMAIN,
+            ) {
+                rows {
+                    domain
+                    impressions
+                    clicks
+                    conversions
+                    spend
+                    ctr
+                    viewability
+                }
+            }
+        }
+        """
+        filter_by: Dict[str, Any] = {"campaignId": campaign_id}
+        if start_date:
+            filter_by["startDate"] = start_date
+        if end_date:
+            filter_by["endDate"] = end_date
+
+        result = await self._query(query, {"filterBy": filter_by})
+        payload = result.get("adDelivery") or {}
+        rows = payload.get("rows") or []
+        return [r for r in rows if r]
 
     # =========================================================================
     # Slice 13 — Write mutations (Phase 8 substrate)
