@@ -101,9 +101,14 @@ DISCIPLINE (B3-LUXY a/b/c/d)
 
 from __future__ import annotations
 
-from typing import Dict, List, Optional
+import json
+import logging
+import time
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+logger = logging.getLogger(__name__)
 
 from adam.intelligence.mechanism_taxonomy import MECHANISM_TAXONOMY
 from adam.intelligence.page_attentional_posture_substrate import (
@@ -642,3 +647,215 @@ def goal_states_with_metaphor(metaphor: str) -> List[GoalState]:
         g for g in list_goal_states()
         if g.primary_metaphor == metaphor
     ]
+
+
+# =============================================================================
+# Slice 12 — Neo4j writeback / reload
+# =============================================================================
+#
+# Schema (idempotent MERGE on goal_state_id):
+#
+#   (:GoalState {
+#       goal_state_id*,                (UNIQUE — MERGE key)
+#       name,
+#       description,
+#       primary_metaphor,
+#       posture_compatibility_json,    (serialized dict)
+#       mechanism_priors_json,         (serialized dict)
+#       keywords_json,                 (serialized list)
+#       last_updated_ts
+#   })
+#
+# Nested fields (posture_compatibility, mechanism_priors, keywords) are
+# JSON-serialized because Neo4j node properties must be primitive or
+# arrays of primitive — nested maps aren't supported. Tests pin the
+# round-trip preserves the typed shape.
+
+
+_GOAL_STATE_NODE_LABEL = "GoalState"
+
+
+_PERSIST_GOAL_STATE_CYPHER: str = (
+    "MERGE (g:" + _GOAL_STATE_NODE_LABEL + " {goal_state_id: $goal_state_id}) "
+    "SET g.name = $name, "
+    "    g.description = $description, "
+    "    g.primary_metaphor = $primary_metaphor, "
+    "    g.posture_compatibility_json = $posture_compatibility_json, "
+    "    g.mechanism_priors_json = $mechanism_priors_json, "
+    "    g.keywords_json = $keywords_json, "
+    "    g.last_updated_ts = $last_updated_ts"
+)
+
+
+_LOAD_GOAL_STATE_CYPHER: str = (
+    "MATCH (g:" + _GOAL_STATE_NODE_LABEL + " {goal_state_id: $goal_state_id}) "
+    "RETURN g.goal_state_id AS goal_state_id, "
+    "       g.name AS name, "
+    "       g.description AS description, "
+    "       g.primary_metaphor AS primary_metaphor, "
+    "       g.posture_compatibility_json AS posture_compatibility_json, "
+    "       g.mechanism_priors_json AS mechanism_priors_json, "
+    "       g.keywords_json AS keywords_json "
+    "LIMIT 1"
+)
+
+
+_LOAD_ALL_GOAL_STATES_CYPHER: str = (
+    "MATCH (g:" + _GOAL_STATE_NODE_LABEL + ") "
+    "RETURN g.goal_state_id AS goal_state_id, "
+    "       g.name AS name, "
+    "       g.description AS description, "
+    "       g.primary_metaphor AS primary_metaphor, "
+    "       g.posture_compatibility_json AS posture_compatibility_json, "
+    "       g.mechanism_priors_json AS mechanism_priors_json, "
+    "       g.keywords_json AS keywords_json"
+)
+
+
+def _state_to_cypher_params(state: GoalState) -> Dict[str, Any]:
+    """Serialize nested fields for Neo4j primitives-only constraint."""
+    return {
+        "goal_state_id": state.id,
+        "name": state.name,
+        "description": state.description,
+        "primary_metaphor": state.primary_metaphor,
+        "posture_compatibility_json": json.dumps(state.posture_compatibility),
+        "mechanism_priors_json": json.dumps(state.mechanism_priors),
+        "keywords_json": json.dumps(list(state.keywords)),
+        "last_updated_ts": time.time(),
+    }
+
+
+def _record_to_state(record: Any) -> Optional[GoalState]:
+    """Reconstruct GoalState from a cypher record. Returns None on
+    parse failure (logged at WARNING)."""
+    try:
+        posture = json.loads(
+            record.get("posture_compatibility_json") or "{}"
+        )
+        priors = json.loads(record.get("mechanism_priors_json") or "{}")
+        keywords = json.loads(record.get("keywords_json") or "[]")
+        return GoalState(
+            id=str(record.get("goal_state_id")),
+            name=str(record.get("name") or ""),
+            description=str(record.get("description") or ""),
+            primary_metaphor=str(record.get("primary_metaphor") or ""),
+            posture_compatibility=posture,
+            mechanism_priors=priors,
+            keywords=list(keywords),
+        )
+    except Exception as exc:
+        logger.warning(
+            "GoalState parse failed for goal_state_id=%s: %s",
+            record.get("goal_state_id"), exc,
+        )
+        return None
+
+
+async def write_goal_state_to_neo4j(
+    state: GoalState,
+    driver: Optional[Any],
+) -> bool:
+    """Persist one GoalState to Neo4j. Idempotent (MERGE on id).
+
+    Returns True on success. Soft-fails (returns False) when:
+      - driver is None
+      - cypher session raises
+
+    Bid path / decision path NEVER block on this — the inventory is
+    static substrate; writeback is a one-time seed (or refresh when
+    inventory is updated upstream).
+    """
+    if driver is None:
+        return False
+
+    try:
+        async with driver.session() as session:
+            await session.run(
+                _PERSIST_GOAL_STATE_CYPHER,
+                **_state_to_cypher_params(state),
+            )
+        return True
+    except Exception as exc:
+        logger.warning(
+            "write_goal_state_to_neo4j failed for goal_state_id=%s: %s",
+            state.id, exc,
+        )
+        return False
+
+
+async def write_all_goal_states_to_neo4j(
+    driver: Optional[Any],
+) -> int:
+    """Bulk-write the entire LUXY inventory. Returns count successfully
+    written. Soft-fails to 0 when driver unavailable.
+
+    Use case: deploy-time seed of the :GoalState nodes so the partner
+    surface (Spine #5 sibling) can read inventory without re-loading
+    the Python module.
+    """
+    if driver is None:
+        return 0
+
+    written = 0
+    for state in list_goal_states():
+        if await write_goal_state_to_neo4j(state, driver):
+            written += 1
+
+    if written:
+        logger.info(
+            "GoalState inventory writeback: %d states persisted", written,
+        )
+    return written
+
+
+async def load_goal_state_from_neo4j(
+    goal_state_id: str,
+    driver: Optional[Any],
+) -> Optional[GoalState]:
+    """Fetch one GoalState by id. Returns None on missing / failure."""
+    if driver is None or not goal_state_id:
+        return None
+
+    try:
+        async with driver.session() as session:
+            result = await session.run(
+                _LOAD_GOAL_STATE_CYPHER,
+                goal_state_id=goal_state_id,
+            )
+            record = await result.single()
+    except Exception as exc:
+        logger.warning(
+            "load_goal_state_from_neo4j failed for id=%s: %s",
+            goal_state_id, exc,
+        )
+        return None
+
+    if record is None:
+        return None
+    return _record_to_state(record)
+
+
+async def load_all_goal_states_from_neo4j(
+    driver: Optional[Any],
+) -> List[GoalState]:
+    """Fetch all :GoalState nodes. Returns [] when driver unavailable
+    or no nodes exist."""
+    if driver is None:
+        return []
+
+    states: List[GoalState] = []
+    try:
+        async with driver.session() as session:
+            result = await session.run(_LOAD_ALL_GOAL_STATES_CYPHER)
+            async for record in result:
+                state = _record_to_state(record)
+                if state is not None:
+                    states.append(state)
+    except Exception as exc:
+        logger.warning(
+            "load_all_goal_states_from_neo4j failed: %s", exc,
+        )
+        return []
+
+    return states

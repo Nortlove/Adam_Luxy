@@ -290,3 +290,197 @@ def test_pydantic_round_trip_preserves_state():
     assert restored.mechanism_priors == state.mechanism_priors
     assert restored.primary_metaphor == state.primary_metaphor
     assert restored.keywords == state.keywords
+
+
+# -----------------------------------------------------------------------------
+# Slice 12 — Neo4j writeback / reload
+# -----------------------------------------------------------------------------
+
+
+from typing import Any, Dict, List, Optional
+from unittest.mock import patch
+
+from adam.intelligence.goal_state_inventory import (
+    load_all_goal_states_from_neo4j,
+    load_goal_state_from_neo4j,
+    write_all_goal_states_to_neo4j,
+    write_goal_state_to_neo4j,
+)
+
+
+class _FakeRecord:
+    def __init__(self, data: Dict[str, Any]) -> None:
+        self._data = data
+
+    def get(self, key: str, default: Any = None) -> Any:
+        return self._data.get(key, default)
+
+
+class _FakeAsyncResult:
+    def __init__(self, rows: List[Dict[str, Any]]) -> None:
+        self._rows = list(rows)
+
+    async def single(self) -> Optional[_FakeRecord]:
+        if not self._rows:
+            return None
+        return _FakeRecord(self._rows[0])
+
+    def __aiter__(self):
+        async def _gen():
+            for r in self._rows:
+                yield _FakeRecord(r)
+        return _gen()
+
+
+class _FakeAsyncSession:
+    def __init__(self, driver: "_FakeNeo4jDriver") -> None:
+        self._driver = driver
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb):
+        return None
+
+    async def run(self, cypher: str, **params: Any) -> _FakeAsyncResult:
+        self._driver.calls.append((cypher, dict(params)))
+        norm = cypher.strip()
+        if norm.startswith("MERGE (g:GoalState"):
+            self._driver.states[params["goal_state_id"]] = dict(params)
+            return _FakeAsyncResult([])
+        if norm.startswith("MATCH (g:GoalState {goal_state_id"):
+            cid = params["goal_state_id"]
+            row = self._driver.states.get(cid)
+            return _FakeAsyncResult([row] if row else [])
+        if norm.startswith("MATCH (g:GoalState)"):
+            return _FakeAsyncResult(list(self._driver.states.values()))
+        return _FakeAsyncResult([])
+
+
+class _FakeNeo4jDriver:
+    def __init__(self) -> None:
+        self.states: Dict[str, Dict[str, Any]] = {}
+        self.calls: List = []
+
+    def session(self) -> _FakeAsyncSession:
+        return _FakeAsyncSession(self)
+
+
+@pytest.mark.asyncio
+async def test_write_no_driver_returns_false():
+    state = get_goal_state("anxiety_reduction")
+    assert state is not None
+    ok = await write_goal_state_to_neo4j(state, driver=None)
+    assert ok is False
+
+
+@pytest.mark.asyncio
+async def test_write_then_load_round_trip_preserves_state():
+    """Persisted nested fields (posture_compatibility, mechanism_priors,
+    keywords) must round-trip through JSON serialization."""
+    driver = _FakeNeo4jDriver()
+    state = get_goal_state("anxiety_reduction")
+    assert state is not None
+
+    ok = await write_goal_state_to_neo4j(state, driver=driver)
+    assert ok is True
+
+    loaded = await load_goal_state_from_neo4j(state.id, driver=driver)
+    assert loaded is not None
+    assert loaded.id == state.id
+    assert loaded.name == state.name
+    assert loaded.description == state.description
+    assert loaded.primary_metaphor == state.primary_metaphor
+    assert loaded.posture_compatibility == state.posture_compatibility
+    assert loaded.mechanism_priors == state.mechanism_priors
+    assert loaded.keywords == state.keywords
+
+
+@pytest.mark.asyncio
+async def test_write_uses_merge_for_idempotence():
+    """Re-writing the same state doesn't create a duplicate; cypher
+    is MERGE-based."""
+    driver = _FakeNeo4jDriver()
+    state = get_goal_state("commute_readiness")
+    assert state is not None
+
+    await write_goal_state_to_neo4j(state, driver=driver)
+    await write_goal_state_to_neo4j(state, driver=driver)
+
+    # Only one state row stored regardless of write count
+    assert len(driver.states) == 1
+    # Cypher was MERGE (not CREATE)
+    merge_calls = [c for c, _ in driver.calls if "MERGE" in c]
+    assert len(merge_calls) == 2
+
+
+@pytest.mark.asyncio
+async def test_load_missing_returns_none():
+    driver = _FakeNeo4jDriver()
+    loaded = await load_goal_state_from_neo4j("not_in_neo4j", driver=driver)
+    assert loaded is None
+
+
+@pytest.mark.asyncio
+async def test_load_no_driver_returns_none():
+    loaded = await load_goal_state_from_neo4j("anxiety_reduction", driver=None)
+    assert loaded is None
+
+
+@pytest.mark.asyncio
+async def test_load_empty_id_returns_none():
+    driver = _FakeNeo4jDriver()
+    loaded = await load_goal_state_from_neo4j("", driver=driver)
+    assert loaded is None
+
+
+@pytest.mark.asyncio
+async def test_write_all_persists_full_inventory():
+    """Bulk write seeds the entire LUXY inventory."""
+    driver = _FakeNeo4jDriver()
+    written = await write_all_goal_states_to_neo4j(driver=driver)
+    assert written == len(list_goal_states())
+    assert len(driver.states) == len(list_goal_states())
+
+
+@pytest.mark.asyncio
+async def test_write_all_no_driver_returns_zero():
+    written = await write_all_goal_states_to_neo4j(driver=None)
+    assert written == 0
+
+
+@pytest.mark.asyncio
+async def test_load_all_returns_full_inventory_after_write():
+    driver = _FakeNeo4jDriver()
+    await write_all_goal_states_to_neo4j(driver=driver)
+
+    loaded = await load_all_goal_states_from_neo4j(driver=driver)
+    assert len(loaded) == len(list_goal_states())
+    loaded_ids = {s.id for s in loaded}
+    expected_ids = {s.id for s in list_goal_states()}
+    assert loaded_ids == expected_ids
+
+
+@pytest.mark.asyncio
+async def test_load_all_no_driver_returns_empty():
+    out = await load_all_goal_states_from_neo4j(driver=None)
+    assert out == []
+
+
+@pytest.mark.asyncio
+async def test_write_soft_fails_on_session_exception():
+    """Cypher session raising → write returns False; never raises."""
+    class _BrokenSession:
+        async def __aenter__(self):
+            raise RuntimeError("simulated cypher failure")
+        async def __aexit__(self, *a, **kw):
+            return None
+
+    class _BrokenDriver:
+        def session(self):
+            return _BrokenSession()
+
+    state = get_goal_state("commute_readiness")
+    assert state is not None
+    ok = await write_goal_state_to_neo4j(state, driver=_BrokenDriver())
+    assert ok is False
