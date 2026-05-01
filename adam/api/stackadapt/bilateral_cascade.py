@@ -3081,11 +3081,13 @@ def run_bilateral_cascade(
             logger.debug("Confidence snapshot skipped: %s", _exc)
 
         # Bid composer inputs — pull BONG posterior from the buyer
-        # profile and posture label from the cascade result (when the
-        # cascade carries one). Either being None leaves the bid slots
-        # at None per the composer's soft-fail contract.
+        # profile and posture from the page intelligence cache. Either
+        # being None leaves the bid slots at None per the composer's
+        # soft-fail contract.
         _bong_posterior: Any = None
         _posture_class: Optional[str] = None
+        _posture_confidence: Optional[float] = None
+        _posture_vector: Optional[List[float]] = None
         try:
             if buyer_id and graph_cache and hasattr(
                 graph_cache, "get_buyer_profile",
@@ -3096,10 +3098,48 @@ def run_bilateral_cascade(
         except Exception as _exc:
             logger.debug("Bid-composer BONG read skipped: %s", _exc)
 
-        # Posture is carried on the cascade result when the page-
-        # attentional-posture substrate has tagged it; otherwise None
-        # → bid composer skips (slots stay None).
-        _posture_class = getattr(result, "page_posture_class", None) or None
+        # Posture wiring — closes Slice 2's structural attention-
+        # inversion gate. The page intelligence cache exposes the
+        # already-computed attentional_posture float + confidence; we
+        # categorize via the canonical 4-class threshold map and pass
+        # the categorical label + confidence + vector to the trace.
+        # Without this, every bid_composer call gets posture=None →
+        # MID-by-soft-fail → fluency_passed=True regardless of mechanism
+        # category. Audit §C2 / directive Phase 2 line 971-973.
+        try:
+            if page_url:
+                from adam.intelligence.page_attentional_posture_substrate import (
+                    categorize_posture,
+                )
+                from adam.intelligence.page_intelligence import (
+                    get_page_intelligence_cache,
+                )
+                _page_cache = get_page_intelligence_cache()
+                _page_profile = _page_cache.lookup(page_url)
+                if _page_profile is not None:
+                    _posture_float = float(
+                        getattr(_page_profile, "attentional_posture", 0.0)
+                        or 0.0
+                    )
+                    _maybe_conf = float(
+                        getattr(
+                            _page_profile,
+                            "attentional_posture_confidence",
+                            0.0,
+                        ) or 0.0
+                    )
+                    if _maybe_conf > 0.0:
+                        _posture_confidence = _maybe_conf
+                        _posture_class = categorize_posture(
+                            _posture_float, _maybe_conf,
+                        )
+                        # Canonical 1-D vector — float in [-1, 1]
+                        # (the attentional axis). Multi-dim posture
+                        # embeddings are a sibling slice (Phase 2 line
+                        # 967-969 five-class head).
+                        _posture_vector = [_posture_float]
+        except Exception as _exc:
+            logger.debug("Posture lookup skipped: %s", _exc)
 
         _trace = build_trace_from_cascade(
             decision_id=f"cascade-{int(t0 * 1000)}-{buyer_id or 'anon'}",
@@ -3111,6 +3151,8 @@ def run_bilateral_cascade(
             p_t=float(p_t),
             confidence_snapshot=_confidence_snapshot,
             posture_class=_posture_class,
+            posture_confidence=_posture_confidence,
+            page_posture_vector=_posture_vector,
             bong_posterior=_bong_posterior,
         )
         _emit_decision_trace(_trace)

@@ -653,3 +653,96 @@ def test_run_bilateral_cascade_emitted_trace_has_correct_user_id():
     assert drained[0].user_id == "user-cascade-test"
     # Decision id includes the buyer_id slug per the wiring contract
     assert "user-cascade-test" in drained[0].decision_id
+
+
+# -----------------------------------------------------------------------------
+# Cascade smoke — Slice 5 posture wiring
+# -----------------------------------------------------------------------------
+
+
+def test_cascade_emits_trace_with_posture_when_page_profile_present():
+    """Slice 5: when page_url resolves to a page_profile with non-zero
+    attentional_posture_confidence, the emitted trace carries
+    posture_class / posture_confidence / page_posture_vector."""
+    reset_for_tests()
+
+    from adam.intelligence.page_intelligence import PagePsychologicalProfile
+
+    profile = PagePsychologicalProfile()
+    profile.attentional_posture = -0.7  # blend
+    profile.attentional_posture_confidence = 0.85  # above MIN_POSTURE_CONFIDENCE
+
+    class _FakeCache:
+        def lookup(self, _url: str):
+            return profile
+
+    from adam.api.stackadapt.bilateral_cascade import run_bilateral_cascade
+
+    with patch(
+        "adam.intelligence.page_intelligence.get_page_intelligence_cache",
+        return_value=_FakeCache(),
+    ):
+        run_bilateral_cascade(
+            segment_id="informativ_achiever_t1",
+            buyer_id="user-posture-test",
+            page_url="https://example.com/article",
+        )
+
+    drained = get_log().drain(max_items=10)
+    assert len(drained) == 1
+    trace = drained[0]
+    # Posture wired through to the trace
+    assert trace.posture_class == "blend_compatible"
+    assert trace.posture_confidence == pytest.approx(0.85)
+    assert trace.page_posture_vector == [pytest.approx(-0.7)]
+
+
+def test_cascade_emits_trace_without_posture_when_no_page_url():
+    """No page_url → posture lookup skipped → trace fields stay None."""
+    reset_for_tests()
+    from adam.api.stackadapt.bilateral_cascade import run_bilateral_cascade
+    run_bilateral_cascade(
+        segment_id="informativ_achiever_t1",
+        buyer_id="user-no-posture",
+        # no page_url
+    )
+    drained = get_log().drain(max_items=10)
+    assert len(drained) == 1
+    trace = drained[0]
+    assert trace.posture_class is None
+    assert trace.posture_confidence is None
+    assert trace.page_posture_vector is None
+
+
+def test_cascade_emits_trace_without_posture_when_low_confidence():
+    """page_profile with confidence=0 (no evidence) → posture skipped."""
+    reset_for_tests()
+
+    from adam.intelligence.page_intelligence import PagePsychologicalProfile
+
+    profile = PagePsychologicalProfile()
+    profile.attentional_posture = 0.0
+    profile.attentional_posture_confidence = 0.0
+
+    class _FakeCache:
+        def lookup(self, _url: str):
+            return profile
+
+    from adam.api.stackadapt.bilateral_cascade import run_bilateral_cascade
+
+    with patch(
+        "adam.intelligence.page_intelligence.get_page_intelligence_cache",
+        return_value=_FakeCache(),
+    ):
+        run_bilateral_cascade(
+            segment_id="informativ_achiever_t1",
+            buyer_id="user-zero-conf",
+            page_url="https://example.com/article",
+        )
+
+    drained = get_log().drain(max_items=10)
+    assert len(drained) == 1
+    trace = drained[0]
+    assert trace.posture_class is None
+    assert trace.posture_confidence is None
+    assert trace.page_posture_vector is None
