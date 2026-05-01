@@ -91,6 +91,42 @@ class StackAdaptGraphQLClient:
             logger.error("GraphQL query failed: %s", e)
             return {"error": str(e)}
 
+    async def _mutate(self, mutation: str, variables: Dict = None) -> Dict:
+        """Execute a GraphQL mutation. Same transport contract as
+        ``_query`` — Bearer token, JSON body, captured errors.
+
+        Slice 13: substrate for Phase 8 write paths
+        (createCreativeByURL, createAudience, addUsersToAudience,
+        Pixel API). The transport is identical to queries; this
+        method is named separately for legibility / audit clarity at
+        the call site (read vs write distinction matters for ops).
+
+        Returns the same shape as ``_query``: ``data`` dict on
+        success, ``{"error": ...}`` on missing key / network failure.
+        GraphQL-level errors (data["errors"]) are logged as WARNING
+        and the data payload is still returned — caller checks for
+        the operation's ``errors`` field per StackAdapt's mutation
+        response convention.
+        """
+        if not self._api_key:
+            logger.warning("No StackAdapt API key configured")
+            return {"error": "No API key"}
+
+        payload = {"query": mutation}
+        if variables:
+            payload["variables"] = variables
+
+        try:
+            resp = await self._client.post(GRAPHQL_ENDPOINT, json=payload)
+            resp.raise_for_status()
+            data = resp.json()
+            if "errors" in data:
+                logger.warning("GraphQL mutation errors: %s", data["errors"])
+            return data.get("data", data)
+        except Exception as e:
+            logger.error("GraphQL mutation failed: %s", e)
+            return {"error": str(e)}
+
     async def get_campaigns(
         self,
         first: int = 100,
@@ -268,6 +304,215 @@ class StackAdaptGraphQLClient:
             "adDelivery schema rewrite; returning empty list"
         )
         return []
+
+    # =========================================================================
+    # Slice 13 — Write mutations (Phase 8 substrate)
+    # =========================================================================
+
+    async def create_creative_by_url(
+        self,
+        landing_page_url: str,
+        name: str,
+        *,
+        advertiser_id: Optional[str] = None,
+        mechanism: Optional[str] = None,
+        primary_metaphor: Optional[str] = None,
+        posture_class: Optional[str] = None,
+        creative_type: str = "banner",
+    ) -> Dict[str, Any]:
+        """Upload a creative via createCreativeByURL with metadata tags.
+
+        Per directive Phase 8 line 1099 + Section 6.4: "Upload to
+        StackAdapt with mechanism + metaphor + posture metadata so the
+        partner-side trace later reads back what was deployed."
+
+        Mechanism / metaphor / posture are passed through the
+        creative's `description` or tags field as a structured JSON
+        blob — StackAdapt's createCreativeByURL accepts free-form
+        descriptive metadata, and our DecisionTrace consumers parse
+        it back. The exact field name (description vs metadata vs
+        tag list) depends on the live mutation schema; v0.1 stores
+        the metadata blob in the `description` slot.
+
+        Args:
+            landing_page_url: target URL for the creative click; must
+                include the {SA_POSTBACK_ID} macro for sapid round-
+                trip per directive line 553.
+            name: human-readable creative name.
+            advertiser_id: optional advertiser scoping.
+            mechanism: canonical or cohort-side mechanism name.
+            primary_metaphor: LUXY metaphor frame (CONTAINMENT, etc.).
+            posture_class: target posture (POSTURE_BLEND / VIGILANCE /
+                NEUTRAL).
+            creative_type: 'banner' | 'native' | 'video'. Default banner.
+
+        Returns the mutation response data dict. Errors land on
+        ``data["createCreativeByURL"]["errors"]`` per StackAdapt
+        convention; caller checks that.
+
+        Honest tag — schema uncertainty
+        --------------------------------
+        The exact mutation field shape (input type name, metadata slot
+        name) depends on StackAdapt's live mutation schema. v0.1 uses
+        a best-guess shape; introspect_mutation_field() validates
+        against the live schema. If the live mutation requires a
+        different shape, this method's mutation string needs a 1-line
+        update.
+        """
+        # Encode our metadata as a JSON blob in the description slot.
+        # Cleaner than splitting across multiple StackAdapt fields when
+        # the live schema's metadata shape is uncertain.
+        metadata = {
+            "mechanism": mechanism,
+            "primary_metaphor": primary_metaphor,
+            "posture_class": posture_class,
+        }
+        # Strip None values so the blob is small and round-trips cleanly.
+        metadata_clean = {k: v for k, v in metadata.items() if v is not None}
+        description = json.dumps({"adam_metadata": metadata_clean})
+
+        mutation = """
+        mutation CreateCreativeByURL($input: CreateCreativeByURLInput!) {
+            createCreativeByURL(input: $input) {
+                creative {
+                    id
+                    name
+                    description
+                    creativeType
+                    landingPageUrl
+                }
+                errors {
+                    field
+                    message
+                }
+            }
+        }
+        """
+        input_obj: Dict[str, Any] = {
+            "name": name,
+            "landingPageUrl": landing_page_url,
+            "creativeType": creative_type,
+            "description": description,
+        }
+        if advertiser_id:
+            input_obj["advertiserId"] = advertiser_id
+
+        result = await self._mutate(mutation, {"input": input_obj})
+        return result.get("createCreativeByURL") or result
+
+    async def create_audience(
+        self,
+        name: str,
+        *,
+        advertiser_id: Optional[str] = None,
+        description: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Create a StackAdapt audience.
+
+        Per directive line 542: "Audience segment pushes via GraphQL
+        API. Each cohort is a StackAdapt audience; users move between
+        audiences as cohort posteriors update."
+
+        Returns the mutation response data dict. The created audience
+        carries an ``id`` that ``add_users_to_audience`` consumes.
+        """
+        mutation = """
+        mutation CreateAudience($input: CreateAudienceInput!) {
+            createAudience(input: $input) {
+                audience {
+                    id
+                    name
+                    description
+                }
+                errors {
+                    field
+                    message
+                }
+            }
+        }
+        """
+        input_obj: Dict[str, Any] = {"name": name}
+        if description:
+            input_obj["description"] = description
+        if advertiser_id:
+            input_obj["advertiserId"] = advertiser_id
+
+        result = await self._mutate(mutation, {"input": input_obj})
+        return result.get("createAudience") or result
+
+    async def add_users_to_audience(
+        self,
+        audience_id: str,
+        user_ids: List[str],
+    ) -> Dict[str, Any]:
+        """Add user IDs to a StackAdapt audience.
+
+        Per directive line 542-543: "users move between audiences as
+        cohort posteriors update." This is the membership-update
+        primitive.
+
+        Args:
+            audience_id: StackAdapt audience id from create_audience.
+            user_ids: list of StackAdapt user_ids (postback ids /
+                ramp_ids depending on the integration mode).
+
+        Returns the mutation response. Empty user_ids → no-op.
+        """
+        if not user_ids:
+            return {"audience": {"id": audience_id}, "errors": []}
+
+        mutation = """
+        mutation AddUsersToAudience($input: AddUsersToAudienceInput!) {
+            addUsersToAudience(input: $input) {
+                audience {
+                    id
+                    name
+                }
+                errors {
+                    field
+                    message
+                }
+            }
+        }
+        """
+        result = await self._mutate(
+            mutation,
+            {"input": {"audienceId": audience_id, "userIds": list(user_ids)}},
+        )
+        return result.get("addUsersToAudience") or result
+
+    async def introspect_mutation_field(
+        self, field_name: str,
+    ) -> Dict[str, Any]:
+        """Introspect a top-level Mutation field's args + return type.
+
+        Mirror of introspect_query_field — discovers the live schema
+        for a mutation. Use to validate v0.1 mutation strings against
+        production before pilot launch.
+        """
+        query = """
+        query InspectMutationField {
+            __schema {
+                mutationType {
+                    fields {
+                        name
+                        args { name type { name kind ofType { name } } }
+                        type { name kind ofType { name kind } }
+                    }
+                }
+            }
+        }
+        """
+        result = await self._query(query)
+        fields = (
+            (result.get("__schema") or {})
+            .get("mutationType", {})
+            .get("fields") or []
+        )
+        for f in fields:
+            if f.get("name") == field_name:
+                return f
+        return {}
 
     async def introspect_query_field(self, field_name: str) -> Dict[str, Any]:
         """Introspect a top-level Query field's args + return type.
