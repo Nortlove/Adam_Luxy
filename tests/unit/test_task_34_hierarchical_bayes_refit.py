@@ -83,6 +83,7 @@ class _FakeDiag:
     divergences: int = 0
     ess_bulk_min: float = 500.0
     errors: List[str] = field(default_factory=list)
+    iac_triples_written: int = 0
 
 
 # -----------------------------------------------------------------------------
@@ -374,6 +375,46 @@ async def test_total_fit_failure_marks_task_failed():
 # -----------------------------------------------------------------------------
 # fdr_n_candidates / fdr_n_selected preserved alongside fit details
 # -----------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_iac_triples_written_surfaced_to_details():
+    """Slice 4 — δ_iac writeback diagnostic flows to result.details."""
+    diag = _FakeDiag(
+        cells_recovered=10,
+        iac_triples_written=24,
+    )
+
+    with patch(
+        "adam.intelligence.hierarchical_bayes.run_nightly_hierarchical_refit",
+        return_value=diag,
+    ), patch(
+        "adam.intelligence.iac_prior.load_iac_prior_from_neo4j",
+        return_value=_FakeMoments(moments={}),
+    ):
+        task = HierarchicalBayesRefitTask()
+        result = await task.execute()
+
+    assert result.success is True
+    assert result.details["iac_triples_written"] == 24
+
+
+@pytest.mark.asyncio
+async def test_iac_triples_written_zero_when_loop_doesnt_close():
+    """Sampler failure / empty triples / etc → iac_triples_written=0."""
+    diag = _FakeDiag(cells_recovered=0, iac_triples_written=0)
+
+    with patch(
+        "adam.intelligence.hierarchical_bayes.run_nightly_hierarchical_refit",
+        return_value=diag,
+    ), patch(
+        "adam.intelligence.iac_prior.load_iac_prior_from_neo4j",
+        return_value=_FakeMoments(moments={}),
+    ):
+        task = HierarchicalBayesRefitTask()
+        result = await task.execute()
+
+    assert result.details["iac_triples_written"] == 0
 
 
 @pytest.mark.asyncio

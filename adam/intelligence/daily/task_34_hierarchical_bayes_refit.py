@@ -139,6 +139,7 @@ class HierarchicalBayesRefitTask(DailyStrengtheningTask):
         divergences = int(getattr(diag, "divergences", 0) or 0)
         ess_bulk_min = float(getattr(diag, "ess_bulk_min", 0.0) or 0.0)
         errors = list(getattr(diag, "errors", []) or [])
+        iac_triples_written = int(getattr(diag, "iac_triples_written", 0) or 0)
 
         result.items_processed = cells_recovered
         result.items_stored = cells_recovered
@@ -151,6 +152,9 @@ class HierarchicalBayesRefitTask(DailyStrengtheningTask):
             "divergences": divergences,
             "ess_bulk_min": ess_bulk_min,
             "fit_errors": errors[:10],  # cap details payload
+            # Slice 4: δ_iac writeback diagnostic. Closes the FDR loop
+            # — these triples become tomorrow's IacPriorMoments load.
+            "iac_triples_written": iac_triples_written,
         })
 
         # Diagnostic flags — surface but don't fail the task

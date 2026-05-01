@@ -107,6 +107,12 @@ class FitDiagnostics:
     fitted_at_ts: float = 0.0
     library_versions: Dict[str, str] = field(default_factory=dict)
     errors: List[str] = field(default_factory=list)
+    # δ_iac writeback diagnostic — closes the FDR loop end-to-end
+    # (directive line 988 + 1055). Counts triples successfully written
+    # to :DeltaIacPosterior nodes for tomorrow's Task 34 to load + FDR-
+    # select. Zero on the simpler partial-pooling-only path (no
+    # interaction model, no δ_iac to extract) or on extraction failure.
+    iac_triples_written: int = 0
 
 
 class HierarchyLibsMissingError(RuntimeError):
@@ -477,12 +483,22 @@ def fit_hierarchical_model(
     nuts_params: Optional[Dict[str, Any]] = None,
     priors: Optional[Dict[str, float]] = None,
     pre_specified_interactions: Optional[List[Tuple[str, str, str]]] = None,
-) -> Tuple[List[CellPosterior], FitDiagnostics]:
+    return_inferencedata: bool = False,
+) -> Any:
     """Fit the hierarchical model and recover Beta(α, β) per cell.
 
-    Returns (cell_posteriors, diagnostics). The diagnostics include
-    r_hat_max + ess_bulk_min + divergence count — handoff §3.7
+    Returns (cell_posteriors, diagnostics) by default. The diagnostics
+    include r_hat_max + ess_bulk_min + divergence count — handoff §3.7
     requires r̂ < 1.01 and ESS > 400 with zero divergences post-warmup.
+
+    When ``return_inferencedata=True``, returns
+    ``(cell_posteriors, diagnostics, idata, observed_triples)`` so the
+    caller can extract δ_iac posterior moments. The interaction-aware
+    model is forced (pre_specified_interactions defaults to ``[]`` when
+    None). ``observed_triples`` is the ordered list keying
+    ``idata.posterior['delta_iac']`` for
+    ``extract_iac_prior_from_inferencedata``. On sampler failure /
+    empty-cells the tuple is ``([], diag, None, [])``.
 
     Args:
         observations: per-cell observation rows.
@@ -491,13 +507,18 @@ def fit_hierarchical_model(
         pre_specified_interactions: optional list of (archetype,
             mechanism, category) triples that should bypass the
             horseshoe shrinkage with a wider Normal(0, 1.0) prior.
-            When None (default), the simpler partial-pooling-only
-            model is used. When non-None (even empty list), the
-            δ_iac interaction-aware model is built — see
+            When None and return_inferencedata=False, the simpler
+            partial-pooling-only model is used. When non-None or
+            return_inferencedata=True, the δ_iac interaction-aware
+            model is built — see
             ``build_hierarchical_model_with_interactions`` (directive
             line 988 + 1055). Typical caller: Task 34 passing the
             FDR-selected triples from
             ``iac_fdr_selection.select_pre_specified_for_next_fit``.
+        return_inferencedata: when True, force the interaction-aware
+            model AND return idata + observed_triples. Used by
+            ``run_nightly_hierarchical_refit`` to close the FDR loop
+            (extract IacPriorMoments and write back).
 
     Raises:
         HierarchyLibsMissingError if PyMC/NumPyro isn't available
@@ -523,14 +544,19 @@ def fit_hierarchical_model(
     except ImportError as exc:
         raise HierarchyLibsMissingError(f"PyMC deps missing: {exc}")
 
-    if pre_specified_interactions is not None:
-        # Interaction-aware model: pre-specified triples bypass horseshoe.
-        # Returns a 3-tuple; the third element (observed_triples) is the
-        # δ_iac extraction key used by sibling slices, not by this fit.
-        model, coords, _observed_triples = (
+    # Force interaction-aware path when caller requests idata; else use
+    # the simpler partial-pooling-only model unless pre-specified
+    # interactions are supplied.
+    use_interaction_model = (
+        return_inferencedata or pre_specified_interactions is not None
+    )
+
+    observed_triples: List[Tuple[str, str, str]] = []
+    if use_interaction_model:
+        model, coords, observed_triples = (
             build_hierarchical_model_with_interactions(
                 observations,
-                pre_specified_interactions=pre_specified_interactions,
+                pre_specified_interactions=pre_specified_interactions or [],
                 priors=priors,
             )
         )
@@ -551,6 +577,8 @@ def fit_hierarchical_model(
             )
     except Exception as exc:
         diag.errors.append(f"NUTS sampler failed: {exc}")
+        if return_inferencedata:
+            return [], diag, None, observed_triples
         return [], diag
 
     # Extract gamma_ctx posterior moments → recover Beta(α, β)
@@ -572,6 +600,8 @@ def fit_hierarchical_model(
             pass
     except KeyError as exc:
         diag.errors.append(f"posterior extraction failed: {exc}")
+        if return_inferencedata:
+            return [], diag, None, observed_triples
         return [], diag
 
     # Recover Beta per cell. Handoff §3.2 formula:
@@ -612,6 +642,8 @@ def fit_hierarchical_model(
                 ))
 
     diag.cells_recovered = len(cells)
+    if return_inferencedata:
+        return cells, diag, idata, observed_triples
     return cells, diag
 
 
@@ -687,6 +719,14 @@ def run_nightly_hierarchical_refit(
 ) -> FitDiagnostics:
     """Drive the nightly fit + writeback. Handoff §3.5 cadence.
 
+    Closes the FDR loop end-to-end (directive line 988 + 1055):
+    runs the interaction-aware model, extracts the δ_iac posterior
+    via ``iac_prior.extract_iac_prior_from_inferencedata``, writes
+    moments to Neo4j (``:DeltaIacPosterior`` nodes). Tomorrow night's
+    Task 34 loads those moments → BH-style FDR selects → next refit's
+    pre_specified_interactions bypasses horseshoe shrinkage. The
+    night-over-night learning loop on δ_iac closes here.
+
     Diagnostics returned for ops visibility. r̂ > 1.01 OR
     divergences > 0 means the fit didn't converge — the writeback
     still happens (better than stale priors) but the diagnostic
@@ -698,11 +738,11 @@ def run_nightly_hierarchical_refit(
         pre_specified_interactions: optional FDR-selected triple list
             from the prior horseshoe fit
             (``iac_fdr_selection.select_pre_specified_for_next_fit``).
-            When provided, the fit uses the interaction-aware model so
-            the system's belief about which interactions exist
-            iteratively tightens (directive line 988 + 1055). When
-            None (default), the existing partial-pooling-only fit
-            runs — backward compatible.
+            First-night (no prior moments) → None or [] both produce
+            the same behavior: every observed triple goes through
+            horseshoe shrinkage and seeds tomorrow's FDR-selectable
+            moments. Subsequent nights pass the FDR-selected triples
+            so they bypass shrinkage.
     """
     obs = load_observations_from_neo4j(
         driver=driver, days_lookback=days_lookback,
@@ -712,9 +752,13 @@ def run_nightly_hierarchical_refit(
         diag.errors.append("no observations available")
         return diag
 
-    cells, diag = fit_hierarchical_model(
+    # Always request idata so the δ_iac writeback can close the FDR loop.
+    # The interaction-aware model is forced inside fit_hierarchical_model
+    # when return_inferencedata=True.
+    cells, diag, idata, observed_triples = fit_hierarchical_model(
         obs,
         pre_specified_interactions=pre_specified_interactions,
+        return_inferencedata=True,
     )
 
     written = 0
@@ -726,8 +770,34 @@ def run_nightly_hierarchical_refit(
                 f"writeback failed for {cell.archetype}×{cell.mechanism}×{cell.category}"
             )
 
+    # δ_iac extract + writeback — closes the FDR loop. Skipped when the
+    # sampler failed (idata is None) or no triples were observed.
+    # Soft-fail: any exception during extract or writeback is logged +
+    # appended to diag.errors but does not abort the refit (cells are
+    # already written; better-than-stale-priors discipline).
+    if idata is not None and observed_triples:
+        try:
+            from adam.intelligence.iac_prior import (
+                extract_iac_prior_from_inferencedata,
+                write_iac_posterior_to_neo4j,
+            )
+            moments = extract_iac_prior_from_inferencedata(
+                idata, observed_triples,
+            )
+            if not moments.is_empty():
+                diag.iac_triples_written = write_iac_posterior_to_neo4j(
+                    moments, driver=driver,
+                )
+        except Exception as exc:
+            logger.warning(
+                "iac_prior extract+writeback failed: %s", exc,
+            )
+            diag.errors.append(f"iac_prior writeback: {exc}")
+
     logger.info(
-        "Hierarchical refit: cells=%d written=%d r_hat_max=%.3f divergences=%d",
+        "Hierarchical refit: cells=%d written=%d r_hat_max=%.3f "
+        "divergences=%d iac_triples_written=%d",
         len(cells), written, diag.r_hat_max, diag.divergences,
+        diag.iac_triples_written,
     )
     return diag

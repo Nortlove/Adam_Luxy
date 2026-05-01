@@ -264,3 +264,170 @@ def test_nightly_propagates_libs_missing():
         # nightly should propagate via exception
         with pytest.raises(HierarchyLibsMissingError):
             run_nightly_hierarchical_refit(driver=MagicMock())
+
+
+# -----------------------------------------------------------------------------
+# Slice 4 — δ_iac extract + writeback (closes the FDR loop)
+# -----------------------------------------------------------------------------
+
+
+def test_nightly_writes_iac_moments_when_fit_succeeds():
+    """When fit returns idata + observed_triples, the nightly orchestrator
+    extracts IacPriorMoments and writes them back. Diagnostic
+    iac_triples_written reflects the writeback count."""
+    from adam.intelligence.iac_prior import IacPriorMoments
+    from adam.intelligence.hierarchical_bayes import FitDiagnostics
+
+    obs = [_obs(success=1), _obs(success=0)]
+    fake_cells = [
+        CellPosterior(
+            archetype="a", mechanism="m", category="c",
+            alpha=1.0, beta=1.0, p_mean=0.5, p_variance=0.1, n_obs=2,
+        ),
+    ]
+    fake_diag = FitDiagnostics(cells_recovered=1, fitted_at_ts=1.0)
+    fake_idata = MagicMock(name="idata")
+    fake_triples = [("a", "m", "c"), ("a", "m", "d")]
+
+    fake_moments = IacPriorMoments(
+        moments={
+            ("a", "m", "c"): (0.4, 0.04),
+            ("a", "m", "d"): (-0.2, 0.04),
+        },
+        fitted_at_ts=1.0,
+    )
+
+    with patch(
+        "adam.intelligence.hierarchical_bayes.load_observations_from_neo4j",
+        return_value=obs,
+    ), patch(
+        "adam.intelligence.hierarchical_bayes.fit_hierarchical_model",
+        return_value=(fake_cells, fake_diag, fake_idata, fake_triples),
+    ), patch(
+        "adam.intelligence.hierarchical_bayes.write_cell_posterior_to_neo4j",
+        return_value=True,
+    ), patch(
+        "adam.intelligence.iac_prior.extract_iac_prior_from_inferencedata",
+        return_value=fake_moments,
+    ), patch(
+        "adam.intelligence.iac_prior.write_iac_posterior_to_neo4j",
+        return_value=2,
+    ):
+        diag = run_nightly_hierarchical_refit(driver=MagicMock())
+
+    assert diag.iac_triples_written == 2
+    assert not any("iac_prior writeback" in e for e in diag.errors)
+
+
+def test_nightly_skips_iac_writeback_when_idata_none():
+    """Sampler failure path returns idata=None → writeback is skipped;
+    iac_triples_written stays at 0; no error appended."""
+    from adam.intelligence.hierarchical_bayes import FitDiagnostics
+
+    obs = [_obs(success=1)]
+    fake_diag = FitDiagnostics()
+    fake_diag.errors.append("NUTS sampler failed: synthetic")
+
+    with patch(
+        "adam.intelligence.hierarchical_bayes.load_observations_from_neo4j",
+        return_value=obs,
+    ), patch(
+        "adam.intelligence.hierarchical_bayes.fit_hierarchical_model",
+        return_value=([], fake_diag, None, []),
+    ):
+        diag = run_nightly_hierarchical_refit(driver=MagicMock())
+
+    assert diag.iac_triples_written == 0
+    # Sampler error preserved; no extra writeback error appended.
+    assert any("NUTS" in e for e in diag.errors)
+    assert not any("iac_prior writeback" in e for e in diag.errors)
+
+
+def test_nightly_skips_iac_writeback_when_no_triples():
+    """observed_triples=[] (no observed (a, m, c) cells in fit) → skip."""
+    from adam.intelligence.hierarchical_bayes import FitDiagnostics
+
+    obs = [_obs(success=1)]
+    fake_diag = FitDiagnostics(cells_recovered=0)
+
+    with patch(
+        "adam.intelligence.hierarchical_bayes.load_observations_from_neo4j",
+        return_value=obs,
+    ), patch(
+        "adam.intelligence.hierarchical_bayes.fit_hierarchical_model",
+        return_value=([], fake_diag, MagicMock(), []),
+    ):
+        diag = run_nightly_hierarchical_refit(driver=MagicMock())
+
+    assert diag.iac_triples_written == 0
+
+
+def test_nightly_soft_fails_iac_extract_failure():
+    """extract_iac_prior_from_inferencedata raising → writeback skipped;
+    error appended to diag.errors but cells were already written."""
+    from adam.intelligence.hierarchical_bayes import FitDiagnostics
+
+    obs = [_obs(success=1)]
+    fake_cells = [
+        CellPosterior(
+            archetype="a", mechanism="m", category="c",
+            alpha=1.0, beta=1.0, p_mean=0.5, p_variance=0.1, n_obs=1,
+        ),
+    ]
+    fake_diag = FitDiagnostics(cells_recovered=1)
+
+    with patch(
+        "adam.intelligence.hierarchical_bayes.load_observations_from_neo4j",
+        return_value=obs,
+    ), patch(
+        "adam.intelligence.hierarchical_bayes.fit_hierarchical_model",
+        return_value=(fake_cells, fake_diag, MagicMock(), [("a", "m", "c")]),
+    ), patch(
+        "adam.intelligence.hierarchical_bayes.write_cell_posterior_to_neo4j",
+        return_value=True,
+    ), patch(
+        "adam.intelligence.iac_prior.extract_iac_prior_from_inferencedata",
+        side_effect=RuntimeError("malformed idata"),
+    ):
+        diag = run_nightly_hierarchical_refit(driver=MagicMock())
+
+    assert diag.iac_triples_written == 0
+    assert any("iac_prior writeback" in e for e in diag.errors)
+
+
+def test_nightly_skips_iac_writeback_when_moments_empty():
+    """Empty IacPriorMoments → writeback not invoked; counter stays 0."""
+    from adam.intelligence.iac_prior import IacPriorMoments
+    from adam.intelligence.hierarchical_bayes import FitDiagnostics
+
+    obs = [_obs(success=1)]
+    fake_cells = [
+        CellPosterior(
+            archetype="a", mechanism="m", category="c",
+            alpha=1.0, beta=1.0, p_mean=0.5, p_variance=0.1, n_obs=1,
+        ),
+    ]
+    fake_diag = FitDiagnostics(cells_recovered=1)
+
+    with patch(
+        "adam.intelligence.hierarchical_bayes.load_observations_from_neo4j",
+        return_value=obs,
+    ), patch(
+        "adam.intelligence.hierarchical_bayes.fit_hierarchical_model",
+        return_value=(fake_cells, fake_diag, MagicMock(), [("a", "m", "c")]),
+    ), patch(
+        "adam.intelligence.hierarchical_bayes.write_cell_posterior_to_neo4j",
+        return_value=True,
+    ), patch(
+        "adam.intelligence.iac_prior.extract_iac_prior_from_inferencedata",
+        return_value=IacPriorMoments(),
+    ) as mock_extract, patch(
+        "adam.intelligence.iac_prior.write_iac_posterior_to_neo4j",
+        return_value=99,  # would-be count if write was called
+    ) as mock_write:
+        diag = run_nightly_hierarchical_refit(driver=MagicMock())
+
+    assert diag.iac_triples_written == 0
+    mock_extract.assert_called_once()
+    # write should NOT be called when moments.is_empty()
+    mock_write.assert_not_called()
