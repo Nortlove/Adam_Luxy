@@ -355,6 +355,21 @@ def _register_all_tasks() -> None:
     except Exception as e:
         logger.debug("Task 39 (mSPRT campaign monitor) not available: %s", e)
 
+    # Task 40 — Spine #5 dual_eval_context nightly re-warm. As new
+    # :GoalStateLabel nodes accumulate (via Slice 18's Claude API
+    # labeler), this task re-runs warm_dual_eval_from_neo4j so the
+    # production cascade's primary model swaps to whichever of B / C
+    # wins on the latest labeled set. Without this scheduled, the
+    # Slice 20 startup wire only runs at process boot — adding labels
+    # mid-run wouldn't propagate to the cascade until the next deploy.
+    try:
+        from adam.intelligence.daily.task_40_dual_eval_rewarm import (
+            DualEvalRewarmTask,
+        )
+        tasks.append(DualEvalRewarmTask())
+    except Exception as e:
+        logger.debug("Task 40 (dual_eval re-warm) not available: %s", e)
+
     for task in tasks:
         _task_registry[task.name] = task
 
