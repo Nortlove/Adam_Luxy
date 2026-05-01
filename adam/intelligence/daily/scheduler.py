@@ -340,6 +340,21 @@ def _register_all_tasks() -> None:
     except Exception as e:
         logger.debug("Task 38 (DecisionTrace drain) not available: %s", e)
 
+    # Task 39 — Spine Section 8 mSPRT campaign-level monitor. Per
+    # CLAUDE_CODE_DIRECTIVE_FULL_BUILD.md line 31, Section 8.3 line
+    # 913, line 1125, line 1134. Daily aggregation of treatment vs
+    # control conversions + mSPRT step → boundary status for the
+    # partner dashboard + RED-criterion launch-deferral trigger.
+    # Without this scheduled, the campaign monitor (f4a9093) +
+    # aggregation function exist but never run on real data.
+    try:
+        from adam.intelligence.daily.task_39_msprt_campaign_monitor import (
+            MSPRTCampaignMonitorTask,
+        )
+        tasks.append(MSPRTCampaignMonitorTask())
+    except Exception as e:
+        logger.debug("Task 39 (mSPRT campaign monitor) not available: %s", e)
+
     for task in tasks:
         _task_registry[task.name] = task
 
