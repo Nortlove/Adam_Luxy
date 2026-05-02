@@ -344,6 +344,8 @@ async def upload_creative(
     reactance_threshold: Optional[float] = None,
     enforce_metaphor_coherence_check: bool = True,
     metaphor_coherence_threshold: Optional[float] = None,
+    enforce_mechanism_activation_check: bool = True,
+    mechanism_activation_threshold: Optional[float] = None,
 ) -> Optional[CreativeRecord]:
     """Upload a creative to StackAdapt + persist a manifest entry.
 
@@ -407,6 +409,43 @@ async def upload_creative(
             logger.warning(
                 "upload_creative: reactance scorer raised; failing OPEN "
                 "(allowing upload) for name=%s: %s",
+                name, exc,
+            )
+
+    # Slice 20 — pre-publication mechanism-activation gate. Per
+    # directive Section 6.4 line 1064 (third scoring dimension).
+    # Skipped when mechanism not declared OR copy_text missing.
+    if (
+        enforce_mechanism_activation_check
+        and copy_text
+        and mechanism
+    ):
+        try:
+            from adam.intelligence.mechanism_activation_scorer import (
+                MECHANISM_ACTIVATION_THRESHOLD,
+                passes_mechanism_activation_check,
+            )
+            ma_threshold = (
+                mechanism_activation_threshold
+                if mechanism_activation_threshold is not None
+                else MECHANISM_ACTIVATION_THRESHOLD
+            )
+            ma_passes, ma_result = passes_mechanism_activation_check(
+                copy_text, mechanism, threshold=ma_threshold,
+            )
+            if not ma_passes:
+                logger.warning(
+                    "upload_creative: REJECTED by mechanism-activation "
+                    "gate (name=%s target=%s score=%.3f threshold=%.3f "
+                    "per_mech_hits=%s) — directive Section 6.4",
+                    name, mechanism, ma_result.activation_score,
+                    ma_threshold, dict(ma_result.per_mechanism_hits),
+                )
+                return None
+        except Exception as exc:
+            logger.warning(
+                "upload_creative: mechanism activation scorer raised; "
+                "failing OPEN (allowing upload) for name=%s: %s",
                 name, exc,
             )
 
