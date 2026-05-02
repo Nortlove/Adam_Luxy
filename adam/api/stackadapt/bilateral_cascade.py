@@ -2846,6 +2846,86 @@ def run_bilateral_cascade(
         except Exception as exc:
             logger.debug("Posture × mechanism modulation skipped: %s", exc)
 
+    # ─── HARD FLUENCY FLOOR — mechanism granularity (Slice 1 / Tier 1 #1) ───
+    # Audit 2026-05-01 Tier 1 #1: the directive (line 974) requires
+    # the fluency floor as eligibility filter, NOT a score modifier.
+    # The bundle-level filter (fluency_floor.passes_fluency_floor) is
+    # blocked on creative resolution (Slice C). Until then, we apply
+    # the hard gate at mechanism × posture granularity here — drop
+    # candidates whose posture × mechanism compatibility is LOW. This
+    # promotes the existing soft gate (bid_composer's epistemic_bonus=0
+    # on LOW) to a true eligibility filter at the cascade's only
+    # available granularity. Foundation rule 11 (fitness function IS
+    # ethics) made operational at decision time.
+    if result.mechanism_scores and page_url:
+        try:
+            from adam.intelligence.mechanism_fluency_floor import (
+                apply_mechanism_fluency_floor,
+            )
+            from adam.intelligence.page_attentional_posture_substrate import (
+                categorize_posture as _categorize_posture_floor,
+            )
+            from adam.intelligence.page_intelligence import (
+                get_page_intelligence_cache as _get_page_cache_floor,
+            )
+            _floor_cache = _get_page_cache_floor()
+            _floor_profile = _floor_cache.lookup(page_url)
+            if _floor_profile is not None:
+                _floor_conf = float(
+                    getattr(
+                        _floor_profile,
+                        "attentional_posture_confidence",
+                        0.0,
+                    ) or 0.0
+                )
+                if _floor_conf > 0.0:
+                    _floor_label = _categorize_posture_floor(
+                        float(
+                            getattr(
+                                _floor_profile, "attentional_posture", 0.0,
+                            ) or 0.0
+                        ),
+                        _floor_conf,
+                    )
+                    floor_result = apply_mechanism_fluency_floor(
+                        mechanism_scores=result.mechanism_scores,
+                        posture=_floor_label,
+                    )
+                    # Emit Prometheus counters for the RED-criterion #1
+                    # input (directive line 1131 — fluency-floor
+                    # violation rate >5% defers launch).
+                    try:
+                        from adam.infrastructure.prometheus import (
+                            get_metrics as _get_metrics_floor,
+                        )
+                        _m_floor = _get_metrics_floor()
+                        if floor_result.n_dropped:
+                            _m_floor.cascade_fluency_floor_violations_total.labels(
+                                posture=_floor_label
+                            ).inc(floor_result.n_dropped)
+                        if floor_result.all_dropped:
+                            _m_floor.cascade_fluency_floor_no_eligible_total.labels(
+                                posture=_floor_label
+                            ).inc()
+                    except Exception:
+                        pass
+                    if floor_result.bypassed:
+                        result.reasoning.append(
+                            f"Fluency floor BYPASSED (all "
+                            f"{floor_result.n_dropped} mechanisms LOW; "
+                            f"Slice 3 refuse-all-bid awaits)"
+                        )
+                    elif floor_result.n_dropped:
+                        result.reasoning.append(
+                            f"Fluency floor: dropped "
+                            f"{floor_result.n_dropped}/"
+                            f"{floor_result.n_dropped + floor_result.n_eligible} "
+                            f"mechanisms (posture={_floor_label})"
+                        )
+                        result.mechanism_scores = floor_result.filtered_scores
+        except Exception as exc:
+            logger.debug("Mechanism fluency floor skipped: %s", exc)
+
     # ─── FREE-ENERGY MODULATION (Spine #5 — directive line 521) ───
     # Slice 17d: subtract λ_F · F(a) from each mechanism score per
     # the active-inference free-energy objective (Spine #5 lines

@@ -242,6 +242,25 @@ class ADAMMetrics:
                 buckets=[0, 5, 10, 25, 50, 100, 250, 500, 1000],
             )
 
+            # Hard fluency floor — count of mechanisms dropped by the
+            # mechanism-granularity gate (Tier 1 audit #1; RED-criterion
+            # #1 input per directive line 1131).
+            self.cascade_fluency_floor_violations_total = Counter(
+                "adam_cascade_fluency_floor_violations_total",
+                "Mechanisms dropped by hard fluency floor (LOW posture×mech)",
+                ["posture"],
+            )
+
+            # Hard fluency floor — count of "all mechanisms LOW" events.
+            # Bypassed in Slice 1 (fail-open + warn); Slice 3 within-
+            # subject scheduler will replace with refuse-all-bid per
+            # directive line 122.
+            self.cascade_fluency_floor_no_eligible_total = Counter(
+                "adam_cascade_fluency_floor_no_eligible_total",
+                "Cascade requests where every mechanism was below fluency floor",
+                ["posture"],
+            )
+
             # Intelligence prefetch latency
             self.prefetch_latency = Histogram(
                 "adam_intelligence_prefetch_latency_seconds",
