@@ -37,9 +37,12 @@ NOT IN SCOPE (named successors)
   * cmo_review_disposition input. CMO review form is operational
     UI work (Phase 7 partner surface); until that lands, this
     criterion is skip-when-no-data.
-  * n_creatives_failed_spot_check input. Offline-pipeline metaphor
-    coherence scorer is Section 6 (Spine #12) work; not in cascade
-    today. Skip-when-no-data until that scorer runs and aggregates.
+  * n_creatives_failed_spot_check input — SHIPPED in Slice 23
+    (Task 45 creative_spot_check). Task 45 runs at 04:00 UTC,
+    populating record_creatives_in_rotation +
+    record_creatives_failed_spot_check from :UploadedCreative
+    copy_text via Slice 18/19/20 scorers. RED criterion #6 fires
+    here at 05:00.
   * Identity-stability collapse counter producer wire — SHIPPED
     in Slice 16 (Task 44 identity_stability_sweep). The producer
     runs at 04:00 UTC, populating snapshot.record_user_active +
@@ -146,6 +149,13 @@ class LaunchGateRunnerTask(DailyStrengtheningTask):
         n_users_collapsed = int(
             snapshot.get("n_users_with_collapsed_identity_stability", 0)
         )
+        # Slice 23 — Task 45 spot-check counters (RED criterion #6).
+        n_creatives_in_rotation = int(
+            snapshot.get("n_creatives_in_rotation", 0)
+        )
+        n_creatives_failed = int(
+            snapshot.get("n_creatives_failed_spot_check", 0)
+        )
         p99_latency_ms = snapshot.get("p99_latency_ms")
         window_seconds = float(snapshot.get("window_seconds", 0.0))
 
@@ -156,6 +166,8 @@ class LaunchGateRunnerTask(DailyStrengtheningTask):
             "n_floor_violations": n_floor_violations,
             "n_users_active": n_users_active,
             "n_users_with_collapsed_identity_stability": n_users_collapsed,
+            "n_creatives_in_rotation": n_creatives_in_rotation,
+            "n_creatives_failed_spot_check": n_creatives_failed,
             "p99_latency_ms": p99_latency_ms,
         }
 
@@ -187,6 +199,15 @@ class LaunchGateRunnerTask(DailyStrengtheningTask):
             inputs_kwargs["n_users_active"] = n_users_active
             inputs_kwargs["n_users_with_collapsed_identity_stability"] = (
                 n_users_collapsed
+            )
+        # Slice 23 — only forward when Task 45 evaluated at least
+        # one creative (skip-when-no-data discipline).
+        if n_creatives_in_rotation > 0:
+            inputs_kwargs["n_creatives_in_rotation"] = (
+                n_creatives_in_rotation
+            )
+            inputs_kwargs["n_creatives_failed_spot_check"] = (
+                n_creatives_failed
             )
         if p99_latency_ms is not None:
             inputs_kwargs["p99_latency_ms"] = float(p99_latency_ms)

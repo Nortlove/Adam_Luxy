@@ -435,6 +435,22 @@ def _register_all_tasks() -> None:
             "Task 44 (identity-stability sweep) not available: %s", e,
         )
 
+    # Task 45 — Slice 23 creative spot-check sweep. RED criterion #6
+    # producer (named sibling in task_42_launch_gate_runner.py:40-42).
+    # Runs Slice 18 (reactance) + 19 (metaphor coherence) + 20
+    # (mechanism activation) scorers against :UploadedCreative
+    # copy_text; increments record_creatives_in_rotation +
+    # record_creatives_failed_spot_check. Same 04:00 slot as Task 44.
+    try:
+        from adam.intelligence.daily.task_45_creative_spot_check import (
+            CreativeSpotCheckTask,
+        )
+        tasks.append(CreativeSpotCheckTask())
+    except Exception as e:
+        logger.debug(
+            "Task 45 (creative spot-check) not available: %s", e,
+        )
+
     for task in tasks:
         _task_registry[task.name] = task
 

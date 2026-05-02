@@ -126,6 +126,11 @@ class CreativeRecord(BaseModel):
     advertiser_id: Optional[str] = None
     creative_type: str = "banner"
     uploaded_at_ts: float = Field(default_factory=time.time)
+    # Slice 23 — copy_text for Phase 10 RED #6 spot-check (Task 45
+    # runs Slice 18 / 19 / 20 scorers against this field). None
+    # when operator hasn't supplied scoreable copy at upload time
+    # (legacy uploads / non-text creatives).
+    copy_text: Optional[str] = None
 
 
 # =============================================================================
@@ -143,7 +148,8 @@ _PERSIST_CYPHER: str = (
     "    c.posture_class = $posture_class, "
     "    c.advertiser_id = $advertiser_id, "
     "    c.creative_type = $creative_type, "
-    "    c.uploaded_at_ts = $uploaded_at_ts"
+    "    c.uploaded_at_ts = $uploaded_at_ts, "
+    "    c.copy_text = $copy_text"
 )
 
 
@@ -179,6 +185,7 @@ def _record_to_cypher_params(record: CreativeRecord) -> Dict[str, Any]:
         "advertiser_id": record.advertiser_id,
         "creative_type": record.creative_type,
         "uploaded_at_ts": record.uploaded_at_ts,
+        "copy_text": record.copy_text,
     }
 
 
@@ -195,6 +202,7 @@ def _node_to_record(node: Any) -> Optional[CreativeRecord]:
             advertiser_id=node.get("advertiser_id"),
             creative_type=str(node.get("creative_type") or "banner"),
             uploaded_at_ts=float(node.get("uploaded_at_ts") or 0.0),
+            copy_text=node.get("copy_text"),
         )
     except Exception as exc:
         logger.warning("CreativeRecord parse failed: %s", exc)
@@ -530,6 +538,7 @@ async def upload_creative(
         posture_class=posture_class,
         advertiser_id=advertiser_id,
         creative_type=creative_type,
+        copy_text=copy_text,
     )
 
     # Best-effort persist

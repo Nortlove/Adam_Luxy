@@ -105,6 +105,12 @@ class RedCriteriaSnapshot:
     n_floor_violations: int = 0
     n_users_active: int = 0
     n_users_with_collapsed_identity_stability: int = 0
+    # Slice 23 — Phase 10 RED criterion #6 producer counters
+    # (per directive line 1135). Populated by Task 45 spot-check
+    # runner against persisted CreativeRecord copy_text + Slice
+    # 18 / 19 / 20 scorers.
+    n_creatives_in_rotation: int = 0
+    n_creatives_failed_spot_check: int = 0
     _latency_ring: Deque[float] = field(
         default_factory=lambda: deque(maxlen=LATENCY_RING_BUFFER_SIZE)
     )
@@ -130,6 +136,22 @@ class RedCriteriaSnapshot:
     def record_identity_collapse(self, n: int = 1) -> None:
         with self._lock:
             self.n_users_with_collapsed_identity_stability += int(n)
+
+    def record_creatives_in_rotation(self, n: int) -> None:
+        """Slice 23: total CreativeRecord entries the spot-check
+        evaluated this cycle. Setter (not increment) — Task 45
+        sweeps the manifest each cycle and reports the absolute
+        rotation size."""
+        with self._lock:
+            self.n_creatives_in_rotation = int(n)
+
+    def record_creatives_failed_spot_check(self, n: int) -> None:
+        """Slice 23: count of CreativeRecord entries that failed
+        the spot-check (metaphor coherence + mechanism activation +
+        reactance) this cycle. Setter (not increment) — paired with
+        record_creatives_in_rotation."""
+        with self._lock:
+            self.n_creatives_failed_spot_check = int(n)
 
     def record_latency_ms(self, ms: float) -> None:
         if ms is None:
@@ -169,6 +191,8 @@ class RedCriteriaSnapshot:
             n_floor_violations = self.n_floor_violations
             n_users_active = self.n_users_active
             n_users_collapsed = self.n_users_with_collapsed_identity_stability
+            n_creatives_rotation = self.n_creatives_in_rotation
+            n_creatives_failed = self.n_creatives_failed_spot_check
             p99 = self._p99_locked()
             now = time.time()
             window_seconds = max(0.0, now - self._last_reset_ts)
@@ -179,6 +203,8 @@ class RedCriteriaSnapshot:
             self.n_floor_violations = 0
             self.n_users_active = 0
             self.n_users_with_collapsed_identity_stability = 0
+            self.n_creatives_in_rotation = 0
+            self.n_creatives_failed_spot_check = 0
             self._latency_ring.clear()
             self._last_reset_ts = now
 
@@ -188,6 +214,8 @@ class RedCriteriaSnapshot:
             "n_floor_violations": n_floor_violations,
             "n_users_active": n_users_active,
             "n_users_with_collapsed_identity_stability": n_users_collapsed,
+            "n_creatives_in_rotation": n_creatives_rotation,
+            "n_creatives_failed_spot_check": n_creatives_failed,
             "p99_latency_ms": p99,
             "window_seconds": window_seconds,
         }

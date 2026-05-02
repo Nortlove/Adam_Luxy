@@ -126,35 +126,27 @@ class ReconciliationResult:
 
 
 def parse_adam_metadata_from_ad(ad: Dict[str, Any]) -> Dict[str, Optional[str]]:
-    """Extract (mechanism, primary_metaphor, posture_class) from an
-    Ad's userMetadata JSON.
+    """Extract (mechanism, primary_metaphor, posture_class, copy_text)
+    from an Ad's userMetadata JSON.
+
+    Slice 23 added copy_text — Phase 10 RED #6 spot-check (Task 45)
+    runs Slice 18/19/20 scorers against this field.
 
     Looks for the conventional ``{"adam_metadata": {...}}`` wrapper
     first (matches what create_creative_by_url writes), then falls
-    back to looking at top-level keys. Returns a dict with all three
+    back to looking at top-level keys. Returns a dict with all four
     keys; missing keys are None.
-
-    Args:
-        ad: Ad node from StackAdapt's list_ads query. Expected shape
-            includes ``userMetadata`` (str | dict | None).
-
-    Returns:
-        ``{"mechanism": str | None, "primary_metaphor": str | None,
-          "posture_class": str | None}``. All-None when userMetadata
-        is empty or non-conformant.
     """
     out: Dict[str, Optional[str]] = {
         "mechanism": None,
         "primary_metaphor": None,
         "posture_class": None,
+        "copy_text": None,
     }
     raw = ad.get("userMetadata")
     if not raw:
         return out
 
-    # userMetadata may be returned as a dict (already JSON-parsed by
-    # GraphQL JSON scalar) or as a string (when the client returns
-    # the raw payload).
     parsed: Any = raw
     if isinstance(raw, str):
         try:
@@ -165,11 +157,12 @@ def parse_adam_metadata_from_ad(ad: Dict[str, Any]) -> Dict[str, Optional[str]]:
     if not isinstance(parsed, dict):
         return out
 
-    # Conventional wrapper from create_creative_by_url.
     inner = parsed.get("adam_metadata")
     src = inner if isinstance(inner, dict) else parsed
 
-    for key in ("mechanism", "primary_metaphor", "posture_class"):
+    for key in (
+        "mechanism", "primary_metaphor", "posture_class", "copy_text",
+    ):
         val = src.get(key)
         if isinstance(val, str) and val:
             out[key] = val
@@ -269,6 +262,7 @@ async def reconcile_existing_creatives(
                     mechanism=metadata["mechanism"],
                     primary_metaphor=metadata["primary_metaphor"],
                     posture_class=metadata["posture_class"],
+                    copy_text=metadata["copy_text"],
                     creative_type=str(
                         ad.get("channelType") or "banner"
                     ).lower(),

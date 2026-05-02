@@ -57,6 +57,7 @@ def test_parse_metadata_empty_userMetadata_returns_all_none():
         "mechanism": None,
         "primary_metaphor": None,
         "posture_class": None,
+        "copy_text": None,
     }
 
 
@@ -123,6 +124,7 @@ def test_parse_metadata_malformed_json_string_returns_all_none():
         "mechanism": None,
         "primary_metaphor": None,
         "posture_class": None,
+        "copy_text": None,
     }
 
 
