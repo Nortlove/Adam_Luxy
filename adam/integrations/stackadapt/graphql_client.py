@@ -442,6 +442,73 @@ class StackAdaptGraphQLClient:
         return [r for r in rows if r]
 
     # =========================================================================
+    # Slice 14 — list ads (read counterpart to create_creative_by_url)
+    # =========================================================================
+
+    async def list_ads(
+        self,
+        *,
+        first: int = 50,
+        after: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """List ads in the account via the ``ads(first, after)`` query.
+
+        Per StackAdapt's live schema (introspected 2026-05-02): the
+        top-level ``ads`` field returns ``AdConnection`` with
+        ``pageInfo`` + ``nodes`` of ``Ad``. ``Ad.userMetadata`` is the
+        free-form JSON slot that holds operator-set metadata.
+
+        This is the read counterpart of ``create_creative_by_url``,
+        used by Slice 14's manifest reconciliation: surveys the
+        existing account inventory and persists ``:UploadedCreative``
+        records so Slice C's lookup can resolve real creatives.
+
+        Returns:
+            ``{"nodes": [...], "pageInfo": {"hasNextPage": bool,
+              "endCursor": str | None}}``. On error: empty dict
+            (caller treats as "no results"; exception logged).
+
+        Honest tag — Ad.userMetadata vs createCreativeByURL.description
+        ------------------------------------------------------------------
+        ``create_creative_by_url`` writes operator metadata into the
+        creative's ``description`` slot. ``Ad.userMetadata`` is a
+        separate JSON slot — what gets read here may NOT be what the
+        upload mutation wrote. The reconciliation slice flags this
+        discrepancy and persists records with metadata=None where the
+        userMetadata slot is empty.
+        """
+        query = """
+        query ListAds($first: Int, $after: String) {
+          ads(first: $first, after: $after) {
+            pageInfo { hasNextPage endCursor }
+            nodes {
+              id
+              name
+              brandname
+              channelType
+              clickUrl
+              creativeSize
+              creativeStatus { status }
+              isArchived
+              isDraft
+              isRejected
+              paused
+              userMetadata
+            }
+          }
+        }
+        """
+        variables: Dict[str, Any] = {"first": first}
+        if after:
+            variables["after"] = after
+        try:
+            result = await self._query(query, variables)
+        except Exception as exc:
+            logger.warning("list_ads failed: %s", exc)
+            return {}
+        return (result or {}).get("ads") or {}
+
+    # =========================================================================
     # Slice 13 — Write mutations (Phase 8 substrate)
     # =========================================================================
 
