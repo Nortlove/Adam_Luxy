@@ -58,6 +58,7 @@ MODULE STRUCTURE
 from adam.intelligence.simulation.architectures import (
     Architecture,
     MarginalAdditiveBaseline,
+    TrilateralCascadeOnly,
 )
 from adam.intelligence.simulation.config import (
     SimulationConfig,
@@ -97,6 +98,7 @@ __all__ = [
     # architectures
     "Architecture",
     "MarginalAdditiveBaseline",
+    "TrilateralCascadeOnly",
     # runner
     "SimulationResult",
     "run_single_cell",
