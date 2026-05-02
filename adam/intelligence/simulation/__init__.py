@@ -59,6 +59,7 @@ from adam.intelligence.simulation.architectures import (
     Architecture,
     MarginalAdditiveBaseline,
     TrilateralCascadeOnly,
+    TrilateralWithInteraction,
 )
 from adam.intelligence.simulation.config import (
     SimulationConfig,
@@ -99,6 +100,7 @@ __all__ = [
     "Architecture",
     "MarginalAdditiveBaseline",
     "TrilateralCascadeOnly",
+    "TrilateralWithInteraction",
     # runner
     "SimulationResult",
     "run_single_cell",

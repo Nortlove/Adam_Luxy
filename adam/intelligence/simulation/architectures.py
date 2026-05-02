@@ -277,3 +277,141 @@ class TrilateralCascadeOnly:
         if outcome.converted:
             self._user_mech_conv[(u, m)] += 1
             self._cohort_mech_conv[(c, m)] += 1
+
+
+# =============================================================================
+# Architecture C — trilateral + interaction model (per directive line 1162)
+# =============================================================================
+
+
+class TrilateralWithInteraction:
+    """Architecture C — Spine #4 trilateral cascade + Spine #1's
+    δ_iac interaction tensor.
+
+    Per directive Appendix A line 1162 ("trilateral + interaction
+    model (Spine #4 + Spine #1's δ_iac)") + directive Section 2
+    likelihood lines 466-477:
+
+        η_iat = θ_i + β_a + γ_c + δ_iac + drift_t + carryover_t
+
+    where δ_iac is the per-(individual i, action a, context c)
+    interaction cell. Architecture C's differentiator over B: B
+    uses a FIXED additive weight between user and cohort signals;
+    C uses Bayesian shrinkage so the per-(user, mechanism) cell
+    signal (the interaction proxy) earns more weight as data
+    accumulates.
+
+    Shrinkage formula:
+        weight_user(u, m) = n_user(u, m) / (n_user(u, m) + κ)
+        score_C(u, m) = weight_user × ratehat(u, m)
+                      + (1 - weight_user) × ratehat(c(u), m)
+
+    where κ is the shrinkage hyperparameter (default 20). This is
+    the partial-pooling formalization of the interaction tensor in
+    additive bandits: when n_user → 0 the score collapses to the
+    cohort prior (B-like at cold-start); when n_user → ∞ the score
+    captures the per-(user, mechanism) cell fully (the interaction
+    captured at high-data limit).
+
+    The architecture has NO carryover correction (Architecture D's
+    differentiator) and NO counterfactual logging (Architecture E's
+    differentiator).
+    """
+
+    name: str = "C_trilateral_plus_interaction"
+
+    def __init__(
+        self,
+        *,
+        epsilon: float = 0.10,
+        shrinkage_kappa: float = 20.0,
+        seed: int = 0,
+    ):
+        if shrinkage_kappa <= 0:
+            raise ValueError("shrinkage_kappa must be positive")
+        self.epsilon = float(epsilon)
+        self.shrinkage_kappa = float(shrinkage_kappa)
+        self._rng = random.Random(int(seed))
+        self._mechanisms: List[str] = []
+        self._user_cohort: Dict[str, int] = {}
+        self._user_mech_n: Dict[tuple, int] = defaultdict(int)
+        self._user_mech_conv: Dict[tuple, int] = defaultdict(int)
+        self._cohort_mech_n: Dict[tuple, int] = defaultdict(int)
+        self._cohort_mech_conv: Dict[tuple, int] = defaultdict(int)
+
+    def configure(self, population: SyntheticPopulation) -> None:
+        self._mechanisms = list(population.mechanisms)
+        self._user_cohort = {
+            u.user_id: u.cohort_id for u in population.users
+        }
+        self._user_mech_n = defaultdict(int)
+        self._user_mech_conv = defaultdict(int)
+        self._cohort_mech_n = defaultdict(int)
+        self._cohort_mech_conv = defaultdict(int)
+
+    def _user_mech_rate(self, user_id: str, mechanism: str) -> float:
+        key = (user_id, mechanism)
+        return (
+            (1 + self._user_mech_conv[key])
+            / float(2 + self._user_mech_n[key])
+        )
+
+    def _cohort_mech_rate(self, cohort_id: int, mechanism: str) -> float:
+        key = (cohort_id, mechanism)
+        return (
+            (1 + self._cohort_mech_conv[key])
+            / float(2 + self._cohort_mech_n[key])
+        )
+
+    def shrinkage_weight(self, user_id: str, mechanism: str) -> float:
+        """Bayesian shrinkage weight on the per-(user, mechanism)
+        cell. Public for diagnostic surfaces + tests."""
+        n_user = self._user_mech_n[(user_id, mechanism)]
+        return float(n_user) / (float(n_user) + self.shrinkage_kappa)
+
+    def _interaction_score(self, user_id: str, mechanism: str) -> float:
+        """Shrinkage-weighted user × mechanism interaction signal."""
+        cohort = self._user_cohort.get(user_id, -1)
+        weight_user = self.shrinkage_weight(user_id, mechanism)
+        return (
+            weight_user * self._user_mech_rate(user_id, mechanism)
+            + (1.0 - weight_user)
+            * self._cohort_mech_rate(cohort, mechanism)
+        )
+
+    def select_mechanism(self, impression: Impression) -> str:
+        if not self._mechanisms:
+            raise RuntimeError(
+                "TrilateralWithInteraction.select_mechanism called "
+                "before configure()"
+            )
+
+        cohort = self._user_cohort.get(impression.user_id, -1)
+        cohort_untried = [
+            m for m in self._mechanisms
+            if self._cohort_mech_n[(cohort, m)] == 0
+        ]
+        if cohort_untried:
+            return self._rng.choice(cohort_untried)
+
+        if self._rng.random() < self.epsilon:
+            return self._rng.choice(self._mechanisms)
+
+        best_m = self._mechanisms[0]
+        best_v = self._interaction_score(impression.user_id, best_m)
+        for m in self._mechanisms[1:]:
+            v = self._interaction_score(impression.user_id, m)
+            if v > best_v:
+                best_v = v
+                best_m = m
+        return best_m
+
+    def record_outcome(self, outcome: Outcome) -> None:
+        m = outcome.mechanism_sent
+        u = outcome.user_id
+        c = self._user_cohort.get(u, -1)
+        self._user_mech_n[(u, m)] += 1
+        self._cohort_mech_n[(c, m)] += 1
+        if outcome.converted:
+            self._user_mech_conv[(u, m)] += 1
+            self._cohort_mech_conv[(c, m)] += 1
