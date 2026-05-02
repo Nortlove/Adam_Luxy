@@ -715,6 +715,77 @@ def test_cascade_emits_trace_without_posture_when_no_page_url():
 
 
 # -----------------------------------------------------------------------------
+# Slice 12 — per_mechanism_carryover_penalty kwarg on
+# build_trace_from_cascade. Closes Step 10 trace-population sibling tag.
+# -----------------------------------------------------------------------------
+
+
+def test_builder_carryover_term_populated_for_alternatives():
+    """Per-mechanism penalty dict → AlternativeCandidate.carryover_correction_term."""
+    kw = _example_trace_dict()
+    # Mechanisms in the example: social_proof (chosen), authority,
+    # scarcity, reciprocity (alternatives).
+    kw["per_mechanism_carryover_penalty"] = {
+        "social_proof": 0.35,
+        "authority": 0.0,
+        "scarcity": 0.0,
+        "reciprocity": 0.0,
+    }
+    trace = build_trace_from_cascade(**kw)
+    # Alternatives are the non-chosen ones; chosen is excluded.
+    by_mech = {alt.mechanism: alt for alt in trace.alternatives}
+    for mech in ("authority", "scarcity", "reciprocity"):
+        assert by_mech[mech].carryover_correction_term == 0.0
+
+
+def test_builder_carryover_term_omitted_when_dict_none():
+    """When dict not provided → carryover_correction_term stays None."""
+    kw = _example_trace_dict()
+    # No per_mechanism_carryover_penalty key.
+    trace = build_trace_from_cascade(**kw)
+    for alt in trace.alternatives:
+        assert alt.carryover_correction_term is None
+
+
+def test_builder_carryover_term_omitted_when_dict_empty():
+    """Empty dict → treated same as None (no claim)."""
+    kw = _example_trace_dict()
+    kw["per_mechanism_carryover_penalty"] = {}
+    trace = build_trace_from_cascade(**kw)
+    for alt in trace.alternatives:
+        assert alt.carryover_correction_term is None
+
+
+def test_builder_carryover_term_for_missing_mech_is_none():
+    """Mechanism not in dict → term None for that alternative
+    (renderer treats None as 'not available')."""
+    kw = _example_trace_dict()
+    # Provide partial — only authority has a value.
+    kw["per_mechanism_carryover_penalty"] = {"authority": 0.12}
+    trace = build_trace_from_cascade(**kw)
+    by_mech = {alt.mechanism: alt for alt in trace.alternatives}
+    assert by_mech["authority"].carryover_correction_term == 0.12
+    assert by_mech["scarcity"].carryover_correction_term is None
+    assert by_mech["reciprocity"].carryover_correction_term is None
+
+
+def test_builder_carryover_term_negative_value_preserved():
+    """Negative penalty (interference flip) → preserved on the trace
+    so the renderer can show the score-component decomposition
+    honestly."""
+    kw = _example_trace_dict()
+    kw["per_mechanism_carryover_penalty"] = {
+        "social_proof": -0.18,
+        "authority": -0.05,
+        "scarcity": 0.0,
+        "reciprocity": 0.0,
+    }
+    trace = build_trace_from_cascade(**kw)
+    by_mech = {alt.mechanism: alt for alt in trace.alternatives}
+    assert by_mech["authority"].carryover_correction_term == -0.05
+
+
+# -----------------------------------------------------------------------------
 # Slice C — resolved_creative_id kwarg on build_trace_from_cascade
 # -----------------------------------------------------------------------------
 

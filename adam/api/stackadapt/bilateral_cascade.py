@@ -3379,6 +3379,109 @@ def run_bilateral_cascade(
         except Exception as exc:
             logger.debug("Regret-weighted rank skipped: %s", exc)
 
+    # ─── STEP 10 CARRYOVER CORRECTION (Slice 12) ───
+    # Directive Section 5.1 Step 10 (line 692): score → score −
+    # carryover_penalty. The within_subject_eligibility honest tag at
+    # within_subject_eligibility.py:85-89 named this as the sibling
+    # slice composing on Slice 3's touch history primitive.
+    # Per Spine #2 (lines 116-118 + 477):
+    #   carryover_term_t = ρ · effect(m_prev) · exp(-Δ / τ)
+    # ρ from UserPosteriorProfile.within_user_correlation (Task 36
+    # nightly HMC reconcile).
+    # effect_prev from mechanism_posteriors[m_prev].mean.
+    # τ from washout_hours_for(m_prev).
+    # v0.1 single-ρ approximation: cross-mechanism penalty is 0
+    # (pair-indexed ρ_m1→m2 is honest-tag sibling slice).
+    # Soft-fail: missing user posterior / no last touch / cold buyer
+    # → ρ=0 path → no correction.
+    _per_mech_carryover_penalty: Optional[Dict[str, float]] = None
+    if result.mechanism_scores and buyer_id:
+        try:
+            from adam.intelligence.carryover_correction import (
+                apply_carryover_correction,
+            )
+            from adam.api.stackadapt.decision_cache import (
+                get_decision_cache as _get_dc_carry,
+            )
+            from adam.retargeting.scheduler import (
+                washout_hours_for as _washout_for_carry,
+            )
+            _dc_carry = _get_dc_carry()
+            _touch_history_carry, _last_touched_carry = (
+                _dc_carry.recent_touches_for_buyer(buyer_id)
+            )
+            _rho_carry: float = 0.0
+            _effect_prev_carry: float = 0.5  # uninformative default
+            _tau_carry: float = 0.0
+            if _last_touched_carry:
+                # User posterior — sourced via the components singleton
+                # (sync accessor; same pattern outcome_handler.py:910 uses).
+                try:
+                    from adam.core.dependencies import get_components
+                    _comp = get_components()
+                    _user_mgr = getattr(
+                        _comp, "user_posterior_manager", None,
+                    )
+                    if _user_mgr is not None:
+                        _profile_carry = _user_mgr.get_user_profile(
+                            user_id=buyer_id,
+                            brand_id=asin or "",
+                        )
+                        _rho_carry = float(
+                            getattr(
+                                _profile_carry,
+                                "within_user_correlation",
+                                0.0,
+                            ) or 0.0
+                        )
+                        _mech_post = (
+                            getattr(
+                                _profile_carry, "mechanism_posteriors", {},
+                            ) or {}
+                        ).get(_last_touched_carry)
+                        if _mech_post is not None:
+                            _effect_prev_carry = float(
+                                getattr(_mech_post, "mean", 0.5)
+                            )
+                except Exception:
+                    pass  # ρ stays 0 → apply_carryover_correction
+                           # passes through without modulation.
+                _tau_carry = float(_washout_for_carry(_last_touched_carry))
+                _hours_since_carry = float(
+                    _touch_history_carry.get(_last_touched_carry, 0.0)
+                )
+                _carry_result = apply_carryover_correction(
+                    result.mechanism_scores,
+                    last_touched_mechanism=_last_touched_carry,
+                    hours_since_last_touch=_hours_since_carry,
+                    rho=_rho_carry,
+                    effect_prev_for_last_touched=_effect_prev_carry,
+                    tau=_tau_carry,
+                )
+                _per_mech_carryover_penalty = (
+                    _carry_result.per_mechanism_penalty
+                )
+                if _carry_result.n_corrected:
+                    result.reasoning.append(
+                        f"Step 10 carryover: {_carry_result.n_corrected} "
+                        f"mechanisms corrected (ρ={_carry_result.rho:.3f})"
+                    )
+                    result.mechanism_scores = _carry_result.modulated_scores
+                # Counter — visibility into the within-subject correction
+                # actually flowing through the cascade.
+                try:
+                    from adam.infrastructure.prometheus import (
+                        get_metrics as _get_metrics_carry,
+                    )
+                    if _carry_result.n_corrected:
+                        _get_metrics_carry().cascade_carryover_corrections_total.inc(
+                            _carry_result.n_corrected,
+                        )
+                except Exception:
+                    pass
+        except Exception as exc:
+            logger.debug("Step 10 carryover correction skipped: %s", exc)
+
     # ─── M1 LIVE-CASCADE REWIRE — bid-time p_t logging ───
     # All argmax decisions inside L1/L2/L3 have already shaped the final
     # mechanism_scores dict. The CANONICAL action selection happens here:
@@ -3602,6 +3705,13 @@ def run_bilateral_cascade(
             # Slice C: real stackadapt_creative_id when manifest hit;
             # None → placeholder fallback.
             resolved_creative_id=_resolved_creative_id,
+            # Slice 12: per-mechanism carryover penalty values populate
+            # AlternativeCandidate.carryover_correction_term so the
+            # trace shows the decomposition the directive's chain-of-
+            # reasoning surface (line 242) consumes. None for cold-
+            # buyer / ρ=0 cases (renderer treats None as "component
+            # not available").
+            per_mechanism_carryover_penalty=_per_mech_carryover_penalty,
         )
         _emit_decision_trace(_trace)
 

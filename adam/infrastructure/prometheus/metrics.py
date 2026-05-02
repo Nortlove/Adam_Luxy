@@ -315,6 +315,19 @@ class ADAMMetrics:
                 "(falls back to mechanism_proxy:{mech} placeholder)",
             )
 
+            # Carryover correction — Slice 12 (2026-05-02 handoff);
+            # directive Section 5.1 Step 10 line 692
+            # (score → score - carryover_penalty) + Spine #2 lines
+            # 116-118 + 477. Counts the mechanisms whose score was
+            # shifted by Step 10 at decision time. Cold buyers / ρ=0
+            # users → no shift. Closes the named sibling tag from
+            # within_subject_eligibility.py:85-89.
+            self.cascade_carryover_corrections_total = Counter(
+                "adam_cascade_carryover_corrections_total",
+                "Mechanisms whose score was modulated by Step 10 "
+                "carryover correction (ρ · effect(m_prev) · exp(-Δ/τ))",
+            )
+
             # Intelligence prefetch latency
             self.prefetch_latency = Histogram(
                 "adam_intelligence_prefetch_latency_seconds",

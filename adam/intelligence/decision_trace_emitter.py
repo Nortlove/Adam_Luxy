@@ -101,7 +101,7 @@ from __future__ import annotations
 import logging
 import threading
 from collections import deque
-from typing import Any, Deque, List, Optional, Tuple
+from typing import Any, Deque, Dict, List, Optional, Tuple
 
 from adam.intelligence.decision_trace import (
     AlternativeCandidate,
@@ -256,6 +256,7 @@ def build_trace_from_cascade(
     bong_posterior: Any = None,
     page_url: Optional[str] = None,
     resolved_creative_id: Optional[str] = None,
+    per_mechanism_carryover_penalty: Optional[Dict[str, float]] = None,
 ) -> DecisionTrace:
     """Build a ``DecisionTrace`` from a cascade output.
 
@@ -313,12 +314,23 @@ def build_trace_from_cascade(
         (m, float(s)) for m, s in scores.items() if m != chosen_mechanism
     ]
     other_scored.sort(key=lambda x: x[1], reverse=True)
+    # Slice 12 — Step 10 carryover correction. When the cascade's
+    # apply_carryover_correction wire produced a per-mechanism penalty
+    # dict, populate AlternativeCandidate.carryover_correction_term at
+    # construction. None otherwise (renderer treats None as
+    # "component not available," not zero).
+    _carry: Dict[str, float] = (
+        per_mechanism_carryover_penalty or {}
+    )
     alternatives = [
         AlternativeCandidate(
             creative_id=f"{_CREATIVE_PROXY_PREFIX}{m}",
             mechanism=m,
             posterior_score=s,
             propensity_under_TS=float(p_t_dist.get(m, 0.0)),
+            carryover_correction_term=(
+                _carry.get(m) if _carry else None
+            ),
         )
         for m, s in other_scored[:max_alternatives]
     ]
