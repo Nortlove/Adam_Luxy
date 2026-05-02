@@ -75,8 +75,11 @@ DISCIPLINE (B3-LUXY a/b/c/d)
       generation via Claude API; this slice handles upload of
       already-generated variants. Generation is its own slice.
     * Reactance-risk independent scorer (Section 6.5 line 1067) —
-      every uploaded creative should pass reactance scoring before
-      reaching this pipeline. Sibling slice.
+      SHIPPED in Slice 18 (2026-05-02 handoff). upload_creative now
+      accepts copy_text + enforce_reactance_check kwargs; when
+      enforce + copy_text provided, the scorer rejects above
+      REACTANCE_REJECT_THRESHOLD before calling create_creative_by_url.
+      v0.1 fail-OPEN if scorer raises (allows upload + WARNING).
     * Per-archetype creative-direction templates (Section 6.3 line
       1060) — substrate for which creatives to generate per
       archetype; sibling.
@@ -336,6 +339,9 @@ async def upload_creative(
     creative_type: str = "banner",
     client: Optional[Any] = None,
     driver: Optional[Any] = None,
+    copy_text: Optional[str] = None,
+    enforce_reactance_check: bool = True,
+    reactance_threshold: Optional[float] = None,
 ) -> Optional[CreativeRecord]:
     """Upload a creative to StackAdapt + persist a manifest entry.
 
@@ -367,6 +373,40 @@ async def upload_creative(
     if client is None:
         logger.debug("upload_creative: no StackAdapt client; skipping")
         return None
+
+    # Slice 18 — pre-publication reactance-risk gate. Per directive
+    # Section 6.5: above the threshold, reject before upload. Skipped
+    # when copy_text is None (operator hasn't supplied scoreable copy)
+    # or when enforce_reactance_check=False (legacy / explicit opt-out).
+    if enforce_reactance_check and copy_text:
+        try:
+            from adam.intelligence.reactance_risk_scorer import (
+                REACTANCE_REJECT_THRESHOLD,
+                passes_reactance_check,
+            )
+            threshold = (
+                reactance_threshold
+                if reactance_threshold is not None
+                else REACTANCE_REJECT_THRESHOLD
+            )
+            passes, react_result = passes_reactance_check(
+                copy_text, threshold=threshold,
+            )
+            if not passes:
+                logger.warning(
+                    "upload_creative: REJECTED by reactance gate "
+                    "(name=%s score=%.3f threshold=%.3f flagged=%s) — "
+                    "directive Section 6.5",
+                    name, react_result.total_score, threshold,
+                    [t for t, _ in react_result.flagged_markers][:8],
+                )
+                return None
+        except Exception as exc:
+            logger.warning(
+                "upload_creative: reactance scorer raised; failing OPEN "
+                "(allowing upload) for name=%s: %s",
+                name, exc,
+            )
 
     # Idempotency check — already in manifest?
     existing = await lookup_creative_by_name(name, driver) if driver else None
