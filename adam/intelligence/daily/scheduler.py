@@ -418,6 +418,23 @@ def _register_all_tasks() -> None:
     except Exception as e:
         logger.debug("Task 43 (label new pages) not available: %s", e)
 
+    # Task 44 — Slice 16 identity-stability sweep. RED criterion #4
+    # producer (named sibling in task_42_launch_gate_runner.py:43-46).
+    # Surveys recently-active buyers, decays their identity_stability
+    # by days-since-last-touch, increments record_user_active +
+    # record_identity_collapse on the snapshot accumulator. Runs at
+    # 04:00 UTC alongside Task 41 — both populate state Task 42
+    # (05:00) reads from the snapshot.
+    try:
+        from adam.intelligence.daily.task_44_identity_stability_sweep import (
+            IdentityStabilitySweepTask,
+        )
+        tasks.append(IdentityStabilitySweepTask())
+    except Exception as e:
+        logger.debug(
+            "Task 44 (identity-stability sweep) not available: %s", e,
+        )
+
     for task in tasks:
         _task_registry[task.name] = task
 

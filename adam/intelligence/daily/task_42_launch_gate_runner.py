@@ -40,10 +40,11 @@ NOT IN SCOPE (named successors)
   * n_creatives_failed_spot_check input. Offline-pipeline metaphor
     coherence scorer is Section 6 (Spine #12) work; not in cascade
     today. Skip-when-no-data until that scorer runs and aggregates.
-  * Identity-stability collapse counter producer wire. The
-    snapshot's record_identity_collapse method exists; the
-    user-posterior maintenance sweep that calls it is a sibling
-    slice (named in red_criteria_snapshot (d)).
+  * Identity-stability collapse counter producer wire — SHIPPED
+    in Slice 16 (Task 44 identity_stability_sweep). The producer
+    runs at 04:00 UTC, populating snapshot.record_user_active +
+    record_identity_collapse so RED criterion #4
+    (check_posterior_pathology) can fire here at 05:00.
   * Phase advance/defer automation (auto-pause, auto-rollback).
     Today the task surfaces the verdict; the human decides. CI/CD
     auto-pause is sibling slice on Phase 7 partner-surface work.
