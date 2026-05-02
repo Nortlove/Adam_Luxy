@@ -29,8 +29,10 @@ Discipline anchors (B3-LUXY a/b/c/d) for
     (c) calibration_pending=False — schema is declarative.
 
     (d) Honest tags — what is NOT tested here:
-          - User-attribution edge (sibling slice)
-          - VIA_MECHANISM edge from ConversionEdge (sibling slice)
+          - User-attribution edge — SHIPPED in Slice 15 (covered
+            by tests below)
+          - VIA_MECHANISM edge from ConversionEdge — SHIPPED in
+            Slice 15 (covered by tests below)
           - DecisionTrace mutation with outcome fields (sibling)
 """
 
@@ -278,3 +280,248 @@ async def test_result_frozen():
     )
     with pytest.raises(Exception):  # FrozenInstanceError
         result.written = True  # type: ignore[misc]
+
+
+# -----------------------------------------------------------------------------
+# Slice 15 — User attribution + VIA_MECHANISM edges
+# -----------------------------------------------------------------------------
+
+
+def test_slice_15_schema_constants_present():
+    """The new node labels and relationship names match directive
+    line 248 ('linked to the User ... and the Mechanism')."""
+    from adam.intelligence.outcome_trace_closure import (
+        GENERATED_REL,
+        MECHANISM_NODE_LABEL,
+        USER_NODE_LABEL,
+        VIA_MECHANISM_REL,
+    )
+    assert USER_NODE_LABEL == "User"
+    assert MECHANISM_NODE_LABEL == "Mechanism"
+    assert GENERATED_REL == "GENERATED"
+    assert VIA_MECHANISM_REL == "VIA_MECHANISM"
+
+
+def _build_capturing_session(
+    *, base_record: bool = True,
+):
+    """Build a fake session that captures every Cypher call."""
+    captured: list = []
+    fake_result_with_record = MagicMock()
+    fake_record = MagicMock()
+    fake_record.__getitem__ = lambda self, k: "ce:test"
+    fake_result_with_record.single = AsyncMock(return_value=fake_record)
+    fake_result_no_record = MagicMock()
+    fake_result_no_record.single = AsyncMock(return_value=None)
+
+    async def _capture_run(query, **kwargs):
+        captured.append((query, dict(kwargs)))
+        # Only the FIRST call (base closure) returns a record;
+        # subsequent calls (user / mechanism) return None.
+        if len(captured) == 1:
+            return (
+                fake_result_with_record if base_record
+                else fake_result_no_record
+            )
+        return fake_result_no_record
+
+    fake_session = MagicMock()
+    fake_session.run = _capture_run
+    fake_session_cm = MagicMock()
+    fake_session_cm.__aenter__ = AsyncMock(return_value=fake_session)
+    fake_session_cm.__aexit__ = AsyncMock(return_value=None)
+
+    fake_client = MagicMock()
+    fake_client.is_connected = True
+    fake_client.session = AsyncMock(return_value=fake_session_cm)
+    return fake_client, captured
+
+
+@pytest.mark.asyncio
+async def test_no_user_no_mechanism_only_base_cypher():
+    """Default behavior (Slice 5 contract): only base closure Cypher
+    runs when user_id / chosen_mechanism not provided."""
+    client, captured = _build_capturing_session()
+    result = await write_outcome_trace_closure(
+        decision_id="dec_baseline",
+        outcome_type="conversion",
+        outcome_value=1.0,
+        neo4j_client=client,
+    )
+    assert result.written is True
+    assert len(captured) == 1
+    base_q, _ = captured[0]
+    assert "ConversionEdge" in base_q
+    assert "RESOLVED" in base_q
+    # No User / Mechanism edges because no inputs.
+    assert "GENERATED" not in base_q
+    assert "VIA_MECHANISM" not in base_q
+
+
+@pytest.mark.asyncio
+async def test_user_id_fires_user_attribution_cypher():
+    """user_id provided → second Cypher MERGEs (:User)-[:GENERATED]->(:CE)."""
+    client, captured = _build_capturing_session()
+    await write_outcome_trace_closure(
+        decision_id="dec_user",
+        outcome_type="conversion",
+        outcome_value=1.0,
+        neo4j_client=client,
+        user_id="buyer-42",
+    )
+    assert len(captured) == 2  # base + user attribution
+    user_q, user_params = captured[1]
+    assert "User" in user_q
+    assert "GENERATED" in user_q
+    assert "ConversionEdge" in user_q
+    assert user_params["user_id"] == "buyer-42"
+
+
+@pytest.mark.asyncio
+async def test_mechanism_fires_via_mechanism_cypher():
+    """chosen_mechanism provided → second Cypher MERGEs
+    (:CE)-[:VIA_MECHANISM]->(:Mechanism)."""
+    client, captured = _build_capturing_session()
+    await write_outcome_trace_closure(
+        decision_id="dec_mech",
+        outcome_type="conversion",
+        outcome_value=1.0,
+        neo4j_client=client,
+        chosen_mechanism="social_proof",
+    )
+    assert len(captured) == 2  # base + via mechanism
+    mech_q, mech_params = captured[1]
+    assert "Mechanism" in mech_q
+    assert "VIA_MECHANISM" in mech_q
+    assert mech_params["mechanism_name"] == "social_proof"
+
+
+@pytest.mark.asyncio
+async def test_both_user_and_mechanism_fire_three_cyphers():
+    """Both supplied → 3 total Cypher calls (base + user + mechanism)."""
+    client, captured = _build_capturing_session()
+    result = await write_outcome_trace_closure(
+        decision_id="dec_full",
+        outcome_type="conversion",
+        outcome_value=1.0,
+        neo4j_client=client,
+        user_id="buyer-42",
+        chosen_mechanism="social_proof",
+    )
+    assert result.written is True
+    assert result.reason == "written"
+    assert len(captured) == 3
+    queries = [q for q, _ in captured]
+    assert any("RESOLVED" in q for q in queries)
+    assert any("GENERATED" in q for q in queries)
+    assert any("VIA_MECHANISM" in q for q in queries)
+
+
+@pytest.mark.asyncio
+async def test_empty_user_id_skips_user_cypher():
+    """Empty / falsy user_id → no User Cypher fired (treated like None)."""
+    client, captured = _build_capturing_session()
+    await write_outcome_trace_closure(
+        decision_id="dec_anon",
+        outcome_type="conversion",
+        outcome_value=1.0,
+        neo4j_client=client,
+        user_id="",  # anonymous
+        chosen_mechanism="social_proof",
+    )
+    # Only base + mechanism — user empty string skipped.
+    assert len(captured) == 2
+    queries = [q for q, _ in captured]
+    assert not any("GENERATED" in q for q in queries)
+    assert any("VIA_MECHANISM" in q for q in queries)
+
+
+@pytest.mark.asyncio
+async def test_user_attribution_failure_does_not_break_base_write():
+    """If the User Cypher raises, the writer logs WARNING but still
+    returns written=True (base closure already succeeded)."""
+    fake_session = MagicMock()
+    fake_result = MagicMock()
+    fake_record = MagicMock()
+    fake_record.__getitem__ = lambda self, k: "ce:test"
+    fake_result.single = AsyncMock(return_value=fake_record)
+
+    call_count = [0]
+
+    async def _selective_run(query, **kwargs):
+        call_count[0] += 1
+        if "GENERATED" in query:
+            raise RuntimeError("user merge failed")
+        return fake_result
+
+    fake_session.run = _selective_run
+    fake_session_cm = MagicMock()
+    fake_session_cm.__aenter__ = AsyncMock(return_value=fake_session)
+    fake_session_cm.__aexit__ = AsyncMock(return_value=None)
+
+    fake_client = MagicMock()
+    fake_client.is_connected = True
+    fake_client.session = AsyncMock(return_value=fake_session_cm)
+
+    result = await write_outcome_trace_closure(
+        decision_id="dec_resilient",
+        outcome_type="conversion",
+        outcome_value=1.0,
+        neo4j_client=fake_client,
+        user_id="buyer-42",
+        chosen_mechanism="social_proof",
+    )
+    # Base + mechanism still succeed; user fail is non-fatal.
+    assert result.written is True
+    assert result.reason == "written"
+
+
+@pytest.mark.asyncio
+async def test_mechanism_failure_does_not_break_base_write():
+    """If the Mechanism Cypher raises, the writer logs WARNING but
+    still returns written=True."""
+    fake_session = MagicMock()
+    fake_result = MagicMock()
+    fake_record = MagicMock()
+    fake_record.__getitem__ = lambda self, k: "ce:test"
+    fake_result.single = AsyncMock(return_value=fake_record)
+
+    async def _selective_run(query, **kwargs):
+        if "VIA_MECHANISM" in query:
+            raise RuntimeError("mechanism merge failed")
+        return fake_result
+
+    fake_session.run = _selective_run
+    fake_session_cm = MagicMock()
+    fake_session_cm.__aenter__ = AsyncMock(return_value=fake_session)
+    fake_session_cm.__aexit__ = AsyncMock(return_value=None)
+
+    fake_client = MagicMock()
+    fake_client.is_connected = True
+    fake_client.session = AsyncMock(return_value=fake_session_cm)
+
+    result = await write_outcome_trace_closure(
+        decision_id="dec_mech_fail",
+        outcome_type="conversion",
+        outcome_value=1.0,
+        neo4j_client=fake_client,
+        user_id="buyer-42",
+        chosen_mechanism="social_proof",
+    )
+    assert result.written is True
+
+
+@pytest.mark.asyncio
+async def test_outcome_handler_threads_user_id_and_mechanism():
+    """The outcome_handler integration point passes user_id and
+    chosen_mechanism into write_outcome_trace_closure when present
+    in the metadata."""
+    from pathlib import Path
+    src = Path("adam/core/learning/outcome_handler.py").read_text()
+    # Source-text contract: handler must reference both kwargs in
+    # the Slice 15 call site.
+    assert "user_id=_user_for_closure" in src
+    assert "chosen_mechanism=_mech_for_closure" in src
+    # Both metadata sources used (buyer_id fallback for legacy keys).
+    assert 'metadata.get("user_id")' in src or 'metadata.get("buyer_id")' in src
+    assert 'metadata.get("mechanism_sent"' in src

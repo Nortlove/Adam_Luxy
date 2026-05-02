@@ -133,22 +133,26 @@ class OutcomeHandler:
         # happened to this impression" provenance + Slice 6 OPE post-
         # outcome update both depend on this join. Fire-and-soft-fail —
         # outcome processing must never block on logging.
+        # Slice 15: user_id + chosen_mechanism thread into the
+        # closure writer so :User-:GENERATED-:ConversionEdge and
+        # :ConversionEdge-:VIA_MECHANISM-:Mechanism edges land per
+        # directive line 248. Empty values → corresponding edge skipped.
+        _user_for_closure = (
+            metadata.get("user_id") or metadata.get("buyer_id") or ""
+        ) or None
+        _mech_for_closure = metadata.get("mechanism_sent", "") or None
         try:
             from adam.intelligence.outcome_trace_closure import (
                 write_outcome_trace_closure,
             )
-            _closure = await write_outcome_trace_closure(
+            await write_outcome_trace_closure(
                 decision_id=decision_id,
                 outcome_type=outcome_type,
                 outcome_value=outcome_value,
                 signed_reward=signed_reward,
+                user_id=_user_for_closure,
+                chosen_mechanism=_mech_for_closure,
             )
-            if _closure.written and _closure.reason == "written":
-                logger.debug(
-                    "outcome_trace_closure: written ce_id=%s for "
-                    "decision_id=%s",
-                    _closure.conversion_edge_id, decision_id,
-                )
         except Exception as exc:
             logger.debug("outcome_trace_closure skipped: %s", exc)
 

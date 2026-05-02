@@ -73,12 +73,16 @@ DISCIPLINE (B3-LUXY a/b/c/d)
 
 (d) Honest tags — what is NOT in this slice (named successors):
 
-    * Buyer attribution edge (``(b:User)-[:GENERATED]->(c:ConversionEdge)``).
-      The decision_cache MERGE pattern already handles user→decision
-      attribution; the user→outcome edge is a sibling slice for the
-      cohort-pooled OPE estimators in Slice 6.
-    * (:ConversionEdge)-[:VIA_MECHANISM]->(:Mechanism) edge for
-      mechanism-conditioned aggregations. Sibling slice.
+    * Buyer attribution edge (``(b:User)-[:GENERATED]->(c:ConversionEdge)``)
+      — SHIPPED in Slice 15 (2026-05-02 handoff). The writer now
+      accepts ``user_id`` and OPTIONAL-MERGEs ``(u:User)-[:GENERATED]
+      ->(c:ConversionEdge)`` when the outcome handler supplies it.
+      Empty user_id → User edge skipped (anonymous outcomes).
+    * (:ConversionEdge)-[:VIA_MECHANISM]->(:Mechanism) edge — SHIPPED
+      in Slice 15. The writer now accepts ``chosen_mechanism`` and
+      OPTIONAL-MERGEs ``(c:ConversionEdge)-[:VIA_MECHANISM]->(m:
+      Mechanism)`` when supplied. Empty chosen_mechanism → Mechanism
+      edge skipped.
     * Outcome-driven update of DecisionTrace.resolved_at_ts +
       outcome_type fields (would mutate the trace; for v0.1 the
       ConversionEdge node carries the resolution data and the
@@ -107,7 +111,11 @@ logger = logging.getLogger(__name__)
 
 CONVERSION_EDGE_NODE_LABEL: str = "ConversionEdge"
 DECISION_TRACE_NODE_LABEL: str = "DecisionTrace"
+USER_NODE_LABEL: str = "User"
+MECHANISM_NODE_LABEL: str = "Mechanism"
 RESOLVED_REL: str = "RESOLVED"
+GENERATED_REL: str = "GENERATED"
+VIA_MECHANISM_REL: str = "VIA_MECHANISM"
 
 
 # =============================================================================
@@ -174,6 +182,25 @@ _CLOSURE_CYPHER: str = (
 )
 
 
+# Slice 15: User attribution + VIA_MECHANISM. Run AFTER the base
+# closure so the ConversionEdge node already exists. We use OPTIONAL
+# MATCH on the conversion edge to be defensive — if the base writer
+# soft-failed (no driver / exception), this Cypher is a no-op.
+_USER_ATTRIBUTION_CYPHER: str = (
+    f"MATCH (c:{CONVERSION_EDGE_NODE_LABEL} "
+    "{conversion_edge_id: $conversion_edge_id}) "
+    f"MERGE (u:{USER_NODE_LABEL} {{user_id: $user_id}}) "
+    f"MERGE (u)-[:{GENERATED_REL}]->(c)"
+)
+
+_VIA_MECHANISM_CYPHER: str = (
+    f"MATCH (c:{CONVERSION_EDGE_NODE_LABEL} "
+    "{conversion_edge_id: $conversion_edge_id}) "
+    f"MERGE (m:{MECHANISM_NODE_LABEL} {{name: $mechanism_name}}) "
+    f"MERGE (c)-[:{VIA_MECHANISM_REL}]->(m)"
+)
+
+
 # =============================================================================
 # Writer
 # =============================================================================
@@ -187,6 +214,8 @@ async def write_outcome_trace_closure(
     signed_reward: Optional[float] = None,
     neo4j_client: Optional[Any] = None,
     observed_at_ts: Optional[float] = None,
+    user_id: Optional[str] = None,
+    chosen_mechanism: Optional[str] = None,
 ) -> ConversionEdgeWriteResult:
     """Write the (:ConversionEdge)-[:RESOLVED]->(:DecisionTrace) closure.
 
@@ -272,6 +301,7 @@ async def write_outcome_trace_closure(
         ),
     }
 
+    closure_reason = "written"
     try:
         async with await client.session() as session:
             result = await session.run(_CLOSURE_CYPHER, **params)
@@ -282,12 +312,39 @@ async def write_outcome_trace_closure(
                 # rows → trace not yet archived. Edge node still
                 # written for backfill on the resolved-by-replay
                 # path. Honest signal in reason.
-                return ConversionEdgeWriteResult(
-                    written=True,
-                    conversion_edge_id=edge_id,
-                    skipped=False,
-                    reason="trace_not_found",
-                )
+                closure_reason = "trace_not_found"
+
+            # Slice 15 — User attribution + VIA_MECHANISM.
+            # OPTIONAL extras: only fire when the caller supplied the
+            # corresponding identifiers. Each is independently soft-
+            # failed (a User-edge failure must not block Mechanism-edge
+            # write or vice versa).
+            if user_id:
+                try:
+                    await session.run(
+                        _USER_ATTRIBUTION_CYPHER,
+                        conversion_edge_id=edge_id,
+                        user_id=user_id,
+                    )
+                except Exception as user_exc:
+                    logger.warning(
+                        "outcome_trace_closure: user attribution edge "
+                        "failed for decision_id=%s user_id=%s: %s",
+                        decision_id, user_id, user_exc,
+                    )
+            if chosen_mechanism:
+                try:
+                    await session.run(
+                        _VIA_MECHANISM_CYPHER,
+                        conversion_edge_id=edge_id,
+                        mechanism_name=chosen_mechanism,
+                    )
+                except Exception as mech_exc:
+                    logger.warning(
+                        "outcome_trace_closure: VIA_MECHANISM edge "
+                        "failed for decision_id=%s mechanism=%s: %s",
+                        decision_id, chosen_mechanism, mech_exc,
+                    )
     except Exception as exc:
         logger.warning(
             "outcome_trace_closure: write failed for decision_id=%s: %s",
@@ -304,5 +361,5 @@ async def write_outcome_trace_closure(
         written=True,
         conversion_edge_id=edge_id,
         skipped=False,
-        reason="written",
+        reason=closure_reason,
     )
