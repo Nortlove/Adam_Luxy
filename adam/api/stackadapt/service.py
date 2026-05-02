@@ -518,6 +518,19 @@ class CreativeIntelligenceService:
                 "evidence_source": ci.evidence_source,
             },
             "timing_ms": round(elapsed_ms, 2),
+            # ── Slice 7 / Tier 1 #6: Kelly-shaded recommended bid ──
+            # Audit 2026-05-01 found Spine #9 quarter-Kelly + winner's-
+            # curse shading + Spine #8 epistemic addend ran inside
+            # bid_composer and were logged to DecisionTrace, but the
+            # service response didn't carry the recommended CPM —
+            # spend was not actually shaped. This field surfaces the
+            # cascade's recommended bid so downstream StackAdapt
+            # bidder consumers can act on it. None when no BONG
+            # posterior / cold-start buyer (caller falls back to
+            # default CPM strategy). Honest tag (d): the StackAdapt
+            # bid-response wire that consumes this value is a sibling
+            # slice on the bidder side.
+            "recommended_bid_value": ci.bid_value,
         }
 
         # Synergy guidance (from cascade's antagonism checks)

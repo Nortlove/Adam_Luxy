@@ -184,6 +184,18 @@ class CreativeIntelligence:
     epsilon_floor: float = 0.0
     p_t_known: bool = False
 
+    # ── Slice 7 / Tier 1 #6: Kelly-shaded bid value ──
+    # Audit 2026-05-01 found compose_chosen_bid_value computed Kelly
+    # bid_value (Spine #9 fractional Kelly + winner's-curse shading +
+    # Spine #8 epistemic addend) and populated DecisionTrace.bid_value
+    # but the cascade result returned NO bid_value field — the math
+    # ran and was logged, but spend was not actually shaped. Surfacing
+    # the bid_value here lets the StackAdapt service response carry
+    # the recommended CPM that downstream bidder consumers can act on.
+    # None when no BONG posterior / cold-start buyer (cascade falls
+    # back to default CPM strategy).
+    bid_value: Optional[float] = None
+
     # Reasoning trace
     reasoning: List[str] = field(default_factory=list)
 
@@ -3510,6 +3522,18 @@ def run_bilateral_cascade(
             bong_posterior=_bong_posterior,
         )
         _emit_decision_trace(_trace)
+
+        # ── Slice 7 / Tier 1 #6: surface Kelly bid_value on result ──
+        # build_trace_from_cascade ran compose_chosen_bid_value (Spine
+        # #9 quarter-Kelly + winner's-curse shading + Spine #8
+        # epistemic addend) and populated DecisionTrace.bid_value.
+        # Audit found this value was logged on the trace but the
+        # cascade returned no bid_value field — spend was not actually
+        # shaped. Mirror the trace value onto result.bid_value so the
+        # StackAdapt service response can carry the recommended CPM
+        # for downstream bidder consumption.
+        if _trace.bid_value is not None:
+            result.bid_value = float(_trace.bid_value)
     except Exception as _exc:
         logger.debug("DecisionTrace emission skipped: %s", _exc)
 
