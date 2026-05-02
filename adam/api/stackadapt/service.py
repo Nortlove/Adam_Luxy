@@ -215,6 +215,86 @@ class CreativeIntelligenceService:
         # Generate decision_id BEFORE the cascade so we can persist context
         decision_id = self._generate_decision_id(segment_id, buyer_id, asin)
 
+        # ──────────────────────────────────────────────────────────────
+        # HOLDOUT DISCIPLINE — directive Section 8.3 + Phase 8 line 1103
+        # ──────────────────────────────────────────────────────────────
+        # Audit 2026-05-01 Tier 1 #2: assign_holdout existed as a single
+        # tested function with zero non-test callers. The 5-10%
+        # deterministic-hash holdout (directive line 916) was not
+        # actually shielding any production traffic. The Phase 8 RED
+        # gate (line 1105) and the pre-registered campaign-level
+        # treatment-vs-control comparison (line 919-928) both depend on
+        # this wire.
+        #
+        # Discipline: holdout users are UNTOUCHED — no ADAM intelligence
+        # applied. We skip the cascade, the persuasion engine, and the
+        # decision persistence (the LATTER intentional: a holdout
+        # decision is not an ADAM decision; persisting it would pollute
+        # the learning loop). We still emit a structured response so the
+        # caller's contract is preserved, with is_holdout=True flagged
+        # and a holdout_assignment block carrying the salt + fraction
+        # for audit. Same buyer_id always assigns the same way (stable
+        # bucketing across the pilot).
+        #
+        # Anonymous users (empty buyer_id) bypass the check — we cannot
+        # bucket consistently without an identifier. Honest tag (d):
+        # anonymous holdout-bucketing requires a fallback hash key
+        # (e.g. session_id) which is a sibling slice.
+        if buyer_id:
+            try:
+                from adam.intelligence.spine.phase_8_stackadapt_integration import (
+                    DEFAULT_HOLDOUT_FRACTION,
+                    assign_holdout,
+                )
+                if assign_holdout(buyer_id):
+                    # Counter — Phase 8 RED gate input + audit surface.
+                    try:
+                        from adam.infrastructure.prometheus import get_metrics
+                        get_metrics().stackadapt_holdout_assignments_total.labels(
+                            stratum="holdout"
+                        ).inc()
+                    except Exception:
+                        pass
+                    elapsed_ms = (time.perf_counter() - start) * 1000
+                    self._request_count += 1
+                    self._total_latency_ms += elapsed_ms
+                    return {
+                        "decision_id": decision_id,
+                        "is_holdout": True,
+                        "holdout_assignment": {
+                            "stratum": "holdout",
+                            "holdout_fraction": DEFAULT_HOLDOUT_FRACTION,
+                            "reason": (
+                                "deterministic-hash holdout per directive "
+                                "Section 8.3 — no ADAM intelligence applied"
+                            ),
+                        },
+                        "primary_mechanism": None,
+                        "secondary_mechanism": None,
+                        "creative_parameters": None,
+                        "copy_guidance": None,
+                        "reasoning_trace": [
+                            f"HOLDOUT: buyer_id assigned to untouched "
+                            f"stratum (target {DEFAULT_HOLDOUT_FRACTION:.0%})"
+                        ],
+                        "segment_metadata": {
+                            "segment_id": segment_id,
+                            "archetype": archetype,
+                        },
+                        "timing_ms": round(elapsed_ms, 2),
+                    }
+                else:
+                    # Treatment counter — gives us the rate denominator.
+                    try:
+                        from adam.infrastructure.prometheus import get_metrics
+                        get_metrics().stackadapt_holdout_assignments_total.labels(
+                            stratum="treatment"
+                        ).inc()
+                    except Exception:
+                        pass
+            except Exception as exc:
+                logger.debug("Holdout assignment skipped: %s", exc)
+
         # Run the bilateral cascade — this is where all the intelligence lives
         cascade_result = run_bilateral_cascade(
             segment_id=segment_id,

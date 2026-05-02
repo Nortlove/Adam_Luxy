@@ -261,6 +261,16 @@ class ADAMMetrics:
                 ["posture"],
             )
 
+            # Holdout discipline — Tier 1 audit #2; directive Section 8.3
+            # + Phase 8 line 1103 (deterministic-hash 5-10% untouched
+            # stratum). Stratum label: "treatment" or "holdout"; rate
+            # converges to DEFAULT_HOLDOUT_FRACTION over volume.
+            self.stackadapt_holdout_assignments_total = Counter(
+                "adam_stackadapt_holdout_assignments_total",
+                "Holdout assignment outcomes per StackAdapt request",
+                ["stratum"],
+            )
+
             # Intelligence prefetch latency
             self.prefetch_latency = Histogram(
                 "adam_intelligence_prefetch_latency_seconds",
