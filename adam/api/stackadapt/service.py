@@ -312,6 +312,49 @@ class CreativeIntelligenceService:
             iab_categories=iab_categories,
         )
 
+        # ──────────────────────────────────────────────────────────────
+        # SLICE 13 — REFUSE-ALL-BID DETECTION
+        # ──────────────────────────────────────────────────────────────
+        # Per directive line 122: the scheduler is permitted to refuse
+        # all mechanisms when no compatible context exists. The cascade
+        # surfaces refused=True when Slice 1 (fluency floor) or Slice 3
+        # (within-subject washout) would have cleared every candidate.
+        # We return a no-bid response shape (mirrors Slice 2's holdout
+        # shape) and SKIP _persist_decision: a refused decision is not
+        # an ADAM decision — persisting would pollute the learning loop.
+        # The trace emission ALSO needs to be skipped (no chosen
+        # mechanism); the cascade itself already cleared mechanism_scores
+        # so the trace builder would emit a degenerate record.
+        if getattr(cascade_result, "refused", False):
+            elapsed_ms = (time.perf_counter() - start) * 1000
+            self._request_count += 1
+            self._total_latency_ms += elapsed_ms
+            return {
+                "decision_id": decision_id,
+                "is_refused": True,
+                "refusal": {
+                    "reason": getattr(
+                        cascade_result, "refusal_reason", "unknown",
+                    ),
+                    "cite": (
+                        "directive line 122 — scheduler authorized "
+                        "to refuse when no compatible context"
+                    ),
+                },
+                "primary_mechanism": None,
+                "secondary_mechanism": None,
+                "creative_parameters": None,
+                "copy_guidance": None,
+                "reasoning_trace": list(
+                    getattr(cascade_result, "reasoning", []) or []
+                ),
+                "segment_metadata": {
+                    "segment_id": segment_id,
+                    "archetype": archetype,
+                },
+                "timing_ms": round(elapsed_ms, 2),
+            }
+
         # Optional DSP enrichment (adds device/temporal context)
         dsp_info = self._run_dsp_if_available(
             device_type, page_url, time_of_day, day_of_week,

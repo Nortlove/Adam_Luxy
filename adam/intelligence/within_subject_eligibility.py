@@ -87,9 +87,13 @@ DISCIPLINE (B3-LUXY a/b/c/d)
       ``AlternativeCandidate.carryover_correction_term`` with
       ``ρ · effect(m_prev) · exp(-Δ/τ)``. Sibling slice composing
       with this primitive.
-    * Refuse-all-bid hard semantic. Per directive line 122 the
-      scheduler is permitted to refuse all bids; v0.1 fail-open +
-      counter; sibling slice will replace with hard no-bid.
+    * Refuse-all-bid hard semantic — SHIPPED in Slice 13
+      (2026-05-02 handoff). The cascade's eligibility-block all-drop
+      branch now sets ``CreativeIntelligence.refused=True`` +
+      ``refusal_reason="within_subject_washout_all_dropped"`` +
+      clears mechanism_scores. The service detects refused=True and
+      returns a no-bid response shape (no decision persistence).
+      Same flip applied to Slice 1's fluency-floor all-drop branch.
     * Persistent (Redis) per-mechanism touch history. v0.1 reads
       from the in-process ``decision_cache`` which is sufficient
       for single-pod Railway deploy. Multi-pod replication via

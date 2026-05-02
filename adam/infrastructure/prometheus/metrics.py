@@ -328,6 +328,21 @@ class ADAMMetrics:
                 "carryover correction (ρ · effect(m_prev) · exp(-Δ/τ))",
             )
 
+            # Refuse-all-bid — Slice 13 (2026-05-02 handoff);
+            # directive line 122 ("the scheduler is permitted to
+            # refuse all mechanisms when no compatible context
+            # exists"). reason="fluency_floor" → all mechanisms
+            # were LOW posture×mech compatible. reason=
+            # "within_subject_washout" → all candidates inside
+            # washout window. Both flip Slice 1 / Slice 3 v0.1
+            # fail-open into fail-closed refusal.
+            self.cascade_refusals_total = Counter(
+                "adam_cascade_refusals_total",
+                "Cascade requests refused (no-bid) per directive "
+                "line 122 authorization",
+                ["reason"],
+            )
+
             # Intelligence prefetch latency
             self.prefetch_latency = Histogram(
                 "adam_intelligence_prefetch_latency_seconds",

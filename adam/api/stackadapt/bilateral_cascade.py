@@ -196,6 +196,17 @@ class CreativeIntelligence:
     # back to default CPM strategy).
     bid_value: Optional[float] = None
 
+    # ── Slice 13: refuse-all-bid hard semantic ──
+    # Per directive line 122 ("the scheduler is permitted to refuse
+    # all mechanisms when no compatible context exists"). True when
+    # Slice 1 (fluency floor) OR Slice 3 (within-subject washout)
+    # would have cleared every candidate. Slice 1 + Slice 3 v0.1 was
+    # fail-open + warn; this slice flips to fail-closed + refuse.
+    # The service translates refused=True into a no-bid response
+    # shape (no decision persistence, no creative emission).
+    refused: bool = False
+    refusal_reason: Optional[str] = None
+
     # Reasoning trace
     reasoning: List[str] = field(default_factory=list)
 
@@ -2947,11 +2958,36 @@ def run_bilateral_cascade(
                     except Exception:
                         pass
                     if floor_result.bypassed:
-                        result.reasoning.append(
-                            f"Fluency floor BYPASSED (all "
-                            f"{floor_result.n_dropped} mechanisms LOW; "
-                            f"Slice 3 refuse-all-bid awaits)"
+                        # Slice 13 (refuse-all-bid): directive line 122
+                        # authorizes the scheduler / fluency gate to
+                        # refuse all mechanisms when no compatible
+                        # context exists. v0.1 fail-open is replaced
+                        # with fail-closed: the cascade marks itself
+                        # refused and clears mechanism_scores so all
+                        # downstream modulations + TTTS are no-op.
+                        # The service detects refused=True and returns
+                        # a no-bid response (no decision persistence).
+                        result.refused = True
+                        result.refusal_reason = (
+                            f"fluency_floor_all_dropped"
+                            f":posture={_floor_label}"
                         )
+                        result.mechanism_scores = {}
+                        result.reasoning.append(
+                            f"REFUSED (fluency floor): all "
+                            f"{floor_result.n_dropped} mechanisms LOW "
+                            f"posture×mech compatible — directive "
+                            f"line 122 authorizes refusal"
+                        )
+                        try:
+                            from adam.infrastructure.prometheus import (
+                                get_metrics as _get_metrics_refuse_floor,
+                            )
+                            _get_metrics_refuse_floor().cascade_refusals_total.labels(
+                                reason="fluency_floor",
+                            ).inc()
+                        except Exception:
+                            pass
                     elif floor_result.n_dropped:
                         result.reasoning.append(
                             f"Fluency floor: dropped "
@@ -3004,11 +3040,33 @@ def run_bilateral_cascade(
                 except Exception:
                     pass
                 if _elig.bypassed:
-                    result.reasoning.append(
-                        f"Scheduler BYPASSED (all "
-                        f"{_elig.n_dropped} candidates inside washout; "
-                        f"refuse-all-bid sibling slice awaits)"
+                    # Slice 13 (refuse-all-bid): directive line 122.
+                    # When EVERY candidate is inside its washout, the
+                    # scheduler is authorized to refuse all bids
+                    # (the user hasn't been given enough time to
+                    # recover from any prior touch). v0.1 fail-open
+                    # is replaced with fail-closed: clear scores +
+                    # mark refused.
+                    result.refused = True
+                    result.refusal_reason = (
+                        "within_subject_washout_all_dropped"
                     )
+                    result.mechanism_scores = {}
+                    result.reasoning.append(
+                        f"REFUSED (within-subject washout): all "
+                        f"{_elig.n_dropped} candidates inside washout "
+                        f"window — directive line 122 authorizes "
+                        f"refusal"
+                    )
+                    try:
+                        from adam.infrastructure.prometheus import (
+                            get_metrics as _get_metrics_refuse_sched,
+                        )
+                        _get_metrics_refuse_sched().cascade_refusals_total.labels(
+                            reason="within_subject_washout",
+                        ).inc()
+                    except Exception:
+                        pass
                 elif _elig.n_dropped:
                     result.reasoning.append(
                         f"Scheduler eligibility: dropped "
