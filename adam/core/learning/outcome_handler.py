@@ -126,6 +126,32 @@ class OutcomeHandler:
         except Exception as e:
             logger.debug("Ethics-signal metric emission failed: %s", e)
 
+        # ── Slice 5 / Tier 1 #4: Outcome → DecisionTrace closure ──
+        # Audit 2026-05-01 found the (:ConversionEdge)-[:RESOLVED]->(:
+        # DecisionTrace) edge writer was missing — outcomes never linked
+        # back to their originating trace. The DR renderer's "what
+        # happened to this impression" provenance + Slice 6 OPE post-
+        # outcome update both depend on this join. Fire-and-soft-fail —
+        # outcome processing must never block on logging.
+        try:
+            from adam.intelligence.outcome_trace_closure import (
+                write_outcome_trace_closure,
+            )
+            _closure = await write_outcome_trace_closure(
+                decision_id=decision_id,
+                outcome_type=outcome_type,
+                outcome_value=outcome_value,
+                signed_reward=signed_reward,
+            )
+            if _closure.written and _closure.reason == "written":
+                logger.debug(
+                    "outcome_trace_closure: written ce_id=%s for "
+                    "decision_id=%s",
+                    _closure.conversion_edge_id, decision_id,
+                )
+        except Exception as exc:
+            logger.debug("outcome_trace_closure skipped: %s", exc)
+
         # Track whether decision context was available (from decision cache)
         has_decision_context = metadata.get("decision_context_found", False)
         cascade_level = metadata.get("cascade_level", 0)
