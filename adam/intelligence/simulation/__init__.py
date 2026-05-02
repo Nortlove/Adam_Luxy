@@ -64,6 +64,11 @@ from adam.intelligence.simulation.architectures import (
     TrilateralWithInteraction,
 )
 from adam.intelligence.simulation.config import (
+    AUDIENCE_SIZE_GRID,
+    CTR_GRID,
+    CONVERSION_RATE_GRID,
+    HORIZON_WEEKS_GRID,
+    IMPRESSION_RATE_GRID,
     SimulationConfig,
     NonStationarityRegime,
     InteractionStrength,
@@ -78,6 +83,19 @@ from adam.intelligence.simulation.runner import (
     SimulationResult,
     run_single_cell,
 )
+from adam.intelligence.simulation.sweep import (
+    SweepCellResult,
+    SweepResult,
+    TimeseriesSample,
+    default_architecture_factories,
+    generate_full_factorial_configs,
+    generate_grid_configs,
+    generate_lhs_configs,
+    load_sweep_result_jsonl,
+    run_sweep,
+    serialize_sweep_result_jsonl,
+    sweep_summary,
+)
 from adam.intelligence.simulation.world import (
     SyntheticWorld,
     Impression,
@@ -90,6 +108,11 @@ __all__ = [
     "NonStationarityRegime",
     "InteractionStrength",
     "CohortSeparation",
+    "AUDIENCE_SIZE_GRID",
+    "CTR_GRID",
+    "CONVERSION_RATE_GRID",
+    "HORIZON_WEEKS_GRID",
+    "IMPRESSION_RATE_GRID",
     # population
     "SyntheticPopulation",
     "SyntheticUser",
@@ -108,4 +131,16 @@ __all__ = [
     # runner
     "SimulationResult",
     "run_single_cell",
+    # sweep
+    "SweepCellResult",
+    "SweepResult",
+    "TimeseriesSample",
+    "default_architecture_factories",
+    "generate_full_factorial_configs",
+    "generate_grid_configs",
+    "generate_lhs_configs",
+    "load_sweep_result_jsonl",
+    "run_sweep",
+    "serialize_sweep_result_jsonl",
+    "sweep_summary",
 ]
