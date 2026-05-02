@@ -179,9 +179,26 @@ def passes_washout(
         return True
 
     if washout_hours is None:
-        floor = washout_hours_for(mechanism)
-        if last_touched_mechanism and last_touched_mechanism != mechanism:
-            floor = max(floor, washout_hours_for(last_touched_mechanism))
+        # Slice 24: dispatch via v3_interfaces.WashoutModel registry.
+        # Default impl delegates to washout_hours_for (Slice 3 substrate);
+        # v3 1.F will register a PK/PD model whose min_wait_hours is
+        # derived from a continuous Hill curve over residual effect.
+        try:
+            from adam.intelligence.v3_interfaces import (
+                get_active_washout_model,
+            )
+            _wm = get_active_washout_model()
+            floor = _wm.min_wait_hours(mechanism)
+            if last_touched_mechanism and last_touched_mechanism != mechanism:
+                floor = max(
+                    floor, _wm.min_wait_hours(last_touched_mechanism),
+                )
+        except Exception:
+            # Soft-fail to direct call — registry is optional substrate
+            # for v3 wrapping; bid path must NEVER block on lookup.
+            floor = washout_hours_for(mechanism)
+            if last_touched_mechanism and last_touched_mechanism != mechanism:
+                floor = max(floor, washout_hours_for(last_touched_mechanism))
     else:
         floor = washout_hours
 

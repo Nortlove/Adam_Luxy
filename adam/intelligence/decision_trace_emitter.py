@@ -362,16 +362,21 @@ def build_trace_from_cascade(
     chosen_bid_value: Optional[float] = None
     if bong_posterior is not None and posture_class:
         try:
-            from adam.intelligence.bid_composer import (
-                compose_alternatives,
-                compose_chosen_bid_value,
+            # Slice 24: dispatch via v3_interfaces.BidComposer registry.
+            # Default impl delegates to compose_chosen_bid_value /
+            # compose_alternatives (Slice 7); v3 1.D registers an
+            # H∞-wrapped composer that takes Kelly's output as the
+            # nominal set-point for a robust controller.
+            from adam.intelligence.v3_interfaces import (
+                get_active_bid_composer,
             )
-            alternatives = compose_alternatives(
+            _bc = get_active_bid_composer()
+            alternatives = _bc.compose_alternatives(
                 alternatives,
                 posture=posture_class,
                 bong_posterior=bong_posterior,
             )
-            chosen_bid_value = compose_chosen_bid_value(
+            chosen_bid_value = _bc.compose_chosen(
                 chosen_mechanism=chosen_mechanism,
                 chosen_score=chosen_score,
                 posture=posture_class,

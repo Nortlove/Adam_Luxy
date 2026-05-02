@@ -3508,7 +3508,13 @@ def run_bilateral_cascade(
                 _hours_since_carry = float(
                     _touch_history_carry.get(_last_touched_carry, 0.0)
                 )
-                _carry_result = apply_carryover_correction(
+                # Slice 24: dispatch via v3_interfaces registry.
+                # Default impl delegates to apply_carryover_correction
+                # (Slice 12); v3 1.E will register a funnel-MPC strategy.
+                from adam.intelligence.v3_interfaces import (
+                    get_active_carryover_strategy,
+                )
+                _carry_result = get_active_carryover_strategy().apply(
                     result.mechanism_scores,
                     last_touched_mechanism=_last_touched_carry,
                     hours_since_last_touch=_hours_since_carry,
