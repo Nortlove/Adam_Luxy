@@ -370,6 +370,23 @@ def _register_all_tasks() -> None:
     except Exception as e:
         logger.debug("Task 40 (dual_eval re-warm) not available: %s", e)
 
+    # Task 41 — Spine #6 OPE daily estimator. Audit Tier 1 #5 closure
+    # consumer side: ope.py ships full IPS/DR/SNIPS estimators with
+    # zero production callers; this nightly task runs them on the
+    # accumulated :DecisionContext-[:HAD_OUTCOME]->:AdOutcome rows
+    # (Slice 6 sibling writer populates input) and persists daily
+    # :OPEDailyEstimate snapshots for trending + dashboard surfaces.
+    # Without this scheduled, the directive's "every served impression
+    # contributes to evaluating every arm" multiplier (line 244)
+    # cannot fire.
+    try:
+        from adam.intelligence.daily.task_41_ope_daily_estimator import (
+            OPEDailyEstimatorTask,
+        )
+        tasks.append(OPEDailyEstimatorTask())
+    except Exception as e:
+        logger.debug("Task 41 (OPE daily estimator) not available: %s", e)
+
     for task in tasks:
         _task_registry[task.name] = task
 

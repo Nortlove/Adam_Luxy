@@ -152,6 +152,36 @@ class OutcomeHandler:
         except Exception as exc:
             logger.debug("outcome_trace_closure skipped: %s", exc)
 
+        # ── Slice 6 / Tier 1 #5: Outcome → AdOutcome (OPE input) ──
+        # Audit 2026-05-01 found the OPE loader at ope.py:469 expects
+        # (:DecisionContext)-[:HAD_OUTCOME]->(:AdOutcome) but no
+        # production code wrote the outcome side. The decision side
+        # is wired (decision_cache._async_persist_to_neo4j MERGEs
+        # :DecisionContext on every cascade decision); the outcome
+        # side is the missing producer. This block writes :AdOutcome
+        # so OPE estimators (IPS/DR/SNIPS) actually have data — the
+        # directive's "every served impression contributes to
+        # evaluating every arm" multiplier (line 244) only fires once
+        # this writer is in place.
+        try:
+            from adam.intelligence.ad_outcome_persist import (
+                write_ad_outcome,
+            )
+            _ad_out = await write_ad_outcome(
+                decision_id=decision_id,
+                outcome_type=outcome_type,
+                outcome_value=outcome_value,
+                signed_reward=signed_reward,
+            )
+            if _ad_out.written:
+                logger.debug(
+                    "ad_outcome_persist: written outcome_id=%s for "
+                    "decision_id=%s",
+                    _ad_out.outcome_id, decision_id,
+                )
+        except Exception as exc:
+            logger.debug("ad_outcome_persist skipped: %s", exc)
+
         # Track whether decision context was available (from decision cache)
         has_decision_context = metadata.get("decision_context_found", False)
         cascade_level = metadata.get("cascade_level", 0)
