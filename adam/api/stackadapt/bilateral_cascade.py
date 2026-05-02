@@ -2926,6 +2926,63 @@ def run_bilateral_cascade(
         except Exception as exc:
             logger.debug("Mechanism fluency floor skipped: %s", exc)
 
+    # ─── WITHIN-SUBJECT SCHEDULER ELIGIBILITY (Slice 3 / Tier 1 #3) ───
+    # Audit 2026-05-01 Tier 1 #3: adam/retargeting/scheduler.py (415
+    # lines, ABAB/RAR/SMART + washout table) had zero callers in
+    # run_bilateral_cascade. Steps 4 (schedule check) + 10 (carryover)
+    # of the directive's 14-step pipeline were absent. Per directive
+    # line 122: "the scheduler is the only object allowed to determine
+    # which mechanism is eligible for a given user at a given moment."
+    # This block applies the washout-respecting eligibility filter at
+    # decision time, drawing per-buyer touch history from the
+    # in-process decision_cache.
+    if result.mechanism_scores and buyer_id:
+        try:
+            from adam.api.stackadapt.decision_cache import get_decision_cache
+            from adam.intelligence.within_subject_eligibility import (
+                apply_within_subject_eligibility,
+            )
+            _dc = get_decision_cache()
+            _touch_history, _last_touched = _dc.recent_touches_for_buyer(
+                buyer_id,
+            )
+            if _touch_history:
+                _elig = apply_within_subject_eligibility(
+                    mechanism_scores=result.mechanism_scores,
+                    user_touch_history=_touch_history,
+                    last_touched_mechanism=_last_touched,
+                )
+                # Counters — Slice 3 RED-criteria input + audit surface.
+                try:
+                    from adam.infrastructure.prometheus import (
+                        get_metrics as _get_metrics_sched,
+                    )
+                    _m_sched = _get_metrics_sched()
+                    if _elig.n_dropped:
+                        _m_sched.cascade_scheduler_eligibility_drops_total.inc(
+                            _elig.n_dropped,
+                        )
+                    if _elig.all_dropped:
+                        _m_sched.cascade_scheduler_no_eligible_total.inc()
+                except Exception:
+                    pass
+                if _elig.bypassed:
+                    result.reasoning.append(
+                        f"Scheduler BYPASSED (all "
+                        f"{_elig.n_dropped} candidates inside washout; "
+                        f"refuse-all-bid sibling slice awaits)"
+                    )
+                elif _elig.n_dropped:
+                    result.reasoning.append(
+                        f"Scheduler eligibility: dropped "
+                        f"{_elig.n_dropped}/"
+                        f"{_elig.n_dropped + _elig.n_eligible} "
+                        f"mechanisms (washout)"
+                    )
+                    result.mechanism_scores = _elig.filtered_scores
+        except Exception as exc:
+            logger.debug("Within-subject eligibility skipped: %s", exc)
+
     # ─── FREE-ENERGY MODULATION (Spine #5 — directive line 521) ───
     # Slice 17d: subtract λ_F · F(a) from each mechanism score per
     # the active-inference free-energy objective (Spine #5 lines

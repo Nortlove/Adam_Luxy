@@ -271,6 +271,22 @@ class ADAMMetrics:
                 ["stratum"],
             )
 
+            # Within-subject scheduler eligibility — Tier 1 audit #3;
+            # directive line 122 (scheduler is the only eligibility
+            # authority) + Section 5.1 Step 4 line 686.
+            self.cascade_scheduler_eligibility_drops_total = Counter(
+                "adam_cascade_scheduler_eligibility_drops_total",
+                "Mechanisms dropped by within-subject eligibility filter (washout)",
+            )
+
+            # Scheduler all-drop signal — refuse-all-bid sibling slice
+            # awaits (per directive line 122 the scheduler is permitted
+            # to refuse all bids when no eligible mechanism exists).
+            self.cascade_scheduler_no_eligible_total = Counter(
+                "adam_cascade_scheduler_no_eligible_total",
+                "Cascade requests where all candidates were inside washout windows",
+            )
+
             # Intelligence prefetch latency
             self.prefetch_latency = Histogram(
                 "adam_intelligence_prefetch_latency_seconds",

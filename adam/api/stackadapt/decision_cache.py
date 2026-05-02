@@ -21,7 +21,7 @@ import logging
 import time
 from collections import OrderedDict
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -363,6 +363,78 @@ class DecisionCache:
         else:
             self._misses += 1
         return best
+
+    def recent_touches_for_buyer(
+        self,
+        buyer_id: str,
+        *,
+        max_age_hours: float = 168.0,
+    ) -> Tuple[Dict[str, float], Optional[str]]:
+        """Per-mechanism most-recent touch ages + last-touched mechanism.
+
+        Slice 3 audit Tier 1 #3 wire: feeds the within-subject
+        eligibility filter at decision time. Per directive line 122,
+        the within-subject scheduler is the only object allowed to
+        determine which mechanism is eligible — this method is the
+        cascade-side touch-history adapter that lets the filter
+        operate on real per-buyer data.
+
+        Args:
+            buyer_id: target buyer.
+            max_age_hours: ignore decisions older than this. Default
+                168h (7 days) covers all reasonable mechanism washouts;
+                older touches do not gate eligibility regardless.
+
+        Returns:
+            ``(touch_history, last_touched_mechanism)`` where:
+              * ``touch_history``: ``{mechanism: hours_since_last_touch}``
+                — newest only per mechanism. Empty dict for cold buyers.
+              * ``last_touched_mechanism``: most recent mechanism the
+                user was touched with across all mechanisms. None when
+                no recent touches.
+
+        Performance: O(n) over the in-process LRU. For LUXY's expected
+        rate (~250 decisions/hour, 24h TTL → ~6K entries) this is
+        microseconds — well inside the directive's <30ms warm-cache
+        latency budget. Persistence via Redis for multi-pod deploy is
+        a sibling slice (named in within_subject_eligibility honest
+        tag (d)).
+        """
+        if not buyer_id:
+            return {}, None
+
+        now = time.time()
+        max_age_seconds = max_age_hours * 3600.0
+        cutoff = now - max_age_seconds
+
+        # Walk newest-first (LRU is move_to_end on retrieve, so reverse
+        # order is rough proxy for "newer last"; we sort to be exact).
+        latest_per_mech: Dict[str, float] = {}  # mechanism -> created_at
+        latest_overall_ts: float = 0.0
+        latest_overall_mech: Optional[str] = None
+
+        for ctx in self._store.values():
+            if ctx.buyer_id != buyer_id:
+                continue
+            if not ctx.mechanism_sent:
+                continue
+            if ctx.created_at < cutoff:
+                continue
+            mech = ctx.mechanism_sent
+            ts = ctx.created_at
+            prev_ts = latest_per_mech.get(mech)
+            if prev_ts is None or ts > prev_ts:
+                latest_per_mech[mech] = ts
+            if ts > latest_overall_ts:
+                latest_overall_ts = ts
+                latest_overall_mech = mech
+
+        # Convert to hours-ago
+        touch_history = {
+            mech: max(0.0, (now - ts) / 3600.0)
+            for mech, ts in latest_per_mech.items()
+        }
+        return touch_history, latest_overall_mech
 
     @property
     def stats(self) -> Dict[str, Any]:
