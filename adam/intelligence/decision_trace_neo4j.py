@@ -127,7 +127,8 @@ _ARCHIVE_CYPHER: str = (
     "    d.timestamp = $timestamp_epoch, "
     "    d.payload_json = $payload_json, "
     "    d.archived_at_ts = $archived_at_ts, "
-    "    d.schema_version = $schema_version "
+    "    d.schema_version = $schema_version, "
+    "    d.page_url = $page_url "
     "WITH d "
     f"MERGE (u:{USER_NODE_LABEL} {{id: $user_id}}) "
     f"MERGE (u)-[:{MADE_DECISION_REL}]->(d) "
@@ -200,6 +201,11 @@ async def archive_trace_to_neo4j(
                 payload_json=payload_json,
                 archived_at_ts=float(archived_at_ts),
                 schema_version=trace.schema_version,
+                # Original-Slice-A: page_url surfaces as a first-class
+                # Cypher property so Cypher queries can filter on it
+                # (e.g., Slice B's "find traces with new pages" scan
+                # without parsing payload_json).
+                page_url=trace.page_url,
             )
     except Exception as exc:
         logger.warning(

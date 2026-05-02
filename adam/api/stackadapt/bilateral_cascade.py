@@ -3545,6 +3545,11 @@ def run_bilateral_cascade(
             posture_confidence=_posture_confidence,
             page_posture_vector=_posture_vector,
             bong_posterior=_bong_posterior,
+            # Original-Slice-A audit gap: cascade had page_url in
+            # scope but never threaded it onto the trace. Slice 19
+            # B-vs-C evaluator + Slice B (companion label-generation
+            # task) both depend on page_url being persisted.
+            page_url=page_url,
         )
         _emit_decision_trace(_trace)
 

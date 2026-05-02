@@ -321,6 +321,15 @@ class DecisionTrace(BaseModel):
     posture_class: Optional[str] = None
     posture_confidence: Optional[float] = Field(default=None, ge=0.0, le=1.0)
 
+    # Original-Slice-A audit gap: cascade had page_url in scope but
+    # discarded it when building the trace. Slice 19's
+    # dual_eval_evaluator wishes to evaluate B-vs-C on real production
+    # traffic by joining traces to labeled goal-states via page_url;
+    # Slice B (companion label-generation task) needs to scan recent
+    # traces for new page_urls. None preserved when the cascade is
+    # called without a page (anonymous / non-page bid contexts).
+    page_url: Optional[str] = None
+
     # --- bid-value (Spine #9 — Kelly-derived; producer is sibling) ----------
     bid_value: Optional[float] = None
 
@@ -384,6 +393,7 @@ def build_decision_trace(
     score_components: Optional[Mapping[str, float]] = None,
     bid_request_id: Optional[str] = None,
     timestamp: Optional[datetime] = None,
+    page_url: Optional[str] = None,
 ) -> DecisionTrace:
     """Build a typed ``DecisionTrace`` from cascade-equivalent inputs.
 
@@ -422,4 +432,5 @@ def build_decision_trace(
         posture_confidence=posture_confidence,
         bid_value=bid_value,
         chain_of_reasoning=chain,
+        page_url=page_url,
     )

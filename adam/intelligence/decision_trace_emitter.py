@@ -251,6 +251,7 @@ def build_trace_from_cascade(
     max_alternatives: int = DEFAULT_MAX_ALTERNATIVES,
     confidence_snapshot: Optional[dict] = None,
     bong_posterior: Any = None,
+    page_url: Optional[str] = None,
 ) -> DecisionTrace:
     """Build a ``DecisionTrace`` from a cascade output.
 
@@ -371,6 +372,7 @@ def build_trace_from_cascade(
         posture_class=posture_class,
         posture_confidence=posture_confidence,
         bid_value=chosen_bid_value,
+        page_url=page_url,
     )
 
 
