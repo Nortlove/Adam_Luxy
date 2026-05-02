@@ -1790,3 +1790,189 @@ async def list_claims(
         return ClaimListResponse(claims=[], total=0)
 
     return ClaimListResponse(claims=claims, total=len(claims))
+
+
+# =============================================================================
+# Slice 9 / Tier 1 #8 — Defensive Reasoning renderer route
+# =============================================================================
+#
+# The 5-layer DR view (defensive_reasoning_renderer.py, 392 lines, fully
+# tested) had ZERO callers outside tests — Spine #13's whole partner-
+# facing artifact was dark. This route is the FastAPI surface that
+# loads a DecisionTrace from Redis (hot) → Neo4j (warm) and renders
+# the 5-layer view.
+#
+# Per directive lines 849-859: the DR panel reads from DecisionTrace
+# (Spine #6) and emits one-liner + counterfactual + decomposition +
+# confidence + provenance. The renderer already does all of that;
+# this route is just the HTTP surface so the dashboard can consume it.
+#
+# Storage resolution: load_and_render falls back Redis → Neo4j → None
+# per the existing helper. None → 404. Both stores unavailable → 503.
+
+
+@router.get(
+    "/decision-trace/{decision_id}/render",
+)
+async def get_defensive_reasoning_render(
+    decision_id: str,
+    _user: DashboardUser = Depends(require_user),
+):
+    """Render the 5-layer Defensive Reasoning view for a decision.
+
+    Loads the DecisionTrace from Redis (hot) with Neo4j (warm)
+    fallback, then renders the 5-layer DefensiveReasoningRender
+    (one-liner, counterfactual, decomposition, confidence,
+    provenance).
+
+    Returns:
+        200 + DefensiveReasoningRender JSON when the trace is found.
+        404 when the trace is not in Redis or Neo4j.
+        503 when both storage backends are unavailable.
+
+    Honest tag (sibling slice): the React <DefensiveReasoningPanel />
+    component that consumes this endpoint is Slice 11 (deferred).
+    """
+    from adam.intelligence.defensive_reasoning_renderer import (
+        load_and_render,
+    )
+
+    redis_client = None
+    neo4j_driver = None
+
+    try:
+        from adam.core.dependencies import get_redis
+        redis_client = await get_redis()
+    except Exception as exc:
+        logger.debug(
+            "DR route: Redis unavailable for decision_id=%s: %s",
+            decision_id, exc,
+        )
+
+    try:
+        from adam.core.dependencies import get_neo4j_driver
+        neo4j_driver = await get_neo4j_driver()
+    except Exception as exc:
+        logger.debug(
+            "DR route: Neo4j unavailable for decision_id=%s: %s",
+            decision_id, exc,
+        )
+
+    if redis_client is None and neo4j_driver is None:
+        # Both backends down — cannot serve. Honest 503.
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                "Decision-trace storage unavailable (both Redis and "
+                "Neo4j are unreachable)"
+            ),
+        )
+
+    rendered = await load_and_render(
+        decision_id=decision_id,
+        redis_client=redis_client,
+        neo4j_driver=neo4j_driver,
+    )
+
+    if rendered is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=(
+                f"DecisionTrace not found for decision_id={decision_id!r} "
+                "(checked Redis hot cache + Neo4j archive)"
+            ),
+        )
+
+    return rendered
+
+
+# =============================================================================
+# Slice 10 / Tier 1 #9 — View A agency-dashboard payload route
+# =============================================================================
+#
+# agency_dashboard.build_agency_dashboard_payload aggregates
+# rotation_events + attention_inversion_diagonals + page_posture +
+# session_mood + uncertainty_panel + construct_chain into a
+# JSON-serializable structure. Audit Tier 1 #9 found it had ZERO
+# callers outside tests — Spine #13's central demo artifact (View A
+# mechanism-rotation graph) had no HTTP surface.
+#
+# Per directive lines 829-841: View A is the partner-facing dashboard
+# showing current mechanism allocation per cohort, cohort-drift
+# indicators, attention-inversion compliance rate, mSPRT boundary
+# status. The build function pulls from the global accumulator
+# singletons; this route wires those singletons + serves the JSON.
+#
+# Decision_summary is mandatory on the build function. For the
+# "current system overview" snapshot view, we synthesize a default
+# system_overview summary so partners can hit /agency-view-a without
+# specifying a decision_id — they see the live system state.
+
+
+@router.get("/agency-view-a")
+async def get_agency_view_a(
+    _user: DashboardUser = Depends(require_user),
+):
+    """Return the View A agency-dashboard payload (Spine #13 demo surface).
+
+    Aggregates from the in-process singleton accumulators:
+      * rotation_events (mechanism_rotation.get_rotation_registry())
+      * attention_inversion_diagonals (taxonomy accumulator)
+      * page_posture summary (page-attentional posture accumulator)
+
+    Per-decision sections (uncertainty_panel, construct_chain,
+    session_mood) require a specific decision context and are NOT
+    populated on this overview surface — sibling slices expose those
+    via decision-specific routes.
+
+    Returns:
+        200 + agency-dashboard payload JSON. Always returns a payload
+        (no 404), even when underlying registries are empty —
+        decision_summary is synthesized as a system_overview snapshot.
+    """
+    from datetime import datetime, timezone
+
+    from adam.intelligence.agency_dashboard import (
+        build_agency_dashboard_payload,
+    )
+
+    rotation_registry = None
+    taxonomy_accumulator = None
+    page_posture_accumulator = None
+
+    try:
+        from adam.intelligence.mechanism_rotation import (
+            get_rotation_registry,
+        )
+        rotation_registry = get_rotation_registry()
+    except Exception as exc:
+        logger.debug("View A: rotation registry unavailable: %s", exc)
+
+    try:
+        from adam.intelligence.mechanism_taxonomy_runtime import (
+            get_taxonomy_accumulator,
+        )
+        taxonomy_accumulator = get_taxonomy_accumulator()
+    except Exception as exc:
+        logger.debug("View A: taxonomy accumulator unavailable: %s", exc)
+
+    try:
+        from adam.intelligence.page_attentional_posture_substrate import (
+            get_page_attentional_posture_accumulator,
+        )
+        page_posture_accumulator = get_page_attentional_posture_accumulator()
+    except Exception as exc:
+        logger.debug("View A: posture accumulator unavailable: %s", exc)
+
+    decision_summary = {
+        "view": "agency_overview",
+        "snapshot_type": "system_state",
+        "snapshot_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+    return build_agency_dashboard_payload(
+        decision_summary=decision_summary,
+        rotation_registry=rotation_registry,
+        taxonomy_accumulator=taxonomy_accumulator,
+        page_posture_accumulator=page_posture_accumulator,
+    )
