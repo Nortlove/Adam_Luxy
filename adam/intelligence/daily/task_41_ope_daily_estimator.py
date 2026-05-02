@@ -186,17 +186,50 @@ class OPEDailyEstimatorTask(DailyStrengtheningTask):
         # v0.1 target policy: uniform identity (returns 1.0 for any
         # action). Yields IPS = avg(reward / propensity) — the
         # unbiased expected-reward estimate of the logging policy
-        # itself. DR's reward_model uses a constant 0.5 baseline (the
-        # uninformative prior). Honest tag (d): DML cross-fit reward
-        # model from M2 is the production sibling per ope.py:272.
-        # Action space derived from observed sample actions.
+        # itself. DR's reward_model upgraded in Slice 17 to the
+        # DML cross-fit model when sample size permits — closes
+        # the named sibling tag in ope.py:270-272. Cross-fit defaults
+        # to K=5; falls back to single-fold marginal mean below
+        # MIN_SAMPLES_FOR_CROSS_FIT, which itself improves on the
+        # constant 0.5 baseline.
         def _identity_policy(context, action):  # type: ignore[no-untyped-def]
             return 1.0
 
-        def _baseline_reward_model(context, action):  # type: ignore[no-untyped-def]
-            return 0.5
-
         action_space = sorted({s.action for s in samples if s.action})
+
+        # Slice 17 — DML cross-fit reward model.
+        from adam.intelligence.ope_dml_reward_model import (
+            DEFAULT_K_FOLDS,
+            fit_cross_fit_reward_model,
+        )
+        try:
+            cross_fit_model = fit_cross_fit_reward_model(
+                samples=samples,
+                action_space=action_space,
+                k_folds=DEFAULT_K_FOLDS,
+            )
+            reward_model = cross_fit_model
+            result.details["reward_model"] = (
+                "dml_cross_fit_per_action_mean"
+                if cross_fit_model.k_folds == DEFAULT_K_FOLDS
+                else f"single_fold_marginal_mean_n{n_samples}"
+            )
+            result.details["reward_model_k_folds"] = (
+                cross_fit_model.k_folds
+            )
+        except Exception as exc:
+            logger.warning(
+                "Task 41: DML cross-fit fit failed (%s); falling back "
+                "to constant 0.5 baseline",
+                exc,
+            )
+            def _baseline_reward_model(  # type: ignore[no-untyped-def]
+                context, action,
+            ):
+                return 0.5
+            reward_model = _baseline_reward_model
+            result.details["reward_model"] = "constant_0.5_fallback"
+            result.details["reward_model_k_folds"] = 0
 
         try:
             ips_result = estimate_ips(samples, _identity_policy)
@@ -204,7 +237,7 @@ class OPEDailyEstimatorTask(DailyStrengtheningTask):
             dr_result = estimate_dr(
                 samples,
                 _identity_policy,
-                _baseline_reward_model,
+                reward_model,
                 action_space,
             )
         except Exception as exc:

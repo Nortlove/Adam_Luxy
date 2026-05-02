@@ -270,6 +270,13 @@ def estimate_dr(
     Unbiased if EITHER q̂(x, a) OR p_i is correct. The substrate
     accepts a reward_model callable for q̂; production passes the
     DML cross-fit q̂ from M2 here.
+
+    Slice 17 ships the cross-fit primitive in
+    ``adam.intelligence.ope_dml_reward_model`` —
+    ``CrossFitRewardModel`` is a drop-in for this kwarg. v0.1
+    underlying model is per-action marginal mean with K=5 cross-fit;
+    swap to gradient-boosted regressor / causal forest is sibling
+    slice. Task 41 nightly runner uses cross-fit by default.
     """
     kept, excluded = _filter_known(samples)
     if not kept:
