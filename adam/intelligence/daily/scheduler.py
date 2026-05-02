@@ -403,6 +403,21 @@ def _register_all_tasks() -> None:
     except Exception as e:
         logger.debug("Task 42 (launch-gate runner) not available: %s", e)
 
+    # Task 43 — Original-Slice-B autonomous label-accumulation loop.
+    # Task 40's docstring (lines 62-67) named this as the missing
+    # sibling: Task 40 RETRAINS dual-eval B/C on accumulated
+    # :GoalStateLabel nodes; this task GENERATES the labels from
+    # newly-seen DecisionTrace.page_url values via Claude API. Sits
+    # at 02:00 UTC slot — before Task 40 (03:00) so the retrain sees
+    # today's new labels.
+    try:
+        from adam.intelligence.daily.task_43_label_new_pages import (
+            LabelNewPagesTask,
+        )
+        tasks.append(LabelNewPagesTask())
+    except Exception as e:
+        logger.debug("Task 43 (label new pages) not available: %s", e)
+
     for task in tasks:
         _task_registry[task.name] = task
 
