@@ -21,9 +21,10 @@ touching the runner.
 
 from __future__ import annotations
 
+import math
 import random
 from collections import defaultdict
-from typing import Any, Dict, List, Optional, Protocol, runtime_checkable
+from typing import Any, Dict, List, Optional, Protocol, runtime_checkable, Tuple
 
 from adam.intelligence.simulation.population import (
     SyntheticPopulation,
@@ -281,6 +282,7 @@ class TrilateralCascadeOnly:
 
 # =============================================================================
 # Architecture C — trilateral + interaction model (per directive line 1162)
+# Architecture D — full proposed stack (per directive line 1163)
 # =============================================================================
 
 
@@ -415,3 +417,195 @@ class TrilateralWithInteraction:
         if outcome.converted:
             self._user_mech_conv[(u, m)] += 1
             self._cohort_mech_conv[(c, m)] += 1
+
+
+# =============================================================================
+# Architecture D — full proposed stack (per directive line 1163)
+# =============================================================================
+
+
+class FullProposedStack:
+    """Architecture D — Spines #1, #2, #4, #5, #7 composed.
+
+    Per directive Appendix A line 1163. Differentiators over C:
+
+      * Spine #1 full-Bayesian: Thompson Sampling on Beta(α, β)
+        posteriors instead of ε-greedy on point estimates.
+      * Spine #2: AR(1) carryover correction at decision time —
+        score - ρ × posterior_mean(m_prev) × exp(-Δ/τ) when a
+        same-mechanism touch occurred within τ.
+
+    Spine #4 trilateral cascade scoring is inherited (shrinkage-
+    weighted Beta mixing on user × mechanism + cohort × mechanism).
+
+    Spine #5 free-energy and Spine #7 cohort-discovery are
+    intentionally limited in v0.1:
+      * Spine #5: synthetic world doesn't expose page-attentional-
+        posture features rich enough for free-energy. Honest tag —
+        sibling slice would augment the SyntheticWorld with posture
+        features and add the F(a) modulation.
+      * Spine #7: architecture uses ground-truth cohort_id (Spine
+        #7's cohort DISCOVERY is operationally blocked on Loop B
+        per the wrap-out handoff). Discovery upgrade is sibling.
+
+    Architecture E adds Spine #6 counterfactual logging on top of D.
+    """
+
+    name: str = "D_full_proposed_stack"
+
+    def __init__(
+        self,
+        *,
+        shrinkage_kappa: float = 20.0,
+        carryover_rho: float = 0.30,
+        carryover_tau_hours: float = 24.0,
+        seed: int = 0,
+    ):
+        if shrinkage_kappa <= 0:
+            raise ValueError("shrinkage_kappa must be positive")
+        if carryover_tau_hours <= 0:
+            raise ValueError("carryover_tau_hours must be positive")
+        self.shrinkage_kappa = float(shrinkage_kappa)
+        self.carryover_rho = float(carryover_rho)
+        self.carryover_tau_hours = float(carryover_tau_hours)
+        self._rng = random.Random(int(seed))
+        self._mechanisms: List[str] = []
+        self._user_cohort: Dict[str, int] = {}
+        self._user_mech_n: Dict[tuple, int] = defaultdict(int)
+        self._user_mech_conv: Dict[tuple, int] = defaultdict(int)
+        self._cohort_mech_n: Dict[tuple, int] = defaultdict(int)
+        self._cohort_mech_conv: Dict[tuple, int] = defaultdict(int)
+        self._touch_history: Dict[str, List[Tuple[int, float, str]]] = (
+            defaultdict(list)
+        )
+
+    def configure(self, population: SyntheticPopulation) -> None:
+        self._mechanisms = list(population.mechanisms)
+        self._user_cohort = {
+            u.user_id: u.cohort_id for u in population.users
+        }
+        self._user_mech_n = defaultdict(int)
+        self._user_mech_conv = defaultdict(int)
+        self._cohort_mech_n = defaultdict(int)
+        self._cohort_mech_conv = defaultdict(int)
+        self._touch_history = defaultdict(list)
+
+    def _user_alpha_beta(
+        self, user_id: str, mechanism: str,
+    ) -> Tuple[float, float]:
+        """Beta(α, β) for the user × mechanism cell. Flat Beta(1, 1)
+        prior + Laplace counts."""
+        key = (user_id, mechanism)
+        n = self._user_mech_n[key]
+        c = self._user_mech_conv[key]
+        return (1.0 + c, 1.0 + (n - c))
+
+    def _cohort_alpha_beta(
+        self, cohort_id: int, mechanism: str,
+    ) -> Tuple[float, float]:
+        key = (cohort_id, mechanism)
+        n = self._cohort_mech_n[key]
+        c = self._cohort_mech_conv[key]
+        return (1.0 + c, 1.0 + (n - c))
+
+    def shrinkage_weight(self, user_id: str, mechanism: str) -> float:
+        n_user = self._user_mech_n[(user_id, mechanism)]
+        return float(n_user) / (float(n_user) + self.shrinkage_kappa)
+
+    def _user_posterior_mean(
+        self, user_id: str, mechanism: str,
+    ) -> float:
+        a, b = self._user_alpha_beta(user_id, mechanism)
+        return a / (a + b)
+
+    def carryover_penalty(
+        self,
+        user_id: str,
+        mechanism: str,
+        week: int,
+        hour_of_horizon: float,
+    ) -> float:
+        """Spine #2 AR(1) carryover correction. Returns the residual
+        effect from the most recent same-mechanism touch — caller
+        SUBTRACTS from the candidate's score."""
+        history = self._touch_history.get(user_id, [])
+        if not history:
+            return 0.0
+        for w, h, m_prev in reversed(history):
+            if m_prev != mechanism:
+                continue
+            delta_h = (week - w) * 168.0 + (hour_of_horizon - h)
+            if delta_h <= 0:
+                return 0.0
+            decay = math.exp(-delta_h / self.carryover_tau_hours)
+            prior_eff = self._user_posterior_mean(user_id, mechanism)
+            return self.carryover_rho * prior_eff * decay
+        return 0.0
+
+    def _thompson_sample_score(
+        self,
+        user_id: str,
+        mechanism: str,
+        week: int,
+        hour_of_horizon: float,
+    ) -> float:
+        """Thompson Sampling on the shrinkage-weighted Beta mix +
+        Spine #2 carryover correction."""
+        cohort = self._user_cohort.get(user_id, -1)
+        weight_user = self.shrinkage_weight(user_id, mechanism)
+
+        a_user, b_user = self._user_alpha_beta(user_id, mechanism)
+        a_coh, b_coh = self._cohort_alpha_beta(cohort, mechanism)
+        a_mix = weight_user * a_user + (1.0 - weight_user) * a_coh
+        b_mix = weight_user * b_user + (1.0 - weight_user) * b_coh
+        sample = self._rng.betavariate(max(a_mix, 1e-6), max(b_mix, 1e-6))
+
+        penalty = self.carryover_penalty(
+            user_id, mechanism, week, hour_of_horizon,
+        )
+        return sample - penalty
+
+    def select_mechanism(self, impression: Impression) -> str:
+        if not self._mechanisms:
+            raise RuntimeError(
+                "FullProposedStack.select_mechanism called before "
+                "configure()"
+            )
+
+        cohort = self._user_cohort.get(impression.user_id, -1)
+        cohort_untried = [
+            m for m in self._mechanisms
+            if self._cohort_mech_n[(cohort, m)] == 0
+        ]
+        if cohort_untried:
+            return self._rng.choice(cohort_untried)
+
+        best_m = self._mechanisms[0]
+        best_v = self._thompson_sample_score(
+            impression.user_id, best_m,
+            impression.week, impression.hour_of_horizon,
+        )
+        for m in self._mechanisms[1:]:
+            v = self._thompson_sample_score(
+                impression.user_id, m,
+                impression.week, impression.hour_of_horizon,
+            )
+            if v > best_v:
+                best_v = v
+                best_m = m
+        return best_m
+
+    def record_outcome(self, outcome: Outcome) -> None:
+        m = outcome.mechanism_sent
+        u = outcome.user_id
+        c = self._user_cohort.get(u, -1)
+        self._user_mech_n[(u, m)] += 1
+        self._cohort_mech_n[(c, m)] += 1
+        if outcome.converted:
+            self._user_mech_conv[(u, m)] += 1
+            self._cohort_mech_conv[(c, m)] += 1
+        self._touch_history[u].append(
+            (outcome.week, outcome.hour_of_horizon, m),
+        )
+        if len(self._touch_history[u]) > 100:
+            self._touch_history[u] = self._touch_history[u][-100:]
