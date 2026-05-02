@@ -58,6 +58,7 @@ MODULE STRUCTURE
 from adam.intelligence.simulation.architectures import (
     Architecture,
     FullProposedStack,
+    FullStackPlusCounterfactual,
     MarginalAdditiveBaseline,
     TrilateralCascadeOnly,
     TrilateralWithInteraction,
@@ -103,6 +104,7 @@ __all__ = [
     "TrilateralCascadeOnly",
     "TrilateralWithInteraction",
     "FullProposedStack",
+    "FullStackPlusCounterfactual",
     # runner
     "SimulationResult",
     "run_single_cell",

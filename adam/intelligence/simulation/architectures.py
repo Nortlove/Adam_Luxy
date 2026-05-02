@@ -609,3 +609,183 @@ class FullProposedStack:
         )
         if len(self._touch_history[u]) > 100:
             self._touch_history[u] = self._touch_history[u][-100:]
+
+
+# =============================================================================
+# Architecture E — full stack + counterfactual logging (per directive line 1164)
+# =============================================================================
+
+
+class FullStackPlusCounterfactual:
+    """Architecture E — D + Spine #6 counterfactual logging.
+
+    Per directive Appendix A line 1164 ("full stack + counterfactual
+    logging (D + Spine #6)"). E inherits D's selection logic
+    (Thompson Sampling on shrinkage-weighted Beta mix + carryover
+    correction) and ADDS:
+
+      * Per-decision propensity logging at decision time. The
+        propensity p_t for each mechanism is estimated via a
+        Monte-Carlo run of the policy (propensity_mc_samples
+        internal Thompson samples → fraction picking each arm).
+      * Per-decision propensity_log entry: (impression_id, user_id,
+        mechanism_chosen, p_t, all_propensities, reward).
+      * effective_sample_size() diagnostic — the IPS formula
+        (Σ w_i)² / Σ w_i² where w_i = 1 / p_t. v0.1's metric for
+        the directive's "counterfactual-trace efficiency multiplier"
+        (line 1171).
+
+    The IPS-WEIGHTED UPDATE (using w_i = 1/p_t in the Beta accumulator
+    update) is intentionally NOT in v0.1. Honest tag — the proper
+    importance-weighted Beta posterior with fractional pseudo-counts
+    is a sibling slice. v0.1 ships the LOGGING (Spine #6's primary
+    contribution); the OPE-rebuilt-policy that USES the logged
+    propensities is the partner-side metric, not the architecture's
+    online-learning loop.
+
+    Selection-wise, E should produce IDENTICAL choices to D (same
+    seed, same impression stream) — the propensity logging is a
+    side effect that does not feed back into the selection state
+    in v0.1. This is the pin for the "Spine #6 enables OPE
+    without disturbing the production policy" guarantee.
+    """
+
+    name: str = "E_full_stack_plus_counterfactual"
+
+    def __init__(
+        self,
+        *,
+        shrinkage_kappa: float = 20.0,
+        carryover_rho: float = 0.30,
+        carryover_tau_hours: float = 24.0,
+        seed: int = 0,
+        propensity_mc_samples: int = 50,
+        ips_clip: float = 0.01,
+    ):
+        if propensity_mc_samples < 1:
+            raise ValueError("propensity_mc_samples must be >= 1")
+        if not (0.0 < ips_clip < 1.0):
+            raise ValueError("ips_clip must be in (0, 1)")
+        self._inner = FullProposedStack(
+            shrinkage_kappa=shrinkage_kappa,
+            carryover_rho=carryover_rho,
+            carryover_tau_hours=carryover_tau_hours,
+            seed=seed,
+        )
+        self.propensity_mc_samples = int(propensity_mc_samples)
+        self.ips_clip = float(ips_clip)
+        # Separate RNG for MC propensity estimation so it doesn't
+        # corrupt the main Thompson sampling RNG state.
+        self._mc_rng = random.Random(int(seed) + 31337)
+        self._propensity_log: List[Dict[str, Any]] = []
+
+    @property
+    def shrinkage_kappa(self) -> float:
+        return self._inner.shrinkage_kappa
+
+    @property
+    def carryover_rho(self) -> float:
+        return self._inner.carryover_rho
+
+    @property
+    def carryover_tau_hours(self) -> float:
+        return self._inner.carryover_tau_hours
+
+    @property
+    def propensity_log(self) -> List[Dict[str, Any]]:
+        """Read-only access to the logged decisions. Tests + the
+        OPE post-hoc analyzer consume this."""
+        return list(self._propensity_log)
+
+    def configure(self, population: SyntheticPopulation) -> None:
+        self._inner.configure(population)
+        self._propensity_log = []
+
+    def _estimate_propensities(
+        self, impression: Impression,
+    ) -> Dict[str, float]:
+        """Monte-Carlo estimate of the policy's propensity over each
+        mechanism for THIS impression.
+
+        Run propensity_mc_samples internal Thompson samples; count
+        the fraction picking each arm. Uses a separate _mc_rng so
+        it doesn't disturb the main selection RNG state."""
+        if not self._inner._mechanisms:
+            return {}
+        cohort = self._inner._user_cohort.get(impression.user_id, -1)
+        counts: Dict[str, int] = defaultdict(int)
+        for _ in range(self.propensity_mc_samples):
+            best_m: Optional[str] = None
+            best_v = float("-inf")
+            for m in self._inner._mechanisms:
+                a_user, b_user = self._inner._user_alpha_beta(
+                    impression.user_id, m,
+                )
+                a_coh, b_coh = self._inner._cohort_alpha_beta(cohort, m)
+                w = self._inner.shrinkage_weight(impression.user_id, m)
+                a_mix = w * a_user + (1.0 - w) * a_coh
+                b_mix = w * b_user + (1.0 - w) * b_coh
+                sample = self._mc_rng.betavariate(
+                    max(a_mix, 1e-6), max(b_mix, 1e-6),
+                )
+                pen = self._inner.carryover_penalty(
+                    impression.user_id, m,
+                    impression.week, impression.hour_of_horizon,
+                )
+                v = sample - pen
+                if v > best_v:
+                    best_v = v
+                    best_m = m
+            if best_m is not None:
+                counts[best_m] += 1
+        total = float(self.propensity_mc_samples)
+        return {
+            m: counts.get(m, 0) / total
+            for m in self._inner._mechanisms
+        }
+
+    def select_mechanism(self, impression: Impression) -> str:
+        # Estimate propensities BEFORE selection so we capture the
+        # state-conditional probability distribution of THIS decision.
+        propensities = self._estimate_propensities(impression)
+        chosen = self._inner.select_mechanism(impression)
+        p_t = max(self.ips_clip, propensities.get(chosen, 0.0))
+        self._propensity_log.append({
+            "impression_id": impression.impression_id,
+            "user_id": impression.user_id,
+            "mechanism_chosen": chosen,
+            "p_t": p_t,
+            "all_propensities": propensities,
+            "reward": None,
+        })
+        return chosen
+
+    def record_outcome(self, outcome: Outcome) -> None:
+        self._inner.record_outcome(outcome)
+        # Tag the matching propensity log entry with the reward.
+        # Walk newest-first since outcomes typically arrive in
+        # near-decision order.
+        for entry in reversed(self._propensity_log):
+            if entry["impression_id"] == outcome.impression_id:
+                entry["reward"] = 1 if outcome.converted else 0
+                break
+
+    def effective_sample_size(self) -> float:
+        """IPS effective sample size: (Σ w_i)² / Σ w_i².
+
+        v0.1 of the directive's "counterfactual-trace efficiency
+        multiplier" (line 1171). Returns 0 when no logged decisions.
+        Higher = the propensity-weighted sample carries more
+        effective evidence than its raw size; lower = high-variance
+        weights are dominating."""
+        if not self._propensity_log:
+            return 0.0
+        weights = [
+            1.0 / max(self.ips_clip, e["p_t"])
+            for e in self._propensity_log
+        ]
+        sum_w = sum(weights)
+        sum_w2 = sum(w * w for w in weights)
+        if sum_w2 <= 0.0:
+            return 0.0
+        return (sum_w * sum_w) / sum_w2
