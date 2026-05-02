@@ -296,6 +296,25 @@ class ADAMMetrics:
                 "Mechanisms shifted by score-space epistemic bonus before TTTS",
             )
 
+            # Creative resolution — Slice C (2026-05-02 handoff); closes
+            # the chosen_creative_id placeholder by looking up the
+            # :UploadedCreative manifest at decision time. Hits/misses
+            # together = total resolution attempts; miss rate signals
+            # whether the upload pipeline has populated the manifest
+            # for the (mechanism, posture_class) cells the cascade
+            # actually picks. Pre-pilot: expect 100% miss until uploads
+            # run.
+            self.cascade_creative_resolution_hits_total = Counter(
+                "adam_cascade_creative_resolution_hits_total",
+                "Creative-resolution lookups that returned a real "
+                "stackadapt_creative_id from the upload manifest",
+            )
+            self.cascade_creative_resolution_misses_total = Counter(
+                "adam_cascade_creative_resolution_misses_total",
+                "Creative-resolution lookups with no manifest match "
+                "(falls back to mechanism_proxy:{mech} placeholder)",
+            )
+
             # Intelligence prefetch latency
             self.prefetch_latency = Histogram(
                 "adam_intelligence_prefetch_latency_seconds",

@@ -714,6 +714,58 @@ def test_cascade_emits_trace_without_posture_when_no_page_url():
     assert trace.page_posture_vector is None
 
 
+# -----------------------------------------------------------------------------
+# Slice C — resolved_creative_id kwarg on build_trace_from_cascade
+# -----------------------------------------------------------------------------
+
+
+def test_builder_uses_resolved_creative_id_when_provided():
+    """When the cascade's Slice C lookup hit the manifest, the resolved
+    stackadapt_creative_id replaces the mechanism_proxy placeholder."""
+    kw = _example_trace_dict()
+    kw["resolved_creative_id"] = "sa-creative-real-42"
+    trace = build_trace_from_cascade(**kw)
+    assert trace.chosen_creative_id == "sa-creative-real-42"
+    # Sanity — the placeholder prefix is NOT used.
+    assert "mechanism_proxy:" not in trace.chosen_creative_id
+
+
+def test_builder_falls_back_to_placeholder_when_resolved_is_none():
+    """No manifest hit → resolved_creative_id=None → placeholder stays."""
+    kw = _example_trace_dict()
+    kw["resolved_creative_id"] = None
+    trace = build_trace_from_cascade(**kw)
+    assert trace.chosen_creative_id == "mechanism_proxy:social_proof"
+
+
+def test_builder_falls_back_to_placeholder_when_resolved_omitted():
+    """Default behavior unchanged when caller doesn't pass the kwarg."""
+    kw = _example_trace_dict()
+    # No resolved_creative_id key at all.
+    trace = build_trace_from_cascade(**kw)
+    assert trace.chosen_creative_id == "mechanism_proxy:social_proof"
+
+
+def test_builder_resolved_id_does_not_change_alternatives():
+    """Slice C resolves only the chosen creative; alternatives keep
+    placeholder ids by design (per-alternative resolution is sibling)."""
+    kw = _example_trace_dict()
+    kw["resolved_creative_id"] = "sa-creative-real-42"
+    trace = build_trace_from_cascade(**kw)
+    for alt in trace.alternatives:
+        assert alt.creative_id.startswith("mechanism_proxy:")
+
+
+def test_builder_empty_string_resolved_id_treated_as_no_resolution():
+    """Empty string is falsy → builder falls back to placeholder.
+    Defensive against accidental empty-string injection from a soft-
+    failing lookup."""
+    kw = _example_trace_dict()
+    kw["resolved_creative_id"] = ""
+    trace = build_trace_from_cascade(**kw)
+    assert trace.chosen_creative_id == "mechanism_proxy:social_proof"
+
+
 def test_cascade_emits_trace_without_posture_when_low_confidence():
     """page_profile with confidence=0 (no evidence) → posture skipped."""
     reset_for_tests()

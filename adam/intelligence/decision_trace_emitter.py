@@ -74,12 +74,15 @@ DISCIPLINE (B3-LUXY a/b/c/d)
 
 (d) Honest tags — what is NOT in this slice (named successors):
 
-    * chosen_creative_id placeholder. The cascade outputs creative
-      INTELLIGENCE (mechanism + parameters), not a specific creative
-      id. We use ``mechanism_proxy:{mechanism_name}`` until a typed
-      creative-resolution layer ships. The placeholder pattern is
-      documented in build_trace_from_cascade and round-trips through
-      the schema honestly.
+    * chosen_creative_id resolution. SHIPPED in Slice C
+      (2026-05-02 handoff): build_trace_from_cascade now accepts
+      ``resolved_creative_id`` and uses it when provided; falls back
+      to ``mechanism_proxy:{mechanism_name}`` when None. The cascade
+      side calls ``lookup_creative_by_metadata_sync`` to resolve;
+      misses return None and the placeholder is preserved (same
+      shape as before — round-trip through the schema is unchanged).
+      Alternatives still carry the placeholder by design; per-
+      alternative resolution is a sibling slice.
     * Daily drain task (e.g., Task 38) that calls drain_to_storage
       on a periodic schedule — sibling slice. The drain function
       shipped here is ready for any async worker to call.
@@ -252,6 +255,7 @@ def build_trace_from_cascade(
     confidence_snapshot: Optional[dict] = None,
     bong_posterior: Any = None,
     page_url: Optional[str] = None,
+    resolved_creative_id: Optional[str] = None,
 ) -> DecisionTrace:
     """Build a ``DecisionTrace`` from a cascade output.
 
@@ -262,10 +266,15 @@ def build_trace_from_cascade(
     matches the logged p_t exactly AND each alternative carries its
     mathematically correct propensity.
 
-    chosen_creative_id is a placeholder (``mechanism_proxy:{mech}``)
-    until a typed creative-resolution layer ships — the cascade picks
-    a mechanism with creative parameters, not a specific creative id.
-    Documented honest tag.
+    chosen_creative_id resolves via ``resolved_creative_id`` when the
+    cascade's Slice C wire passes a real StackAdapt creative_id from
+    the ``:UploadedCreative`` manifest. When ``resolved_creative_id``
+    is None (no upload exists for the (mechanism, posture_class) cell,
+    or the lookup soft-failed), we fall back to the
+    ``mechanism_proxy:{mech}`` placeholder. Alternatives currently
+    always carry placeholder ids — the cascade doesn't bind
+    alternatives to specific creatives; per-alternative resolution
+    is a sibling slice if needed.
 
     confidence_snapshot, when provided, is merged into the trace's
     ``user_posterior_snapshot`` dict. Conventional keys consumed by
@@ -359,11 +368,20 @@ def build_trace_from_cascade(
         except Exception as exc:
             logger.debug("bid_composer skipped: %s", exc)
 
+    # Slice C: resolve chosen creative id from the upload manifest
+    # when the cascade's lookup hit a (mechanism, posture_class) cell.
+    # Falls back to placeholder when no upload exists.
+    chosen_creative_id_final = (
+        resolved_creative_id
+        if resolved_creative_id
+        else f"{_CREATIVE_PROXY_PREFIX}{chosen_mechanism}"
+    )
+
     return build_decision_trace(
         decision_id=decision_id,
         user_id=user_id,
         bid_request_id=bid_request_id,
-        chosen_creative_id=f"{_CREATIVE_PROXY_PREFIX}{chosen_mechanism}",
+        chosen_creative_id=chosen_creative_id_final,
         chosen_mechanism=chosen_mechanism,
         chosen_score=chosen_score,
         alternatives=alternatives,

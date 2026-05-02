@@ -3532,6 +3532,55 @@ def run_bilateral_cascade(
         _snapshot_for_emitter = dict(_confidence_snapshot or {})
         _snapshot_for_emitter.update(_dual_eval_log)
 
+        # ── Slice C: decision-time creative resolution ──
+        # The cascade picks a (mechanism, posture_class) cell;
+        # ``lookup_creative_by_metadata_sync`` resolves it to the
+        # most-recently-uploaded matching :UploadedCreative manifest
+        # entry. When the lookup hits, ``resolved_creative_id`` is the
+        # real stackadapt_creative_id. When it misses (no upload exists
+        # for the cell, or driver unavailable, or manifest empty), the
+        # emitter falls back to the ``mechanism_proxy:{mech}``
+        # placeholder. Soft-fail discipline: any exception → miss
+        # counter + None. Bid path NEVER blocks on resolution.
+        _resolved_creative_id: Optional[str] = None
+        _chosen_mech_for_resolution = chosen_mech or result.primary_mechanism
+        if _chosen_mech_for_resolution and _posture_class:
+            try:
+                from adam.intelligence.creative_upload_pipeline import (
+                    lookup_creative_by_metadata_sync,
+                )
+                _sync_driver = None
+                try:
+                    if graph_cache is not None:
+                        _sync_driver = graph_cache._get_driver()
+                except Exception:
+                    _sync_driver = None
+                if _sync_driver is not None:
+                    _record = lookup_creative_by_metadata_sync(
+                        mechanism=_chosen_mech_for_resolution,
+                        posture_class=_posture_class,
+                        driver=_sync_driver,
+                    )
+                    if _record is not None:
+                        _resolved_creative_id = _record.stackadapt_creative_id
+                        try:
+                            from adam.infrastructure.prometheus import (
+                                get_metrics as _get_metrics_resolve_hit,
+                            )
+                            _get_metrics_resolve_hit().cascade_creative_resolution_hits_total.inc()
+                        except Exception:
+                            pass
+                    else:
+                        try:
+                            from adam.infrastructure.prometheus import (
+                                get_metrics as _get_metrics_resolve_miss,
+                            )
+                            _get_metrics_resolve_miss().cascade_creative_resolution_misses_total.inc()
+                        except Exception:
+                            pass
+            except Exception as _exc:
+                logger.debug("Creative resolution skipped: %s", _exc)
+
         _trace = build_trace_from_cascade(
             decision_id=f"cascade-{int(t0 * 1000)}-{buyer_id or 'anon'}",
             user_id=buyer_id or "",
@@ -3550,6 +3599,9 @@ def run_bilateral_cascade(
             # B-vs-C evaluator + Slice B (companion label-generation
             # task) both depend on page_url being persisted.
             page_url=page_url,
+            # Slice C: real stackadapt_creative_id when manifest hit;
+            # None → placeholder fallback.
+            resolved_creative_id=_resolved_creative_id,
         )
         _emit_decision_trace(_trace)
 

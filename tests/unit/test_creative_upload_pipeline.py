@@ -40,6 +40,7 @@ import pytest
 from adam.intelligence.creative_upload_pipeline import (
     CreativeRecord,
     lookup_creative_by_metadata,
+    lookup_creative_by_metadata_sync,
     lookup_creative_by_name,
     persist_creative_record,
     upload_creative,
@@ -466,3 +467,260 @@ def test_creative_record_extra_fields_forbidden():
             landing_page_url="https://x.com",
             unknown_field=42,  # type: ignore[call-arg]
         )
+
+
+# =============================================================================
+# Slice C — sync lookup_creative_by_metadata_sync
+# =============================================================================
+#
+# Mirrors the async lookup but against a sync GraphDatabase driver
+# (the one graph_cache._get_driver() returns). Cascade is sync; this
+# is the path it actually uses.
+
+
+class _FakeSyncResult:
+    def __init__(self, rows: List[Dict[str, Any]]) -> None:
+        self._rows = list(rows)
+
+    def single(self) -> Optional[_FakeRecord]:
+        return _FakeRecord(self._rows[0]) if self._rows else None
+
+
+class _FakeSyncSession:
+    def __init__(self, driver: "_FakeSyncDriver") -> None:
+        self._driver = driver
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        return None
+
+    def run(self, cypher: str, **params: Any) -> _FakeSyncResult:
+        self._driver.calls.append((cypher, dict(params)))
+        norm = cypher.strip()
+        if norm.startswith("MATCH (c:UploadedCreative)"):
+            mech = params.get("mechanism")
+            posture = params.get("posture_class")
+            metaphor = params.get("primary_metaphor")
+            matches = []
+            for r in self._driver.records.values():
+                if r.get("mechanism") != mech:
+                    continue
+                if r.get("posture_class") != posture:
+                    continue
+                if metaphor is not None and r.get("primary_metaphor") != metaphor:
+                    continue
+                matches.append(r)
+            matches.sort(
+                key=lambda r: r.get("uploaded_at_ts", 0.0), reverse=True,
+            )
+            return _FakeSyncResult([{"c": matches[0]}] if matches else [])
+        return _FakeSyncResult([])
+
+
+class _FakeSyncDriver:
+    def __init__(self) -> None:
+        self.records: Dict[str, Dict[str, Any]] = {}
+        self.calls: List = []
+
+    def session(self) -> _FakeSyncSession:
+        return _FakeSyncSession(self)
+
+    def add(self, record: CreativeRecord) -> None:
+        self.records[record.stackadapt_creative_id] = {
+            "stackadapt_creative_id": record.stackadapt_creative_id,
+            "name": record.name,
+            "landing_page_url": record.landing_page_url,
+            "mechanism": record.mechanism,
+            "primary_metaphor": record.primary_metaphor,
+            "posture_class": record.posture_class,
+            "advertiser_id": record.advertiser_id,
+            "creative_type": record.creative_type,
+            "uploaded_at_ts": record.uploaded_at_ts,
+        }
+
+
+def _rec(
+    *, cid: str, mech: str, posture: str,
+    metaphor: Optional[str] = None, ts: float = 100.0,
+) -> CreativeRecord:
+    return CreativeRecord(
+        stackadapt_creative_id=cid,
+        name=f"name-{cid}",
+        landing_page_url=f"https://x/{cid}",
+        mechanism=mech,
+        posture_class=posture,
+        primary_metaphor=metaphor,
+        uploaded_at_ts=ts,
+    )
+
+
+def test_sync_lookup_no_driver_returns_none():
+    out = lookup_creative_by_metadata_sync(
+        mechanism="social_proof",
+        posture_class="blend_compatible",
+        driver=None,
+    )
+    assert out is None
+
+
+def test_sync_lookup_empty_mechanism_returns_none():
+    driver = _FakeSyncDriver()
+    out = lookup_creative_by_metadata_sync(
+        mechanism="",
+        posture_class="blend_compatible",
+        driver=driver,
+    )
+    assert out is None
+    assert len(driver.calls) == 0  # short-circuited
+
+
+def test_sync_lookup_empty_posture_returns_none():
+    driver = _FakeSyncDriver()
+    out = lookup_creative_by_metadata_sync(
+        mechanism="social_proof",
+        posture_class="",
+        driver=driver,
+    )
+    assert out is None
+    assert len(driver.calls) == 0
+
+
+def test_sync_lookup_returns_match():
+    driver = _FakeSyncDriver()
+    driver.add(_rec(cid="c-1", mech="social_proof", posture="blend_compatible"))
+
+    out = lookup_creative_by_metadata_sync(
+        mechanism="social_proof",
+        posture_class="blend_compatible",
+        driver=driver,
+    )
+    assert out is not None
+    assert out.stackadapt_creative_id == "c-1"
+    assert out.mechanism == "social_proof"
+    assert out.posture_class == "blend_compatible"
+
+
+def test_sync_lookup_no_match_returns_none():
+    driver = _FakeSyncDriver()
+    driver.add(_rec(cid="c-1", mech="social_proof", posture="blend_compatible"))
+
+    out = lookup_creative_by_metadata_sync(
+        mechanism="not_a_mech",
+        posture_class="blend_compatible",
+        driver=driver,
+    )
+    assert out is None
+
+
+def test_sync_lookup_optional_metaphor_filter_matches():
+    driver = _FakeSyncDriver()
+    driver.add(_rec(
+        cid="c-fwd", mech="social_proof", posture="blend_compatible",
+        metaphor="forward_motion",
+    ))
+    driver.add(_rec(
+        cid="c-rel", mech="social_proof", posture="blend_compatible",
+        metaphor="reliability_as_weight",
+    ))
+
+    out = lookup_creative_by_metadata_sync(
+        mechanism="social_proof",
+        posture_class="blend_compatible",
+        primary_metaphor="reliability_as_weight",
+        driver=driver,
+    )
+    assert out is not None
+    assert out.stackadapt_creative_id == "c-rel"
+
+
+def test_sync_lookup_metaphor_none_matches_any():
+    """primary_metaphor=None should match any metaphor (Cypher OR)."""
+    driver = _FakeSyncDriver()
+    driver.add(_rec(
+        cid="c-1", mech="social_proof", posture="blend_compatible",
+        metaphor="forward_motion", ts=100.0,
+    ))
+    out = lookup_creative_by_metadata_sync(
+        mechanism="social_proof",
+        posture_class="blend_compatible",
+        primary_metaphor=None,
+        driver=driver,
+    )
+    assert out is not None
+    assert out.stackadapt_creative_id == "c-1"
+
+
+def test_sync_lookup_returns_most_recent():
+    driver = _FakeSyncDriver()
+    driver.add(_rec(
+        cid="c-old", mech="social_proof",
+        posture="blend_compatible", ts=100.0,
+    ))
+    driver.add(_rec(
+        cid="c-new", mech="social_proof",
+        posture="blend_compatible", ts=200.0,
+    ))
+
+    out = lookup_creative_by_metadata_sync(
+        mechanism="social_proof",
+        posture_class="blend_compatible",
+        driver=driver,
+    )
+    assert out is not None
+    assert out.stackadapt_creative_id == "c-new"
+
+
+def test_sync_lookup_session_exception_returns_none():
+    """Driver session raising → soft-fail to None (bid path must
+    NEVER block on resolution)."""
+    class _RaisingDriver:
+        def session(self):
+            raise RuntimeError("connection lost")
+
+    out = lookup_creative_by_metadata_sync(
+        mechanism="social_proof",
+        posture_class="blend_compatible",
+        driver=_RaisingDriver(),
+    )
+    assert out is None
+
+
+def test_sync_lookup_run_exception_returns_none():
+    """driver.session().run(...) raising → soft-fail to None."""
+    class _BadSession:
+        def __enter__(self): return self
+        def __exit__(self, *a): return None
+        def run(self, *a, **kw):
+            raise RuntimeError("cypher syntax error")
+
+    class _BadDriver:
+        def session(self):
+            return _BadSession()
+
+    out = lookup_creative_by_metadata_sync(
+        mechanism="social_proof",
+        posture_class="blend_compatible",
+        driver=_BadDriver(),
+    )
+    assert out is None
+
+
+def test_sync_lookup_passes_correct_cypher_params():
+    driver = _FakeSyncDriver()
+    driver.add(_rec(cid="c-1", mech="social_proof", posture="blend_compatible"))
+
+    lookup_creative_by_metadata_sync(
+        mechanism="social_proof",
+        posture_class="blend_compatible",
+        primary_metaphor="forward_motion",
+        driver=driver,
+    )
+    assert len(driver.calls) == 1
+    _, params = driver.calls[0]
+    assert params == {
+        "mechanism": "social_proof",
+        "posture_class": "blend_compatible",
+        "primary_metaphor": "forward_motion",
+    }

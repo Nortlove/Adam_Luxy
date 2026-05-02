@@ -60,10 +60,16 @@ DISCIPLINE (B3-LUXY a/b/c/d)
 
 (d) Honest tags — what is NOT in this slice (named successors):
 
-    * Decision-time creative resolution from cascade — wires the
-      manifest lookup into bilateral_cascade.run_bilateral_cascade
-      so chosen_creative_id is real, not mechanism_proxy. Sibling
-      slice.
+    * Decision-time creative resolution from cascade — SHIPPED in
+      Slice C (2026-05-02 handoff): ``lookup_creative_by_metadata_sync``
+      is wired into ``run_bilateral_cascade`` so chosen_creative_id
+      resolves to a real ``stackadapt_creative_id`` when a manifest
+      entry matches the (mechanism, posture_class) cell. Falls back
+      to ``mechanism_proxy:{mech}`` when no upload exists.
+    * Alternatives carry placeholder ids — only the chosen mechanism
+      gets resolved (the cascade doesn't bind alternatives to specific
+      creatives; resolving every alternative is N extra queries on the
+      hot path). Sibling slice if needed.
     * Multi-variant creative generation per (mechanism, metaphor,
       posture) cell — Section 6.4 line 1062-1067 names creative
       generation via Claude API; this slice handles upload of
@@ -263,6 +269,48 @@ async def lookup_creative_by_metadata(
     except Exception as exc:
         logger.warning(
             "lookup_creative_by_metadata failed (%s, %s): %s",
+            mechanism, posture_class, exc,
+        )
+        return None
+    if record is None:
+        return None
+    node = record.get("c")
+    return _node_to_record(node) if node is not None else None
+
+
+def lookup_creative_by_metadata_sync(
+    *,
+    mechanism: str,
+    posture_class: str,
+    primary_metaphor: Optional[str] = None,
+    driver: Optional[Any] = None,
+) -> Optional[CreativeRecord]:
+    """Synchronous sibling of ``lookup_creative_by_metadata`` for the
+    sync cascade hot path (run_bilateral_cascade is sync — see Slice C
+    decision in 2026-05-02 session handoff).
+
+    Same semantics as the async version, against a sync ``GraphDatabase``
+    driver (the one ``graph_cache._get_driver()`` already returns).
+    Returns None when driver missing / no match / Cypher error.
+
+    Soft-fail discipline: any exception → WARNING + None. The bid path
+    must NEVER block on creative resolution; falling back to the
+    ``mechanism_proxy:{mech}`` placeholder is the correct safe behavior.
+    """
+    if driver is None or not mechanism or not posture_class:
+        return None
+    try:
+        with driver.session() as session:
+            result = session.run(
+                _LOOKUP_BY_METADATA_CYPHER,
+                mechanism=mechanism,
+                posture_class=posture_class,
+                primary_metaphor=primary_metaphor,
+            )
+            record = result.single()
+    except Exception as exc:
+        logger.warning(
+            "lookup_creative_by_metadata_sync failed (%s, %s): %s",
             mechanism, posture_class, exc,
         )
         return None
