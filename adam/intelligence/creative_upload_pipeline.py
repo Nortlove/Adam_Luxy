@@ -342,6 +342,8 @@ async def upload_creative(
     copy_text: Optional[str] = None,
     enforce_reactance_check: bool = True,
     reactance_threshold: Optional[float] = None,
+    enforce_metaphor_coherence_check: bool = True,
+    metaphor_coherence_threshold: Optional[float] = None,
 ) -> Optional[CreativeRecord]:
     """Upload a creative to StackAdapt + persist a manifest entry.
 
@@ -405,6 +407,44 @@ async def upload_creative(
             logger.warning(
                 "upload_creative: reactance scorer raised; failing OPEN "
                 "(allowing upload) for name=%s: %s",
+                name, exc,
+            )
+
+    # Slice 19 — pre-publication metaphor-coherence gate. Per directive
+    # Section 6.4 line 1064 + Phase 10 RED criterion #6 (line 1135).
+    # Skipped when primary_metaphor not declared OR copy_text missing
+    # OR check explicitly disabled.
+    if (
+        enforce_metaphor_coherence_check
+        and copy_text
+        and primary_metaphor
+    ):
+        try:
+            from adam.intelligence.metaphor_coherence_scorer import (
+                METAPHOR_COHERENCE_THRESHOLD,
+                passes_metaphor_coherence_check,
+            )
+            mc_threshold = (
+                metaphor_coherence_threshold
+                if metaphor_coherence_threshold is not None
+                else METAPHOR_COHERENCE_THRESHOLD
+            )
+            mc_passes, mc_result = passes_metaphor_coherence_check(
+                copy_text, primary_metaphor, threshold=mc_threshold,
+            )
+            if not mc_passes:
+                logger.warning(
+                    "upload_creative: REJECTED by metaphor-coherence "
+                    "gate (name=%s target=%s score=%.3f threshold=%.3f "
+                    "axis_hits=%s) — directive Section 6.4",
+                    name, primary_metaphor, mc_result.coherence_score,
+                    mc_threshold, dict(mc_result.axis_hits),
+                )
+                return None
+        except Exception as exc:
+            logger.warning(
+                "upload_creative: metaphor coherence scorer raised; "
+                "failing OPEN (allowing upload) for name=%s: %s",
                 name, exc,
             )
 
