@@ -25,6 +25,11 @@ import sys
 from pathlib import Path
 from typing import Any, Optional
 
+# Self-locate the project root so the script runs from any cwd
+# without requiring PYTHONPATH. Matches the existing pattern in
+# scripts/annotate_seller_side.py + others.
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+
 
 def _load_env_from_dotenv() -> None:
     """Best-effort .env load."""

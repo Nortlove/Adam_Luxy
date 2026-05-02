@@ -31,6 +31,10 @@ import os
 import sys
 from typing import Any, Optional
 
+# Self-locate the project root so the script runs from any cwd
+# without requiring PYTHONPATH.
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",

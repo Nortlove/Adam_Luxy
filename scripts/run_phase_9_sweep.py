@@ -23,6 +23,10 @@ import sys
 import time
 from typing import Dict
 
+# Self-locate the project root so the script runs from any cwd
+# without requiring PYTHONPATH.
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+
 
 def _build_factories(propensity_mc: int) -> Dict:
     """Default 5 architectures with E using a small MC sample count

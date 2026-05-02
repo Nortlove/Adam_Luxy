@@ -26,6 +26,10 @@ import os
 import sys
 import time
 from dataclasses import asdict
+
+# Self-locate the project root so the script runs from any cwd
+# without requiring PYTHONPATH.
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
