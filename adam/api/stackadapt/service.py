@@ -445,6 +445,57 @@ class CreativeIntelligenceService:
             archetype=archetype,
         )
 
+        # ──────────────────────────────────────────────────────────────
+        # SLICE 35 — STACKADAPT SHADOW-MODE BIDDER WIRE
+        # ──────────────────────────────────────────────────────────────
+        # Per the 2026-05-02 wrap-out greenlight: shadow mode, no live
+        # writes. The wire CONSUMES recommended_bid_value (which the
+        # cascade computed via v3_interfaces.get_active_bid_composer()
+        # — Slice 24's seam) and propensity-logs it as a :ShadowBid
+        # Neo4j node. v3 Phase 1 work-stream 1.D's H∞-wrapped Kelly
+        # composer registers via register_bid_composer() with zero
+        # changes to this wire — the wire honors the registry by
+        # capturing the active composer's .name at submission time
+        # (the proof that the registry-dispatch invariant holds
+        # end-to-end).
+        #
+        # Soft-fail by design: shadow logging must NEVER block the
+        # bid-path response. Bid value None / no driver / Cypher
+        # exception all fall through silently.
+        bid_value = getattr(cascade_result, "bid_value", None)
+        if bid_value is not None:
+            try:
+                from adam.api.stackadapt.shadow_bidder import (
+                    submit_shadow_bid_sync,
+                )
+                _shadow_driver = None
+                try:
+                    if self._graph_cache is not None:
+                        _shadow_driver = self._graph_cache._get_driver()
+                except Exception:
+                    _shadow_driver = None
+                if _shadow_driver is not None:
+                    submit_shadow_bid_sync(
+                        decision_id=decision_id,
+                        recommended_bid_value=float(bid_value),
+                        ts_propensity=float(
+                            getattr(cascade_result, "ts_propensity", 0.0)
+                            or 0.0
+                        ),
+                        chosen_mechanism=str(
+                            getattr(
+                                cascade_result, "primary_mechanism", "",
+                            ) or ""
+                        ),
+                        archetype=str(archetype or ""),
+                        user_id=str(buyer_id or ""),
+                        driver=_shadow_driver,
+                    )
+            except Exception as _shadow_exc:
+                logger.debug(
+                    "shadow_bidder submit skipped: %s", _shadow_exc,
+                )
+
         # Enrich response with the decision engine output
         if persuasion_decision:
             result["persuasion_intelligence"] = {
