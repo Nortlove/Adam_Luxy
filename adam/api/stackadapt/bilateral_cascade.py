@@ -3056,6 +3056,58 @@ def run_bilateral_cascade(
         except Exception as exc:
             logger.debug("Free-energy modulation skipped: %s", exc)
 
+    # ─── SCORE-SPACE EPISTEMIC BONUS (Slice 4 / Tier 1 #4) ───
+    # Audit 2026-05-01 Tier 1 #4: compute_epistemic_bonus runs in
+    # bid_composer AFTER mechanism choice — it populates
+    # AlternativeCandidate.epistemic_bonus on the trace but does NOT
+    # influence which mechanism gets chosen. Per directive Section 5.1
+    # Step 9 (line 691): "score → score + λ_E · epistemic, conditioned
+    # on fluency-floor pass." This block adds the bonus into the
+    # per-candidate score BEFORE TTTS so the choice reflects exploration
+    # value (low-information users get high bonus per directive line
+    # 285). Slice 1's hard fluency floor already dropped LOW posture ×
+    # mechanism candidates from mechanism_scores, so every remaining
+    # candidate is fluency-passed (anti-gaming safeguard structural).
+    if result.mechanism_scores and buyer_id and graph_cache:
+        try:
+            from adam.intelligence.score_space_epistemic import (
+                apply_score_space_epistemic_bonus,
+            )
+            _bong_for_eps: Any = None
+            if hasattr(graph_cache, "get_buyer_profile"):
+                _profile_eps = graph_cache.get_buyer_profile(buyer_id=buyer_id)
+                if _profile_eps is not None:
+                    _bong_for_eps = getattr(
+                        _profile_eps, "bong_posterior", None,
+                    )
+            if _bong_for_eps is not None:
+                _eps_result = apply_score_space_epistemic_bonus(
+                    mechanism_scores=result.mechanism_scores,
+                    bong_posterior=_bong_for_eps,
+                )
+                if _eps_result.n_modulated:
+                    result.reasoning.append(
+                        f"Epistemic bonus (Step 9): "
+                        f"{_eps_result.n_modulated} mechanisms shifted "
+                        f"(total mass={_eps_result.total_bonus_mass:.4f})"
+                    )
+                    result.mechanism_scores = _eps_result.modulated_scores
+                # Counter — visibility into the dual-control
+                # exploration value flowing through the cascade.
+                try:
+                    from adam.infrastructure.prometheus import (
+                        get_metrics as _get_metrics_eps,
+                    )
+                    _m_eps = _get_metrics_eps()
+                    if _eps_result.n_modulated:
+                        _m_eps.cascade_epistemic_bonus_modulations_total.inc(
+                            _eps_result.n_modulated,
+                        )
+                except Exception:
+                    pass
+        except Exception as exc:
+            logger.debug("Score-space epistemic bonus skipped: %s", exc)
+
     # ─── PER-USER POSTERIOR MODULATION (N-of-1 shrinkage) ───
     # Audit §0a fix: until now the cascade read cached archive priors
     # at decision time. This call applies the buyer's accumulated

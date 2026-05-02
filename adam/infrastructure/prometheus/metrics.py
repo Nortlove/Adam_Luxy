@@ -287,6 +287,15 @@ class ADAMMetrics:
                 "Cascade requests where all candidates were inside washout windows",
             )
 
+            # Score-space epistemic bonus — Tier 1 audit #4; directive
+            # Step 9 line 691 (score → score + λ_E · epistemic).
+            # Visibility into how often the dual-control exploration
+            # value is actually shifting cascade choices.
+            self.cascade_epistemic_bonus_modulations_total = Counter(
+                "adam_cascade_epistemic_bonus_modulations_total",
+                "Mechanisms shifted by score-space epistemic bonus before TTTS",
+            )
+
             # Intelligence prefetch latency
             self.prefetch_latency = Histogram(
                 "adam_intelligence_prefetch_latency_seconds",
