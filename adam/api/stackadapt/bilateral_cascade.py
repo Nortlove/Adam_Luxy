@@ -2718,6 +2718,17 @@ def run_bilateral_cascade(
     """
     t0 = time.monotonic()
 
+    # ── Slice 8 / Tier 1 #10: RED-criteria producer wire (bid count) ──
+    # Audit 2026-05-01 found 6 of 8 RED-criteria input counters had no
+    # producer; the launch-gate runner could not be evidenced from
+    # inside the system. Increment the bid counter at cascade entry —
+    # n_bids feeds check_decision_trace_emission's denominator.
+    try:
+        from adam.intelligence.red_criteria_snapshot import get_red_snapshot
+        get_red_snapshot().record_bid()
+    except Exception:
+        pass  # snapshot accumulator failures must NEVER block cascade
+
     # Refresh archetype priors if stale (Audit #1 fix: priors were
     # previously frozen at startup for the entire process lifetime).
     _refresh_priors_if_stale()
@@ -2919,6 +2930,20 @@ def run_bilateral_cascade(
                             _m_floor.cascade_fluency_floor_no_eligible_total.labels(
                                 posture=_floor_label
                             ).inc()
+                    except Exception:
+                        pass
+                    # Slice 8 — also record into the launch-gate
+                    # snapshot accumulator so Task 42 can compute
+                    # the fluency-floor violation RATE per cycle
+                    # (RED criterion #1 input).
+                    try:
+                        from adam.intelligence.red_criteria_snapshot import (
+                            get_red_snapshot as _get_red_snapshot_floor,
+                        )
+                        if floor_result.n_dropped:
+                            _get_red_snapshot_floor().record_floor_violation(
+                                floor_result.n_dropped
+                            )
                     except Exception:
                         pass
                     if floor_result.bypassed:
@@ -3523,6 +3548,19 @@ def run_bilateral_cascade(
         )
         _emit_decision_trace(_trace)
 
+        # ── Slice 8 / Tier 1 #10: trace-emission snapshot counter ──
+        # Increment AFTER successful emit so the count reflects
+        # actually-emitted traces (not attempted). Pairs with the
+        # n_bids counter at cascade entry — daily Task 42 computes
+        # emission_rate = n_traces_emitted / n_bids per cycle.
+        try:
+            from adam.intelligence.red_criteria_snapshot import (
+                get_red_snapshot as _get_red_snapshot_trace,
+            )
+            _get_red_snapshot_trace().record_trace_emission()
+        except Exception:
+            pass
+
         # ── Slice 7 / Tier 1 #6: surface Kelly bid_value on result ──
         # build_trace_from_cascade ran compose_chosen_bid_value (Spine
         # #9 quarter-Kelly + winner's-curse shading + Spine #8
@@ -3539,6 +3577,19 @@ def run_bilateral_cascade(
 
     elapsed_ms = (time.monotonic() - t0) * 1000
     result.reasoning.append(f"Cascade complete: level={result.cascade_level}, elapsed={elapsed_ms:.1f}ms")
+
+    # ── Slice 8 / Tier 1 #10: bid-time latency snapshot sample ──
+    # Append the cascade's per-decision latency to the snapshot's
+    # ring buffer; Task 42 computes p99 per cycle for RED criterion #7
+    # (directive line 1137 — bid-time latency p99 >120ms over budget
+    # defers launch).
+    try:
+        from adam.intelligence.red_criteria_snapshot import (
+            get_red_snapshot as _get_red_snapshot_lat,
+        )
+        _get_red_snapshot_lat().record_latency_ms(elapsed_ms)
+    except Exception:
+        pass
 
     # Record cascade observability metrics
     try:

@@ -387,6 +387,22 @@ def _register_all_tasks() -> None:
     except Exception as e:
         logger.debug("Task 41 (OPE daily estimator) not available: %s", e)
 
+    # Task 42 — Slice 8 launch-gate runner. Audit Tier 1 #10 found
+    # all 8 RED-criteria check functions + run_launch_gate_evaluation
+    # aggregator existed but only the sapid counter was incrementing
+    # in production. Slice 8's red_criteria_snapshot is the producer
+    # side; this task is the daily consumer that reads the snapshot
+    # + sapid monitor, runs the gate, and persists :LaunchGateResult
+    # for trending. Without this scheduled, the directive's
+    # "continuous monitoring" line 1128 has no closure.
+    try:
+        from adam.intelligence.daily.task_42_launch_gate_runner import (
+            LaunchGateRunnerTask,
+        )
+        tasks.append(LaunchGateRunnerTask())
+    except Exception as e:
+        logger.debug("Task 42 (launch-gate runner) not available: %s", e)
+
     for task in tasks:
         _task_registry[task.name] = task
 
