@@ -37,6 +37,14 @@ Held-out fixture: see HELDOUT_URLS below — 50 URLs (10 per posture)
 hand-curated from domains NOT present in any round-1 / round-2 /
 round-3 training corpus. Treat as fixture, not training data: NEVER
 persist these to :PostureLabel (would contaminate the gate).
+
+Fixture-rotation trail (HELDOUT_ROTATION_MANIFEST below):
+  * 2026-05-03  initial 50-URL fixture authored, but post-curation
+    audit found docs.google.com/document/d/abc123/edit collided with
+    training URL calendar.google.com/calendar/u/0/r (round-1 TASK
+    label). Swapped to 3.basecamp.com/12345/projects/67890 to enforce
+    the permanent fixture-isolation rule (held-out fixture domains
+    must never appear in any training set, ever).
 """
 from __future__ import annotations
 
@@ -177,8 +185,8 @@ HELDOUT_URLS: List[Tuple[str, str, str]] = [
      "TASK_COMPLETION", "Zoom meeting join — in-flow"),
     ("https://app.monday.com/boards/12345",
      "TASK_COMPLETION", "Monday.com board — task tooling"),
-    ("https://docs.google.com/document/d/abc123/edit",
-     "TASK_COMPLETION", "Google Docs editor — in-flow productivity"),
+    ("https://3.basecamp.com/12345/projects/67890",
+     "TASK_COMPLETION", "Basecamp project — in-flow productivity"),
     ("https://www.dropbox.com/home",
      "TASK_COMPLETION", "Dropbox home — file management"),
     ("https://app.salesforce.com/lightning/o/Lead/list",
@@ -191,6 +199,30 @@ HELDOUT_URLS: List[Tuple[str, str, str]] = [
      "TASK_COMPLETION", "QuickBooks home — accounting tool"),
     ("https://app.hubspot.com/contacts/12345",
      "TASK_COMPLETION", "HubSpot contacts — CRM workflow"),
+]
+
+
+# =============================================================================
+# Held-out fixture rotation manifest. Append-only audit trail. Each
+# entry records one swap: dropped URL, replacement URL, and the reason
+# (training-domain collision is the binding reason). Append, never
+# rewrite history.
+# =============================================================================
+HELDOUT_ROTATION_MANIFEST: List[Dict[str, str]] = [
+    {
+        "rotation_id": "2026-05-03-001",
+        "class": "TASK_COMPLETION",
+        "out_url": "https://docs.google.com/document/d/abc123/edit",
+        "out_domain": "google.com",
+        "in_url": "https://3.basecamp.com/12345/projects/67890",
+        "in_domain": "basecamp.com",
+        "reason": (
+            "Training corpus contains calendar.google.com (round-1 "
+            "TASK label) — google.com violated the permanent fixture-"
+            "isolation rule. Replaced with basecamp.com which is "
+            "absent from training and from round-3 candidates."
+        ),
+    },
 ]
 
 
