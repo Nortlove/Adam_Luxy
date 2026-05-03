@@ -15,6 +15,26 @@ Usage (verify corpus state):
 Auth: requires NEO4J_URI / NEO4J_USERNAME / NEO4J_PASSWORD in .env
 or environment. Loaded automatically from project-root .env when
 present.
+
+Held-out fixture isolation (binding rule:
+feedback_heldout_fixture_isolation.md): every persist invocation
+checks the URL's registrable domain against the held-out fixture
+in scripts/heldout_eval_posture_classifier.py. If a collision is
+detected, the persist is REFUSED with exit code 6 and an error
+message naming the colliding fixture URL plus two resolution paths
+(pick a different candidate, preferred; or rotate the fixture-side
+URL with a HELDOUT_ROTATION_MANIFEST entry, fallback). This
+protects against accidental fixture re-contamination at the
+keystroke. --list and --count modes do not run the check.
+
+Exit codes:
+  0 — persist succeeded (or list/count succeeded)
+  1 — invalid args (missing --url or --label)
+  2 — Neo4j env vars missing or driver build failed
+  3 — PageLabelEntry validation failed
+  4 — persist_page_label returned False
+  5 — persist returned True but read-back found no record
+  6 — held-out fixture isolation violation (NEW; refuse-to-persist)
 """
 from __future__ import annotations
 
@@ -23,7 +43,7 @@ import asyncio
 import os
 import sys
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, List, Optional
 
 # Self-locate the project root so the script runs from any cwd
 # without requiring PYTHONPATH. Matches the existing pattern in
@@ -71,13 +91,37 @@ async def _build_driver() -> Optional[Any]:
         return None
 
 
+def _load_heldout_fixture_urls() -> List[str]:
+    """Load the held-out fixture URLs for the persist-time isolation
+    check. Imported lazily so that --list / --count modes don't pay
+    the import cost. Returns [] if the fixture script is missing or
+    malformed (which itself is a soft failure — the operator gets a
+    warning rather than a refusal, since the gate script's absence
+    already breaks the gate)."""
+    try:
+        from scripts.heldout_eval_posture_classifier import HELDOUT_URLS
+    except Exception as exc:
+        print(
+            f"WARNING: could not import held-out fixture for "
+            f"isolation check ({exc}). Persist will proceed WITHOUT "
+            f"the fixture-isolation rule enforced — verify the "
+            f"colliding-domain audit by hand "
+            f"(/tmp/domain_overlap_audit.py).",
+            file=sys.stderr,
+        )
+        return []
+    return [u for u, _, _ in HELDOUT_URLS]
+
+
 async def _persist(args: argparse.Namespace) -> int:
     from adam.intelligence.posture_five_class import (
         FIVE_CLASS_POSTURES,
         PageLabelEntry,
         count_labels_corpus,
+        find_url_fixture_collision,
         load_labeled_pages,
         persist_page_label,
+        registrable_domain,
     )
 
     driver = await _build_driver()
@@ -115,6 +159,48 @@ async def _persist(args: argparse.Namespace) -> int:
                 file=sys.stderr,
             )
             return 1
+
+        # Held-out fixture isolation check (binding rule:
+        # feedback_heldout_fixture_isolation.md). Refuse to persist
+        # any URL whose registrable domain matches a held-out fixture
+        # domain, naming the colliding fixture URL. Resolution
+        # preference: pick a different candidate (preferred — fixture
+        # authority preserved) or rotate the fixture-side URL
+        # (fallback — append HELDOUT_ROTATION_MANIFEST entry).
+        fixture_urls = _load_heldout_fixture_urls()
+        collision = find_url_fixture_collision(args.url, fixture_urls)
+        if collision is not None:
+            collision_domain, fixture_url = collision
+            print(
+                f"ERROR: URL violates the held-out fixture isolation "
+                f"rule.\n"
+                f"\n"
+                f"  url being persisted    : {args.url}\n"
+                f"  registrable_domain     : {collision_domain}\n"
+                f"  collides with fixture  : {fixture_url}\n"
+                f"\n"
+                f"The held-out fixture in "
+                f"scripts/heldout_eval_posture_classifier.py uses "
+                f"{collision_domain}; persisting any URL on that "
+                f"domain into :PostureLabel would contaminate the "
+                f"criterion-(ii) gate.\n"
+                f"\n"
+                f"Resolution preference:\n"
+                f"  (a) [PREFERRED] Choose a different labeling "
+                f"candidate from a domain not in the held-out "
+                f"fixture. This preserves the fixture's authority.\n"
+                f"  (b) [FALLBACK] Rotate the fixture-side URL by "
+                f"editing scripts/heldout_eval_posture_classifier.py "
+                f"— swap the colliding HELDOUT_URLS entry to a "
+                f"fresh same-class URL on a never-trained domain, "
+                f"then append a HELDOUT_ROTATION_MANIFEST entry "
+                f"recording the swap.\n"
+                f"\n"
+                f"Binding rule: feedback_heldout_fixture_isolation.md\n"
+                f"Audit memo:   docs/CRITERION_II_STATUS_CORRECTION_2026_05_02.md",
+                file=sys.stderr,
+            )
+            return 6
 
         try:
             entry = PageLabelEntry(

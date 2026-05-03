@@ -91,7 +91,8 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Tuple
+from urllib.parse import urlparse
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -379,6 +380,92 @@ async def load_labeled_pages(
         except Exception:
             continue  # skip malformed row
     return out
+
+
+# =============================================================================
+# Held-out fixture isolation — registrable-domain helpers.
+#
+# Per binding rule `feedback_heldout_fixture_isolation.md` (memory):
+# held-out fixture domains must NEVER appear in any training set,
+# ever. These helpers operationalize the rule at persist-time so the
+# operator can never accidentally re-contaminate the gate by labeling
+# a URL whose domain is already in the held-out fixture.
+#
+# Pure functions — no Neo4j, no I/O. Tests pin behavior on edge
+# cases (subdomains, multi-suffix TLDs, malformed URLs, empty
+# fixture). The persist script imports these to enforce the rule;
+# the held-out fixture is loaded separately by the persist script
+# (currently from scripts/heldout_eval_posture_classifier.py's
+# HELDOUT_URLS).
+# =============================================================================
+
+# Multi-suffix TLDs we treat as effective TLDs. Conservative list —
+# the goal is correctness on common public suffixes, not full PSL
+# parity. If we hit a hostname not handled here, fall back to the
+# last-2-labels heuristic, which is right for .com/.net/.org/.app/.io.
+_MULTI_SUFFIX_TLDS: Tuple[str, ...] = (
+    "co.uk", "co.jp", "co.nz", "co.kr", "co.in", "co.za",
+    "com.au", "com.br", "com.mx", "com.sg", "com.hk", "com.tw",
+    "ac.uk", "gov.uk", "org.uk",
+    "ne.jp", "or.jp", "ac.jp", "go.jp",
+)
+
+
+def registrable_domain(url: str) -> str:
+    """Heuristic registrable-domain extraction.
+
+    Strips scheme, port, and subdomains; returns last-2 hostname
+    labels, or last-3 if the last-2 form a known multi-suffix TLD
+    (e.g. "bbc.co.uk", "asahi.co.jp"). Lowercase. Returns empty
+    string on malformed input.
+
+    Used by the held-out-fixture-isolation rule to compare a URL
+    being persisted against the fixture's domain set. Two URLs
+    sharing a registrable domain are treated as collisions even
+    when paths differ — the rule is about domain isolation, not
+    URL identity.
+    """
+    if not url:
+        return ""
+    try:
+        netloc = urlparse(url).netloc.lower()
+    except Exception:
+        return ""
+    if not netloc:
+        return ""
+    netloc = netloc.split("@")[-1]  # strip userinfo if present
+    netloc = netloc.split(":", 1)[0]  # strip port
+    parts = [p for p in netloc.split(".") if p]
+    if len(parts) < 2:
+        return netloc
+    last_two = ".".join(parts[-2:])
+    if len(parts) >= 3 and last_two in _MULTI_SUFFIX_TLDS:
+        return ".".join(parts[-3:])
+    return last_two
+
+
+def find_url_fixture_collision(
+    candidate_url: str,
+    fixture_urls: Iterable[str],
+) -> Optional[Tuple[str, str]]:
+    """Check whether candidate_url shares a registrable domain with
+    any URL in fixture_urls. Returns (collision_domain, first_
+    colliding_fixture_url) on hit; None on miss.
+
+    "First colliding" is determined by iteration order over
+    fixture_urls. The caller passes the held-out fixture (typically
+    HELDOUT_URLS from the gate script). If candidate_url's domain
+    cannot be parsed (e.g. empty / malformed), returns None — the
+    persist script's pydantic validation catches malformed URLs
+    upstream of this check.
+    """
+    cand_dom = registrable_domain(candidate_url)
+    if not cand_dom:
+        return None
+    for fx_url in fixture_urls:
+        if registrable_domain(fx_url) == cand_dom:
+            return (cand_dom, fx_url)
+    return None
 
 
 async def count_labels_corpus(
