@@ -32,11 +32,11 @@
 ## Current State
 
 - Active branch: `feature/hmt-dashboard`
-- Active slice: **none yet** (awaiting first prompt from Claude Proper for S0)
-- Last commit on branch: `61644a9 feat(criterion-ii): persist-time held-out fixture isolation enforcement`
-- Test suite baseline: 4380+ passing (per directive Part 0)
-- Open QUESTIONs: none
-- Critical-path next slice: **S0** (StackAdapt Historical URL Extraction, one-shot) — gated by Chris-executed pre-flight (verify LUXY StackAdapt API key is GraphQL, not REST)
+- Active slice: **S0 (BLOCKED on QUESTION 3 — schema mismatch with directive §1.2)**
+- Last commit on branch: `9936cf6 chore(directive): v3.1 transition — add directive + MEMORY.md, remove superseded plan/directive docs`
+- Test suite baseline: 4380+ passing (per directive Part 0; no code touched in this session)
+- Open QUESTIONs: **3** (see `docs/S0_SCHEMA_MISMATCH_REPORT_2026_05_04.md`)
+- Critical-path next slice: **S0** — §1.1 pre-flight introspection ping PASSED; §1.2 Q1 field `deliveryReportImpressionLevel` non-existent in live schema; awaiting Claude Proper directive amendment
 
 ## Critical Path (Directive Part 2)
 
@@ -109,7 +109,45 @@ Structural defense against re-drift. Past pattern: surviving alternative plans d
 
 ## Per-Session Append (newest at bottom)
 
-### Session 2026-05-04 — session #001
+### Session 2026-05-04 — session #002 — S0 §1.1 ping + schema mismatch surfaced
+
+**EVE Handoff:**
+
+- **E (Executed):**
+  - Per Chris instruction "go forward and follow the instruction": ran §1.1 introspection ping live against `https://api.stackadapt.com/graphql` using existing `StackAdaptGraphQLClient` (no parallel client per §1.3). PASS — `queryType.name = Query`, 60 query fields enumerable.
+  - Three rounds of schema introspection: (R1) confirm `deliveryReportImpressionLevel` exists/not-exists; (R2) probe args + return types of all four `*Delivery` candidates + `AdDeliveryPayload` shape + scan for url/page/site/host/inventory naming; (R3) probe `conversionPath` + `campaignPageContext` to find URL-bearing surfaces.
+  - Wrote `docs/S0_SCHEMA_MISMATCH_REPORT_2026_05_04.md` — self-contained artifact for Claude Proper with: §1.1 PASS confirmation, the field-name gap (Q1 field non-existent), the four real `*Delivery` fields' actual signatures, the only URL-bearing cursor-paginated surface (`conversionPath`), three schema-grounded paths α/β/γ, and recommendation of γ.
+
+- **V (Verified):**
+  - Auth: `STACKADAPT_GRAPHQL_KEY` (64 chars) loaded from `.env`; `is_configured` is a `@property` (not a method — caught and corrected during round 1).
+  - Field-name gap: `Query.deliveryReportImpressionLevel` returns `{}` from introspection. Real fields: `adDelivery / advertiserDelivery / campaignDelivery / campaignGroupDelivery` — all share args `(dataType, date, filterBy, granularity)`, none take `breakdowns/after/first`, none expose URL-level row granularity. `conversionPath` is the only Relay-cursor-paginated URL-bearing field.
+  - No code committed; no tests run; no slice closure claimed. State = BLOCKED per §0.3.
+
+- **E (Expected next session):**
+  - Chris pastes `docs/S0_SCHEMA_MISMATCH_REPORT_2026_05_04.md` into Claude Proper.
+  - Claude Proper adjudicates between Path α (conversionPath-based — biased to bottom-of-funnel), Path β (adDelivery + campaignPageContext — depends on unconfirmed field shape), Path γ (directive amendment — slowest, cleanest).
+  - Claude Proper writes amended S0 prompt; Claude Code executes the amendment.
+  - Optional interim: Claude Proper may authorize a calibration-only Path α run in parallel with the amendment cycle (must be flagged calibration-only, not for G1 closure).
+
+- **Open QUESTIONs:**
+  - **QUESTION 3:** Which path (α / β / γ) for S0 against the live StackAdapt GraphQL schema? Decision criterion includes posture-class representativeness for downstream G1 closure.
+
+- **Binding amendment from Chris (2026-05-04, mid-session):** S0 §1.5/§1.7 + S1 §1.8 entry-condition amended with **posture-class diversity audit**. After URL extraction completes, S0 runs ContentProfiler offline pass against `unique_urls.jsonl`, emits per-posture-class counts in summary, and writes `posture_diversity_inadequate=true|false` key=value into `READY_FOR_RATER_WORKSHEET.flag`. If true, S1.1 stops and surfaces a QUESTION before producing the rater worksheet. Per-class minimum: 30 URLs (5-class total minimum: 150). `INFORMATION_FORAGING` and `LEISURE_BROWSING` are the empirically most-at-risk classes (round-3 held-out: 49/50 collapsed to INFO_FORAGING because other classes lacked calibration evidence) — and exactly the two classes Path α's conversion bias would systematically under-sample. ContentProfiler verified to exist at `adam/platform/intelligence/content_profiler.py:56`; 5-class taxonomy canonical names confirmed at `adam/intelligence/posture_five_class.py:106`. Full amendment text in `docs/S0_SCHEMA_MISMATCH_REPORT_2026_05_04.md` "Binding Amendment" section.
+
+- **Hand-off pointer:** S0 BLOCKED at field-name gap + diversity-gate amendment binding. Schema-mismatch report (now including binding amendment) at `docs/S0_SCHEMA_MISMATCH_REPORT_2026_05_04.md`. No code work pending Claude Proper adjudication of QUESTION 3.
+
+**Mid-session resolutions from Chris (2026-05-04):**
+- **Canonical-classifier resolution:** `URLPostureClassifier` (`adam/intelligence/posture_five_class.py`) is canonical for the diversity audit. NOT ContentProfiler-direct. The round-3-pre-rotation checkpoint caveat (held-out macro-AUC 0.7980, top-1 0.22, 49/50 collapsed to INFO_FORAGING) must be inscribed in the S0 emitted summary artifact. Diversity-gate bias is conservative-for-purpose: a firing gate ⇒ inadequate corpus (high confidence); a passing gate ⇒ minimum-bar cleared but per-class counts carry classifier-default-to-INFO bias.
+- **Three constraints binding the not-yet-issued amended S0 prompt** (Claude Proper must incorporate ALL three):
+  1. **Hybrid γ + α-as-calibration** — Path γ (directive amendment against real schema) is the primary path; Path α (conversionPath-based pull) is authorized in parallel as a **calibration-only artifact**, NOT for G1 closure. Calibration-only flag must be on every output.
+  2. **Posture-class diversity audit using URLPostureClassifier** with round-3-checkpoint caveat per the binding amendment.
+  3. **Multi-source provenance with `source` field on every row** of the emitted JSONL — every row carries the data source (e.g., `"source": "stackadapt.conversionPath.touchpoint"`, `"source": "stackadapt.adDelivery+campaignPageContext"`, etc.) so downstream consumers can stratify by source and re-evaluate without re-deriving.
+
+**Standdown state:** Claude Code is at hard standdown until the amended S0 prompt arrives from Claude Proper. No autonomous S0 work; QUESTION 3 + the three binding constraints adjudicated via Claude Proper.
+
+---
+
+### Session 2026-05-04 — session #001 — directive transition
 
 **EVE Handoff:**
 
@@ -129,11 +167,10 @@ Structural defense against re-drift. Past pattern: surviving alternative plans d
   - Verified all 24 file removals + 2 directory removals landed (post-deletion existence-check loop produced zero "STILL EXISTS" lines).
 
 - **E (Expected next session):**
-  - Await Chris's go/no-go on a `chore: clean up superseded plan/directive docs per v3.1 transition` commit that captures the 8 tracked deletions + the new `docs/MEMORY.md`. Untracked deletions are filesystem-only, no commit needed.
   - Chris-executed S0 pre-flight (verify LUXY StackAdapt API key is GraphQL-not-REST with the LUXY account manager).
   - Once pre-flight lands, await Claude Proper's first slice prompt (S0).
   - First S0 action when prompted: GraphQL introspection ping at `adam/integrations/stackadapt/graphql_client.py`. Halt-and-surface on auth failure per directive §1.1; no auto-retry, no fallback to REST.
 
 - **Open QUESTIONs:** none.
 
-- **Hand-off pointer:** Awaiting (a) Chris's authorization to commit the cleanup, (b) Chris-executed S0 pre-flight + Claude Proper's S0 prompt.
+- **Hand-off pointer:** Branch `feature/hmt-dashboard` at `9936cf6`. Awaiting (a) Chris-executed S0 pre-flight, (b) Claude Proper's first S0 slice prompt. The cleanup commit `9936cf6` landed cleanly: 10 files changed (+1160/-4928); 8 tracked deletions + 2 doc additions (the v3.1 directive + this MEMORY.md). Remaining untracked filesystem deletions (15 top-level files, 2 docs files, central_plan/ directory, docs/handoff/ directory) were `rm`'d in the same operator pass — no commit needed for those. User-level memory (`~/.claude/projects/.../memory/`) updated: LOAD-FIRST block + reference_directive_full_build.md + reference_seven_component_methodology_handoff.md all re-anchored on v3.1.
