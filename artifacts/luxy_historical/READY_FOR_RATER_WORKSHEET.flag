@@ -1,0 +1,11 @@
+ready=false
+gate_grade=false
+calibration_grade=true
+posture_diversity_inadequate=true
+inadequate_classes=INFORMATION_FORAGING,TASK_COMPLETION,LEISURE_BROWSING,SOCIAL_CONSUMPTION,TRANSACTIONAL_COMPARISON
+total_unique_urls=6
+total_validated_live=6
+domains=1
+sources=conversion_path
+diversity_gate_verdict=FAIL
+report_path=artifacts/luxy_historical/luxy_served_urls_2026-05-04.summary.md

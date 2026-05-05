@@ -36,11 +36,13 @@ flagged with explicit raise-or-return-stub behavior pending schema
 rework.
 """
 
+import asyncio
 import json
 import logging
 import os
+import random
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import httpx
 
@@ -90,6 +92,251 @@ class StackAdaptGraphQLClient:
         except Exception as e:
             logger.error("GraphQL query failed: %s", e)
             return {"error": str(e)}
+
+    async def _query_with_retry(
+        self,
+        query: str,
+        variables: Dict = None,
+        max_attempts: int = 7,
+        base_delay_ms: int = 500,
+        max_delay_ms: int = 60_000,
+    ) -> Dict:
+        """Wrap _query with full-jitter exponential backoff on rate-limit
+        envelopes (HTTP 429 or message containing 'rate limit' / 'too many').
+
+        Slice S0: substrate for the multi-source URL extraction CLI per
+        the amended directive §B (and reused by S4 ingestion). Pattern
+        per Marc Brooker / AWS architecture blog: full jitter over the
+        capped exponential interval.
+
+        Args:
+            query: GraphQL query string.
+            variables: Variable bindings.
+            max_attempts: Hard cap on retries (default 7 per directive §1.3).
+            base_delay_ms: Base delay (default 500ms per directive §1.3).
+            max_delay_ms: Cap (default 60000ms = 60s per directive §1.3).
+
+        Returns:
+            Same shape as `_query`. On rate-limit-exhausted: returns
+            {"error": "RATE_LIMIT_EXHAUSTED", "attempts": <n>}. On
+            non-rate-limit error from `_query`: returns immediately
+            (single attempt, original error preserved).
+        """
+        attempt = 0
+        last_error: Optional[str] = None
+        while attempt < max_attempts:
+            result = await self._query(query, variables)
+            if not isinstance(result, dict) or not result.get("error"):
+                return result
+
+            err = str(result.get("error") or "").lower()
+            is_rate_limit = (
+                "429" in err
+                or "rate limit" in err
+                or "too many" in err
+                or "throttl" in err
+            )
+            if not is_rate_limit:
+                return result
+
+            last_error = str(result.get("error"))
+            attempt += 1
+            if attempt >= max_attempts:
+                break
+            cap_ms = min(max_delay_ms, base_delay_ms * (2 ** attempt))
+            delay_ms = random.uniform(0, cap_ms)
+            logger.warning(
+                "rate-limit envelope (attempt %d/%d); backing off %.0fms",
+                attempt, max_attempts, delay_ms,
+            )
+            await asyncio.sleep(delay_ms / 1000.0)
+
+        return {
+            "error": "RATE_LIMIT_EXHAUSTED",
+            "attempts": attempt,
+            "last_error": last_error,
+        }
+
+    async def get_conversion_paths_page(
+        self,
+        filter_by: Dict[str, Any],
+        first: int = 200,
+        after: Optional[str] = None,
+    ) -> Tuple[List[Dict], Dict[str, Any]]:
+        """Single-page cursor-paginated read of `conversionPath`.
+
+        Slice S0 Source 1. Returns (nodes, pageInfo) where pageInfo has
+        {hasNextPage, endCursor}; caller iterates with after=endCursor
+        until hasNextPage is False.
+
+        Schema realities (introspected 2026-05-04, two corrections from
+        directive's Q3 spec):
+            * Q3 named `touchpoints[]` with per-touch `url, domain, sapid`
+              — DOES NOT EXIST on the live schema. ConversionPathRecords
+              has no touchpoints array.
+            * Q3 named `conversionId, conversionTimestamp, revenueUsd` as
+              top-level fields — DO NOT EXIST. Conversion data is nested
+              under `conversionStats { conversionUrl conversionTime ... }`
+              which is the only URL field on the entire path subtree.
+
+        What we get per record (live):
+            * id (path identifier)
+            * domain (first-impression publisher host)
+            * lastDomain (last-impression publisher host)
+            * impressionCount, clickCount
+            * firstImpressionTime, lastImpressionTime
+            * conversionStats.conversionUrl  ← THE URL field
+            * conversionStats.conversionTime, .device
+            * ad { id, name, clickUrl } (LUXY click destination, not publisher)
+            * campaign { id, name }
+
+        Filter shape (ConversionPathFilters input fields):
+            campaignIds: [ID], trackerIds: [ID],
+            startTime: ISO8601DateTime, endTime: ISO8601DateTime.
+            (No advertiser filter at this layer — caller must pre-fetch
+            LUXY campaign IDs via get_campaigns(filter_by={"advertiserIds":[...]}).
+        """
+        query = """
+        query ConversionPathPage(
+            $first: Int!,
+            $after: String,
+            $filterBy: ConversionPathFilters
+        ) {
+            conversionPath(first: $first, after: $after, filterBy: $filterBy) {
+                pageInfo { hasNextPage endCursor }
+                totalCount
+                nodes {
+                    id
+                    domain
+                    lastDomain
+                    impressionCount
+                    clickCount
+                    firstImpressionTime
+                    lastImpressionTime
+                    conversionStats {
+                        conversionUrl
+                        conversionTime
+                        device
+                    }
+                    ad { id name clickUrl }
+                    campaign { id name }
+                }
+            }
+        }
+        """
+        variables: Dict[str, Any] = {"first": first, "filterBy": filter_by}
+        if after:
+            variables["after"] = after
+
+        result = await self._query_with_retry(query, variables)
+        if isinstance(result, dict) and result.get("error"):
+            return [], {"hasNextPage": False, "endCursor": None,
+                        "error": result.get("error")}
+        conn = (result or {}).get("conversionPath") or {}
+        nodes = conn.get("nodes") or []
+        page_info = conn.get("pageInfo") or {
+            "hasNextPage": False, "endCursor": None,
+        }
+        return [n for n in nodes if n], page_info
+
+    async def get_campaign_page_context_page(
+        self,
+        advertiser_id: str,
+        date_from: str,
+        date_to: str,
+        first: int = 200,
+        after: Optional[str] = None,
+        max_progress_polls: int = 24,
+        progress_poll_seconds: float = 5.0,
+    ) -> Tuple[List[Dict], Dict[str, Any]]:
+        """Single-page cursor-paginated read of `campaignPageContext`.
+
+        Slice S0 Source 3 (REFRAMED). The directive's original Source 3
+        spec named `adDelivery` with `groupBy: DOMAIN` — but the live
+        schema does NOT support either: AdDeliveryRecord has no domain
+        field, and `groupBy` is not an arg on Query.adDelivery. The
+        live-schema URL-bearing population-level surface is
+        `campaignPageContext` (verified 2026-05-04: returns
+        CampaignPageContextRecord with `url: String` field — exactly
+        what we want for unbiased URL discovery).
+
+        Returns (nodes, pageInfo). UNION resolution:
+            campaignPageContext returns CampaignPageContextPayload UNION
+            { CampaignPageContextOutcome | Progress }.
+
+            * If Outcome: extract records.{nodes, pageInfo}.
+            * If Progress (only `_` field exposed; no jobId): poll the
+              same query after `progress_poll_seconds`, up to
+              `max_progress_polls` retries. The `_` schema indicates the
+              server is computing and re-querying retrieves Outcome once
+              ready. (Not async-jobId; just transient async signal.)
+
+        Filter shape (CampaignFilters input — verified 2026-05-04):
+            advertiserIds: [ID], ids: [ID], campaignGroupIds: [ID],
+            archived: Boolean, endDateAfter: ISO8601Date,
+            startDateBefore: ISO8601Date, states, types, subTypes,
+            nameOrIdContains: String.
+        Date shape (DateRangeInput): { from, to } (NOT startDate/endDate).
+        Default poll budget: 24 retries × 5s = 120s for the async
+        compute to complete on a 365d window.
+        """
+        query = """
+        query CampaignPageContextPage(
+            $first: Int!,
+            $after: String,
+            $date: DateRangeInput!,
+            $filterBy: CampaignFilters!
+        ) {
+            campaignPageContext(date: $date, filterBy: $filterBy) {
+                __typename
+                ... on CampaignPageContextOutcome {
+                    records(first: $first, after: $after) {
+                        pageInfo { hasNextPage endCursor }
+                        nodes { url campaign { id name } }
+                    }
+                }
+                ... on Progress { _ }
+            }
+        }
+        """
+        variables: Dict[str, Any] = {
+            "first": first,
+            "date": {"from": date_from, "to": date_to},
+            "filterBy": {"advertiserIds": [advertiser_id]},
+        }
+        if after:
+            variables["after"] = after
+
+        polls = 0
+        while polls <= max_progress_polls:
+            result = await self._query_with_retry(query, variables)
+            if isinstance(result, dict) and result.get("error"):
+                return [], {"hasNextPage": False, "endCursor": None,
+                            "error": result.get("error")}
+            payload = (result or {}).get("campaignPageContext") or {}
+            tname = payload.get("__typename")
+            if tname == "Progress":
+                polls += 1
+                if polls > max_progress_polls:
+                    return [], {"hasNextPage": False, "endCursor": None,
+                                "error": "PROGRESS_TIMEOUT"}
+                logger.info(
+                    "campaignPageContext returned Progress; re-polling "
+                    "in %.1fs (%d/%d)",
+                    progress_poll_seconds, polls, max_progress_polls,
+                )
+                await asyncio.sleep(progress_poll_seconds)
+                continue
+            # Outcome path
+            records = payload.get("records") or {}
+            nodes = records.get("nodes") or []
+            page_info = records.get("pageInfo") or {
+                "hasNextPage": False, "endCursor": None,
+            }
+            return [n for n in nodes if n], page_info
+
+        return [], {"hasNextPage": False, "endCursor": None,
+                    "error": "PROGRESS_TIMEOUT_UNREACHABLE"}
 
     async def _mutate(self, mutation: str, variables: Dict = None) -> Dict:
         """Execute a GraphQL mutation. Same transport contract as
