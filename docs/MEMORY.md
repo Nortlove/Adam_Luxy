@@ -32,11 +32,11 @@
 ## Current State
 
 - Active branch: `feature/hmt-dashboard`
-- Active slice: **S0 (BLOCKED on QUESTION 3 — schema mismatch with directive §1.2)**
-- Last commit on branch: `9936cf6 chore(directive): v3.1 transition — add directive + MEMORY.md, remove superseded plan/directive docs`
-- Test suite baseline: 4380+ passing (per directive Part 0; no code touched in this session)
-- Open QUESTIONs: **3** (see `docs/S0_SCHEMA_MISMATCH_REPORT_2026_05_04.md`)
-- Critical-path next slice: **S0** — §1.1 pre-flight introspection ping PASSED; §1.2 Q1 field `deliveryReportImpressionLevel` non-existent in live schema; awaiting Claude Proper directive amendment
+- Active slice: **S0 CLOSED** (commit `54407ac`); **G0 closed**; S1 ready to begin
+- Last commit on branch: `54407ac feat(stackadapt): S0 amended schema-grounded URL extraction with multi-source provenance and diversity gate`
+- Test suite: 4740 passing + 9 pre-existing failures (TestCampaignDocs + test_dag_has_14_atoms — present on baseline `9159758`, NOT S0-related)
+- Open QUESTIONs: none for S0; one for S1 (gate FAILED, S1 must surface QUESTION before producing rater corpus per its entry-condition amendment)
+- Critical-path next slice: **S1** — read `READY_FOR_RATER_WORKSHEET.flag` (currently `posture_diversity_inadequate=true`); per binding amendment S1 must stop and surface QUESTION before producing the rater worksheet
 
 ## Critical Path (Directive Part 2)
 
@@ -108,6 +108,41 @@ Structural defense against re-drift. Past pattern: surviving alternative plans d
 ---
 
 ## Per-Session Append (newest at bottom)
+
+### Session 2026-05-04 — session #003 — S0 amended slice CLOSED (commit 54407ac)
+
+**EVE Handoff:**
+
+- **E (Executed):**
+  - Phase 1 (audit): introspected ConversionPathFilters / AdFilters / CampaignFilters / DateRangeInput / enum types; audited pixel infrastructure; located LUXY advertiser ID (`122463`); added `STACKADAPT_ADVERTISER_ID=122463` to `.env` (gitignored).
+  - Phase 2 (client extension): added 3 methods to `adam/integrations/stackadapt/graphql_client.py` per §1.3 ("small additions to existing client") — `_query_with_retry`, `get_conversion_paths_page`, `get_campaign_page_context_page`. Schema-corrected from directive's stale assumptions: conversionPath has NO touchpoints (single conversionUrl per record); DateRangeInput uses `{from, to}`; enums are `{GRAPH, TABLE}` and `{DAILY, ..., WEEKLY}`; `groupBy` is not a Query.adDelivery arg.
+  - **Source 3 reframe:** directive's `adDelivery` domain rotation does NOT work against live schema (AdDeliveryRecord has no domain field, no `groupBy` arg). `campaignPageContext` IS the population-level URL surface (`CampaignPageContextRecord.url` verified) — Source 3 reframed; documented in client docstring + commit body + summary artifact.
+  - Phase 3 (CLI): wrote `tools/stackadapt_historical_extract.py` (~440 lines) — orchestrates 3 sources, dedup + HEAD validation, URLPostureClassifier diversity audit, 7-section summary, machine-readable flag.
+  - Phase 4 (tests): 6 test files in `tests/integrations/stackadapt/` covering pagination + jitter retry + UNION resolution + pixel-audit semantics + diversity-gate verdicts (parametrized over threshold) + summary-section invariants + flag-format + semantic consistency. **42 tests, all passing.**
+  - Phase 5 (live run): executed against LUXY production GraphQL (key in .env). 12 LUXY campaigns visible. 285 conversion-path raw rows → **only 6 unique URLs** (all variants of `https://luxyride.com/ride-details` with UTM tags). Source 3 returned 0 (Progress polled 5×; resolved to empty Outcome). Diversity gate FAILED (5/5 classes below 30 minimum). **Coverage Gap section captured 200+ publisher domains** (CNN, foxnews, ESPN, CBS Sports, Cleveland Clinic, Hulu/DirectTV bundles, etc.) where ads served but no URL captured — the S4 ingestion-pipeline target list.
+  - Phase 6 (commit): `54407ac feat(stackadapt): S0 amended schema-grounded URL extraction with multi-source provenance and diversity gate` — 14 files, +2369. Per §I single-slice closure; ready/gate_grade/calibration_grade/posture_diversity_inadequate all written to flag.
+
+- **V (Verified):**
+  - §1.1 introspection ping PASS.
+  - §1.2 schema mismatch fully resolved by introspection-driven query rewrite.
+  - URL classifier checkpoint located at `artifacts/posture_classifier/posture_classifier_n100_1777759342.jsonl`.
+  - All 6 unique URLs HTTP HEAD validated 200.
+  - Diversity audit run on the 6 URLs: all classified as `INFORMATION_FORAGING` by the round-3 default-to-INFO bias (consistent with the documented checkpoint behavior).
+  - Per directive §I criteria, S0 closed: all 3 sources ran (Source 2 N/A documented), all 4 artifacts at canonical paths, flag written with valid key=value, test suite green.
+  - 9 pre-existing test failures (TestCampaignDocs against `campaigns/ridelux_v6/*` JSON files + test_dag_has_14_atoms) confirmed PRE-EXISTING on baseline `9159758` — unaffected by S0 work.
+
+- **E (Expected next session):**
+  - **S1 begins.** S1.1 (worksheet generator) must read `READY_FOR_RATER_WORKSHEET.flag` as its first action. Current flag content: `ready=false, gate_grade=false, calibration_grade=true, posture_diversity_inadequate=true`. Per binding amendment S1 must STOP and surface a QUESTION naming the under-served classes (all 5) and per-class counts (INFO=6, others=0).
+  - Chris adjudicates: (a) corpus expansion strategy (e.g., supplement from RSS feeds per round-3 history; pull from another LUXY-adjacent advertiser if any; manually augment with marketing-page URLs); (b) accept calibration_grade for S1 tooling iteration only; (c) other.
+  - **Directive amendment slice** `docs(directive): v3.1 §1.2/§1.4/§1.5 schema-amendment` is the next standalone slice to capture the schema corrections in directive text so S4 inherits the corrected spec.
+
+- **Open QUESTIONs:** none for S0 (closed); QUESTION-on-flag is S1's responsibility to surface when its first action runs.
+
+- **Hand-off pointer:** S0 closed at `54407ac`. Coverage Gap section in summary names the S4 ingestion-pipeline scope concretely (200+ domains). Branch ready for S1.
+
+- **Procedural gotcha (record for future sessions):** `git stash pop` without confirming the top stash is yours can apply someone else's pre-existing stash to your working tree. The pre-existing `stash@{0}: On 2026-01-26-fxqi: Pre-inferential-intelligence uncommitted work` was popped accidentally during a regression-isolation step; required surgical `git checkout HEAD -- <each file>` to restore 43 files while preserving my work in `graphql_client.py` + untracked `tools/` + `tests/integrations/`. Lesson: **`git stash list` BEFORE `git stash pop`**; if a top stash isn't from this session, do not pop it.
+
+---
 
 ### Session 2026-05-04 — session #002 — S0 §1.1 ping + schema mismatch surfaced
 
