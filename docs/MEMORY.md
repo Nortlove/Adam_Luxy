@@ -32,12 +32,16 @@
 ## Current State
 
 - Active branch: `feature/hmt-dashboard`
-- Active slice: **EVE handoff after session #004** (8 slices shipped this session; standdown for next-conversation G1-pivot adjudication)
-- Last commit on branch: `c55a4b3 feat(blind_analysis): 1.A.SI.1 blind-analysis box construction`
-- Test suite: ~4831+ passing (added +133 across this session's 8 slices); 9 pre-existing failures unchanged
+- Active slice: **Session #004 CLOSED** (8 slices shipped + EVE handoff `e85b4d0` + this standdown-record commit)
+- Last commit on branch: this commit (close session #004 EVE handoff record)
+- Test suite: ~4831+ passing (added +133 across session #004's 8 slices); 9 pre-existing failures unchanged
 - Open QUESTIONs: QUESTION 4 still standing (S1 gate-failed); next conversation adjudicates G1 pivot
 - Critical-path next: **G1-pivot adjudication in next conversation** (paste `docs/S0_HANDOFF_2026_05_04.md` + operational architecture doc per Closing Block)
 - Standstill items (resume after Claude Proper adjudication / amended slice prompts): S1 build, directive-amendment slice, S0 G1-pivot architecture, S8 build (audit signed off pending Chris review per S2 closure criterion)
+
+### Architecturally consequential carry-forward (session #004 → next)
+
+**S2 audit collapsed S8's scope.** The retargeting substrate audit (`docs/RETARGETING_AUDIT_2026_05_04.md`) found Surface 5 (decision-time cascade) 100% shipped — `BidComposer` / `CarryoverCorrectionStrategy` / `WashoutModel` Protocols + default implementations + registry-pattern adapter swap all live in `adam/intelligence/v3_interfaces.py`. The bilateral cascade (Surface 3) is a 3909-line L1→L2→L3 implementation already in production with TTTS propensity-logged primary selection, page-shift integration, and chain-attestation primitive. The journey-state machine (Surface 1) and TherapeuticTouch/TherapeuticSequence models (Surface 2) are both ~70-80% shipped. The `PixelCorrelator` (Surface 4) just shipped in S4.1 (`a2c9124`). **Net:** S8 reduces from "build retargeting v0" to "wire `RetargetingOrchestrator` that registers as a `BidComposer` adapter via the existing Slice 24 seam, composing journey-state + cell classifier + page-priming + sequence selection + bilateral cascade L3 + chain-attestation, with shadow-mode logging via Slice 35." Every other piece exists. This is the architecturally consequential framing the next session should authorize against.
 - Substrate-blocked deferred (per directive): S3.2-S3.6 (URL corpus dependent), S4.2-S4.8 (Iceberg/Neo4j/Postgres + IPSW + e2e + live backfill), S5/S6/S7/S8/S9/S10 chain, 1.A.SB.1 / 1.B.SB.1 / 1.C.SB.1 / 1.D.SB.1 / 1.E.SB.1 / 1.F.SB.1 / 1.G.SB.1 / 1.H.SB.1 (all SB items)
 - Substrate-independent v3 Phase 1 items remaining for next session(s): 1.A.SI.2 (Gross-Vitells LEE — depends on 1.A.SI.1 just shipped), 1.B.SI.1, 1.C.SI.1, 1.D.SI.1, 1.E.SI.1, 1.F.SI.1, 1.G.SI.1, 1.H.SI.1
 
