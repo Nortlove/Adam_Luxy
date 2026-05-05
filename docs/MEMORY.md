@@ -32,11 +32,14 @@
 ## Current State
 
 - Active branch: `feature/hmt-dashboard`
-- Active slice: **S0 CLOSED** (commit `54407ac`); **G0 closed**; S1 ready to begin
-- Last commit on branch: `54407ac feat(stackadapt): S0 amended schema-grounded URL extraction with multi-source provenance and diversity gate`
-- Test suite: 4740 passing + 9 pre-existing failures (TestCampaignDocs + test_dag_has_14_atoms — present on baseline `9159758`, NOT S0-related)
-- Open QUESTIONs: none for S0; one for S1 (gate FAILED, S1 must surface QUESTION before producing rater corpus per its entry-condition amendment)
-- Critical-path next slice: **S1** — read `READY_FOR_RATER_WORKSHEET.flag` (currently `posture_diversity_inadequate=true`); per binding amendment S1 must stop and surface QUESTION before producing the rater worksheet
+- Active slice: **EVE handoff after session #004** (8 slices shipped this session; standdown for next-conversation G1-pivot adjudication)
+- Last commit on branch: `c55a4b3 feat(blind_analysis): 1.A.SI.1 blind-analysis box construction`
+- Test suite: ~4831+ passing (added +133 across this session's 8 slices); 9 pre-existing failures unchanged
+- Open QUESTIONs: QUESTION 4 still standing (S1 gate-failed); next conversation adjudicates G1 pivot
+- Critical-path next: **G1-pivot adjudication in next conversation** (paste `docs/S0_HANDOFF_2026_05_04.md` + operational architecture doc per Closing Block)
+- Standstill items (resume after Claude Proper adjudication / amended slice prompts): S1 build, directive-amendment slice, S0 G1-pivot architecture, S8 build (audit signed off pending Chris review per S2 closure criterion)
+- Substrate-blocked deferred (per directive): S3.2-S3.6 (URL corpus dependent), S4.2-S4.8 (Iceberg/Neo4j/Postgres + IPSW + e2e + live backfill), S5/S6/S7/S8/S9/S10 chain, 1.A.SB.1 / 1.B.SB.1 / 1.C.SB.1 / 1.D.SB.1 / 1.E.SB.1 / 1.F.SB.1 / 1.G.SB.1 / 1.H.SB.1 (all SB items)
+- Substrate-independent v3 Phase 1 items remaining for next session(s): 1.A.SI.2 (Gross-Vitells LEE — depends on 1.A.SI.1 just shipped), 1.B.SI.1, 1.C.SI.1, 1.D.SI.1, 1.E.SI.1, 1.F.SI.1, 1.G.SI.1, 1.H.SI.1
 
 ## Critical Path (Directive Part 2)
 
@@ -108,6 +111,49 @@ Structural defense against re-drift. Past pattern: surviving alternative plans d
 ---
 
 ## Per-Session Append (newest at bottom)
+
+### Session 2026-05-04 — session #004 — Parallel-execution discipline: 8 slices shipped
+
+**EVE Handoff:**
+
+- **E (Executed):** 8 slices closed, in ship-cleanest-first order:
+  1. `38496bf` **G.1 DMC charter draft** — 5-page docs/governance/DMC_CHARTER_DRAFT.md (authority, composition, blinding, stopping rules, conflict-of-interest, meeting cadence; references DuMouchel 1999 / Howard-Ramdas 2021 / Johari-Pekelis-Walsh 2017 / CONSORT-AI 2020 / SPIRIT-AI 2020)
+  2. `5cf4a87` **G.4 CONSORT-AI + SPIRIT-AI templates** — docs/reporting/{CONSORT,SPIRIT}_AI_TEMPLATE.md, fill-in-as-data-accumulates with cross-document linkages enforcing pre-spec ↔ results ↔ governance triangle
+  3. `d6f8815` **G.3 pharmacovigilance schema** — adam/pharmacovigilance/{__init__,schema}.py + tests with PRR/ROR/IC/IC025/EBGM-naive computations + (creative × cohort × posture × cell) grain pin (28 tests)
+  4. `cc16e81` **S0 Handoff Consolidation** — docs/S0_HANDOFF_2026_05_04.md per Chris's spec; full Coverage Gap (all 202 publisher domains) preserved verbatim; paste-target for next-conversation G1-pivot adjudication
+  5. `2df66d5` **S3.1 PagePrimingSignature** — adam/priming/{__init__,signature}.py + tests; frozen dataclass with §S3.1 dimensions verbatim, range invariants enforced, feature-store row round-trip, neutral_signature cold-miss fallback (31 tests)
+  6. `a2c9124` **S4.1 ingestion package skeleton** — adam/ingestion/stackadapt/{rate_limited_session, historical_puller, incremental_puller, pixel_correlator}.py using corrected S0 schema patterns from 54407ac; PixelPostback + CorrelatedConversion + coverage_rate (13 tests)
+  7. `48f7e4e` **S2 retargeting substrate audit** — docs/RETARGETING_AUDIT_2026_05_04.md; read-only inspection of 5 surfaces; net finding "S8 = wire RetargetingOrchestrator that registers as BidComposer adapter via existing Slice 24 seam — every other piece exists"
+  8. `c55a4b3` **1.A.SI.1 blind-analysis box** — adam/blind_analysis/{__init__,box}.py + tests; SHA-256 pre-registration hash, SEALED→AUTHORIZED→UNBLINDED state machine gated by CTO authorization per G.1 §3, deterministic placeholder data generator (19 tests). Substrate for 1.A.SI.2 (Gross-Vitells LEE).
+
+  **Total: +133 tests** all passing. Test suite ~4831+ baseline.
+
+- **V (Verified):**
+  - All 8 slice tests pass independently and in batch (133/133).
+  - 9 pre-existing failures unchanged (TestCampaignDocs + test_dag_has_14_atoms — confirmed pre-existing on baseline `9159758` in session #003).
+  - No regressions on existing stackadapt tests (88/88 still pass — ran spot check after extending graphql_client.py in S0 #003 session; S4.1 reuses the same client without modification).
+  - Each commit body follows directive Appendix D format (slice ID, predecessors closed, test-suite delta, why this slice now, body content).
+  - Working tree clean at standdown except for this MEMORY.md update (uncommitted; picked up by next slice's commit per Appendix E pattern, OR by an explicit chore commit at session boundary — Chris's call).
+
+- **E (Expected next session):**
+  - **Primary** — next conversation adjudicates G1 pivot per `docs/S0_HANDOFF_2026_05_04.md` Closing Block. Expected attached input: that document + the operational architecture doc (StackAdapt API exploitation / permanent learning pipeline / cell-classified retargeting / substrate audit-and-build) named in the Closing Block.
+  - **Secondary parallel work-stream remaining for compute-fill** if Chris wants more autonomous SI ship-runs:
+    - 1.A.SI.2 Gross-Vitells LEE trial-factor (now unblocked by 1.A.SI.1 shipped this session)
+    - 1.B.SI.1 / 1.C.SI.1 / 1.D.SI.1 / 1.E.SI.1 / 1.F.SI.1 / 1.G.SI.1 / 1.H.SI.1 (independent of each other)
+  - **Held until adjudication:** S1 build, S8 build, directive-amendment slice, G1-pivot architecture.
+
+- **Open QUESTIONs:** QUESTION 4 (S1 entry-condition gate-failed) still standing. No new QUESTIONs from session #004 work — all 8 slices either shipped clean or surfaced findings into their summary artifacts.
+
+- **Hand-off pointer:** Branch `feature/hmt-dashboard` at `c55a4b3`. 8 slices shipped this session beyond the standdown anchor `0a17bab`. Working tree clean except docs/MEMORY.md (this update). Five-artifact handoff list canonical for next-conversation paste:
+  1. `docs/S0_HANDOFF_2026_05_04.md` (consolidated; all 202 Coverage Gap domains preserved)
+  2. `docs/RETARGETING_AUDIT_2026_05_04.md` (S2 audit; informs S8 sequencing)
+  3. `docs/governance/DMC_CHARTER_DRAFT.md` (governance scaffold)
+  4. `docs/reporting/{CONSORT,SPIRIT}_AI_TEMPLATE.md` (pre-spec ↔ results triangle)
+  5. The corrected schema patterns embedded in `adam/integrations/stackadapt/graphql_client.py` and inherited by S4.1 + S0 CLI.
+
+- **Procedural lesson re-confirmed:** all session-#004 commits used proper Appendix D format with predecessor-closure list + test-suite delta. No `git stash` operations were attempted (avoiding the session-#003 pop-without-list-check trap by simply not invoking stash at all this session).
+
+---
 
 ### Session 2026-05-04 — session #003 — S0 amended slice CLOSED (commit 54407ac)
 
