@@ -12,11 +12,27 @@ from adam.priming.signature import (
     SIGNATURE_VERSION_V1,
     neutral_signature,
 )
+from adam.priming.pipeline import (
+    FetchedPage,
+    PipelineResult,
+    batch_process_urls,
+    map_profile_to_signature,
+    profile_url_to_signature,
+    url_to_hash,
+)
 
 __all__ = [
+    # signature
     "PagePrimingSignature",
     "RegulatoryFocus",
     "SIGNATURE_DIMENSIONS",
     "SIGNATURE_VERSION_V1",
     "neutral_signature",
+    # pipeline
+    "FetchedPage",
+    "PipelineResult",
+    "batch_process_urls",
+    "map_profile_to_signature",
+    "profile_url_to_signature",
+    "url_to_hash",
 ]
