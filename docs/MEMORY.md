@@ -32,10 +32,10 @@
 ## Current State
 
 - Active branch: `feature/hmt-dashboard`
-- Active slice: **Session #005 CLOSED** (3 slices shipped + EVE handoff record commit)
-- Last commit on branch: this commit (close session #005 EVE handoff record)
-- Test suite: 4960 passing (added +129 across session #005's 3 slices: +49 / +31 / +49); 9 pre-existing failures + 5 skipped unchanged
-- Open QUESTIONs: QUESTION 4 still standing (S1 gate-failed); next conversation adjudicates G1 pivot
+- Active slice: **Session #005 CLOSED** (4 slices shipped + 1 docs follow-up + 2 EVE handoff record commits)
+- Last commit on branch: this commit (close session #005 EVE handoff record — append)
+- Test suite: 4999 passing (added +168 across session #005's 4 slices: +49 / +31 / +49 / +39); 9 pre-existing failures + 5 skipped unchanged
+- Open QUESTIONs: QUESTION 4 still standing (S1 gate-failed); QUESTIONs 6/7/8 surfaced this session as discoveries (held-area boundary, schema-collision rediscovery via parallel-client near-miss, 4-vs-5-class taxonomy question feeding QUESTION 4) — all routed to Claude Proper, none addressed in code; next conversation adjudicates G1 pivot
 - Critical-path next: **G1-pivot adjudication in next conversation** (paste `docs/S0_HANDOFF_2026_05_04.md` + operational architecture doc per Closing Block)
 - Standstill items (resume after Claude Proper adjudication / amended slice prompts): S1 build, directive-amendment slice, S0 G1-pivot architecture, S8 build (audit signed off pending Chris review per S2 closure criterion)
 
@@ -43,7 +43,7 @@
 
 **S2 audit collapsed S8's scope.** The retargeting substrate audit (`docs/RETARGETING_AUDIT_2026_05_04.md`) found Surface 5 (decision-time cascade) 100% shipped — `BidComposer` / `CarryoverCorrectionStrategy` / `WashoutModel` Protocols + default implementations + registry-pattern adapter swap all live in `adam/intelligence/v3_interfaces.py`. The bilateral cascade (Surface 3) is a 3909-line L1→L2→L3 implementation already in production with TTTS propensity-logged primary selection, page-shift integration, and chain-attestation primitive. The journey-state machine (Surface 1) and TherapeuticTouch/TherapeuticSequence models (Surface 2) are both ~70-80% shipped. The `PixelCorrelator` (Surface 4) just shipped in S4.1 (`a2c9124`). **Net:** S8 reduces from "build retargeting v0" to "wire `RetargetingOrchestrator` that registers as a `BidComposer` adapter via the existing Slice 24 seam, composing journey-state + cell classifier + page-priming + sequence selection + bilateral cascade L3 + chain-attestation, with shadow-mode logging via Slice 35." Every other piece exists. This is the architecturally consequential framing the next session should authorize against.
 - Substrate-blocked deferred (per directive): S3.2-S3.6 (URL corpus dependent), S4.2-S4.8 (Iceberg/Neo4j/Postgres + IPSW + e2e + live backfill), S5/S6/S7/S8/S9/S10 chain, 1.A.SB.1 / 1.B.SB.1 / 1.C.SB.1 / 1.D.SB.1 / 1.E.SB.1 / 1.F.SB.1 / 1.G.SB.1 / 1.H.SB.1 (all SB items)
-- Substrate-independent v3 Phase 1 items remaining for next session(s): 1.B.SI.1, 1.C.SI.1, 1.D.SI.1, 1.E.SI.1, 1.H.SI.1 (1.A.SI.2 + 1.G.SI.1 + 1.F.SI.1 closed in session #005)
+- Substrate-independent v3 Phase 1 items remaining for next session(s): 1.B.SI.1, 1.C.SI.1, 1.D.SI.1, 1.H.SI.1 (1.A.SI.2 + 1.G.SI.1 + 1.F.SI.1 + 1.E.SI.1 closed in session #005)
 
 ## Critical Path (Directive Part 2)
 
@@ -116,43 +116,51 @@ Structural defense against re-drift. Past pattern: surviving alternative plans d
 
 ## Per-Session Append (newest at bottom)
 
-### Session 2026-05-05 — session #005 — Compute-fill ship-cleanest-first: 3 substrate-independent v3 Phase 1 SI slices shipped
+### Session 2026-05-05/06 — session #005 — Compute-fill ship-cleanest-first: 4 substrate-independent v3 Phase 1 SI slices shipped + 1 docs follow-up
 
 **EVE Handoff:**
 
-- **E (Executed):** 3 slices closed, in ship-cleanest-first order (smallest spec / cleanest dependencies first):
+- **E (Executed):** 4 slices closed, in ship-cleanest-first order (smallest spec / cleanest dependencies first), plus a docs follow-up on the fourth:
   1. `b39c18e` **1.A.SI.2 Gross-Vitells LEE trial-factor** — adam/blind_analysis/lee.py + tests; closed-form `gross_vitells_global_p_value` / `gross_vitells_trial_factor` per Gross & Vitells 2010 eq. (1) with Davies 1987 asymptotic upcrossings; Monte-Carlo cross-check via squared-exponential Gaussian random field on a 1-d grid (`monte_carlo_global_p_value`, n_trials=10_000 ensemble matches closed-form at z=2.5 within 3 standard errors). 49 tests including the directive's specific parametrization target — asymptotic linearity (TF − 1) / z → ⟨N⟩ * √(2π) at large z — exercised at 20 (z, N) combinations. Composes with §1.A.SI.1 sealed-box pre-registration via TestIntegrationWithSealedBox.
   2. `ae2e1fc` **1.G.SI.1 Daw uncertainty-weighted arbitration** — adam/two_system/{__init__,arbitration}.py + tests; Bayesian inverse-variance arbitration of model-free (cached, habit-driven) vs model-based (deliberative, simulated) Q-value estimates per Daw, Niv, Dayan 2005 *Nat. Neurosci.* 8:1704-1711. `arbitrate_with_processing_mode_prior` is the seam §1.G.SB.1 will plug into once S6 + S7 close — λ=0.5 linear blend between inverse-variance MB-weight and exogenous prior in [0, 1]. `softmax_action_selection` provides Boltzmann policy with max-subtraction stability. 31 tests including end-to-end composition where the systematic prior can FLIP action preference when MF and MB systems disagree (the behavioral signature SB.1 will calibrate against).
   3. `b75e904` **1.F.SI.1 Hill / Dayneka-Garg-Jusko PK/PD** — adam/pkpd/{__init__, hill, indirect_response}.py + tests; closed-form Hill / Emax sigmoid + the four canonical Dayneka-Garg-Jusko 1993 *J. Pharmacokinet. Biopharm.* 21:457-478 indirect-response model variants (inhibit input/output × stimulate input/output) integrated via scipy LSODA. Analytical-steady-state cross-checks at saturating c → numerical match within 1e-4 relative. 49 tests including delayed step-off response showing IRM-family signature lag behavior. A14 PILOT_PENDING flags MECHANISM_PHARMACOLOGY_LITERATURE_MIDPOINTS_PILOT_PENDING + TOLERANCE_RATE_EXPONENTIAL_PILOT_PENDING bind at the 1.F.SB.1 stage (substrate-blocked on S9), not here.
+  4. `8dd4c0b` **1.E.SI.1 Funnel-MPC formulation + receding-horizon solver** — adam/funnel_mpc/{__init__, formulation, solver}.py + tests; `PrescribedPerformanceEnvelope` per Bechlioulis & Rovithakis 2008 IEEE TAC 53:2090-2099 eq. (2) with strict-interior `contains()` (open-set semantics); `FunnelMPCProblem` per Camacho & Bordons 2007 *Model Predictive Control* (Springer 2nd ed., Ch. 2) generic over (state_dim, control_dim) with `rollout` / `cost` primitives; `solve_mpc_step` using scipy.optimize.minimize SLSQP with state-inequality constraints converted to ≥ 0 form; `simulate_receding_horizon` with optional warm-start. 39 tests including CLOSED-LOOP DISTURBANCE-RECOVERY (one-time unmodeled state kick at t=5 absorbed by re-optimization — the receding-horizon principle's central robustness claim) and PPC envelope wired as state constraint via the canonical Funnel-MPC use case. Mayne et al. 2000 *Automatica* 36:789-814 named for the consumer's V_f / terminal-set choice that determines closed-loop stability.
+  5. `41fc66f` **1.E.SI.1.docs A14 flag forward-reference block** — adam/funnel_mpc/__init__.py docstring; adds an "ACTIVE A14 CALIBRATION-PENDING FLAGS" block naming `FUNNEL_CONTROL_CALIBRATION_PILOT_PENDING` per QUESTION 5 resolution. Single construct-level flag with heterogeneous payload (envelope tuple per cell × cohort + global cost weights + global horizon); precedent established by `MECHANISM_PHARMACOLOGY_LITERATURE_MIDPOINTS_PILOT_PENDING`. "Control" rather than "dynamics" naming deliberate — dynamics f(x, u, k) explicitly excluded from flag scope. Doc-only change, zero source-code coupling.
 
-  **Total: +129 tests** all passing. Test suite at 4960 passing.
+  **Total: +168 tests** all passing across the four slices (49 + 31 + 49 + 39). Test suite at 4999 passing.
 
 - **V (Verified):**
-  - All 3 slice tests pass independently and in batch (129/129).
-  - 9 pre-existing failures unchanged (TestCampaignDocs * 8 + test_dag_has_14_atoms) — confirmed both before session start (4831 baseline) and after each commit (4880 → 4911 → 4960).
+  - All 4 slice tests pass independently and in batch (168/168).
+  - 9 pre-existing failures unchanged (TestCampaignDocs * 8 + test_dag_has_14_atoms) — confirmed before session start (4831 baseline) and after each commit (4880 → 4911 → 4960 → 4999 → 4999 after docs follow-up).
   - 5 skipped unchanged across the session.
   - PYTHONPATH=/Users/chrisnocera/Sites/adam-platform required for pytest collection (otherwise pytest hits 215 ModuleNotFoundError on `adam.*` collection — environment-only, not a regression). This is the local-dev invocation pattern; project pyproject.toml has `testpaths = ["tests"]` but no `pythonpath` setting.
   - Each commit body follows directive Appendix D format established by session #004 (slice ID, predecessors closed, test-suite delta, why this slice now, Module / Tests / Composition / References / Co-Author trailer).
-  - Staged set verified by `git diff --stat --cached` before each commit (1.A.SI.2: 3 files; 1.G.SI.1: 4 files including tests/two_system/__init__.py; 1.F.SI.1: 6 files including tests/pkpd/__init__.py). No leakage from working-tree untracked files.
+  - Staged set verified by `git diff --stat --cached` before each commit (1.A.SI.2: 3 files; 1.G.SI.1: 4 files including tests/two_system/__init__.py; 1.F.SI.1: 6 files including tests/pkpd/__init__.py; 1.E.SI.1: 6 files including tests/funnel_mpc/__init__.py; 1.E.SI.1.docs: 1 file). No leakage from working-tree untracked files.
 
 - **E (Expected next session):**
-  - **Primary** — next conversation still adjudicates G1 pivot per `docs/S0_HANDOFF_2026_05_04.md` Closing Block. The hold from session #004 is unchanged by this session's compute-fill work.
+  - **Primary** — next conversation still adjudicates G1 pivot per `docs/S0_HANDOFF_2026_05_04.md` Closing Block. The hold from session #004 is unchanged by this session's compute-fill work. **QUESTIONs 6/7/8 surfaced this session compose with the existing G1-pivot adjudication context — see "Open QUESTIONs" + "Procedural notes" below.**
   - **Secondary parallel work-stream remaining for compute-fill** if Chris wants more autonomous SI ship-runs:
     - 1.B.SI.1 (Free-Wilson decomposition + conformal prediction bands)
     - 1.C.SI.1 (MRA / GENIE3 / dynGENIE3 / CMap mediator inference)
     - 1.D.SI.1 (H∞ robust-control derivation)
-    - 1.E.SI.1 (Funnel-MPC formulation + receding-horizon solver)
     - 1.H.SI.1 (Persistent-homology offline pipeline)
   - **Held until adjudication:** S1 build, S8 build, directive-amendment slice, G1-pivot architecture (all unchanged from session #004).
 
-- **Open QUESTIONs:** QUESTION 4 (S1 entry-condition gate-failed) still standing. No new QUESTIONs from session #005 work — all 3 slices shipped clean per the §4 compute-fill authorization in the session opener.
+- **Open QUESTIONs:**
+  - **QUESTION 4** (S1 entry-condition gate-failed) still standing — unchanged from session #004.
+  - **QUESTION 5** (A14 flag-naming for Funnel-MPC) — RESOLVED in session via `41fc66f`. Decision: Option 1 single construct-level flag, name `FUNNEL_CONTROL_CALIBRATION_PILOT_PENDING`, heterogeneous-payload precedent confirmed via `MECHANISM_PHARMACOLOGY_LITERATURE_MIDPOINTS_PILOT_PENDING`.
+  - **QUESTION 6** (NEW — held-area boundary case): a script for IRR labeling pulls (`pull_luxy_candidate_urls_for_irr.py`) was surfaced mid-session as a candidate for execution. Audited as **S1.1 work** (rater-worksheet generation pipeline), which is held pending Claude Proper adjudication of QUESTION 4. **Routed to Claude Proper, not executed in code. The audit response itself was the slice work.**
+  - **QUESTION 7** (NEW — schema-collision rediscovery via parallel-client near-miss): the same script's `CAMPAIGN_URLS_QUERY` uses `campaign(id) { deliveryReport(dimensions: [URL, DOMAIN], ...) }` which **does not exist in the live StackAdapt schema** (rediscovery of session #003's S0 schema-mismatch finding). The corrected schema is already implemented at `tools/stackadapt_historical_extract.py` (commit `54407ac`) using `conversionPath` + `campaignPageContext` per directive §1.3 *"Reuse, do not recreate."* Routed to Claude Proper as a script-redesign question.
+  - **QUESTION 8** (NEW — 4-vs-5-class taxonomy question feeding QUESTION 4): the same script samples 4 of 5 canonical posture classes (omits `INFORMATION_FORAGING`). G1 gate criterion (ii) is macro-AUC ≥ 0.50 AND top-1 ≥ 0.40 across all five classes per `adam/intelligence/posture_five_class.py:106` (`FIVE_CLASS_POSTURES`). A retrain on a 4-class corpus cannot evaluate against the 5-class gate (per-class AUC for the missing class is undefined). Routed to Claude Proper as a G1-pivot architecture question.
 
-- **Hand-off pointer:** Branch `feature/hmt-dashboard` at `b75e904` (3 slices shipped this session beyond the standdown anchor `6a4ad69`); EVE handoff record commit follows. Working tree clean except this MEMORY.md update (picked up by the standdown record commit per Appendix E pattern). Three new top-level packages introduced: `adam/blind_analysis/lee.py` (extends existing), `adam/two_system/` (new), `adam/pkpd/` (new). Test directories created at `tests/blind_analysis/test_lee.py`, `tests/two_system/`, `tests/pkpd/`.
+- **Hand-off pointer:** Branch `feature/hmt-dashboard` at `41fc66f` (4 slices + 1 docs follow-up shipped this session beyond the standdown anchor `2df2822`); this EVE-append commit follows. Working tree clean except this MEMORY.md update (picked up by the standdown record commit per Appendix E pattern). Four new top-level packages introduced this session: `adam/blind_analysis/lee.py` (extends existing), `adam/two_system/` (new), `adam/pkpd/` (new), `adam/funnel_mpc/` (new). Test directories created at `tests/blind_analysis/test_lee.py`, `tests/two_system/`, `tests/pkpd/`, `tests/funnel_mpc/`.
 
 - **Procedural notes:**
-  - The opener's §4 compute-fill authorization scoped this session cleanly — three slices shipped without reaching for any architecturally-blocked work. The discipline rule "If a prompt instruction would cause work in any of the four held areas, stop and surface as a QUESTION" was not triggered.
+  - The opener's §4 compute-fill authorization scoped this session cleanly — four slices shipped without reaching for any architecturally-blocked work.
+  - The discipline rule *"If a prompt instruction would cause work in any of the four held areas, stop and surface as a QUESTION"* was triggered exactly once (the IRR script — QUESTIONs 6/7/8) and honored: no script execution, no file write, no production-API call. The audit response was the slice. This is the discipline rule operating as designed.
   - The 1.F.SI.1 first pytest run had 4 tolerance failures (numerical → analytical agreement at c=1000 × IC_50 was ~0.15%, my tolerance was 0.1%). All four were resolved by switching two saturation tests to mathematical-limit concentrations (1e5 / 1e6 × half-max → ~1e-4 agreement) and accepting rel=1e-2 on the dynamic step-off test (LSODA integrator residual at ~7 time constants). Tolerance discipline noted in the commit body.
-  - A14 flag-binding decision: per Chris's session-mid review, A14 PILOT_PENDING flags bind at the SB.1 (calibrated production atom) stage, not at SI.1 (mathematical primitives). Verified: neither b39c18e nor ae2e1fc declared A14 flags either, and the directive itself doesn't reference A14 or the three named PILOT_PENDING flags. The 1.F.SI.1 commit body forward-references the two relevant flags (MECHANISM_PHARMACOLOGY_LITERATURE_MIDPOINTS_PILOT_PENDING + TOLERANCE_RATE_EXPONENTIAL_PILOT_PENDING) so a future audit can find this commit when those flags get bound at SB.1.
+  - 1.E.SI.1 passed 39/39 on first pytest pass — no tolerance loosening needed. The math + test conditions held.
+  - A14 flag-binding decision finalized this session: A14 PILOT_PENDING flags **may** be forward-referenced at SI.1 in the module docstring (per `41fc66f`'s Funnel-MPC pattern), but the runtime `CalibrationStatus.PILOT_PENDING` binding still lands at SB.1 in the calibrated production atom. The forward-reference is documentation-only and creates the audit trail SB.1 prompt-author can follow. Earlier slices (1.A.SI.2, 1.G.SI.1) did not forward-reference; 1.F.SI.1 forward-referenced two flags inline in the commit body's Composition section but not in the module docstring; 1.E.SI.1 forward-referenced via the `1.E.SI.1.docs` follow-up. The pattern is now established for future SI.1 slices.
 
 ---
 
