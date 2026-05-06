@@ -20,6 +20,14 @@ from adam.priming.pipeline import (
     profile_url_to_signature,
     url_to_hash,
 )
+from adam.priming.feature_store import (
+    CascadeMetrics,
+    InMemoryL2Backend,
+    InMemoryL3Backend,
+    L2Backend,
+    L3Backend,
+    PagePrimingSignatureStore,
+)
 
 __all__ = [
     # signature
@@ -35,4 +43,11 @@ __all__ = [
     "map_profile_to_signature",
     "profile_url_to_signature",
     "url_to_hash",
+    # feature store
+    "CascadeMetrics",
+    "InMemoryL2Backend",
+    "InMemoryL3Backend",
+    "L2Backend",
+    "L3Backend",
+    "PagePrimingSignatureStore",
 ]
