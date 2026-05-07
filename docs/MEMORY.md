@@ -164,6 +164,253 @@ Structural defense against re-drift. Past pattern: surviving alternative plans d
 
 ---
 
+### Session 2026-05-07 — D / S6-prep.3b — depletion_proxy composite state landed (D.bis deferred)
+
+**EVE Handoff:**
+
+- **Executed:** D / S6-prep.3b — `depletion_proxy` derived composite state on `PageMindstateVector`. 3 new orchestrator-populated dataclass fields (`session_position_seconds: float = 0.0`, `posture_class: str = ""`, `browsing_momentum: float = 0.5`) + 1 `@property` derivation (`depletion_proxy = cognitive_load × min(1.0, session_position_seconds / DEPLETION_THRESHOLD_SECONDS)`) + 1 module-level tunable constant (`DEPLETION_THRESHOLD_SECONDS = 1800.0` with explicit replication-crisis caveat block) + new test file `tests/retargeting/test_mindstate_composite_states_d.py` covering 17 unique tests (45 parametrize expansions for 59 total). Test suite: **5,450 passing** (+59 from D).
+
+- **Q12.A=(γ) DEFERRED to D.bis:** `loneliness_compensatory_flag` and `parasocial_priming_score` derivations PUSHED. Pre-flight Pass C surfaced that emotion_loneliness, emotion_warmth, and creator_content frame are not present in the canonical EMOTION_KEYWORDS / MECHANISM_KEYWORDS dictionaries. Per "no canonical invention" discipline, derivations whose inputs would require new vocabulary cannot ship until the vocabulary lands. D.bis = canonical-vocabulary extension (EMOTION_KEYWORDS += loneliness, warmth; MECHANISM_KEYWORDS += creator_content) + signature_version bump V2 → V3 + the two deferred derivations.
+
+- **Q12.B=✅ CASE B engaged:** `cognitive_velocity` lives in the decision-time atoms layer (`adam/atoms/core/`), NOT on the bid-time PageMindstateVector substrate. CASE A (load × velocity × position) is therefore unavailable on the bid-time substrate; CASE B (load × position) is the bid-time-substrate-correct formula. CASE A may supersede in a future slice when cognitive_velocity surfaces on bid-time substrate.
+
+- **Verified:**
+  - Pre-flight Pass A: C derivations still resolve correctly (smoke: fomo_score=0.96 promotion+scarcity+arousal0.8; psych_ownership_proxy=1.0 heavy-touch present-focus). C arithmetic preserved.
+  - Pre-flight Pass B: `cognitive_load` already on PMV at line 73 (default 0.5); `session_position_seconds` was NOT — added as new field with default 0.0.
+  - Pre-flight Pass C: `cognitive_velocity` confirmed atoms-layer-only (lives in decision-time aggregator, not bid-time substrate). CASE B engaged correctly.
+  - Smoke-test 7-pattern verification: default→0.0 ✅; high-load early(300s)→0.1333 ✅; high-load threshold(1800s)→0.8 ✅; saturation beyond threshold→0.8 ✅; zero load→0.0 ✅; coexistence with C derivations (fomo=0.84/psych_own=0.5/depletion=0.3 same PMV) ✅; new field defaults verified ✅.
+  - Bid-time latency: p99 < 1ms over 10,000 randomly-parameterized instances for ALL THREE derivations combined (in practice microseconds — cached-field arithmetic).
+  - Three-way trait × state composability test: ANALYST × FOMO × HIGH-DEPLETION > ANALYST × FOMO × LOW-DEPLETION (matching FOMO inputs; only depletion differs) — pins multiplicative composition across trait + 2 states.
+  - Replication-crisis caveat pinned in test (`test_replication_crisis_caveat_pinned_in_docstring`): docstring must contain "REPLICATION-CRISIS CAVEAT" + reference to Hagger 2016 RRR / Carter & McCullough 2014. Future readers cannot promote depletion_proxy to load-bearing without breaking this test.
+  - Zero-regression: pre-D `PageMindstateVector` fields untouched; `to_numpy()` 32-dim projection unchanged (new fields are side-channel derivation inputs only); pre-D PMV construction defaults preserved.
+  - Full pytest suite: 5,450 passed / 9 pre-existing failures unchanged (TestCampaignDocs ×8 + test_dag_has_14_atoms ×1) / 5 skipped — **zero regressions on any unrelated surface**.
+
+- **One PARTIALLY-COVERED gap from gap assessment §3 Block H now CLOSED (with explicit replication caveat):** Self-control depletion operational signature now surfaceable on bid-time substrate. Substrate is intentionally a HEURISTIC PROXY, not a load-bearing academic claim — caveat docstring + caveat test both pin this discipline.
+
+- **Tunable calibration constant:** `DEPLETION_THRESHOLD_SECONDS = 1800.0` (30 minutes). Calibration choice informed by session-engagement research; pilot data through `per_user_posterior_modulation` will tighten.
+
+- **Architectural decision (continued from C):** new fields are side-channel derivation inputs — NOT part of the 32-dim resonance vector. `to_numpy()` projection unchanged across A/B/C/D series.
+
+- **Expected next:** Either (a) Session D.bis — canonical-vocabulary extension (loneliness, warmth, creator_content) + signature_version V2→V3 + loneliness_compensatory_flag + parasocial_priming_score derivations; or (b) Session E / S6-prep.4 — cohort emission flag (`compensatory_consumption_pattern`); or (c) Session F / S6.1 — cell taxonomy keystone. Sequence per Claude Proper.
+
+- **Hand-off pointer:** Branch `feature/hmt-dashboard` @ HEAD post-D commit. Sessions A (5 slices) + B (1) + C (1) + D (1) closed. Working tree carries this MEMORY.md update + the prior-turn `docs/PLATFORM_INVENTORY_2026_05_07.md` still untracked. D.bis/E/F/G await Claude Proper prompts in sequence.
+
+---
+
+### Session 2026-05-07 — C / S6-prep.3a — fomo_score + psych_ownership_proxy composite states landed
+
+**EVE Handoff:**
+
+- **Executed:** C / S6-prep.3a — `fomo_score` + `psych_ownership_proxy` derived composite states on `PageMindstateVector` (commit `fd1a95a`). 4 new dataclass fields populated from PagePrimingSignature + retargeting state at orchestrator input-assembly time (`scarcity_frame_present`, `regulatory_focus_priming`, `touch_count`, `dwell_seconds`) + 2 `@property` derivations + 5 module-level tunable constants + 173 tests (including parametrized fuzz: 30 FOMO × 125 ownership combinations covering full input space). Test suite: **5,391 passing** (+173 from C).
+
+- **Verified:**
+  - Pre-flight Pass A: class is `PageMindstateVector` (not `MindstateVector`) at `adam/retargeting/resonance/models.py:55`; plain `@dataclass` → used `@property` (not Pydantic computed_field).
+  - Pre-flight Pass B: inputs cached + accessible (`emotional_arousal` as field; `temporal_horizon` via `ndf_activations` dict; `regulatory_focus_priming`/`scarcity_frame_present`/`touch_count`/`dwell_seconds` added as new fields per slice spec adaptation).
+  - Pre-flight Pass C: canonical scarcity name is `"scarcity"` per `MECHANISM_KEYWORDS` (`adam/platform/intelligence/content_profiler.py:35`) and `_PREVENTION_MECHS` frozenset (`adam/priming/pipeline.py:148`); `activated_frames` populated from `mechanisms[:5]` per `pipeline.py:227`. `FOMO_SCARCITY_FRAME_NAME = "scarcity"`.
+  - Pre-flight Pass D: `touch_count` + `dwell_seconds` widely used in `adam/retargeting/engines/` but NOT centralized; per slice spec, added as new fields with safe defaults — orchestrator populates at input assembly.
+  - Smoke-test 7-pattern verification: default 0.0 ✅; promotion+scarcity+arousal=0.8 → 0.96 ✅; prevention same arousal → 0.64 (< promotion) ✅; clipping at 1.0 ✅; heavy-touch present-focus → 1.0 ✅; future-focus 5× degradation → 0.2 ✅; cold-start → 0.0 ✅.
+  - Bid-time latency: p99 < 1ms over 10,000 randomly-parameterized instances (both derivations together; in practice microseconds — cached-field arithmetic).
+  - Trait × state composability test: ANALYST × promotion-amplified FOMO > ANALYST × neutral FOMO — pins multiplicative architecture.
+  - Zero-regression: pre-C `PageMindstateVector` fields untouched; `to_numpy()` 32-dim projection unchanged (new fields are side-channel derivation inputs only).
+  - Full pytest suite: 5,391 passed / 9 pre-existing failures unchanged / 5 skipped — **zero regressions**.
+
+- **Two PARTIALLY-COVERED gaps from gap assessment now CLOSED:**
+  - §3 Block A #6 (FOMO) — Cialdini scarcity + Pham-Higgins regulatory-fit + Przybylski FOMO grounding via `fomo_score = arousal × scarcity_indicator × regulatory_focus_modifier`
+  - §3 Block I #33 (Psychological Ownership) — Pierce-Kostova-Dirks ownership + Kahneman-Knetsch-Thaler endowment grounding via `psych_ownership_proxy = touch_density × dwell_normalized × presentness`
+
+- **Tunable constants surfaced as the calibration interface:**
+  - `FOMO_REGULATORY_PROMOTION_MODIFIER = 1.2`, `FOMO_REGULATORY_PREVENTION_MODIFIER = 0.8`, `FOMO_REGULATORY_NEUTRAL_MODIFIER = 1.0`
+  - `FOMO_SCARCITY_FRAME_NAME = "scarcity"`
+  - `PSYCH_OWNERSHIP_DECAY_WINDOW_DAYS = 7.0`, `PSYCH_OWNERSHIP_TARGET_DWELL_SECONDS = 60.0`
+  All calibration choices informed by literature but NOT load-bearing citations; pilot data through `per_user_posterior_modulation` will tighten them.
+
+- **Architectural decision:** new fields are side-channel derivation inputs — NOT part of the 32-dim resonance vector. `to_numpy()` projection unchanged; new fields populate from orchestrator input assembly when bid-time derivations are needed.
+
+- **Expected next:** Session D / S6-prep.3b — `depletion_proxy` + `loneliness_compensatory_flag` + `parasocial_priming_score` derived composite states (3 more derivations, same pattern). Awaits Claude Proper prompt with derivation specs.
+
+- **Hand-off pointer:** Branch `feature/hmt-dashboard` @ `fd1a95a`. Sessions A (5 slices) + B (1) + C (1) closed. Working tree carries this MEMORY.md update + the prior-turn `docs/PLATFORM_INVENTORY_2026_05_07.md` still untracked. D/E/F await Claude Proper prompts in sequence.
+
+---
+
+### Session 2026-05-07 — B / S6-prep.2 — persuasion_knowledge_activation page-side dimension landed
+
+**EVE Handoff:**
+
+- **Executed:** B / S6-prep.2 add `persuasion_knowledge_activation` field to `PagePrimingSignature` (commit `831e49a`). Schema extension V1 → V2 (1 new field + range invariant + serialization round-trip + neutral_signature update + SIGNATURE_DIMENSIONS tuple grows 5→6) + heuristic extractor `compute_persuasion_knowledge_activation` in `content_profiler.py` with 3 cue families (explicit disclosure markers ×14, salesy diction ×14, aggressive persuasion language density-normalized) + `ContentProfiler.profile()` output emits `"persuasion_knowledge": {"activation", "confidence"}` block + `map_profile_to_signature` mapper integration with backward-compat default (0.0, 0.5) when block absent + 30 new tests. Test suite: **5,218 passing** (+30 from B).
+
+- **Verified:**
+  - Pre-flight Pass A: PagePrimingSignature located at `adam/priming/signature.py:58` (frozen dataclass, NOT Pydantic v2; uses `confidence_per_dimension` dict pattern → followed dict pattern).
+  - Pre-flight Pass B: `content_profiler.py` ContentProfiler.profile() returns dict with `ndf_profile/segments/constructs/mechanisms/confidence/emotions`; mapper at `adam/priming/pipeline.py:192:map_profile_to_signature` consumes that dict.
+  - Pre-flight Pass C: Feature Store cascade serialization backward-compat verified — `from_feature_store_row` defaults missing field to 0.0; legacy v1 entries preserve their v1 version string.
+  - Pre-flight Pass D: `persuasion_knowledge` IS already used in `adam/atoms/core/{autonomy_reactance.py, strategic_awareness.py}` as a USER-STATE dict key (decision-time tracking), NOT a page-side dataclass field. Different namespace; no naming collision with new `persuasion_knowledge_activation` page-side field. Atom-side construct and page-side construct are conceptually related (both track persuasion-knowledge activation) but architecturally separate (atom-side is per-user state at decision time; page-side is per-URL static feature in priming cascade).
+  - Smoke-test results: paid-promo (1 #ad cue) → score=0.300, conf=0.85 ✅; editorial → score=0.000, conf=0.50 ✅; 3-disclosure-marker → score=0.600 (capped at family limit 0.60), conf=0.85 ✅; salesy → score=0.500, conf=0.65 ✅.
+  - Backward-compat (Test 4): legacy v1 cached row deserializes with `persuasion_knowledge_activation=0.0` and `signature_version="page_priming_v1"` preserved.
+  - Cascade round-trip (Test 11): `PagePrimingSignatureStore` L2 path preserves new field correctly.
+  - Pipeline integration (Test 13): profile dict with `persuasion_knowledge` block flows end-to-end; mapper defaults (0.0, 0.5) when block absent.
+  - Zero-regression (Test 14): all pre-A.2 fields retain values; new field takes default; neutral_signature includes new field at floor.
+  - 3 schema-evolution updates in `tests/priming/test_signature.py` (test_minimal_construction, test_signature_dimensions_pinned, test_neutral_signature_carries_canonical_version) — legitimate shape pins that the V1→V2 schema upgrade invalidated; updated to pin V2 / new dimension list. NOT zero-regression failures (these are intended pins of the schema constants, which legitimately evolved).
+  - Full pytest suite: 5,218 passed / 9 pre-existing failures unchanged (TestCampaignDocs ×8 + test_dag_has_14_atoms ×1) / 5 skipped — **zero regressions on any unrelated surface**.
+
+- **Heuristic extractor calibration** (compute_persuasion_knowledge_activation):
+  - Family 1 (explicit disclosure markers, 14 cues): each → +0.30; family capped 0.60
+  - Family 2 (salesy diction, 14 cues): each → +0.10; family capped 0.30
+  - Family 3 (aggressive persuasion language): density per 100 words; saturates at 6.0/100 → 0.20 contribution
+  - Confidence: 0.85 if explicit detected; 0.65 if salesy/aggressive ≥ 0.10; 0.50 otherwise
+  - Calibration choices are heuristic informed by Friestad-Wright PKM but NOT load-bearing academic citations; pilot data may tighten weights via downstream slices.
+
+- **Friestad-Wright PKM PARTIALLY-COVERED gap from gap assessment §3 Block F #25 is now CLOSED** — page-priming has a named dimension for ad-format-cue-driven persuasion-knowledge activation; required substrate input for S6.1 cell classifier cells conditioned on persuasion-resistance disposition.
+
+- **Expected next:** Session C / S6-prep.3a — `fomo_score` + `psych_ownership_proxy` added to `mindstate_vector`. Awaits Claude Proper prompt with derivation specs (FOMO from arousal + scarcity_frame + regulatory_focus; psych_ownership from retargeting touch_count + dwell + temporal_horizon).
+
+- **Hand-off pointer:** Branch `feature/hmt-dashboard` @ `831e49a`. Sessions A (5 slices) + B (1 slice) closed. Working tree carries this MEMORY.md update + the prior-turn `docs/PLATFORM_INVENTORY_2026_05_07.md` still untracked-pending. Sessions C/D/E/F await Claude Proper prompts in sequence.
+
+---
+
+### Session 2026-05-07 — A.2 maximizer_tendency Beta prior differentiation — keystone landed
+
+**EVE Handoff:**
+
+- **Executed:** A.2 maximizer_tendency Beta prior differentiation across 8 Jung archetypes via z-score derivation (commit `c090037`). New module `adam/cold_start/priors/maximizer_tendency.py` (162 lines) with pure derivation function `derive_maximizer_beta_priors(profiles) -> Dict[ArchetypeID, BetaDistribution]`, module-level registry `ARCHETYPE_MAXIMIZER_PRIORS` populated at import, accessor `get_maximizer_tendency_prior(archetype_id)`. Integration pattern parallels `ARCHETYPE_MECHANISM_PRIORS` (per-archetype Beta priors keyed by ArchetypeID, single-construct level). Updated `adam/cold_start/priors/__init__.py` to export the new surface. **+18 tests** all passing. Test suite **5,188 passing**.
+
+- **Verified:**
+  - Pre-flight Pass A: migration 032 slot AVAILABLE; migration 031 (A.1) confirmed present.
+  - Pre-flight Pass B: audit-cited profile spot-checks all match (ANALYST C=0.80, NURTURER A=0.90, GUARDIAN N=0.65); audit values current at HEAD `9a2fc84`.
+  - Pre-flight Pass C: cold_start prior surface located; integration pattern is `ARCHETYPE_MECHANISM_PRIORS` precedent (per-archetype Beta-prior registry); no Neo4j migration needed (Schwartz academic_grounding already in migration 031 from A.1; A.2 priors are Python-only at the cold_start engine layer).
+  - Live derivation results: ANALYST highest (mean 0.6078), GUARDIAN second (0.5744), ACHIEVER third (0.5672); CREATOR/PRAGMATIST middle; EXPLORER/NURTURER/CONNECTOR low (NURTURER lower than audit-predicted "moderate" because high A=0.90 carries strong negative weight per Schwartz; academically defensible).
+  - Differentiation max-min = **0.2169** (above 0.20 invariant floor).
+  - Top-3 = {ANALYST, GUARDIAN, ACHIEVER} = the audit's expected_core set exactly (no swap needed).
+  - Trait × state posterior update test (Test 9) passes: ANALYST + PRAGMATIST both move upward on 5 successes; PRAGMATIST's absolute Δ > ANALYST's (lower-prior posterior absorbs more evidence shift per identical observation count) — pins the multiplicative trait × state architecture.
+  - Zero-regression on `ARCHETYPE_TRAIT_PROFILES`, `POPULATION_TRAIT_PRIORS`, `ARCHETYPE_MECHANISM_PRIORS` confirmed.
+  - Full pytest suite: 5,188 passed / 9 pre-existing failures unchanged / 5 skipped — **zero regressions**.
+
+- **Live derivation table** (per-archetype Beta priors for `maximizer_tendency`):
+
+  | Archetype | α | β | mean = α/(α+β) | α+β |
+  |---|---:|---:|---:|---:|
+  | ANALYST | 6.0780 | 3.9220 | 0.6078 | 10.0 |
+  | GUARDIAN | 5.7444 | 4.2556 | 0.5744 | 10.0 |
+  | ACHIEVER | 5.6719 | 4.3281 | 0.5672 | 10.0 |
+  | CREATOR | 4.9754 | 5.0246 | 0.4975 | 10.0 |
+  | PRAGMATIST | 4.8190 | 5.1810 | 0.4819 | 10.0 |
+  | EXPLORER | 4.5119 | 5.4881 | 0.4512 | 10.0 |
+  | NURTURER | 4.2856 | 5.7144 | 0.4286 | 10.0 |
+  | CONNECTOR | 3.9094 | 6.0906 | 0.3909 | 10.0 |
+
+- **Q11 chain closed:** Q11.A (β engine-empirical reference) implemented as `ENGINE_EMPIRICAL_POPULATION` constants matching audit §6.1 within 1e-9. Q11.B (Schwartz weights {O: +0.20, C: +0.40, A: -0.20, N: +0.20}, E dropped) implemented as `SCHWARTZ_MAXIMIZER_WEIGHTS` with sum-of-absolute-values=1.0 invariant. Q11.C (n=10) implemented as `PRIOR_STRENGTH=10.0` invariant.
+
+- **Maximizer/satisficer PARTIAL-COVERED gap from gap assessment §3 Block D #21 is now CLOSED.** Each cold-start user gets archetype-conditioned maximizer_tendency Beta prior at zero bid-time cost; subsequent bid observations update the posterior multiplicatively per the trait × state architecture demonstrated in Test 9.
+
+- **Expected next:** Session B — S6-prep.2 page-side schema extension. Add `persuasion_knowledge_activation` field to `PagePrimingSignature`. Awaits Claude Proper prompt with field spec, range/default, mapper rule for `content_profiler.py`, and cascade integration policy.
+
+- **Hand-off pointer:** Branch `feature/hmt-dashboard` @ `c090037`. A.0 + A.1.0 + A.1 + A.2.0 + A.2 closed. Session A complete (5 slices: gap-assessment doc + audit + consolidation refactor + profile audit + Beta prior differentiation). Session B awaits Claude Proper. Working tree carries this MEMORY.md update + the prior-turn `docs/PLATFORM_INVENTORY_2026_05_07.md` still untracked-pending.
+
+---
+
+### Session 2026-05-07 — A.2.0 audit-slice — cold_start archetype profiles & scale convention memo landed
+
+**EVE Handoff:**
+
+- **Executed:** A.2.0 cold_start archetype profiles audit (commit `9a2fc84`). Four-pass read-only inspection of `adam/cold_start/archetypes/definitions.py` + supporting type modules (`priors.py`, `archetypes.py`). Memo committed at `docs/audits/COLD_START_ARCHETYPE_PROFILES_AUDIT.md` (~3.3k words, 379 lines, 24 KB; §1 Executive Summary + §2 Pass 1 schema + §3 Pass 2 profile extraction + §4 Pass 3 scale convention + §5 Pass 4 anchoring + §6 Recommended A.2 derivation anchor + §7 Q11.A–C surfaced + §8 Closure). Zero code changes; zero test changes; **5,170 tests passing** unchanged.
+
+- **Verified:** Memo present at expected path; all four passes documented; §6 recommended-anchor section completed with engine-empirical (μ, σ) per trait + Schwartz weight formula + predicted per-archetype Beta priors; §7 surfaced **3 QUESTION-and-stop concerns** (Q11.A reference population for z-score; Q11.B Schwartz trait-correlate weight formula; Q11.C Beta-prior pseudo-count strength); no other repo files modified; full pytest suite passes (5,170 passed / 9 pre-existing failures unchanged: TestCampaignDocs ×8 + test_dag_has_14_atoms ×1 / 5 skipped).
+
+- **Three architectural findings surfaced for A.2's reference:**
+  1. **Scale convention NORMALIZED_0_TO_1 is validator-enforced** by `Field(ge=0.0, le=1.0)` on `GaussianDistribution.mean` — not just empirical pattern. A.2's z-score derivation input domain is locked at the type level.
+  2. **Profile anchoring is POPULATION-ANCHORED IN INTENT but with internal-engine convention shifted below literature.** Per-trait engine-empirical means fall 0.04–0.11 BELOW Chris's literature-rescaled reference across all five Big Five (e.g., C engine-avg 0.6313 vs literature-rescaled 0.74). Engine appears to use a 0.5-centered convention with archetype values expressed as deviations from 0.5, rather than against literature-rescaled Costa-McCrae norms. Direction of differentiation matches literature qualitatively (C/A elevated, N suppressed), but absolute scale differs.
+  3. **Schema is clean for A.2 consumption:** all 8 archetypes have all 5 Big Five dimensions; standard 5-factor model (no NEO-PI-R facet decomposition); `GaussianDistribution` uses VARIANCE not STD (A.2 must use `computed_field .std` = `sqrt(variance)`); variance discipline binary (0.02 for defining traits, 0.03 for non-defining); trait names exactly match Big Five canonical.
+
+- **Engine-empirical (μ, σ) per Big Five trait** (audit-recommended z-score reference per Q11.A=(β)):
+  - O: μ=0.6250, σ=0.1604
+  - C: μ=0.6313, σ=0.1607
+  - E: μ=0.5563, σ=0.1675
+  - A: μ=0.6188, σ=0.1416
+  - N: μ=0.4313, σ=0.1130
+
+- **Audit-suggested Schwartz trait-correlate weight formula** (Q11.B for Claude Proper): `maximizer_z = +0.20·z(O) + 0.40·z(C) + 0.05·z(E) − 0.15·z(A) + 0.40·z(N)`. Logistic-converted to μ_max ∈ (0, 1); α = μ_max·n, β = (1 − μ_max)·n with audit-suggested n=10 (Q11.C).
+
+- **Predicted differentiation pattern** (illustrative, n=10): GUARDIAN highest maximizer prior (high N + high C + low O); ANALYST high (high C, deliberate); ACHIEVER moderate-high; CREATOR / NURTURER / PRAGMATIST moderate; EXPLORER / CONNECTOR low (low C + low N + high social orientation). Pattern is plausible per Schwartz literature.
+
+- **Expected next:** A.2 maximizer_tendency Beta prior differentiation. Awaits Claude Proper prompt incorporating audit findings — specifically: (1) Q11.A reference population from §6 (audit recommends β engine empirical), (2) Q11.B Schwartz trait-correlate weight formula source + normalization, (3) Q11.C Beta-prior pseudo-count strength, (4) any further QUESTION-and-stop concerns from §7 that need adjudication. A.2 implementation should be a pure function `derive_maximizer_beta_priors(profiles) -> Dict[ArchetypeID, BetaDistribution]` per §6.5; tests pin per-archetype Beta priors against §6.4 illustrative table.
+
+- **Hand-off pointer:** Branch `feature/hmt-dashboard` @ `9a2fc84`. A.0 + A.1.0 + A.1 + A.2.0 closed. A.2 awaits Claude Proper adjudication of Q11.A–C + execution prompt with locked decisions. Working tree carries this MEMORY.md update + the prior-turn `docs/PLATFORM_INVENTORY_2026_05_07.md` still untracked-pending.
+
+---
+
+### Session 2026-05-07 — A.1 consolidation refactor — maximizer_tendency canonical landed
+
+**EVE Handoff:**
+
+- **Executed:** A.1 consolidation refactor (commit `8a7ef23`). New migration `031_update_decision_style_dim.cypher` (28 lines, `MATCH…SET` pattern, Schwartz 2002 academic_grounding + scale anchors + provenance). Enum rename `MAXIMIZING_TENDENCY = "maximizing_tendency"` → `MAXIMIZER_TENDENCY = "maximizer_tendency"` (full unconditional per Pass A IN_MEMORY result). 6 file string-literal renames per audit §8.4 (19 hits of `"decision_maximizer"` → `"maximizer_tendency"`). New invariant-pinning test file with **17 tests**. Test suite **5,170 passing** (+17 from A.1).
+
+- **Verified:**
+  - Pre-flight Pass A persistence check: 1 hit total for `"maximizing_tendency"`, only at declaration site (no PERSISTED hits, no IN_MEMORY consumers); UNCONDITIONAL full rename authorized.
+  - Pre-flight Pass B audit-citation freshness: all `§8.4` cited lines verified current at HEAD `c237e4b`.
+  - Pre-flight Pass C migration slot: `031_*.cypher` slot confirmed available.
+  - Post-rename: zero `"decision_maximizer"` string literals in `adam/.py` source (Test 1); zero `MAXIMIZING_TENDENCY` identifiers in `adam/.py` source (Test 2); 29 `maximizer_tendency` hits (7 pre-existing canonical + 22 newly-renamed); all 7 edited files syntax-clean (py_compile ✅).
+  - Migration 031 statics: file present (Test 3); SET clause has expected new properties (Test 4); MATCH…SET pattern (Test 5); does NOT override any of migration 005's 11 preserved properties (Test 6 — parametrized over `full_name, domain, dimension_type, description, low_description, high_description, measurement_method, ad_relevance, population_mean, population_std, created_at`); cold_start enum has renamed identifier with renamed value (Test 7).
+  - construct_taxonomy.py bipolar `dm_maximizer`/`dm_satisficer` split untouched per Q10.D. `empirical_psychology_framework.py` `"satisficing"`/`"maximizing"` categorical entries untouched per Q10.F. 683 categorical-bucket `decision_style` sites untouched per Q10.E. Already-canonical sites in `unified_psychological_intelligence.py` + `constructs/service.py` + `constructs/models.py` untouched (no churn). Migration 005 never amended per Q10.C.
+  - Full pytest suite: 5,170 passed / 9 pre-existing failures unchanged / 5 skipped — **zero regressions**.
+
+- **Static-analysis adaptation noted:** Tests 3–5 were specced as live-Neo4j-execution tests; no existing migration test harness in `tests/` (verified pre-commit). Adapted to static-analysis pattern (parse migration cypher text + assert content invariants). This pins migration correctness at file level without requiring live Neo4j; database-level idempotency is provided by the `MATCH…SET` pattern itself (verified in Test 5).
+
+- **Expected next:** A.2 revised S6-prep.1 — 8 Jung-archetype Beta prior differentiation against the now-renamed `maximizer_tendency` PersonalityDimension. Awaits Claude Proper prompt with Beta priors mapped to the cold_start engine's actual 8 archetypes (`EXPLORER, ACHIEVER, CONNECTOR, GUARDIAN, ANALYST, CREATOR, NURTURER, PRAGMATIST`) per Q7.C=(α). The archetype-trait-profile schema in `adam/cold_start/archetypes/definitions.py` should provide the Big Five Gaussian distributions that anchor the Beta-prior mapping for `maximizer_tendency`.
+
+- **Hand-off pointer:** Branch `feature/hmt-dashboard` @ `8a7ef23`. A.0 + A.1.0 + A.1 closed. A.2 awaits Claude Proper prompt. Working tree carries this MEMORY.md update + the prior-turn `docs/PLATFORM_INVENTORY_2026_05_07.md` still untracked-pending.
+
+---
+
+### Session 2026-05-07 — A.1.0 audit-slice — maximizer/satisficer fragmentation memo landed
+
+**EVE Handoff:**
+
+- **Executed:** A.1.0 audit-slice (commit `c237e4b`). Six-pass read-only inspection of maximizer/satisficer construct distribution across codebase. Memo committed at `docs/audits/MAXIMIZER_FRAGMENTATION_AUDIT.md` (~3.5k words, 426 lines, 30 KB; §1 Executive Summary + §2 Pass 1 Migration 005 schema + §3 Pass 2 ID cross-references + §4 Pass 3 named-variant cross-references + §5 Pass 4 test surface + §6 Pass 5 downstream migrations + §7 Pass 6 construct_taxonomy.py role + §8 Recommended A.1 Scope + §9 Audit closure). Created `docs/audits/` directory. Zero code changes; zero test changes; **5,153 tests passing** unchanged.
+
+- **Verified:** Memo present at expected path; all six passes documented; §8 recommended-scope section completed with 7 adjudication points (Q10.A–G) for Claude Proper; no other repo files modified; full pytest suite passes (5,153 passed / 9 pre-existing failures unchanged: TestCampaignDocs ×8 + test_dag_has_14_atoms ×1 / 5 skipped).
+
+- **Two architectural surprises surfaced** beyond the Q7 surface that A.1 must respect:
+  1. **Namespace disambiguation**: `decision_style` is used in TWO semantically-different namespaces — bipolar TRAIT (1 hit, the Neo4j seed) vs categorical-bucket VARIABLE (683 hits across demo/intelligence/orchestrator/workflows holding values like 'system1_intuitive', 'satisficing', etc.). A.1 scope = trait namespace only; bucket-namespace is out-of-scope.
+  2. **Dormant Neo4j seed**: `dim_cog_decision_style` has ZERO READ_BY sites in the codebase. The construct is queried/used everywhere via Python-identifier names (`decision_maximizer` ×19, `maximizer_tendency` ×7) — not via Neo4j queries. Implication: keeping `dimension_id` stable in A.1 has zero downside.
+
+- **Audit-recommended A.1 scope** (subject to Claude Proper adjudication of Q10.A–G):
+  - Canonical name: `maximizer_tendency`
+  - `dimension_id` strategy: option (i) keep stable
+  - Migration mechanics: option (β) new migration `031` with `MATCH...SET`
+  - `construct_taxonomy.py` bipolar `dm_maximizer`/`dm_satisficer` split: leave intact (academically faithful to Schwartz Maximization Scale)
+  - Categorical-bucket namespace (683 hits) + `"satisficing"`/`"maximizing"` categorical values (67 hits): NOT in A.1 scope
+  - Enum rename: `MAXIMIZING_TENDENCY` → `MAXIMIZER_TENDENCY` + value `"maximizing_tendency"` → `"maximizer_tendency"`, pending persistence-layer check
+  - Estimated commit-LOC delta: +50 to +100 lines, 7 file edits + 1 new migration; zero existing test edits required
+
+- **Per-site rename plan** (memo §8.4): 19 `decision_maximizer` hits across 8 files become `maximizer_tendency`; 1 `MAXIMIZING_TENDENCY` enum hit becomes `MAXIMIZER_TENDENCY`; 7 already-canonical `maximizer_tendency` sites unchanged. No `dm_maximizer`/`dm_satisficer` changes (intentional bipolar split). No `decision_style` (variable) changes.
+
+- **Expected next:** A.1 consolidation refactor. Awaits Claude Proper prompt incorporating audit findings — specifically: (1) Q10.A canonical-name confirmation, (2) Q10.B `dimension_id` strategy, (3) Q10.C migration mechanics, (4) Q10.D bipolar-split disposition, (5) Q10.E + Q10.F namespace-scope confirmations, (6) Q10.G enum-value rename + persistence-layer check authorization.
+
+- **Hand-off pointer:** Branch `feature/hmt-dashboard` @ `c237e4b`. A.0 + A.1.0 closed. A.1 awaits adjudication. Working tree carries this MEMORY.md update + the prior-turn `docs/PLATFORM_INVENTORY_2026_05_07.md` still untracked-pending.
+
+---
+
+### Session 2026-05-07 — A.0 docs-slice — gap-assessment artifact landed
+
+**EVE Handoff:**
+
+- **Executed:** A.0 docs-slice (commit `cf41115`). Added `docs/MINDSET_COVERAGE_GAP_ASSESSMENT_2026_05_07.md` as tracked repo artifact (403 lines, 7,679 words, 59 KB; §1 Executive Summary through §7 Practicality Filter Disposition Table plus Caveats). Zero code changes; zero test changes; **5,153 tests passing** unchanged.
+
+- **Verified:** Document present at spec-expected path; full markdown structure intact (§1, §2, §3 Coverage Matrix Blocks A–F, §4 Trait × State Deep-Dive, §5 Academic Substrate, §6 Operationalization Path 8-step S6.1 spec, §7 Practicality Table, Caveats); no other repo files modified; full pytest suite passes (5,153 passed / 9 pre-existing failures unchanged: TestCampaignDocs ×8 + test_dag_has_14_atoms ×1 / 5 skipped).
+
+- **Pre-flight resolution chain** (recorded across QUESTIONs 6/7/8/9):
+  - Q6: constrained mindset map source absent (S6.1 surface) — superseded by gap-assessment ship
+  - Q7: S6-prep.1 multi-trigger (existing `decision_style` PersonalityDimension at migration `005:148`; 7-site fragmentation; cold_start engine uses 8 Jung archetypes not 10 / 5; gap-assessment doc absent) — adjudicated as: A.0 ships doc → A.1 consolidates 7 sites → A.2 revised priors against engine's 8 Jung archetypes
+  - Q8: A.0 prompt placeholder `[FULL CONTENT FROM THE ARTIFACT...]` — resolved by Chris pre-staging file in working tree
+  - Q9: filename mismatch (`docs/ADAM:INFORMATIV Mindset Coverage Gap Assessment.md` → `docs/MINDSET_COVERAGE_GAP_ASSESSMENT_2026_05_07.md`) — Chris adjudicated (a) authorize plain `mv`; rename complete; spec-expected path now the canonical location
+
+- **Expected next:** A.1 consolidation refactor — `decision_style` → `maximizer_tendency` rename across 7 fragmentation sites per Q7.A=(c) + Q7.B=(ii). For A.1 pre-flight, **the prompt should specify**:
+  1. Complete list of 7 fragmentation sites with current local naming (recorded in Q7 surface for reference: `005_seed_personality_dimensions.cypher:148` `decision_style` / `dim_cog_decision_style`; `adam/cold_start/models/enums.py:147` `MAXIMIZING_TENDENCY = "maximizing_tendency"`; `adam/intelligence/unified_psychological_intelligence.py:197` `maximizer_tendency: float`; `adam/intelligence/construct_taxonomy.py:653-654` `dm_maximizer` + `dm_satisficer`; `adam/intelligence/empirical_psychology_framework.py:714,772` `"satisficing"` + `"maximizing"`; `adam/intelligence/unified_construct_integration.py:152` `"decision_maximizer"`; `adam/intelligence/historical_data_reprocessor.py:977` + `langgraph_alignment_integration.py:347` `"satisficing"` decision style)
+  2. Migration `005`'s `dim_cog_decision_style` schema handling — keep stable `dimension_id` with new `name`, or rename `dimension_id` too (touches index/constraint surface)
+  3. Test-update strategy for any tests pinning the old names
+
+- **Hand-off pointer:** Branch `feature/hmt-dashboard` @ `cf41115`. A.0 closed. A.1 pre-flight will surface as soon as the consolidation-rules prompt arrives. Working tree carries this MEMORY.md update + the prior-turn `docs/PLATFORM_INVENTORY_2026_05_07.md` still untracked-pending.
+
+---
+
 ### Session 2026-05-04 — session #004 — Parallel-execution discipline: 8 slices shipped
 
 **EVE Handoff:**

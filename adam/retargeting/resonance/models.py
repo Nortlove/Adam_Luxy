@@ -85,6 +85,26 @@ PSYCH_OWNERSHIP_DECAY_WINDOW_DAYS: float = 7.0
 PSYCH_OWNERSHIP_TARGET_DWELL_SECONDS: float = 60.0
 
 
+# =============================================================================
+# D / S6-prep.3b — depletion_proxy tunable constant
+# =============================================================================
+#
+# Per gap assessment §3 Block I #31 + §6 Step 2 + §7 row 3:
+# self-control depletion proxy. CASE B formula
+# (cognitive_velocity unavailable on bid-time substrate per Q12 Pass C):
+#     depletion_proxy = cognitive_load × session_position_normalized
+#
+# REPLICATION-CRISIS CAVEAT — Baumeister et al. 1998 ego-depletion
+# has documented replication failures (Carter & McCullough 2014;
+# Hagger et al. 2016 Registered Replication Report). This proxy is
+# heuristic substrate, NOT load-bearing academic citation. Pilot
+# data via per_user_posterior_modulation will tighten or refute.
+
+# 30-minute session-position threshold drawn from session-engagement
+# research conventions; calibration choice.
+DEPLETION_THRESHOLD_SECONDS: float = 1800.0
+
+
 @dataclass
 class PageMindstateVector:
     """32-dimensional representation of a page's psychological field.
@@ -146,6 +166,35 @@ class PageMindstateVector:
 
     # From per-user retargeting state (dwell on brand pages, seconds).
     dwell_seconds: float = 0.0
+
+    # ── D / S6-prep.3b orchestrator-populated fields ──
+    #
+    # Three more fields populated from external sources at orchestrator
+    # input-assembly time. Defaults are safe (no depletion / unset
+    # posture / mid-momentum). NOT part of the 32-dim resonance vector.
+
+    # From session_state (adam/intelligence/session_state.py:78
+    # session_start) — current bid-time delta to session_start.
+    # Default 0.0 = freshly-started session = no depletion. Range
+    # constraint: ≥ 0.
+    session_position_seconds: float = 0.0
+
+    # From URLPostureClassifier output (5-class taxonomy at
+    # adam/intelligence/posture_five_class.py:106). One of:
+    # INFORMATION_FORAGING / TASK_COMPLETION / LEISURE_BROWSING /
+    # SOCIAL_CONSUMPTION / TRANSACTIONAL_COMPARISON, or empty
+    # string when unset/cold-start. Empty string is the safe
+    # default — D's depletion_proxy doesn't depend on posture, but
+    # D.bis (loneliness_compensatory_flag, deferred) will.
+    posture_class: str = ""
+
+    # From BrowsingMomentumTracker
+    # (adam/retargeting/resonance/browsing_momentum.py:71) — current
+    # browsing-momentum scalar in [0, 1]. Default 0.5 = mid (no
+    # informative signal). D.bis (loneliness_compensatory_flag,
+    # deferred) consumes this; included in D for orchestrator wiring
+    # readiness so D.bis is a pure derivation slice.
+    browsing_momentum: float = 0.5
 
     @property
     def fomo_score(self) -> float:
@@ -228,6 +277,50 @@ class PageMindstateVector:
         presentness = 1.0 - max(0.0, min(1.0, temporal_horizon))
         result = touch_density * dwell_normalized * presentness
         return max(0.0, min(1.0, result))
+
+    @property
+    def depletion_proxy(self) -> float:
+        """Self-control depletion composite score ∈ [0, 1].
+
+        REPLICATION-CRISIS CAVEAT — NOT load-bearing academic
+        citation. Baumeister et al. 1998 ego-depletion has
+        well-documented replication failures (Carter & McCullough
+        2014; Hagger et al. 2016 Registered Replication Report).
+        Treat this proxy as a tunable heuristic that captures the
+        operational signature (sustained cognitive effort across
+        session) without committing to the psychological theory's
+        specific mechanism claims.
+
+        Formula (CASE B — cognitive_velocity unavailable on bid-time
+        PageMindstateVector substrate per Q12 Pass C; lives in the
+        decision-time atoms layer at adam/atoms/core/, not on bid-
+        time substrate):
+            depletion_proxy = cognitive_load × session_position_normalized
+
+        Where:
+            cognitive_load ∈ [0, 1] from PageMindstateVector
+                (existing field) — current cognitive load on user
+            session_position_normalized = min(1.0,
+                session_position_seconds / DEPLETION_THRESHOLD_SECONDS)
+                with DEPLETION_THRESHOLD = 1800s (30 min) default
+
+        Bid-time latency: <0.5ms (cached-field arithmetic only).
+
+        Notes:
+            The 30-minute threshold is a calibration choice informed
+            by session-engagement research; pilot data may tighten
+            via per_user_posterior_modulation. CASE B uses current
+            cognitive_load as a static proxy rather than load
+            trajectory; when cognitive_velocity becomes available
+            on bid-time substrate (future slice), CASE A
+            (load × velocity × position) supersedes.
+        """
+        session_position_normalized = min(
+            1.0,
+            self.session_position_seconds / DEPLETION_THRESHOLD_SECONDS,
+        )
+        raw = self.cognitive_load * session_position_normalized
+        return max(0.0, min(1.0, raw))
 
     def to_numpy(self) -> np.ndarray:
         """Flatten to 32-dim numpy vector in fixed dimension order."""
