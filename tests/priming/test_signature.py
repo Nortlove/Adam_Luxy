@@ -15,6 +15,7 @@ from adam.priming import (
     PagePrimingSignature,
     SIGNATURE_DIMENSIONS,
     SIGNATURE_VERSION_V1,
+    SIGNATURE_VERSION_V2,
     neutral_signature,
 )
 
@@ -34,7 +35,9 @@ class TestConstruction:
             activated_frames=("frame_a", "frame_b"),
         )
         assert sig.url_hash == "abc123"
-        assert sig.signature_version == SIGNATURE_VERSION_V1
+        # Default version bumped from V1 → V2 in B/S6-prep.2 (added
+        # persuasion_knowledge_activation field).
+        assert sig.signature_version == SIGNATURE_VERSION_V2
         assert sig.confidence_per_dimension == {}
 
     def test_frozen_dataclass_cannot_mutate(self):
@@ -50,10 +53,12 @@ class TestConstruction:
     def test_signature_dimensions_pinned(self):
         # Pin the canonical dimension list so accidental schema
         # changes break this test, not silently change downstream
-        # consumers.
+        # consumers. Schema upgrade in B/S6-prep.2 added
+        # persuasion_knowledge_activation as the 6th dimension.
         assert SIGNATURE_DIMENSIONS == (
             "valence", "arousal", "regulatory_focus_priming",
             "cognitive_load_estimate", "activated_frames",
+            "persuasion_knowledge_activation",
         )
 
 
@@ -242,4 +247,5 @@ class TestNeutralFallback:
 
     def test_neutral_signature_carries_canonical_version(self):
         sig = neutral_signature("x")
-        assert sig.signature_version == SIGNATURE_VERSION_V1
+        # Canonical version bumped V1 → V2 in B/S6-prep.2.
+        assert sig.signature_version == SIGNATURE_VERSION_V2

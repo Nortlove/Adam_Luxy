@@ -199,12 +199,24 @@ def map_profile_to_signature(
     """Pure mapper: ContentProfiler output → PagePrimingSignature.
 
     Determines all 5 dimensions + per-dim confidences from the
-    profile dict. No I/O.
+    profile dict + B/S6-prep.2 persuasion_knowledge_activation.
+    No I/O.
     """
     ndf = profile.get("ndf_profile") or {}
     mechs = profile.get("mechanisms") or []
     emotions = profile.get("emotions") or {}
     overall_conf = float(profile.get("confidence", 0.0))
+
+    # B/S6-prep.2 — extract Persuasion Knowledge Model activation
+    # from ContentProfiler.profile() output. Old profile dicts
+    # without the key default to (0.0, 0.5) — backward-compat for
+    # any profile producer that hasn't been updated.
+    pk_block = profile.get("persuasion_knowledge") or {}
+    pk_activation = float(pk_block.get("activation", 0.0))
+    pk_confidence = float(pk_block.get("confidence", 0.5))
+
+    confidence_dim = _compute_confidence_per_dim(overall_conf, emotions)
+    confidence_dim["persuasion_knowledge"] = pk_confidence
 
     return PagePrimingSignature(
         url_hash=url_to_hash(url),
@@ -213,9 +225,8 @@ def map_profile_to_signature(
         regulatory_focus_priming=_compute_regulatory_focus(ndf, mechs),
         cognitive_load_estimate=_compute_cognitive_load(ndf),
         activated_frames=tuple(mechs[:5]),
-        confidence_per_dimension=_compute_confidence_per_dim(
-            overall_conf, emotions,
-        ),
+        persuasion_knowledge_activation=pk_activation,
+        confidence_per_dimension=confidence_dim,
         computed_at=computed_at or datetime.now(tz=timezone.utc),
         signature_version=signature_version,
     )

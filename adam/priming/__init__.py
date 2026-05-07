@@ -10,6 +10,7 @@ from adam.priming.signature import (
     RegulatoryFocus,
     SIGNATURE_DIMENSIONS,
     SIGNATURE_VERSION_V1,
+    SIGNATURE_VERSION_V2,
     neutral_signature,
 )
 from adam.priming.pipeline import (
@@ -35,6 +36,7 @@ __all__ = [
     "RegulatoryFocus",
     "SIGNATURE_DIMENSIONS",
     "SIGNATURE_VERSION_V1",
+    "SIGNATURE_VERSION_V2",
     "neutral_signature",
     # pipeline
     "FetchedPage",

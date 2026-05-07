@@ -42,6 +42,147 @@ MECHANISM_KEYWORDS = {
     "loss_aversion": ["miss", "lose", "risk", "protect", "safeguard", "don't let", "before it's gone"],
 }
 
+# =============================================================================
+# Persuasion Knowledge Model cue families (B / S6-prep.2)
+# =============================================================================
+#
+# Per Friestad & Wright (1994) Persuasion Knowledge Model. Three cue
+# families combine into a single activation score in [0, 1]. Higher
+# values = page content cues activate the user's persuasion-knowledge
+# schemas, raising skepticism and resistance to embedded persuasive
+# messages.
+#
+# Constants are module-level so cue lists can be tuned/extended without
+# touching the function body. Specific weights (0.30 explicit / 0.10
+# salesy / density-normalized aggressive) are calibration choices
+# informed by PKM but NOT load-bearing academic citations — pilot data
+# may tighten via downstream slices.
+
+EXPLICIT_DISCLOSURE_CUES = (
+    "#ad", "#sponsored", "#promoted", "#paid",
+    "[ad]", "(ad)",
+    "sponsored content", "paid promotion", "paid partnership",
+    "in partnership with", "this is sponsored",
+    "affiliate links", "advertisement", "promoted post",
+)
+
+SALESY_DICTION_CUES = (
+    "limited time offer", "act now", "don't miss out",
+    "exclusive deal", "while supplies last",
+    "click here to buy", "shop now", "buy now",
+    "limited stock", "offer expires", "discount code",
+    "use coupon", "free shipping", "order today",
+)
+
+PERSUASION_SUPERLATIVE_STEMS = (
+    "best", "top", "ultimate", "perfect",
+    "amazing", "incredible", "revolutionary", "breakthrough",
+)
+
+PERSUASION_IMPERATIVE_STEMS = (
+    "buy", "get", "claim", "grab", "try",
+    "start", "join", "sign up",
+)
+
+
+def compute_persuasion_knowledge_activation(
+    page_text: str,
+    page_metadata: Optional[Dict[str, Any]] = None,
+) -> tuple:
+    """Compute persuasion_knowledge_activation score and confidence
+    from page textual content.
+
+    Per Friestad & Wright (1994) Persuasion Knowledge Model. Three cue
+    families combine into a single [0, 1] score; confidence reflects
+    cue density and explicitness.
+
+    Args:
+        page_text: full text of the page (title + body, lowercased
+            internally).
+        page_metadata: optional dict; if present, its values are
+            also scanned for explicit disclosure cues (e.g., social
+            platforms expose disclosure-flag metadata separately
+            from body text).
+
+    Returns:
+        (activation_score, confidence) — both in [0, 1].
+
+    Algorithm:
+        (1) EXPLICIT DISCLOSURE MARKERS — high-weight, sparse signal.
+            Each detected cue contributes 0.30 to raw score; family
+            capped at 0.60 (so 2+ markers = full family contribution).
+
+        (2) SALESY DICTION PATTERNS — medium-weight, denser signal.
+            Each detected cue contributes 0.10; family capped at 0.30.
+
+        (3) AGGRESSIVE PERSUASION-ATTEMPT LANGUAGE — medium-weight,
+            density-normalized. Counts superlative + imperative stems
+            per 100 words; combined density score in [0, 0.20].
+
+        Total raw score = sum of three family contributions, clipped
+        to [0, 1].
+
+    Confidence calibration:
+        - 0.85 if any explicit-disclosure cue detected (high reliability)
+        - 0.65 if salesy or aggressive families contribute ≥ 0.10
+        - 0.50 otherwise (uninformative neutral)
+
+    Notes:
+        Heuristic extractor. Pilot data may tighten weights via
+        downstream slices. English-language only for this slice.
+    """
+    text_lower = (page_text or "").lower()
+    word_count = max(1, len(text_lower.split()))
+
+    metadata_text = ""
+    if page_metadata:
+        for value in page_metadata.values():
+            if isinstance(value, str):
+                metadata_text += " " + value.lower()
+    haystack = text_lower + metadata_text
+
+    # Family 1 — explicit disclosure markers
+    explicit_hits = 0
+    for cue in EXPLICIT_DISCLOSURE_CUES:
+        if cue in haystack:
+            explicit_hits += 1
+    explicit_contribution = min(0.60, 0.30 * explicit_hits)
+
+    # Family 2 — salesy diction
+    salesy_hits = 0
+    for cue in SALESY_DICTION_CUES:
+        if cue in text_lower:
+            salesy_hits += 1
+    salesy_contribution = min(0.30, 0.10 * salesy_hits)
+
+    # Family 3 — aggressive persuasion language (density-normalized)
+    sup_count = sum(
+        text_lower.count(stem) for stem in PERSUASION_SUPERLATIVE_STEMS
+    )
+    imp_count = sum(
+        text_lower.count(stem) for stem in PERSUASION_IMPERATIVE_STEMS
+    )
+    density_per_100 = ((sup_count + imp_count) / word_count) * 100.0
+    # Saturate at density 6.0 per 100 words → 0.20 contribution
+    aggressive_contribution = min(0.20, density_per_100 / 6.0 * 0.20)
+
+    raw_score = (
+        explicit_contribution
+        + salesy_contribution
+        + aggressive_contribution
+    )
+    activation_score = max(0.0, min(1.0, raw_score))
+
+    if explicit_contribution > 0:
+        confidence = 0.85
+    elif salesy_contribution >= 0.10 or aggressive_contribution >= 0.10:
+        confidence = 0.65
+    else:
+        confidence = 0.50
+
+    return activation_score, confidence
+
+
 EMOTION_KEYWORDS = {
     "excitement": ["exciting", "thrill", "amazing", "incredible", "wow", "breakthrough"],
     "trust": ["trust", "reliable", "safe", "secure", "guarantee", "proven", "tested"],
@@ -94,6 +235,12 @@ class ContentProfiler:
             except Exception as e:
                 logger.debug("Graph enrichment unavailable: %s", e)
 
+        # B/S6-prep.2 — Persuasion Knowledge Model activation
+        # extracted from textual disclosure cues (Friestad-Wright 1994).
+        pk_activation, pk_confidence = (
+            compute_persuasion_knowledge_activation(text, metadata)
+        )
+
         return {
             "ndf_profile": ndf,
             "segments": segments,
@@ -102,6 +249,10 @@ class ContentProfiler:
             "mechanism_scores": mechanisms,
             "confidence": confidence,
             "emotions": self._detect_emotions(text),
+            "persuasion_knowledge": {
+                "activation": pk_activation,
+                "confidence": pk_confidence,
+            },
         }
 
     async def _extract_ndf(self, text: str, metadata: Dict[str, Any]) -> Dict[str, float]:
