@@ -131,12 +131,40 @@ class URLPostureClassifier:
     random_state: int = DEFAULT_RANDOM_STATE
     version: str = CLASSIFIER_VERSION
     n_train: int = 0
+    # Class-weight setting last used in fit(); persisted for
+    # reproducibility + for round-trip-load to record the training
+    # regime that produced the artifact. None = uniform; "balanced"
+    # = sklearn's inverse-frequency weighting.
+    class_weight: Any = "balanced"
 
     def fit(
         self, urls: List[str], labels: List[str],
+        class_weight: Any = "balanced",
     ) -> "URLPostureClassifier":
         """Fit on (urls, labels). Validates aligned shapes; raises
-        on mismatch. Sets self.classes_ to the sorted unique labels."""
+        on mismatch. Sets self.classes_ to the sorted unique labels.
+
+        Class-weight handling (G1.path4 amendment 2026-05-06):
+            class_weight="balanced" (default) — sklearn's standard
+                cost-sensitive-learning correction:
+                n_samples / (n_classes * np.bincount(y)). Each class
+                contributes inverse-frequency-weighted gradient mass
+                during fit; the optimizer no longer collapses toward
+                the modal class under imbalance + few-shot.
+            class_weight=None — uniform weights (the prior behavior).
+                Provided for backwards-compat + as the regression
+                control in tests that pin the class-collapse signal.
+            class_weight=dict — caller-supplied per-class weights;
+                passed through to LogisticRegression unchanged.
+
+        Default change rationale: the v0.1 round-3 checkpoint
+        evaluation against the held-out fixture (session #002 EVE
+        block, 2026-05-02) showed top-1=0.22 with 49/50 predictions
+        collapsed to INFORMATION_FORAGING — a class-collapse signal
+        attributable to imbalance + few-shot under-fitting under
+        uniform weights. "balanced" mode is sklearn's documented
+        cost-sensitive correction; no novel methodology.
+        """
         if len(urls) != len(labels):
             raise ValueError(
                 f"len(urls)={len(urls)} != len(labels)={len(labels)}"
@@ -174,9 +202,11 @@ class URLPostureClassifier:
             max_iter=2000,
             random_state=self.random_state,
             C=1.0,
+            class_weight=class_weight,
         )
         self.model.fit(X, labels)
         self.n_train = len(urls)
+        self.class_weight = class_weight
         return self
 
     def predict_proba(self, urls: List[str]) -> np.ndarray:
@@ -391,6 +421,9 @@ def persist_classifier_artifact(
         "classes": list(classifier.classes_) if classifier.classes_ else [],
         "n_train": classifier.n_train,
         "random_state": classifier.random_state,
+        # G1.path4: persist the class_weight regime for reproducibility.
+        # "balanced" / None / dict — JSON-serialized as-is.
+        "class_weight": classifier.class_weight,
     }
     if eval_summary is not None:
         header["eval_summary"] = eval_summary
@@ -455,6 +488,17 @@ def load_classifier_artifact(path: str) -> URLPostureClassifier:
     # Need n_features_in_ for predict path consistency.
     model.n_features_in_ = model.coef_.shape[1]
 
+    # G1.path4: round-trip the class_weight regime when present.
+    # Older artifacts (pre-path4) lack this key → default to None
+    # (uniform), which is the regime they were trained under.
+    class_weight = header.get("class_weight", None)
+    if class_weight == "balanced":
+        cw = "balanced"
+    elif class_weight is None:
+        cw = None
+    else:
+        cw = class_weight  # dict pass-through
+
     clf = URLPostureClassifier(
         classes_=list(header.get("classes") or []),
         vectorizer=vec,
@@ -462,6 +506,7 @@ def load_classifier_artifact(path: str) -> URLPostureClassifier:
         random_state=int(header.get("random_state") or DEFAULT_RANDOM_STATE),
         version=str(header.get("version") or CLASSIFIER_VERSION),
         n_train=int(header.get("n_train") or 0),
+        class_weight=cw,
     )
     return clf
 

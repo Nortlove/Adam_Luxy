@@ -1,0 +1,97 @@
+{
+  "timestamp": 1778122739.2493272,
+  "slice_id": "G1.path4",
+  "training_corpus": "audits/url_resolution_1777847380/training_corpus.csv",
+  "checkpoint": "artifacts/posture_classifier/posture_classifier_n100_balanced_1778122729.jsonl",
+  "held_out_fixture": "scripts/heldout_eval_posture_classifier.py:HELDOUT_URLS",
+  "n_heldout": 50,
+  "macro_auc": 0.788,
+  "macro_auc_ci_low": 0.6996290292545828,
+  "macro_auc_ci_high": 0.8671757927014506,
+  "top_1": 0.46,
+  "top_1_n_correct": 23,
+  "per_class_auc": {
+    "INFORMATION_FORAGING": 0.68125,
+    "LEISURE_BROWSING": 0.8825,
+    "SOCIAL_CONSUMPTION": 0.59625,
+    "TASK_COMPLETION": 0.915,
+    "TRANSACTIONAL_COMPARISON": 0.865
+  },
+  "per_class_true_counts": {
+    "INFORMATION_FORAGING": 10,
+    "TRANSACTIONAL_COMPARISON": 10,
+    "LEISURE_BROWSING": 10,
+    "SOCIAL_CONSUMPTION": 10,
+    "TASK_COMPLETION": 10
+  },
+  "per_class_pred_counts": {
+    "INFORMATION_FORAGING": 24,
+    "LEISURE_BROWSING": 11,
+    "TASK_COMPLETION": 11,
+    "TRANSACTIONAL_COMPARISON": 1,
+    "SOCIAL_CONSUMPTION": 3
+  },
+  "confusion_matrix": {
+    "INFORMATION_FORAGING": {
+      "INFORMATION_FORAGING": 6,
+      "LEISURE_BROWSING": 2,
+      "SOCIAL_CONSUMPTION": 0,
+      "TASK_COMPLETION": 2,
+      "TRANSACTIONAL_COMPARISON": 0
+    },
+    "LEISURE_BROWSING": {
+      "INFORMATION_FORAGING": 2,
+      "LEISURE_BROWSING": 7,
+      "SOCIAL_CONSUMPTION": 1,
+      "TASK_COMPLETION": 0,
+      "TRANSACTIONAL_COMPARISON": 0
+    },
+    "SOCIAL_CONSUMPTION": {
+      "INFORMATION_FORAGING": 7,
+      "LEISURE_BROWSING": 1,
+      "SOCIAL_CONSUMPTION": 1,
+      "TASK_COMPLETION": 1,
+      "TRANSACTIONAL_COMPARISON": 0
+    },
+    "TASK_COMPLETION": {
+      "INFORMATION_FORAGING": 2,
+      "LEISURE_BROWSING": 0,
+      "SOCIAL_CONSUMPTION": 0,
+      "TASK_COMPLETION": 8,
+      "TRANSACTIONAL_COMPARISON": 0
+    },
+    "TRANSACTIONAL_COMPARISON": {
+      "INFORMATION_FORAGING": 7,
+      "LEISURE_BROWSING": 1,
+      "SOCIAL_CONSUMPTION": 1,
+      "TASK_COMPLETION": 0,
+      "TRANSACTIONAL_COMPARISON": 1
+    }
+  },
+  "gate_thresholds": {
+    "macro_auc_min": 0.5,
+    "top_1_min": 0.4
+  },
+  "g1_gate_status": "pass",
+  "auc_pass": true,
+  "top1_pass": true,
+  "comparison_to_prior_checkpoint": {
+    "prior": {
+      "artifact": "artifacts/posture_classifier/posture_classifier_n100_1777759342.jsonl",
+      "macro_auc": 0.798,
+      "top_1": 0.22,
+      "class_collapse_note": "49/50 predictions collapsed to INFORMATION_FORAGING",
+      "class_weight": null
+    },
+    "current": {
+      "artifact": "artifacts/posture_classifier/posture_classifier_n100_balanced_1778122729.jsonl",
+      "macro_auc": 0.788,
+      "top_1": 0.46,
+      "class_weight": "balanced"
+    },
+    "macro_auc_delta": -0.010000000000000009,
+    "top_1_delta": 0.24000000000000002,
+    "class_collapse_resolved": true,
+    "modal_predicted_class_share": 0.48
+  }
+}
