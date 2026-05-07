@@ -51,6 +51,40 @@ ALL_MINDSTATE_DIMS = EDGE_DIM_NAMES + NDF_DIM_NAMES + ENV_DIM_NAMES
 MINDSTATE_DIM_COUNT = len(ALL_MINDSTATE_DIMS)  # 32
 
 
+# =============================================================================
+# C / S6-prep.3a — Composite-state derivation tunable constants
+# =============================================================================
+#
+# Per gap assessment §6 Step 2 + §7 rows 1+2: two derived composite
+# states close PARTIAL-COVERED gaps for FOMO (§3 Block A #6) and
+# Psychological Ownership (§3 Block I #33). Both compose from
+# already-cached signals at <1ms bid-time cost; pure derivations
+# (no new content profiling, no schema migration).
+
+# fomo_score modifiers (Pham & Higgins 2005 regulatory-fit
+# amplification): promotion-oriented states amplify
+# scarcity-FOMO into action urgency; prevention-oriented states
+# dampen it into caution. Calibration choice; pilot data may
+# tighten via per_user_posterior_modulation.
+FOMO_REGULATORY_PROMOTION_MODIFIER: float = 1.2
+FOMO_REGULATORY_PREVENTION_MODIFIER: float = 0.8
+FOMO_REGULATORY_NEUTRAL_MODIFIER: float = 1.0
+
+# Canonical scarcity-frame name used in PagePrimingSignature.
+# activated_frames (which is populated from
+# ContentProfiler MECHANISM_KEYWORDS top-5 — "scarcity" is one of
+# the 9 Cialdini mechanism names per
+# adam/platform/intelligence/content_profiler.py:35).
+FOMO_SCARCITY_FRAME_NAME: str = "scarcity"
+
+# psych_ownership_proxy tunables (Pierce-Kostova-Dirks 2001 +
+# Kahneman-Knetsch-Thaler 1990). Decay window matches retargeting
+# frequency-cap conventions; target dwell drawn from
+# session-engagement research. Both calibration choices.
+PSYCH_OWNERSHIP_DECAY_WINDOW_DAYS: float = 7.0
+PSYCH_OWNERSHIP_TARGET_DWELL_SECONDS: float = 60.0
+
+
 @dataclass
 class PageMindstateVector:
     """32-dimensional representation of a page's psychological field.
@@ -86,6 +120,114 @@ class PageMindstateVector:
     confidence: float = 0.3
     scoring_tier: str = "unknown"  # full_extraction, taxonomy_category, ndf_fallback, url_heuristic
     timestamp: float = field(default_factory=lambda: __import__('time').time())
+
+    # ── C / S6-prep.3a composite-state derivation inputs ──
+    #
+    # These four fields are populated from PagePrimingSignature and
+    # retargeting state at orchestrator input-assembly time. They are
+    # NOT part of the 32-dim resonance vector (to_numpy() ignores
+    # them); they exist solely to feed the fomo_score and
+    # psych_ownership_proxy @property derivations below at <1ms
+    # bid-time cost. Defaults are safe — all existing call sites
+    # that don't populate these fields get the no-FOMO + no-ownership
+    # behavior.
+
+    # From PagePrimingSignature.activated_frames — True iff
+    # FOMO_SCARCITY_FRAME_NAME ("scarcity") is in the top-5
+    # mechanisms detected on the page.
+    scarcity_frame_present: bool = False
+
+    # From PagePrimingSignature.regulatory_focus_priming.
+    regulatory_focus_priming: str = "neutral"  # promotion|prevention|neutral
+
+    # From per-user retargeting state (touch_count for the
+    # (user, brand/creative) pair within the decay window).
+    touch_count: int = 0
+
+    # From per-user retargeting state (dwell on brand pages, seconds).
+    dwell_seconds: float = 0.0
+
+    @property
+    def fomo_score(self) -> float:
+        """FOMO (Fear Of Missing Out) composite score ∈ [0, 1].
+
+        Operationalizes Przybylski et al. 2013 FOMO + Cialdini
+        scarcity + Pham & Higgins 2005 regulatory-fit research as
+        a derived bid-time signal. High values indicate the page
+        primes missing-out anxiety AND the user's regulatory
+        orientation amplifies that anxiety into action urgency.
+
+        Formula:
+            fomo_score = arousal
+                       × scarcity_frame_indicator
+                       × regulatory_focus_modifier
+
+        Where:
+            arousal = self.emotional_arousal ∈ [0, 1]
+            scarcity_frame_indicator = 1.0 if scarcity_frame_present
+                                       else 0.0
+            regulatory_focus_modifier = 1.2 (promotion) | 0.8
+                (prevention) | 1.0 (neutral)
+
+        Result clipped to [0, 1] (1.2 × 1.0 × 1.0 = 1.2 → 1.0).
+
+        Bid-time latency: <0.5ms (cached-field arithmetic only).
+        """
+        scarcity_indicator = 1.0 if self.scarcity_frame_present else 0.0
+        if self.regulatory_focus_priming == "promotion":
+            modifier = FOMO_REGULATORY_PROMOTION_MODIFIER
+        elif self.regulatory_focus_priming == "prevention":
+            modifier = FOMO_REGULATORY_PREVENTION_MODIFIER
+        else:
+            modifier = FOMO_REGULATORY_NEUTRAL_MODIFIER
+        raw = self.emotional_arousal * scarcity_indicator * modifier
+        return max(0.0, min(1.0, raw))
+
+    @property
+    def psych_ownership_proxy(self) -> float:
+        """Psychological ownership composite score ∈ [0, 1].
+
+        Operationalizes Pierce, Kostova & Dirks 2001 psychological-
+        ownership theory + Kahneman, Knetsch & Thaler 1990 endowment
+        effect as a derived bid-time signal. High values indicate
+        accumulated touch + sustained dwell + present-focused
+        temporal horizon — the conditions under which a consumer
+        begins to feel a product is "mine" before purchase.
+
+        Formula:
+            psych_ownership_proxy = touch_density
+                                  × dwell_normalized
+                                  × presentness
+
+        Where:
+            touch_density = min(1.0, touch_count / (1 + decay_window))
+                — saturating; recent touches count more
+            dwell_normalized = min(1.0, dwell_seconds /
+                                   TARGET_DWELL_SECONDS)
+                — saturating
+            presentness = 1.0 - temporal_horizon
+                — present-focused = high; future-focused = low
+                (temporal_horizon ∈ [0, 1] from
+                ndf_activations dict; 0=present, 1=distant-future)
+
+        All terms ∈ [0, 1]; product ∈ [0, 1]; clipped for safety.
+
+        Bid-time latency: <0.5ms (cached-field arithmetic only).
+        """
+        touch_density = min(
+            1.0,
+            self.touch_count / (1.0 + PSYCH_OWNERSHIP_DECAY_WINDOW_DAYS),
+        )
+        dwell_normalized = min(
+            1.0,
+            self.dwell_seconds / PSYCH_OWNERSHIP_TARGET_DWELL_SECONDS,
+        )
+        temporal_horizon = float(
+            self.ndf_activations.get("temporal_horizon", 0.5)
+        )
+        presentness = 1.0 - max(0.0, min(1.0, temporal_horizon))
+        result = touch_density * dwell_normalized * presentness
+        return max(0.0, min(1.0, result))
 
     def to_numpy(self) -> np.ndarray:
         """Flatten to 32-dim numpy vector in fixed dimension order."""
