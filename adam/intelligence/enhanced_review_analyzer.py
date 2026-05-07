@@ -169,7 +169,7 @@ DOMAIN_CONSTRUCTS = {
         "temporal_orientation", "temporal_fsc", "temporal_ddr", "temporal_ph",
     ],
     PsychologicalDomain.DECISION_MAKING: [
-        "decision_maximizer", "decision_regret", "decision_overload",
+        "maximizer_tendency", "decision_regret", "decision_overload",
     ],
     PsychologicalDomain.SOCIAL_COGNITIVE: [
         "social_sco", "social_conformity", "social_nfu", "social_oli",
@@ -317,7 +317,7 @@ CONSTRUCT_LINGUISTIC_MARKERS = {
     # =========================================================================
     # DECISION MAKING
     # =========================================================================
-    "decision_maximizer": {  # Maximizer vs Satisficer
+    "maximizer_tendency": {  # Maximizer vs Satisficer
         "superlative_words": 0.35,
         "good_enough_words": -0.30,  # Inverse
         "comparison_words": 0.25,
@@ -920,7 +920,7 @@ ARCHETYPE_CONSTRUCT_MAPPING = {
         "big5_conscientiousness": 0.25,
         "selfreg_rf_promotion": 0.25,
         "motivation_achievement": 0.30,
-        "decision_maximizer": 0.20,
+        "maximizer_tendency": 0.20,
     },
     "Explorer": {
         "big5_openness": 0.30,
@@ -948,7 +948,7 @@ ARCHETYPE_CONSTRUCT_MAPPING = {
     },
     "Analyzer": {
         "cognitive_nfc": 0.35,
-        "decision_maximizer": 0.25,
+        "maximizer_tendency": 0.25,
         "info_holistic_analytic": 0.25,
         "cognitive_psp": -0.15,  # Low = slow/deliberate
     },

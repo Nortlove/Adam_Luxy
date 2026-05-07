@@ -97,7 +97,7 @@ class EnhancedReviewAnalysis:
     motivation_approach: float = 0.0
     
     # Decision Making
-    decision_maximizer: float = 0.0
+    maximizer_tendency: float = 0.0
     decision_sc: float = 0.0        # Self-control
     decision_ti: float = 0.0        # Temporal inconsistency
     
@@ -320,7 +320,7 @@ class EnhancedIngestionPipeline:
                     "motivation_achievement": "motivation_achievement",
                     "motivation_approach": "motivation_approach",
                     # Decision Making
-                    "decision_maximizer": "decision_maximizer",
+                    "maximizer_tendency": "maximizer_tendency",
                     "decision_sc": "decision_sc",
                     "decision_ti": "decision_ti",
                     # Uncertainty
@@ -393,7 +393,7 @@ class EnhancedIngestionPipeline:
     def _detect_archetype(self, analysis: EnhancedReviewAnalysis) -> str:
         """Simple archetype detection from constructs."""
         scores = {
-            "Achiever": analysis.motivation_achievement + analysis.decision_maximizer,
+            "Achiever": analysis.motivation_achievement + analysis.maximizer_tendency,
             "Explorer": analysis.big5_openness + analysis.uncertainty_cr,
             "Connector": analysis.big5_extraversion + analysis.social_sco,
             "Guardian": analysis.big5_conscientiousness + analysis.selfreg_lam,

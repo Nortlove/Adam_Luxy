@@ -149,7 +149,7 @@ CONSTRUCT_MECHANISM_INFLUENCES: Dict[str, Dict[str, float]] = {
     },
     
     # Decision Making Domain
-    "decision_maximizer": {
+    "maximizer_tendency": {
         "automatic_evaluation": -0.35,
         "attention_dynamics": 0.3,
         "construal_level": 0.2,

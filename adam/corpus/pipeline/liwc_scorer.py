@@ -276,7 +276,7 @@ def score_review_liwc(
         "regulatory_promotion": round(promotion, 3),
         "regulatory_prevention": round(prevention, 3),
         # Decision style
-        "decision_maximizer": round(maximizer, 3),
+        "maximizer_tendency": round(maximizer, 3),
         "decision_impulse": round(impulse, 3),
         "decision_info_search": round(info_search, 3),
         # Construal

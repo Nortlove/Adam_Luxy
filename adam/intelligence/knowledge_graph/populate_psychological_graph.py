@@ -317,7 +317,7 @@ CONSTRUCT_DEFINITIONS: Dict[str, ConstructDefinition] = {
             "automatic_evaluation": -0.2,  # Less reliance on automatic
             "attention_dynamics": 0.25,  # More sustained attention
         },
-        related_constructs={"info_holistic_analytic": 0.4, "decision_maximizer": 0.35},
+        related_constructs={"info_holistic_analytic": 0.4, "maximizer_tendency": 0.35},
     ),
     "cognitive_psp": ConstructDefinition(
         id="cognitive_psp",
@@ -394,7 +394,7 @@ CONSTRUCT_DEFINITIONS: Dict[str, ConstructDefinition] = {
             "attention_dynamics": 0.15,
             "wanting_liking": 0.25,
         },
-        related_constructs={"decision_maximizer": -0.35, "cognitive_psp": -0.25},
+        related_constructs={"maximizer_tendency": -0.35, "cognitive_psp": -0.25},
     ),
     
     # Domain 3: Temporal Psychology
@@ -460,8 +460,8 @@ CONSTRUCT_DEFINITIONS: Dict[str, ConstructDefinition] = {
     ),
     
     # Domain 4: Decision Making
-    "decision_maximizer": ConstructDefinition(
-        id="decision_maximizer",
+    "maximizer_tendency": ConstructDefinition(
+        id="maximizer_tendency",
         name="Maximizer-Satisficer",
         domain="decision_making",
         description="Optimization (maximizing) vs 'good enough' (satisficing) preference",
@@ -488,7 +488,7 @@ CONSTRUCT_DEFINITIONS: Dict[str, ConstructDefinition] = {
             "temporal_construal": 0.2,
             "wanting_liking": -0.15,
         },
-        related_constructs={"decision_maximizer": 0.4, "uncertainty_nfc": 0.35},
+        related_constructs={"maximizer_tendency": 0.4, "uncertainty_nfc": 0.35},
     ),
     "decision_overload": ConstructDefinition(
         id="decision_overload",
@@ -503,7 +503,7 @@ CONSTRUCT_DEFINITIONS: Dict[str, ConstructDefinition] = {
             "automatic_evaluation": 0.25,  # Falls back to heuristics
             "construal_level": -0.2,
         },
-        related_constructs={"decision_maximizer": 0.35, "cognitive_hri": 0.3},
+        related_constructs={"maximizer_tendency": 0.35, "cognitive_hri": 0.3},
     ),
     
     # Domain 5: Social-Cognitive
@@ -709,7 +709,7 @@ CONSTRUCT_DEFINITIONS: Dict[str, ConstructDefinition] = {
             "construal_level": 0.25,
             "regulatory_focus": -0.2,  # Prevention = higher threshold
         },
-        related_constructs={"decision_maximizer": 0.4, "cognitive_nfc": 0.35},
+        related_constructs={"maximizer_tendency": 0.4, "cognitive_nfc": 0.35},
     ),
     
     # Domain 11: Value Orientation
@@ -741,7 +741,7 @@ CONSTRUCT_DEFINITIONS: Dict[str, ConstructDefinition] = {
             "regulatory_focus": 0.15,
             "temporal_construal": 0.2,
         },
-        related_constructs={"decision_maximizer": 0.3, "cognitive_nfc": 0.25},
+        related_constructs={"maximizer_tendency": 0.3, "cognitive_nfc": 0.25},
     ),
 }
 

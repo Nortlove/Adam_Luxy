@@ -505,7 +505,7 @@ SUSCEPTIBILITY_CONSTRUCTS: Dict[str, SusceptibilityConstructDefinition] = {
         related_constructs={
             "cognitive_nfc": 0.65,  # Strong relationship
             "suscept_info_avoid": -0.55,  # Inverse
-            "decision_maximizer": 0.50,  # Maximizers have higher tolerance
+            "maximizer_tendency": 0.50,  # Maximizers have higher tolerance
         },
         
         high_markers=[
@@ -553,7 +553,7 @@ SUSCEPTIBILITY_CONSTRUCTS: Dict[str, SusceptibilityConstructDefinition] = {
         },
         related_constructs={
             "suscept_anchoring": 0.50,  # Price anchoring effects
-            "decision_maximizer": 0.35,  # Maximizers compare prices
+            "maximizer_tendency": 0.35,  # Maximizers compare prices
         },
         
         high_markers=[

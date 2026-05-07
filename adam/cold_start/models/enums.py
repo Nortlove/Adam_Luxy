@@ -144,7 +144,7 @@ class ExtendedConstruct(str, Enum):
     REGULATORY_FOCUS_PREVENTION = "regulatory_focus_prevention"
     NEED_FOR_COGNITION = "need_for_cognition"
     SELF_MONITORING = "self_monitoring"
-    MAXIMIZING_TENDENCY = "maximizing_tendency"
+    MAXIMIZER_TENDENCY = "maximizer_tendency"
     RISK_TOLERANCE = "risk_tolerance"
 
 
