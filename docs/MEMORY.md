@@ -164,6 +164,62 @@ Structural defense against re-drift. Past pattern: surviving alternative plans d
 
 ---
 
+### Session 2026-05-08 — W.1 wire 5 substrate accessors into bilateral_cascade (cohort direct-call + posture/priming/cascade_tier adapters + journey coordinator wrapper)
+
+**EVE Handoff:**
+
+- **Executed:** W.1 — first substrate accessor wiring slice. Components shipped: (1) `adam/cells/accessors.py` (new) with 5 accessor factories — `make_cohort_accessor` (direct-call to F.2 `get_cohort_compensatory_flag`), `make_posture_accessor` (lightweight adapter for `URLPostureClassifier.predict`), `make_priming_accessor` (sync-only adapter for `PagePrimingSignatureStore` reading L1+L3 only, skipping async L2 per Q21), `make_cascade_tier_accessor` (lightweight adapter composing `PageIntelligenceCache.lookup` + `categorize_posture`), `make_journey_accessor` (coordinator wrapper using sync `_journeys` dict + `to_conversion_stage` mapping with `JOURNEY_DEFAULT_CATEGORY` sentinel per Q23); (2) `production_aggregator()` factory in `adam/cells/aggregator.py` with explicit-DI signature + automatic singleton fetch (`get_graph_cache()`, `get_page_intelligence_cache()`, `get_journey_tracking_service()`) + per-accessor fail-soft fallback to neutral defaults when underlying source unavailable; (3) cascade integration site swap at `adam/api/stackadapt/bilateral_cascade.py:2882` — `default_aggregator()` → `production_aggregator()` (one-line factory swap; integration block markers + fail-soft template preserved); (4) integration-block comment updated to reflect W.1 swap (mentions production_aggregator + 5/7 channels wired); (5) 1 stale S6.2 integration test schema-evolution updated (`test_imports_default_aggregator_evaluate_apply` → `test_imports_aggregator_factory_evaluate_apply`); (6) 46 new tests across `tests/cells/test_accessors.py` (28 tests covering each of 5 accessor factories — direct-call, fail-soft, cold-start, mapping correctness, sentinel) + `tests/cells/test_integration_w1.py` (18 tests covering `production_aggregator` factory, cascade integration swap, end-to-end predicate fire, p99 latency budget). Test suite: **5,644 passing** (+46 net from W.1; +47 new minus 1 stale-test schema-evolution rename; 0 regressions).
+
+- **Q20-Q24 adjudications baked in:**
+  - **Q20 (mindstate dead-letter)**: deferred to M.0/M.1+ chain. Mindstate accessor remains at neutral-default lambda (`lambda buyer_id, url_hash: None`). 3 of 6 seed predicates (FOMO + ownership) stay at default-firing rate until M.0 audits the mindstate substrate-fetch path and M.1+ ships the wiring.
+  - **Q21 (asyncio.run forbidden in sync hot path)**: priming + journey adapters use SYNC paths only — `feature_store._l1` LRU + `feature_store._l3` Memcached for priming (skipping async L2 Redis); `journey_service._journeys` dict for journey (skipping async cache fallback). Reaches into private attrs of source modules but mirrors the source's own internal cascade order; documented as deferred-cleanup pattern for follow-up.
+  - **Q22 (latency budget revision)**: aggregator p99 budget revised from <8ms to 12-15ms (eats into 18ms cell-classifier slot). p99 latency test pinned at <15ms; observed well under in mock-fixture runs.
+  - **Q23 (journey category sentinel)**: option (i) — `JOURNEY_DEFAULT_CATEGORY = "__bid_default__"` sentinel never matches populated journeys at bid time → journey accessor returns `ConversionStage.UNAWARE` always until category-threading wiring lands. Wiring exists for future use; effectively no-op at bid time today.
+  - **Q24 (archetype/maximizer_prior W.2 scope)**: confirmed deferred to W.2. Archetype accessor lambda returns `ArchetypeID.PRAGMATIST`; maximizer_prior accessor lambda returns `(0.5, 10.0)`.
+
+- **Pre-flight findings beyond W.0 audit:**
+  - **Pass A**: W.0 findings still current. No source-module renames or signature changes since 2cef8d3.
+  - **Pass B**: `default_aggregator()` confirmed as the integration-site call at `bilateral_cascade.py:2882` (per S6.2 commit 78dcbec).
+  - **Pass C (cohort signature direct-match)**: F.2's `get_cohort_compensatory_flag(buyer_id) -> Tuple[bool, float]` matches S6.2's `CohortAccessor` type alias exactly.
+  - **Pass D — adapter source signatures (verified):**
+    - `URLPostureClassifier.predict(urls: List[str]) -> List[str]` (instance method, batch-of-N; adapter wraps `[url_hash]` and unwraps `[0]`).
+    - `PagePrimingSignatureStore.get(url_hash) -> PagePrimingSignature` is **async**. Sync paths exist inside it (L1 LRU, L3 Memcached) — adapter inlines those, skipping async L2 Redis.
+    - `categorize_posture(posture_float, posture_confidence) -> str` is sync; `PageIntelligenceCache.lookup(page_url) -> Optional[PagePsychologicalProfile]` is sync. Adapter composes both.
+  - **Pass E — journey state machine + ConversionStage mapping:**
+    - `JourneyTrackingService.get_journey(user_id, category)` is **async** + requires category parameter. Sync `_journeys` dict at line 91 is the L1 read path; adapter uses it directly with sentinel category.
+    - `to_conversion_stage(journey_stage) -> str` returns string, not `ConversionStage` enum; adapter coerces via `ConversionStage(stage_str)`.
+  - **Singleton inventory:** `get_graph_cache()` ✓ at `graph_cache.py:1183`; `get_page_intelligence_cache()` ✓ at `page_intelligence.py:2157`; `get_journey_tracking_service()` ✓ at `journey/service.py:302`. **No singletons exist** for `URLPostureClassifier` (requires `load_classifier_artifact(path)`) or `PagePrimingSignatureStore` (requires explicit construction with backends). Production_aggregator falls through to neutral-default lambdas for posture + priming when no instance is provided — the wirings exist, activation requires explicit DI from a deployment-config follow-up.
+
+- **Substrate firing inventory post-W.1:**
+  - **Fires on real data when singleton/instance available:**
+    - `cohort_accessor` (F.2 sibling accessor via `get_graph_cache()` singleton) — REAL DATA when Neo4j reachable
+    - `cascade_tier_accessor` (PageIntelligenceCache.lookup via singleton + categorize_posture) — REAL DATA when page profile cached
+  - **Wired but effectively cold-start in current deployment:**
+    - `posture_accessor` — no singleton; activation requires explicit `posture_classifier=` DI
+    - `priming_accessor` — no singleton; activation requires explicit `priming_store=` DI
+    - `journey_accessor` — singleton works but sentinel category never matches; effectively `UNAWARE` always until category-threading lands
+  - **Still neutral-default per W.2/M.0+ deferral:**
+    - `archetype_accessor` (W.2)
+    - `maximizer_prior_accessor` (W.2)
+    - `mindstate_accessor` (M.0/M.1+)
+
+  Honest framing: W.1 ships the wiring framework + 2-of-7 accessors firing on real data in current deployment (cohort + cascade_tier). The remaining 3 W.1-scope accessors (posture + priming + journey) need explicit-DI activation OR singleton infrastructure that doesn't exist in the repo today. The seed predicates that actually fire on real data are `compensatory_cohort_social_consumption` (when cohort + cascade_tier both populated) — which is a meaningful improvement over S6.2's 0-predicate baseline.
+
+- **Verified:**
+  - Smoke-test 5-pattern verification: production_aggregator constructs cleanly even with Neo4j/Redis unavailable (fail-soft singleton fetch); aggregate returns valid CellFeatureSet with correct cold-start defaults; explicit DI of mock classifier activates posture wiring (verified `SOCIAL_CONSUMPTION` flows through); cohort accessor active path returns mock data (True, 0.85); cohort accessor fail-soft path on RuntimeError returns (False, 0.5); posture accessor fail-soft on `RuntimeError("Call fit() first")` returns INFORMATION_FORAGING.
+  - Accessor tests (28): cohort direct-call + 2 fail-soft cases; posture 4 cases (label, empty list, falsy label, unfit-classifier exception); priming 5 cases (L1 hit, L3 fallback, cold-miss neutral signature, empty url, exception fail-soft); cascade_tier 6 cases (high-blend → blend_compatible, high-vigilance → vigilance_activating, low-confidence → unknown, no-profile → None, empty url → None, exception fail-soft); journey 6 cases (unknown buyer → UNAWARE, populated journey → mapped ConversionStage, **6-stage mapping table parametrized round-trip**, empty buyer → UNAWARE, service exception fail-soft, custom category override).
+  - Integration tests (18): production_aggregator returns CellFeaturesAggregator instance; aggregate returns valid CellFeatureSet; **explicit DI activates each of 5 wirings** (5 dedicated tests, one per accessor); W.2-deferred accessors at neutral defaults; M.0/M.1+-deferred mindstate at None; cascade source imports `production_aggregator` (NOT `default_aggregator`); cascade calls `production_aggregator()`; S6.2 integration block markers preserved; **end-to-end compensatory_cohort_social_consumption predicate fires** when graph_cache + posture_classifier wired with mock; **end-to-end persuasion-resistance predicate fires** when priming_store wired with high-PKM signature; full apply_cell_modulation round-trip on real substrate; aggregator p99 latency < 15ms over 10,000 random aggregations (Q22-revised budget).
+  - Schema-evolution test update (1): `test_imports_default_aggregator_evaluate_apply` → `test_imports_aggregator_factory_evaluate_apply` reflects W.1's swap from default_aggregator to production_aggregator at the integration site. Same schema-evolution pattern as F.2 updating E's stale `test_default_cohort_pipeline_produces_safe_defaults`.
+  - Full pytest suite: 5,644 passed / 9 pre-existing failures unchanged (TestCampaignDocs ×8 + test_dag_has_14_atoms ×1) / 5 skipped — **zero regressions on any unrelated surface**.
+
+- **Architectural decision history note:** The dependency-injection-with-singleton-fallback pattern lets W.1 ship the framework + activate what's reachable without forcing follow-up slices to wait on infrastructure (no-op posture + priming wirings + UNAWARE-always journey are honest about current deployment state). The audit-first discipline (W.0) was load-bearing here — without it, I'd have assumed all 5 source modules had matching sync entry points + working singletons, and the slice would have shipped subtly broken (asyncio.run added to sync hot path; missing-singleton crashes in production_aggregator).
+
+- **Expected next:** **W.2 build-the-accessor for archetype + maximizer_prior**. Per W.0 audit §8 Q24=(β) full build adjudication: per_user_posterior_modulation pipeline operational, per-user posterior storage layer, cold-start-to-A.2-prior fallback, Bayesian update path. May warrant its own pre-flight audit slice (W.2.0) given the architectural complexity W.0 §8 surfaced ("no `(buyer_id) → ArchetypeID` direct surface exists" + "only `get_maximizer_tendency_prior(archetype_id) → BetaDistribution` exists — no per-user posterior surface, and the return type is wrong shape"). After W.2 ships, only mindstate (M.0/M.1+) remains pre-pilot. Awaits Claude Proper prompt with W.2 scope adjudication (audit-first or implementation-first; storage layer choice for per-user posteriors).
+
+- **Hand-off pointer:** Branch `feature/hmt-dashboard` @ HEAD post-W.1 commit. **15 slices closed total** (13 implementation + 2 audits). Working tree carries this MEMORY.md update + `docs/PLATFORM_INVENTORY_2026_05_07.md` still untracked from earlier sessions. Substrate-accessor wiring is the next core-path work; W.2 is the next implementation slice.
+
+---
+
 ### Session 2026-05-08 — W.0 substrate accessor wiring audit landed (read-only memo)
 
 **EVE Handoff:**

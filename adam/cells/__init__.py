@@ -10,6 +10,7 @@ Path A integration in run_bilateral_cascade.
 from adam.cells.aggregator import (
     CellFeaturesAggregator,
     default_aggregator,
+    production_aggregator,
 )
 from adam.cells.constructor import (
     AROUSAL_NEUTRAL_THRESHOLD,
@@ -59,6 +60,7 @@ __all__ = [
     "compute_valence_arousal_quadrant",
     "construct_cell_id",
     "default_aggregator",
+    "production_aggregator",
     "evaluate_predicates",
     "get_active_cells",
     "get_active_parent_cell_count",

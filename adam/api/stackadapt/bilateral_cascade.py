@@ -2888,22 +2888,24 @@ def run_bilateral_cascade(
     # recommended seam (a) BEFORE: fail-soft modulator parallel to
     # apply_posture_modulation. Aggregates B/C/D/E/F.2 substrate into
     # a CellFeatureSet, evaluates registered predicates, applies the
-    # CombinedModulation to result.mechanism_scores. Substrate accessor
-    # wiring is incremental: this slice ships the framework + plumbing
-    # with default_aggregator() (neutral substrate defaults). Future
-    # slices wire real per_user_posterior_modulation / posture_classifier
-    # / journey state machine / priming Feature Store / mindstate cache
-    # accessors. Until then, predicates rarely fire and the modulation
-    # is effectively a no-op decision-trace event — safe operational
-    # ship of the framework.
+    # CombinedModulation to result.mechanism_scores.
+    #
+    # W.1 substrate accessor wiring (commit pending) replaced the
+    # initial neutral-defaults factory with production_aggregator(),
+    # which wires 5 of 7 substrate channels via singletons (cohort,
+    # posture, priming, cascade_tier, journey) when those singletons
+    # are reachable. Archetype + maximizer_prior remain at neutral
+    # defaults pending W.2; mindstate composites pending M.0/M.1+.
+    # Each accessor is fail-soft: missing singletons fall back to
+    # S6.2 neutral defaults and the cascade continues unchanged.
     if result.mechanism_scores:
         try:
             from adam.cells import (
                 apply_cell_modulation,
-                default_aggregator,
                 evaluate_predicates,
+                production_aggregator,
             )
-            _cell_aggregator = default_aggregator()
+            _cell_aggregator = production_aggregator()
             _cell_features = _cell_aggregator.aggregate(
                 buyer_id=buyer_id or "",
                 url_hash=page_url or "",

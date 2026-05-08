@@ -32,12 +32,18 @@ class TestIntegrationBlockInsertion:
         src = self._cascade_source()
         assert "S6.2 CELL-CONDITIONAL CREATIVE-SELECTION MODULATION" in src
 
-    def test_imports_default_aggregator_evaluate_apply(self):
+    def test_imports_aggregator_factory_evaluate_apply(self):
+        """Pin the integration block's lazy imports. Schema-evolution
+        note: W.1 swapped default_aggregator → production_aggregator
+        as the factory the cascade calls. Both are valid factories
+        from adam/cells/aggregator.py; the W.1 switch wires real
+        substrate accessors via singletons. The S6.2-era assertion
+        on `default_aggregator` is updated to assert
+        `production_aggregator` per W.1 contract."""
         src = self._cascade_source()
-        # Lazy imports inside the try block.
         assert "from adam.cells import (" in src
         assert "apply_cell_modulation" in src
-        assert "default_aggregator" in src
+        assert "production_aggregator" in src
         assert "evaluate_predicates" in src
 
     def test_fail_soft_try_except_template(self):

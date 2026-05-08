@@ -300,3 +300,140 @@ def default_aggregator() -> CellFeaturesAggregator:
         cascade_tier_accessor=None,
         enable_timing=False,
     )
+
+
+# ============================================================================
+# W.1 production_aggregator — wires 5 accessors per W.1 slice scope
+# ============================================================================
+
+def production_aggregator(
+    *,
+    graph_cache=None,
+    posture_classifier=None,
+    priming_store=None,
+    page_intel_cache=None,
+    journey_service=None,
+    journey_default_category: str = "__bid_default__",
+) -> CellFeaturesAggregator:
+    """Build the W.1 production CellFeaturesAggregator.
+
+    Wires 5 substrate accessors per W.1 scope:
+        cohort       (a) direct-call to F.2 sibling accessor
+        posture      (b) lightweight adapter for URLPostureClassifier
+        priming      (b) lightweight adapter for PagePrimingSignatureStore
+                          (sync paths only; skips async L2 per Q21)
+        cascade_tier (b) lightweight adapter composing
+                          PageIntelligenceCache + categorize_posture
+        journey      (c) coordinator wrapper using sync _journeys dict
+                          + to_conversion_stage mapping (Q23 sentinel
+                          for category)
+
+    The 2 build-the-accessor cases (archetype, maximizer_prior) and
+    mindstate (deferred to M.0/M.1+ per Q20) remain at neutral
+    defaults via S6.2 fail-soft pattern.
+
+    Each accessor is fail-soft at construction — if its underlying
+    source isn't available (no singleton, no instance provided),
+    falls back to S6.2's neutral default lambda. Production
+    deployments may pass real instances explicitly to activate
+    specific wirings.
+
+    Args:
+        graph_cache: GraphIntelligenceCache instance. Defaults to
+            get_graph_cache() singleton when available.
+        posture_classifier: URLPostureClassifier instance. No
+            singleton in repo; pass explicitly to activate posture
+            wiring. Defaults to neutral-default lambda.
+        priming_store: PagePrimingSignatureStore instance. No
+            singleton in repo; pass explicitly to activate priming
+            wiring. Defaults to neutral-default lambda.
+        page_intel_cache: PageIntelligenceCache instance. Defaults
+            to get_page_intelligence_cache() singleton when available.
+        journey_service: JourneyTrackingService instance. Defaults
+            to get_journey_tracking_service() singleton when
+            available.
+        journey_default_category: Sentinel category for journey
+            lookups (per Q23 = (i)). Default sentinel never matches
+            populated journeys, so journey accessor returns
+            ConversionStage.UNAWARE until category-threading
+            wiring lands.
+
+    Returns:
+        CellFeaturesAggregator with 5 accessors wired (or fail-
+        soft defaults where underlying source unavailable) +
+        2 W.2-deferred accessors at neutral defaults +
+        mindstate at neutral default.
+    """
+    from adam.cells.accessors import (
+        make_cascade_tier_accessor,
+        make_cohort_accessor,
+        make_journey_accessor,
+        make_posture_accessor,
+        make_priming_accessor,
+    )
+
+    # Try to fetch singletons when not explicitly provided.
+    if graph_cache is None:
+        try:
+            from adam.api.stackadapt.graph_cache import get_graph_cache
+            graph_cache = get_graph_cache()
+        except Exception:  # noqa: BLE001
+            graph_cache = None
+
+    if page_intel_cache is None:
+        try:
+            from adam.intelligence.page_intelligence import (
+                get_page_intelligence_cache,
+            )
+            page_intel_cache = get_page_intelligence_cache()
+        except Exception:  # noqa: BLE001
+            page_intel_cache = None
+
+    if journey_service is None:
+        try:
+            from adam.user.journey.service import (
+                get_journey_tracking_service,
+            )
+            journey_service = get_journey_tracking_service()
+        except Exception:  # noqa: BLE001
+            journey_service = None
+
+    # Build accessors, falling back to neutral-default lambdas if
+    # the underlying source isn't available.
+    cohort_accessor_fn = (
+        make_cohort_accessor(graph_cache)
+        if graph_cache is not None
+        else (lambda buyer_id: (False, 0.5))
+    )
+    posture_accessor_fn = (
+        make_posture_accessor(posture_classifier)
+        if posture_classifier is not None
+        else (lambda url_hash: "INFORMATION_FORAGING")
+    )
+    priming_accessor_fn = (
+        make_priming_accessor(priming_store)
+        if priming_store is not None
+        else (lambda url_hash: None)
+    )
+    cascade_tier_accessor_fn = (
+        make_cascade_tier_accessor(page_intel_cache)
+        if page_intel_cache is not None
+        else None
+    )
+    journey_accessor_fn = (
+        make_journey_accessor(journey_service, journey_default_category)
+        if journey_service is not None
+        else (lambda buyer_id: ConversionStage.UNAWARE)
+    )
+
+    return CellFeaturesAggregator(
+        archetype_accessor=lambda buyer_id: ArchetypeID.PRAGMATIST,
+        posture_accessor=posture_accessor_fn,
+        journey_accessor=journey_accessor_fn,
+        priming_accessor=priming_accessor_fn,
+        mindstate_accessor=lambda buyer_id, url_hash: None,
+        cohort_accessor=cohort_accessor_fn,
+        maximizer_prior_accessor=lambda buyer_id, arch: (0.5, 10.0),
+        cascade_tier_accessor=cascade_tier_accessor_fn,
+        enable_timing=False,
+    )
