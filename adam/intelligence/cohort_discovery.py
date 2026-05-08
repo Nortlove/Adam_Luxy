@@ -65,6 +65,134 @@ class UserCohort:
     compensatory_detection_confidence: float = 0.5
 
 
+# =============================================================================
+# F.2 / S6.1 (2 of 2) — compensatory_consumption_pattern detection
+# =============================================================================
+#
+# Two-criterion heuristic detection from cohort.dominant_mechanisms +
+# cohort.mechanism_effectiveness (the actual cohort_discovery outputs per
+# Q13 finding). The original spec's per-session telemetry inputs (posture
+# concentration / browsing_momentum / hour-of-day variance) don't have a
+# per-cohort aggregation surface in this codebase; F.2 uses what the
+# Louvain-over-RESPONDS_TO pipeline actually produces — the Cialdini-
+# mechanism vocabulary is the canonical cohort-aggregated signal.
+#
+# Mapping rationale (Mead et al. 2010; Loh et al. 2021):
+#   AFFILIATIVE mechanisms (social_proof, liking, unity) ≈ in-group
+#     identification + social-bond proxy + conformity-with-others ≈
+#     compensatory-consumption-as-social-substitute literature.
+#   TRANSACTIONAL NEGATIVES (anchoring, scarcity, loss_aversion) ≈
+#     utilitarian / risk-management response; LOW effectiveness on these
+#     in a cohort indicates the cohort is NOT primarily transactional.
+#
+# REPLICATION + EMPIRICAL CAVEAT — Cialdini-mechanism mapping to
+# compensatory-consumption literature is THEORETICALLY MOTIVATED, NOT
+# EMPIRICALLY VALIDATED on this platform's data. Pilot data through
+# cohort outcome tracking will tighten thresholds and may revise the
+# mechanism-set selection. Heuristic substrate, NOT load-bearing
+# academic citation.
+
+COMPENSATORY_MECHANISM_INDICATORS: tuple = (
+    "social_proof",   # affiliative — conformity-with-others
+    "liking",         # affiliative — peer / celebrity bond proxy
+    "unity",          # affiliative — in-group / shared-identity priming
+)
+
+COMPENSATORY_TRANSACTIONAL_NEGATIVES: tuple = (
+    "anchoring",      # comparison-shopping / price-rationalization
+    "scarcity",       # urgency / utilitarian loss-aversion
+    "loss_aversion",  # transactional risk-management
+)
+
+COMPENSATORY_AFFILIATIVE_DOMINANCE_THRESHOLD: float = 0.50
+COMPENSATORY_TRANSACTIONAL_WEAKNESS_THRESHOLD: float = 0.40
+COMPENSATORY_MIN_COHORT_SIZE_FOR_HIGH_CONFIDENCE: int = 200
+
+
+def detect_compensatory_consumption_pattern(
+    cohort: UserCohort,
+) -> tuple:
+    """Detect compensatory-consumption pattern in a UserCohort using its
+    dominant_mechanisms and mechanism_effectiveness.
+
+    HEURISTIC SUBSTRATE — Cialdini-mechanism vocabulary as proxy for
+    compensatory-consumption literature constructs. NOT load-bearing
+    academic citation. Pilot data through cohort outcome tracking will
+    tighten thresholds and may revise the mechanism-set selection.
+
+    Algorithm (two-criterion):
+        (1) AFFILIATIVE-MECHANISM DOMINANCE:
+            fraction of cohort.dominant_mechanisms in
+            COMPENSATORY_MECHANISM_INDICATORS must be ≥
+            COMPENSATORY_AFFILIATIVE_DOMINANCE_THRESHOLD (default 0.50).
+
+        (2) TRANSACTIONAL-MECHANISM WEAKNESS:
+            mean cohort.mechanism_effectiveness across
+            COMPENSATORY_TRANSACTIONAL_NEGATIVES must be <
+            COMPENSATORY_TRANSACTIONAL_WEAKNESS_THRESHOLD (default 0.40).
+
+        Both criteria required for flag = True.
+
+    Confidence calibration:
+        0.85 — both criteria met AND cohort.size ≥
+               COMPENSATORY_MIN_COHORT_SIZE_FOR_HIGH_CONFIDENCE (200).
+        0.65 — exactly one criterion met OR (both met but undersample).
+        0.50 — neither criterion met (uninformative neutral default;
+               also returned for cohorts with empty dominant_mechanisms).
+
+    References (theoretical motivation, NOT empirical validation):
+        Mead, N. L., Baumeister, R. F., Stillman, T. F., Rawn, C. D., &
+            Vohs, K. D. (2010). Social exclusion causes people to spend
+            and consume strategically in the service of affiliation.
+            JCR 37(5), 902-919.
+        Loh, H. C. et al. (2021). Compensatory consumption: A systematic
+            review. JCB 20(5), 1144-1156.
+        Cialdini, R. B. (2009/2016). Influence: Science and Practice
+            (mechanism vocabulary mapping).
+    """
+    if not cohort.dominant_mechanisms:
+        return (False, 0.50)
+
+    affiliative_count = sum(
+        1 for m in cohort.dominant_mechanisms
+        if m in COMPENSATORY_MECHANISM_INDICATORS
+    )
+    affiliative_fraction = (
+        affiliative_count / len(cohort.dominant_mechanisms)
+    )
+    criterion_1 = (
+        affiliative_fraction
+        >= COMPENSATORY_AFFILIATIVE_DOMINANCE_THRESHOLD
+    )
+
+    transactional_values = [
+        cohort.mechanism_effectiveness.get(m, 0.5)
+        for m in COMPENSATORY_TRANSACTIONAL_NEGATIVES
+    ]
+    mean_transactional = (
+        sum(transactional_values) / len(transactional_values)
+    )
+    criterion_2 = (
+        mean_transactional
+        < COMPENSATORY_TRANSACTIONAL_WEAKNESS_THRESHOLD
+    )
+
+    flag = criterion_1 and criterion_2
+    sufficient_sample = (
+        cohort.size
+        >= COMPENSATORY_MIN_COHORT_SIZE_FOR_HIGH_CONFIDENCE
+    )
+
+    if flag and sufficient_sample:
+        confidence = 0.85
+    elif (criterion_1 != criterion_2) or (flag and not sufficient_sample):
+        confidence = 0.65
+    else:
+        confidence = 0.50
+
+    return (flag, confidence)
+
+
 @dataclass
 class CohortMembership:
     """A user's cohort membership."""
@@ -260,7 +388,12 @@ class CohortDiscoveryService:
                     )
                     cohort.dominant_mechanisms = mechanism_profile.get("dominant", [])
                     cohort.mechanism_effectiveness = mechanism_profile.get("effectiveness", {})
-                    
+
+                    # F.2 / S6.1 (2 of 2) — populate E's deferred slot.
+                    flag, confidence = detect_compensatory_consumption_pattern(cohort)
+                    cohort.compensatory_consumption_pattern = flag
+                    cohort.compensatory_detection_confidence = confidence
+
                     cohorts.append(cohort)
                     self._cohorts[cohort_id] = cohort
                 
@@ -342,6 +475,12 @@ class CohortDiscoveryService:
             ),
         ]
         for cohort in defaults:
+            # F.2 / S6.1 (2 of 2) — populate E's deferred slot on
+            # default cohorts too, so the no-Neo4j fallback path
+            # carries realistic flag values rather than silent defaults.
+            flag, confidence = detect_compensatory_consumption_pattern(cohort)
+            cohort.compensatory_consumption_pattern = flag
+            cohort.compensatory_detection_confidence = confidence
             self._cohorts[cohort.cohort_id] = cohort
         return defaults
     
@@ -531,6 +670,11 @@ class CohortDiscoveryService:
                 "mechanism_effectiveness_json": json.dumps(
                     c.mechanism_effectiveness or {},
                 ),
+                # F.2 / S6.1 (2 of 2) — persist E's slot.
+                "compensatory_consumption_pattern":
+                    c.compensatory_consumption_pattern,
+                "compensatory_detection_confidence":
+                    c.compensatory_detection_confidence,
             }
             for c in self._cohorts.values()
         ]
@@ -549,6 +693,8 @@ class CohortDiscoveryService:
         MERGE (uc:UserCohort {id: c.cohort_id})
         SET uc.size = c.size,
             uc.mechanism_effectiveness_json = c.mechanism_effectiveness_json,
+            uc.compensatory_consumption_pattern = c.compensatory_consumption_pattern,
+            uc.compensatory_detection_confidence = c.compensatory_detection_confidence,
             uc.updated_at = datetime()
         RETURN count(*) AS persisted
         """

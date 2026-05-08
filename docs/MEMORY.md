@@ -164,6 +164,49 @@ Structural defense against re-drift. Past pattern: surviving alternative plans d
 
 ---
 
+### Session 2026-05-07 — F.2 / S6.1 (2 of 2) — compensatory_consumption_pattern detection + bid-time accessor landed; **S6 KEYSTONE CLOSED**
+
+**EVE Handoff:**
+
+- **Executed:** F.2 / S6.1 (2 of 2 — cohort-side; closes S6 keystone) — `detect_compensatory_consumption_pattern` two-criterion heuristic detection function in `adam/intelligence/cohort_discovery.py` + 5 module-level constants (COMPENSATORY_MECHANISM_INDICATORS, COMPENSATORY_TRANSACTIONAL_NEGATIVES, COMPENSATORY_AFFILIATIVE_DOMINANCE_THRESHOLD=0.50, COMPENSATORY_TRANSACTIONAL_WEAKNESS_THRESHOLD=0.40, COMPENSATORY_MIN_COHORT_SIZE_FOR_HIGH_CONFIDENCE=200) + integration into `discover_cohorts` and `_get_default_cohorts` pipelines + `persist_cohort_assignments` cypher write extended to persist E's two new fields + `get_cohort_compensatory_flag(buyer_id) -> tuple[bool, float]` sibling accessor in `adam/api/stackadapt/graph_cache.py` with parallel TTL cache (30 min) mirroring `get_cohort_priors` pattern + 33 new tests across 2 files (`tests/unit/test_compensatory_detection.py` + `tests/unit/test_graph_cache_cohort_compensatory.py`) + 1 stale-test update (E's `test_default_cohort_pipeline_produces_safe_defaults` renamed to `test_default_cohort_pipeline_populates_new_fields` — F.2 wires detection into the default-cohort path per spec, so the pre-F.2 "always (False, 0.5)" assertion legitimately evolved to "valid type + range" invariants). Test suite: **5,535 passing** (+32 net from F.2: +33 new − 0 regressions; the 1 stale E test was an in-slice schema-evolution update, not a regression).
+
+- **🔑 S6 KEYSTONE CLOSED.** 11 slices total (A.0 + A.1.0 + A.1 + A.2.0 + A.2 + B + C + D + E + F.1 + F.2). All preparation slices and the keystone closed. **Pilot path fully unblocked.**
+
+- **Q14.B=(β) baked in:** Sibling accessor `get_cohort_compensatory_flag` (NOT extending `get_cohort_priors` return type, NOT encoding flag in mechanism_effectiveness_json blob). Clean separation between mechanism-effectiveness scalars (`Dict[str, float]`) and cohort-level boolean flag (`tuple[bool, float]`). Existing `get_cohort_priors` callers continue working unchanged. New cache `self._cohort_compensatory_flags` parallels `self._cohort_priors` with the same 30-min TTL.
+
+- **Pass A finding (cypher extension required):** `persist_cohort_assignments` cypher writes only specific UserCohort fields via SET enumeration. F.2 extended both the metadata-payload comprehension AND the `cohort_query` SET clause to include `compensatory_consumption_pattern` and `compensatory_detection_confidence`. Cypher write extension is part of F.2's scope per the spec ("F.2 must extend the cypher write to persist the new fields"). Backward-compat: pre-F.2 cohort nodes lacking these properties read as None at the bid-time accessor → return (False, 0.50) neutral default via the explicit `isinstance(raw_flag, bool)` / `isinstance(raw_conf, (int, float))` guards.
+
+- **Pass B finding:** Cialdini mechanism IDs in `adam/intelligence/mechanism_vocab.py:152-165` match spec exactly — social_proof, liking, unity (affiliative — COMPENSATORY_MECHANISM_INDICATORS); anchoring, scarcity, loss_aversion (transactional negatives); plus authority, reciprocity, commitment, curiosity for the broader vocabulary.
+
+- **Pass C finding:** `get_cohort_priors` at `graph_cache.py:996` confirmed unchanged from Q13. F.2 added the parallel `get_cohort_compensatory_flag` method without touching the existing accessor.
+
+- **Pass D finding:** F.1 cell taxonomy substrate operational (2,880 cells loaded; canonical example "ANALYST_TC_INT_PROM_Q1" resolves correctly). F.2 doesn't touch `adam/cells/`.
+
+- **Verified:**
+  - Smoke-test 9-pattern detection verification: empty mechanisms → (False, 0.50) ✅; pure affiliative + low transactional + size 300 → (True, 0.85) ✅; same with size 100 (undersample) → (True, 0.65) ✅; affiliative-only → (False, 0.65) ✅; transactional-weak only → (False, 0.65) ✅; neither criterion → (False, 0.50) ✅; missing transactional mechanism defaults to 0.5 → (True, 0.85) ✅; determinism (same input twice) ✅; default-cohort populated values consistent with direct function call ✅.
+  - Smoke-test 4-pattern accessor verification: empty buyer_id → (False, 0.50) ✅; no driver → (False, 0.50) ✅; driver returns flag → (True, 0.85) ✅; pre-F.2 None fields → (False, 0.50) backward-compat ✅.
+  - Detection logic (Tests 1-9): all six two-criterion combinations + missing-mechanism handling + determinism + heuristic caveat docstring pin.
+  - Boundary semantics (Test 7 ×4 sub-cases): exactly-at-threshold behavior pinned for each of three thresholds (`>=` for affiliative, strict `<` for transactional, `>=` for size).
+  - Constants tunability (Test 17): all 5 module-level constants pinned at spec defaults.
+  - Pipeline integration (Tests 10-11 in default-cohort variant + payload variant): default cohorts populate new fields after detection runs; `persist_cohort_assignments` source contains both `uc.compensatory_consumption_pattern = c.compensatory_consumption_pattern` and `uc.compensatory_detection_confidence = c.compensatory_detection_confidence` SET clauses.
+  - Bid-time accessor (Tests 12-15): returns flag for known buyer; returns neutral default for empty / no-driver / pre-F.2-None cases; cache TTL respected (cache-hit path doesn't touch driver; expired entry triggers re-query); p99 latency on cached path < 1ms over 10,000 calls.
+  - Cache coherence (Test 16): `get_cohort_priors` cache and `get_cohort_compensatory_flags` cache are independent dicts on the same buyer_id key — pin for Q14.B=(β) sibling-accessor design.
+  - Zero-regression on F.1 (Test 19): cell taxonomy + canonical example "ANALYST_TC_INT_PROM_Q1" still resolves; CELL_TAXONOMY count == 2,880.
+  - Zero-regression on existing `get_cohort_priors` (Test 18): signature `(self, buyer_id) -> Dict` unchanged; F.2 only ADDS the sibling accessor.
+  - Heuristic caveat docstring pinned (Test 20): "HEURISTIC SUBSTRATE" + "not load-bearing" + "Cialdini" all present in detect function docstring; future readers cannot promote to load-bearing without breaking the test.
+  - 1 stale E test updated (`test_default_cohort_pipeline_produces_safe_defaults` → `test_default_cohort_pipeline_populates_new_fields`): pre-F.2 asserted always-defaults; post-F.2 asserts valid type + range invariants. Same schema-evolution pattern as B's V1→V2 update of test_signature.py.
+  - Full pytest suite: 5,535 passed / 9 pre-existing failures unchanged (TestCampaignDocs ×8 + test_dag_has_14_atoms ×1) / 5 skipped — **zero regressions on any unrelated surface; the 1-test diff vs pre-F.2 baseline is the in-slice schema-evolution update, not a regression**.
+
+- **Loneliness/Compensatory at COHORT level (§3 Block A #5) status: PARTIAL → COMPLETE.** Schema slot now populated by detection logic; bid-time access wired; persistence cypher extended. Together with C/D's mindstate-level FOMO + psych_ownership + depletion (and the deferred D.bis loneliness_compensatory_flag + parasocial_priming_score), the platform has the full cohort-prior + mindstate-level signal stack for compensatory consumption — minus the deferred D.bis vocabulary work which the keystone closure makes safe to ship next.
+
+- **Architectural decision history closed:** A/B/C/D added side-channel substrate fields on existing structures (Page-Mindstate-Vector, Page-Priming-Signature, archetype priors). E added a cohort-level schema slot. F.1 shipped the static cell taxonomy + tuple constructor. F.2 shipped the cohort-side detection + bid-time accessor. The full S6 stack is now substrate-complete; S6.2 (predicate evaluator) consumes it.
+
+- **Expected next:** Either (a) **D.bis** (canonical EMOTION_KEYWORDS / MECHANISM_KEYWORDS extension + signature_version V2→V3 + 2 deferred mindstate derivations: loneliness_compensatory_flag + parasocial_priming_score — restores the symmetry between cohort-level and mindstate-level compensatory signal stacks); or (b) **S6.2** (predicate evaluator that consumes B's persuasion_knowledge_activation, C+D's mindstate composites, E+F.2's cohort flag, and the F.1 cell taxonomy to drive cell-conditioned creative selection — the actual decision-time consumer that makes all of A/B/C/D/E/F substrate worth its bytes). Both legitimate next moves; Chris adjudicates sequencing.
+
+- **Hand-off pointer:** Branch `feature/hmt-dashboard` @ HEAD post-F.2 commit. **11 slices closed total**; S6 keystone closed. Working tree carries this MEMORY.md update + `docs/PLATFORM_INVENTORY_2026_05_07.md` still untracked from earlier sessions. Pilot path fully unblocked.
+
+---
+
 ### Session 2026-05-07 — F.1 / S6.1 (1 of 2) — cell taxonomy + tuple constructor landed (substrate-side keystone)
 
 **EVE Handoff:**

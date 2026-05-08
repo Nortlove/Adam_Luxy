@@ -196,21 +196,32 @@ class TestZeroRegression:
         assert c.compensatory_consumption_pattern is False
         assert c.compensatory_detection_confidence == 0.5
 
-    def test_default_cohort_pipeline_produces_safe_defaults(self):
+    def test_default_cohort_pipeline_populates_new_fields(self):
         """Run _get_default_cohorts (the no-Neo4j fallback that ships
         in discover_cohorts when the driver is unavailable). Assert
-        each resulting UserCohort carries the new fields with safe
-        defaults — the pre-E pipeline is not broken by the schema
-        extension."""
+        each resulting UserCohort carries the new fields with VALID
+        values.
+
+        Schema-evolution note: F.2 (commit landing this slice) wires
+        detect_compensatory_consumption_pattern into _get_default_cohorts
+        per the F.2 spec. Pre-F.2 this test asserted always (False, 0.5)
+        defaults; post-F.2 the fields are populated by detection running
+        on the default cohort signatures. We pin VALID-value invariants
+        rather than specific values, since the values are F.2's contract.
+        """
         service = CohortDiscoveryService(neo4j_driver=None)
         defaults = service._get_default_cohorts()
-        assert len(defaults) > 0, "default-cohort fallback should produce at least one cohort"
+        assert len(defaults) > 0, (
+            "default-cohort fallback should produce at least one cohort"
+        )
         for c in defaults:
-            assert c.compensatory_consumption_pattern is False, (
-                f"default cohort {c.cohort_id} carries non-default flag"
+            assert isinstance(c.compensatory_consumption_pattern, bool), (
+                f"default cohort {c.cohort_id} flag has wrong type: "
+                f"{type(c.compensatory_consumption_pattern)}"
             )
-            assert c.compensatory_detection_confidence == 0.5, (
-                f"default cohort {c.cohort_id} carries non-default confidence"
+            assert 0.0 <= c.compensatory_detection_confidence <= 1.0, (
+                f"default cohort {c.cohort_id} confidence out of range: "
+                f"{c.compensatory_detection_confidence}"
             )
 
     def test_singleton_factory_still_works(self):

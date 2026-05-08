@@ -93,6 +93,13 @@ class GraphIntelligenceCache:
         # Cached per-buyer with TTL to avoid hot-path Neo4j reads.
         self._cohort_priors: Dict[str, Tuple[Dict[str, float], float]] = {}
 
+        # F.2 / S6.1 (2 of 2) — sibling cache for the cohort-level
+        # compensatory_consumption_pattern flag (read from the same
+        # UserCohort metadata as get_cohort_priors but exposed via a
+        # separate accessor with semantically appropriate type).
+        # Cached value is (flag, confidence, ts).
+        self._cohort_compensatory_flags: Dict[str, Tuple[bool, float, float]] = {}
+
         self._initialized = False
 
     # ── Connection ──────────────────────────────────────────────────────
@@ -1065,6 +1072,86 @@ class GraphIntelligenceCache:
         with self._lock:
             self._cohort_priors[buyer_id] = (priors, now)
         return priors
+
+    # ── F.2 / S6.1 (2 of 2): cohort compensatory flag accessor ─────────
+
+    _COHORT_COMPENSATORY_FLAG_TTL = 60 * 30  # 30 minutes; mirrors priors TTL
+
+    def get_cohort_compensatory_flag(
+        self, buyer_id: str,
+    ) -> Tuple[bool, float]:
+        """Sync read of compensatory_consumption_pattern flag and
+        detection_confidence for a buyer's cohort.
+
+        Pipeline:
+            (User {user_id: $buyer_id}).cohort_id →
+                (UserCohort {id: cohort_id}).compensatory_consumption_pattern
+                                            .compensatory_detection_confidence
+
+        Returns (False, 0.50) — uninformative neutral default — when:
+            * buyer_id is empty
+            * no Neo4j driver available
+            * the buyer has no cohort_id assigned
+            * the cohort metadata node doesn't exist
+            * the cohort node lacks the F.2 properties (pre-F.2
+              persisted entries — backward-compat path)
+
+        Bid-time latency: <1ms after first lookup (cached per-buyer
+        with TTL; same pattern as get_cohort_priors).
+
+        Q14.B=(β) sibling-accessor design: this method is deliberately
+        SEPARATE from get_cohort_priors (which returns Dict[str, float]
+        of mechanism effectiveness) to avoid type-confusing per-mechanism
+        scalars with a cohort-level boolean flag.
+        """
+        if not buyer_id:
+            return (False, 0.50)
+
+        now = time.time()
+        cached = self._cohort_compensatory_flags.get(buyer_id)
+        if cached is not None:
+            flag, confidence, ts = cached
+            if now - ts < self._COHORT_COMPENSATORY_FLAG_TTL:
+                return (flag, confidence)
+
+        flag: bool = False
+        confidence: float = 0.50
+        driver = self._get_driver()
+        if driver is None:
+            with self._lock:
+                self._cohort_compensatory_flags[buyer_id] = (
+                    flag, confidence, now,
+                )
+            return (flag, confidence)
+
+        cypher = """
+        MATCH (u:User {user_id: $buyer_id})
+        WHERE u.cohort_id IS NOT NULL
+        OPTIONAL MATCH (uc:UserCohort {id: u.cohort_id})
+        RETURN uc.compensatory_consumption_pattern AS flag,
+               uc.compensatory_detection_confidence AS confidence
+        """
+        try:
+            with driver.session() as session:
+                record = session.run(cypher, buyer_id=buyer_id).single()
+                if record:
+                    raw_flag = record.get("flag")
+                    raw_conf = record.get("confidence")
+                    if isinstance(raw_flag, bool):
+                        flag = raw_flag
+                    if isinstance(raw_conf, (int, float)):
+                        confidence = float(raw_conf)
+        except Exception as exc:
+            logger.debug(
+                "Cohort compensatory flag query failed for %s: %s",
+                buyer_id, exc,
+            )
+
+        with self._lock:
+            self._cohort_compensatory_flags[buyer_id] = (
+                flag, confidence, now,
+            )
+        return (flag, confidence)
 
     # ── Public API ──────────────────────────────────────────────────────
 
