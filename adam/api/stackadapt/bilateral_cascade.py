@@ -3294,6 +3294,15 @@ def run_bilateral_cascade(
                     _profile.archetype_assigned_at = (
                         datetime.now(timezone.utc).isoformat()
                     )
+                    # W.2b: refresh maximizer_tendency posterior with
+                    # archetype-conditional prior from A.2 derivation.
+                    try:
+                        from adam.intelligence.information_value import (
+                            apply_archetype_maximizer_prior,
+                        )
+                        apply_archetype_maximizer_prior(_profile)
+                    except Exception:
+                        pass  # graceful fallback to default Beta(2,2)
                     _profile_dirty = True
 
                 # One-shot reassignment policy (Q27=(ε))
@@ -3309,6 +3318,17 @@ def run_bilateral_cascade(
                         _new_assignment = evaluate_reassignment(_profile)
                         if _new_assignment is not None:
                             _profile.archetype = _new_assignment.value
+                            # W.2b: refresh maximizer prior on
+                            # reassignment (discards accumulated
+                            # posterior — acceptable per one-shot
+                            # rarity).
+                            try:
+                                from adam.intelligence.information_value import (
+                                    apply_archetype_maximizer_prior,
+                                )
+                                apply_archetype_maximizer_prior(_profile)
+                            except Exception:
+                                pass
                         _profile.archetype_reassigned = True
                     _profile_dirty = True
 

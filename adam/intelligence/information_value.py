@@ -133,6 +133,11 @@ UNCERTAINTY_DIMENSIONS = [
     "interoceptive_awareness",      # body-signal driven decisions (interoceptive_style.py)
     "cooperative_framing_fit",      # fairness/reciprocity orientation (cooperative_framing.py)
     "decision_entropy",             # choice difficulty/paralysis (decision_entropy.py)
+    # --- W.2b: maximizer_tendency dimension (archetype-conditional prior) ---
+    "maximizer_tendency",           # Schwartz et al. 2002 maximizer/satisficer
+                                    # (cold-start prior derived from
+                                    # archetype assignment via A.2's
+                                    # derive_maximizer_beta_priors)
 ]
 # NOTE on bilateral edge dimensions (e.g., metaphor_alignment from F3):
 # UNCERTAINTY_DIMENSIONS is the BUYER-SIDE trait list, each tracked as
@@ -228,11 +233,77 @@ _ARCHETYPE_DIMENSION_PRIORS_FALLBACK: Dict[str, Dict[str, Tuple[float, float]]] 
     },
 }
 
+# ---------------------------------------------------------------------------
+# W.2b: inject A.2-derived maximizer_tendency priors into the fallback dict
+# at module load time. derive_maximizer_beta_priors is a pure function over
+# static archetype definitions; no I/O risk. Failure (e.g., circular import)
+# silently leaves maximizer dimensions at default Beta(2,2) — graceful
+# degradation matching pre-W.2b behavior.
+# ---------------------------------------------------------------------------
+def _inject_maximizer_priors_into_archetype_dict() -> None:
+    try:
+        from adam.cold_start.priors.maximizer_tendency import (
+            derive_maximizer_beta_priors,
+        )
+        from adam.cold_start.archetypes.definitions import (
+            ARCHETYPE_DEFINITIONS,
+        )
+        priors = derive_maximizer_beta_priors(ARCHETYPE_DEFINITIONS)
+        for archetype_id, beta_dist in priors.items():
+            arch_key = archetype_id.value.lower()
+            if arch_key not in _ARCHETYPE_DIMENSION_PRIORS_FALLBACK:
+                _ARCHETYPE_DIMENSION_PRIORS_FALLBACK[arch_key] = {}
+            _ARCHETYPE_DIMENSION_PRIORS_FALLBACK[arch_key][
+                "maximizer_tendency"
+            ] = (float(beta_dist.alpha), float(beta_dist.beta))
+    except Exception:
+        # A.2 unavailable; maximizer_tendency stays at default Beta(2,2)
+        pass
+
+
+_inject_maximizer_priors_into_archetype_dict()
+
 # Mutable reference — replaced by load_graph_dimension_priors() at startup
 _ARCHETYPE_DIMENSION_PRIORS: Dict[str, Dict[str, Tuple[float, float]]] = dict(
     _ARCHETYPE_DIMENSION_PRIORS_FALLBACK
 )
 _DIMENSION_PRIORS_SOURCE: str = "hardcoded_fallback"
+
+
+def apply_archetype_maximizer_prior(profile) -> None:
+    """W.2b helper: apply archetype-conditional maximizer_tendency
+    prior to a BuyerUncertaintyProfile.
+
+    Called from the cascade integration block after W.2a's
+    archetype assignment OR reassignment to refresh
+    profile.constructs["maximizer_tendency"] with the
+    archetype-specific prior derived from A.2's
+    derive_maximizer_beta_priors.
+
+    Idempotent — safe to call multiple times for the same archetype.
+    No-op when profile.archetype is None (cold-start before W.2a's
+    mapper has assigned). No-op when the archetype has no
+    maximizer_tendency entry in _ARCHETYPE_DIMENSION_PRIORS (rare;
+    only if A.2 import failed at module load).
+
+    On reassignment (archetype changes), this REPLACES the
+    accumulated maximizer_tendency posterior with the new
+    archetype's prior — discarding evidence accumulated under the
+    old archetype. Acceptable because Q27=(ε) reassignment is rare
+    (one-shot at bid 20) and the new archetype's prior is more
+    informative than the discarded posterior.
+    """
+    if getattr(profile, "archetype", None) is None:
+        return
+    archetype_priors = _ARCHETYPE_DIMENSION_PRIORS.get(
+        profile.archetype.lower(), {},
+    )
+    if "maximizer_tendency" not in archetype_priors:
+        return
+    alpha, beta = archetype_priors["maximizer_tendency"]
+    profile.constructs["maximizer_tendency"] = ConstructPosterior(
+        alpha=alpha, beta=beta,
+    )
 
 
 async def load_graph_dimension_priors(neo4j_driver=None) -> bool:
