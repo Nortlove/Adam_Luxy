@@ -164,6 +164,50 @@ Structural defense against re-drift. Past pattern: surviving alternative plans d
 
 ---
 
+### Session 2026-05-08 — W.0 substrate accessor wiring audit landed (read-only memo)
+
+**EVE Handoff:**
+
+- **Executed:** W.0 read-only audit. Ten-pass inspection of the 6 substrate accessors S6.2's `CellFeaturesAggregator` needs wired (replacing `default_aggregator()` neutral-defaults at `bilateral_cascade.py:2882`) producing tracked memo at `docs/audits/SUBSTRATE_ACCESSOR_WIRING_AUDIT.md` (~3,783 words / 19 ##-level sections: 5-line header block + §1 Executive Summary + §2-§9 per-accessor passes + §10 latency budget + §11 wiring approach inventory + §12 W.1+ recommended sequence + §13 QUESTION-and-stop concerns + §14 closure). Audit-then-implement pattern matching A.1.0 + A.2.0 + S6.2.0 precedents. Zero code changes; zero test changes.
+
+- **Wiring approach distribution (Pass 11 inventory):**
+  - **(a) Direct-call: 1** — `cohort_accessor` (F.2's `get_cohort_compensatory_flag` matches S6.2's expected signature exactly).
+  - **(b) Lightweight adapter: 3** — `posture_accessor`, `priming_accessor`, `cascade_tier_accessor` (5-line lambdas/wrappers for minor signature mismatches).
+  - **(c) Coordinator wrapper: 1** — `journey_accessor` (20-50 line wrapper because journey state lives across multiple modules and ConversionStage mapping needs explicit composition with `to_conversion_stage`).
+  - **(d) Build-the-accessor: 3** — `archetype_accessor`, `mindstate_accessor`, `maximizer_prior_accessor` (don't exist as single function calls today; W.1+ must construct from existing pieces).
+
+- **Recommended W.1+ slice sequence (4 slices estimated per §12):**
+  - W.1: bundle direct-call (cohort) + lightweight adapters (posture, priming, cascade_tier)
+  - W.2: journey coordinator wrapper
+  - W.3: archetype + maximizer build-the-accessor interims (pilot stubs vs full constructions)
+  - W.4: mindstate build-the-accessor (potentially split per Q20 — see scope-expansion finding below)
+
+- **5 QUESTION-and-stop concerns surfaced for Claude Proper adjudication:**
+  - **Q20 — mindstate C+D orchestrator field population (MOST CONSEQUENTIAL).** The C+D-derived mindstate properties (`fomo_score`, `psych_ownership_proxy`, `depletion_proxy`) **do not fire on real bid data without a separate substrate-fetch path**. `extract_mindstate_vector` does not populate the orchestrator-side fields the C+D properties depend on, and some of those fields (`touch_count`, `dwell_seconds`, `session_position_seconds`) come from session-telemetry surfaces that don't exist as cached bid-time accessors today. **Half the seed predicates (3 of 6 — high_fomo_promotion, high_fomo_prevention, high_psych_ownership_endowment_reinforce, plus depletion-keyed predicates if added later) are dead-letter until Q20 is resolved.** W.4 may need to split (W.4a extraction-only at defaults; W.4b session-telemetry layer).
+  - **Q21 — asyncio.run in sync hot path.** Some accessor paths require crossing async/sync boundaries; calling `asyncio.run` in the bid hot path is a latency disaster. Adjudication needed: pre-run async work into a sync cache, or convert the aggregator integration block to run within an async context.
+  - **Q22 — <8ms aggregator p99 budget exceeded by sum-of-accessors estimate.** Per-accessor latency estimates summed exceed S6.2's <8ms target. Adjudication: revise budget upward (move time from elsewhere in the 25ms retargeting slot), introduce parallel-fetch via `asyncio.gather`, or accept that some accessors must be cached more aggressively.
+  - **Q23 — default category for journey_accessor.** The journey state machine's cold-start behavior may not return UNAWARE (S6.2's neutral default); some flows return `None` and others return a different starting stage. Adjudication: standardize cold-start to UNAWARE in the wrapper, or revise S6.2's neutral default policy.
+  - **Q24 — archetype pilot stub vs full build.** A per-user archetype accessor doesn't exist as a single function. Pilot can stub with PRAGMATIST default for all users (matches S6.2's neutral default; predicates that condition on archetype don't fire) or W.3 can build a real accessor wrapping the cold-start archetype detection. Adjudication: pilot urgency vs predicate-fire-rate tradeoff.
+
+- **Pre-flight findings:**
+  - All 9 inspection points populated for each of 6 accessors (Pass 1-7 in §2-§8) plus optional cascade_tier_accessor (Pass 8 in §9).
+  - Latency-budget accounting (§10): per-accessor estimates derived from existing benchmarks where present + estimates otherwise. Sum exceeds 8ms — this is the Q22 concern.
+  - Wiring approach inventory (§11): classification table with rationale per accessor.
+
+- **Verified:**
+  - Memo present at expected path (`docs/audits/SUBSTRATE_ACCESSOR_WIRING_AUDIT.md`); 32KB; all 19 sections present per spec.
+  - Zero tracked files modified by audit fork (only the new untracked memo file in working tree).
+  - All claims in memo cite `path:line` references throughout per audit discipline rule.
+  - Full pytest unchanged (no code changes; baseline 5,598 passing remains intact).
+
+- **Architectural decision history note:** The audit-first discipline keeps paying for itself. Q20 (mindstate dead-letter) would have been a substantial pre-pilot disappointment if discovered after wiring 4 slices and noticing predicates still don't fire. Q22 (latency budget overrun) would have manifested as production p99 spikes if discovered post-wiring. Q24 (archetype pilot stub vs full build) is a scope decision that affects W.3 sizing — better adjudicated before W.3 starts. The audit makes the W.1+ sequence shippable on real findings rather than assumptions.
+
+- **Expected next:** **W.1 first wire slice** — likely the direct-call + lightweight adapter bundle (cohort + posture + priming + cascade_tier per §12 W.1) since those have no QUESTION-and-stop blockers. W.2 (journey wrapper) and W.3 (archetype + maximizer build) need Q23 + Q24 adjudication before shipping. **W.4 (mindstate) is gated by Q20** — Chris must adjudicate scope (extraction-only with defaults vs full session-telemetry layer build) before W.4 can ship. Awaits Claude Proper prompt incorporating Q20-Q24 adjudications + W.1 scope confirmation.
+
+- **Hand-off pointer:** Branch `feature/hmt-dashboard` @ HEAD post-W.0 commit. **14 slices closed total** (12 implementation + 2 audits — S6.2.0 + W.0). Working tree carries this MEMORY.md update + the new audit memo + `docs/PLATFORM_INVENTORY_2026_05_07.md` still untracked from earlier sessions. Substrate-accessor wiring is the next core-path work; W.1 is the next implementation slice.
+
+---
+
 ### Session 2026-05-07 — S6.2 cell-conditional creative-selection: predicate evaluator + cell_features aggregator + Path A integration landed; **S6 SUBSTRATE NOW OPERATIONAL**
 
 **EVE Handoff:**
