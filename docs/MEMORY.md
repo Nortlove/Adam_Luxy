@@ -164,6 +164,41 @@ Structural defense against re-drift. Past pattern: surviving alternative plans d
 
 ---
 
+### Session 2026-05-07 — S6.2.0 retargeting orchestrator creative-selection audit landed (read-only memo)
+
+**EVE Handoff:**
+
+- **Executed:** S6.2.0 read-only audit. Six-pass inspection of `adam/retargeting/` orchestrator surface producing tracked memo at `docs/audits/RETARGETING_ORCHESTRATOR_CREATIVE_SELECTION_AUDIT.md` (~4,013 words / 407 lines / 14 sections: 9 numbered §-sections + 5 sub-headings under §8). Audit-then-implement pattern matching A.1.0 + A.2.0 precedents (commits c237e4b + 9a2fc84). Zero code changes; zero test changes; the memo is the entire deliverable.
+
+- **Recommended integration seam: (a) BEFORE.** Per audit §5: insert as a new fail-soft modulator inside `run_bilateral_cascade` at `bilateral_cascade.py` ~line 2870, parallel to the existing `apply_posture_modulation` (which is the structural template). Minimizes coupling; matches an established pattern; preserves the existing creative-selection logic downstream.
+
+- **4 QUESTION-and-stop concerns surfaced for Claude Proper adjudication before S6.2 ships:**
+  - **Q16 — substrate-not-yet-consumed scope.** S6.2 is not just a predicate evaluator — it is the **first consumer of the entire B/C/D/E/F.2 substrate stack at bid time**. Verified by grep: zero bid-time consumers of `PageMindstateVector.fomo_score | psych_ownership_proxy | depletion_proxy`, `PagePrimingSignature.persuasion_knowledge_activation`, `UserCohort.compensatory_consumption_pattern`, `get_cohort_compensatory_flag`, OR `PagePrimingSignature` itself anywhere in `adam/api/`, `adam/intelligence/bid_composer.py`, `adam/intelligence/kelly_bid_sizing.py`, or `adam/retargeting/`. Two adjudication options: (i) S6.2 owns substrate-fetch coordination via a new `cell_features` aggregator AND the predicate evaluator (single combined slice); (ii) split S6.2 into S6.2a substrate-fetch + S6.2b predicate-evaluator slices. Audit recommends (i) for cohesion; Chris adjudicates.
+  - **Q17 — parallel-path reconciliation.** `TherapeuticTouch` does NOT flow into `adam/api/stackadapt/`. Path A (bid-time bilateral_cascade) and Path B (post-non-conversion adaptive therapeutic loop) run in parallel and meet only via Neo4j-persisted posteriors. S6.2 lives on Path A; how (and whether) the predicate evaluator interacts with Path B's TherapeuticTouch sequence selection needs explicit decision before scope freeze.
+  - **Q18 — posture cardinality mismatch.** F.1 cells use 5-class `FIVE_CLASS_POSTURES` (INFORMATION_FORAGING / TASK_COMPLETION / LEISURE_BROWSING / SOCIAL_CONSUMPTION / TRANSACTIONAL_COMPARISON). The bid-time cascade reads a 4-class HIGH/MID/LOW/UNKNOWN posture vocabulary in `apply_posture_modulation`. Either S6.2 maps between them at the seam, or the cascade adopts the 5-class vocabulary for cell-conditional paths. Surface for Claude Proper because it affects whether the cell tuple constructor's existing `posture` axis can be fed directly from the cascade's current posture signal.
+  - **Q19 — predicate authoring surface.** Python decorator-based predicates (programmer-authored, code-reviewed) vs YAML/JSON DSL (analyst-authored, hot-reloadable) vs hybrid. Affects who owns predicate evolution post-pilot and how predicates are versioned alongside cell taxonomy.
+
+- **Other key audit findings:**
+  - Decision boundary call graph mapped (§2): bid-time entry → bilateral_cascade.run_bilateral_cascade → mechanism_scores → bid response. The "creative selection" function in the orchestrator turns out to be mechanism + bid composition, not a discrete creative-id picker — clarifies what S6.2 is actually conditioning.
+  - Current-selector input inventory (§3): selector consumes archetype, posture (4-class), mechanism_effectiveness from cohort priors, mechanism_scores from cascade L1-L3 — but NONE of B/C/D/E/F.2's substrate. This is the substrate-not-yet-consumed finding that drives Q16.
+  - Downstream consumers + output contract (§4): mechanism_scores dict flows into bid composer + Kelly bid sizing + decision-trace emitter. S6.2's output must remain `Dict[str, float]`-shape-compatible to plug in at the BEFORE seam without contract changes.
+  - Test surface (§6): regression invariants in `tests/unit/test_bilateral_cascade.py` and `tests/unit/test_cohort_modulation.py` pin specific input-output behavior the BEFORE-seam integration must preserve.
+  - Latency budget (§7): current retargeting selector consumes well under 25ms; S6.2 has substantial headroom in the same slot for predicate evaluation. F.1 (4μs) + F.2 (<1ms) leave room for ~15ms+ of predicate work before encroaching on adjacent slots.
+
+- **Verified:**
+  - Memo present at expected path (`docs/audits/RETARGETING_ORCHESTRATOR_CREATIVE_SELECTION_AUDIT.md`); 4,013 words; all 9 numbered §-sections present.
+  - Zero tracked files modified by audit fork (only the new untracked memo file in working tree).
+  - Zero code changes; zero test changes; pytest count unchanged at 5,535 passing.
+  - Claims in memo cite `path:line` references throughout, per audit discipline rule.
+
+- **Architectural decision history note:** This is the first audit slice since A.2.0 (commit `9a2fc84`) used the audit-first pattern. The substrate-not-yet-consumed finding (Q16) is exactly the kind of structural insight the audit-first discipline is meant to surface — building S6.2 against an assumed substrate pipeline that doesn't actually exist would have been a substantial waste. The discipline paid for itself in this slice.
+
+- **Expected next: S6.2 predicate evaluator implementation.** Awaits Claude Proper prompt incorporating audit findings — specifically: (1) confirmed BEFORE-seam choice from §5 (audit-recommended); (2) Q16 split-vs-combined adjudication (audit-recommended: combined `cell_features` aggregator + predicate evaluator); (3) Q17 Path A / Path B interaction explicit decision; (4) Q18 posture-cardinality mapping decision; (5) Q19 predicate-authoring-surface decision. After S6.2 lands, the substrate built across A→F.2 will FINALLY be consumed at bid time — closing the substrate-without-consumer gap the v3.1 directive's anti-drift discipline exists to prevent.
+
+- **Hand-off pointer:** Branch `feature/hmt-dashboard` @ HEAD post-S6.2.0 commit. **12 slices closed total** (11 substrate + 1 audit). Working tree carries this MEMORY.md update + the new audit memo + `docs/PLATFORM_INVENTORY_2026_05_07.md` still untracked from earlier sessions. Pilot path remains fully unblocked; S6.2 is the next core-path slice.
+
+---
+
 ### Session 2026-05-07 — F.2 / S6.1 (2 of 2) — compensatory_consumption_pattern detection + bid-time accessor landed; **S6 KEYSTONE CLOSED**
 
 **EVE Handoff:**
