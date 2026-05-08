@@ -2880,6 +2880,55 @@ def run_bilateral_cascade(
         except Exception as exc:
             logger.debug("Posture × mechanism modulation skipped: %s", exc)
 
+    # ─── S6.2 CELL-CONDITIONAL CREATIVE-SELECTION MODULATION ──────────
+    # Per S6.2 Q16 (combined slice) + Q17 (Path A only) + Q18 (5-class
+    # posture canonical, cascade 4-class orthogonal) + Q19 (Python
+    # decorator predicates) + audit memo
+    # docs/audits/RETARGETING_ORCHESTRATOR_CREATIVE_SELECTION_AUDIT.md
+    # recommended seam (a) BEFORE: fail-soft modulator parallel to
+    # apply_posture_modulation. Aggregates B/C/D/E/F.2 substrate into
+    # a CellFeatureSet, evaluates registered predicates, applies the
+    # CombinedModulation to result.mechanism_scores. Substrate accessor
+    # wiring is incremental: this slice ships the framework + plumbing
+    # with default_aggregator() (neutral substrate defaults). Future
+    # slices wire real per_user_posterior_modulation / posture_classifier
+    # / journey state machine / priming Feature Store / mindstate cache
+    # accessors. Until then, predicates rarely fire and the modulation
+    # is effectively a no-op decision-trace event — safe operational
+    # ship of the framework.
+    if result.mechanism_scores:
+        try:
+            from adam.cells import (
+                apply_cell_modulation,
+                default_aggregator,
+                evaluate_predicates,
+            )
+            _cell_aggregator = default_aggregator()
+            _cell_features = _cell_aggregator.aggregate(
+                buyer_id=buyer_id or "",
+                url_hash=page_url or "",
+            )
+            _cell_modulation = evaluate_predicates(_cell_features)
+            if not _cell_modulation.is_neutral:
+                _cell_modulated = apply_cell_modulation(
+                    result.mechanism_scores, _cell_modulation,
+                )
+                if _cell_modulated is not result.mechanism_scores:
+                    _cell_shifted = sum(
+                        1
+                        for m, v in _cell_modulated.items()
+                        if abs(v - result.mechanism_scores.get(m, v)) > 1e-9
+                    )
+                    if _cell_shifted:
+                        result.reasoning.append(
+                            f"Cell-conditional modulation: {_cell_shifted} "
+                            f"mechanisms shifted (cell={_cell_modulation.cell_id}, "
+                            f"fired={','.join(_cell_modulation.fired_predicates)})"
+                        )
+                    result.mechanism_scores = _cell_modulated
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("Cell-conditional modulation skipped: %s", exc)
+
     # ─── HARD FLUENCY FLOOR — mechanism granularity (Slice 1 / Tier 1 #1) ───
     # Audit 2026-05-01 Tier 1 #1: the directive (line 974) requires
     # the fluency floor as eligibility filter, NOT a score modifier.
