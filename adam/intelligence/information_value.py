@@ -429,6 +429,22 @@ class BuyerUncertaintyProfile:
     total_conversions: int = 0
     last_updated_ts: float = 0.0
 
+    # ── W.2a — archetype assignment + one-shot reassignment policy ──
+    # Per Q25=(β) + Q27=(ε) adjudications. archetype starts None
+    # on cold-start; bid-stream-signal mapper assigns at first
+    # observation and persists. archetype_reassigned guards Q27=(ε)
+    # one-shot policy: at bids_since_archetype_assignment == 20 the
+    # reassignment evaluator fires once; archetype_reassigned flips
+    # to True regardless of outcome. Pilot-locked thereafter; S5.5
+    # nightly retrain handles continuous reassessment post-pilot.
+    # Stored as ArchetypeID.value (lowercase string) for clean
+    # JSON serialization; coerced back to ArchetypeID at API
+    # boundaries.
+    archetype: Optional[str] = None
+    archetype_assigned_at: Optional[str] = None
+    archetype_reassigned: bool = False
+    bids_since_archetype_assignment: int = 0
+
     def __post_init__(self):
         # Initialize all dimensions with default priors if not provided
         for dim in UNCERTAINTY_DIMENSIONS:
@@ -577,6 +593,12 @@ class BuyerUncertaintyProfile:
                 dim: {"alpha": p.alpha, "beta": p.beta}
                 for dim, p in self.constructs.items()
             },
+            # W.2a archetype + reassignment-policy metadata.
+            "archetype": self.archetype,
+            "archetype_assigned_at": self.archetype_assigned_at,
+            "archetype_reassigned": self.archetype_reassigned,
+            "bids_since_archetype_assignment":
+                self.bids_since_archetype_assignment,
         }
         # Include BONG posterior if available
         if self.bong_posterior is not None:
@@ -658,6 +680,15 @@ class BuyerUncertaintyProfile:
             total_conversions=data.get("total_conversions", 0),
             constructs=constructs,
             bong_posterior=bong_posterior,
+            # W.2a fields — pre-W.2a entries deserialize with safe
+            # defaults (None archetype, False reassigned flag, 0
+            # bid count) so legacy Redis cache rows round-trip cleanly.
+            archetype=data.get("archetype"),
+            archetype_assigned_at=data.get("archetype_assigned_at"),
+            archetype_reassigned=data.get("archetype_reassigned", False),
+            bids_since_archetype_assignment=data.get(
+                "bids_since_archetype_assignment", 0,
+            ),
         )
 
 

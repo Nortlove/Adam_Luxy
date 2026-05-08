@@ -3262,6 +3262,69 @@ def run_bilateral_cascade(
     # bypass; well-characterized buyers shift toward their personal
     # posterior. The mixing weight is calibration-pending under LUXY
     # mSPRT. Soft-fail: any error → pass scores through unchanged.
+    # ─── W.2a — ARCHETYPE COLD-START + ONE-SHOT REASSIGNMENT POLICY ───
+    # Per Q25=(β) bid-stream-signal cold-start mapper + Q27=(ε)
+    # one-shot reassignment policy (N=20 bids, LLR > 3 threshold,
+    # archetype_reassigned flag locks subsequent evaluations). Runs
+    # BEFORE apply_per_user_posterior_modulation so the per-user
+    # posterior shrinkage operates against an assigned archetype's
+    # priors. Soft-fail by design: any exception → cascade continues
+    # unchanged.
+    if buyer_id and graph_cache and hasattr(graph_cache, "get_buyer_profile"):
+        try:
+            from datetime import datetime, timezone
+            from adam.intelligence.cold_start_archetype_mapper import (
+                map_cold_start_archetype,
+            )
+            from adam.intelligence.archetype_reassignment import (
+                REASSIGNMENT_BID_THRESHOLD, evaluate_reassignment,
+            )
+            _profile = graph_cache.get_buyer_profile(buyer_id=buyer_id)
+            if _profile is not None:
+                _profile_dirty = False
+
+                # Cold-start archetype assignment (Q25=(β))
+                if _profile.archetype is None:
+                    _new_archetype = map_cold_start_archetype(
+                        device=device_type,
+                        hour_of_day=time_of_day,
+                        iab_category=iab_category,
+                    )
+                    _profile.archetype = _new_archetype.value
+                    _profile.archetype_assigned_at = (
+                        datetime.now(timezone.utc).isoformat()
+                    )
+                    _profile_dirty = True
+
+                # One-shot reassignment policy (Q27=(ε))
+                if (
+                    _profile.archetype is not None
+                    and not _profile.archetype_reassigned
+                ):
+                    _profile.bids_since_archetype_assignment += 1
+                    if (
+                        _profile.bids_since_archetype_assignment
+                        == REASSIGNMENT_BID_THRESHOLD
+                    ):
+                        _new_assignment = evaluate_reassignment(_profile)
+                        if _new_assignment is not None:
+                            _profile.archetype = _new_assignment.value
+                        _profile.archetype_reassigned = True
+                    _profile_dirty = True
+
+                # Write-through to Redis when state changed.
+                if _profile_dirty and hasattr(
+                    graph_cache, "_save_buyer_profile_to_redis",
+                ):
+                    try:
+                        graph_cache._save_buyer_profile_to_redis(
+                            buyer_id, _profile,
+                        )
+                    except Exception:
+                        pass  # Redis unavailable; in-memory state retained
+        except Exception as exc:
+            logger.debug("W.2a archetype cold-start/reassignment skipped: %s", exc)
+
     if result.mechanism_scores and buyer_id and graph_cache:
         try:
             from adam.intelligence.per_user_posterior_modulation import (
