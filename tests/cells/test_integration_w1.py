@@ -104,14 +104,28 @@ class TestProductionAggregatorFactory:
         fs = agg.aggregate(buyer_id="u", url_hash="h")
         assert fs.cascade_attentional_posture == "vigilance_activating"
 
-    def test_w2_deferred_accessors_at_neutral_defaults(self):
-        """Q24 = (β) full build → W.2: archetype + maximizer_prior
-        remain at neutral defaults until W.2 ships."""
+    def test_archetype_and_maximizer_defaults_when_no_explicit_graph_cache(self):
+        """Schema-evolution note: pre-W.2c this test asserted that
+        archetype + maximizer_prior were W.2-deferred lambda stubs
+        returning (PRAGMATIST, mean=0.5, strength=10.0). Post-W.2c
+        these accessors are wired to read from BuyerUncertaintyProfile.
+
+        With no explicit graph_cache passed to production_aggregator,
+        the singleton fetch succeeds (graph_cache itself is fail-soft
+        re: Neo4j) and creates a fresh BuyerUncertaintyProfile for an
+        unknown buyer — that profile has archetype=None (→ accessor
+        defaults PRAGMATIST) AND a default Beta(2,2) maximizer
+        posterior (→ accessor returns mean=0.5, strength=4.0,
+        reflecting actual profile state, NOT the old stub value 10).
+        """
         agg = production_aggregator()
         fs = agg.aggregate(buyer_id="u", url_hash="h")
+        # Archetype: cold-start profile.archetype is None → PRAGMATIST default
         assert fs.archetype == ArchetypeID.PRAGMATIST
+        # Maximizer: cold-start profile has Beta(2,2) default
+        # construct → mean=0.5, strength=4.0 (was 10.0 pre-W.2c lambda stub)
         assert fs.maximizer_tendency_posterior_mean == 0.5
-        assert fs.maximizer_tendency_posterior_strength == 10.0
+        assert fs.maximizer_tendency_posterior_strength == 4.0
 
     def test_mindstate_deferred_to_m_chain(self):
         """Q20 deferred: mindstate composites stay at 0.0 defaults

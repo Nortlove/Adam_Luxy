@@ -365,9 +365,11 @@ def production_aggregator(
         mindstate at neutral default.
     """
     from adam.cells.accessors import (
+        make_archetype_accessor,
         make_cascade_tier_accessor,
         make_cohort_accessor,
         make_journey_accessor,
+        make_maximizer_prior_accessor,
         make_posture_accessor,
         make_priming_accessor,
     )
@@ -426,14 +428,29 @@ def production_aggregator(
         else (lambda buyer_id: ConversionStage.UNAWARE)
     )
 
+    # W.2c: archetype + maximizer_prior accessors read from
+    # BuyerUncertaintyProfile via graph_cache.get_buyer_profile.
+    # Both fall through to neutral defaults when graph_cache
+    # unavailable (matches W.1's per-accessor fail-soft pattern).
+    archetype_accessor_fn = (
+        make_archetype_accessor(graph_cache)
+        if graph_cache is not None
+        else (lambda buyer_id: ArchetypeID.PRAGMATIST)
+    )
+    maximizer_prior_accessor_fn = (
+        make_maximizer_prior_accessor(graph_cache)
+        if graph_cache is not None
+        else (lambda buyer_id, arch: (0.5, 10.0))
+    )
+
     return CellFeaturesAggregator(
-        archetype_accessor=lambda buyer_id: ArchetypeID.PRAGMATIST,
+        archetype_accessor=archetype_accessor_fn,
         posture_accessor=posture_accessor_fn,
         journey_accessor=journey_accessor_fn,
         priming_accessor=priming_accessor_fn,
         mindstate_accessor=lambda buyer_id, url_hash: None,
         cohort_accessor=cohort_accessor_fn,
-        maximizer_prior_accessor=lambda buyer_id, arch: (0.5, 10.0),
+        maximizer_prior_accessor=maximizer_prior_accessor_fn,
         cascade_tier_accessor=cascade_tier_accessor_fn,
         enable_timing=False,
     )

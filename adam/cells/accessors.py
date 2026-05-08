@@ -44,8 +44,22 @@ import logging
 from typing import Optional, Tuple
 
 from adam.cells.taxonomy import ConversionStage
+from adam.cold_start.models.enums import ArchetypeID
 
 logger = logging.getLogger(__name__)
+
+
+# Maximizer-tendency dimension key on BuyerUncertaintyProfile.constructs
+# (defined alongside W.2a/W.2b in adam/intelligence/archetype_reassignment.py
+# as MAXIMIZER_TENDENCY_DIMENSION; W.2c reads via this string key from
+# the profile's constructs dict).
+_MAXIMIZER_DIM_KEY = "maximizer_tendency"
+
+# Cold-start neutral defaults per S6.2 contract (Q23 — wrapper seam):
+_DEFAULT_ARCHETYPE = ArchetypeID.PRAGMATIST
+_DEFAULT_MAXIMIZER_PRIOR = (0.5, 10.0)
+"""(mean, strength) — strength 10.0 matches A.2 archetype-prior
+strength typical magnitude (α + β ≈ 10 for cold-start)."""
 
 
 # ============================================================================
@@ -255,3 +269,112 @@ def make_journey_accessor(
             )
             return ConversionStage.UNAWARE
     return journey_accessor
+
+
+# ============================================================================
+# (c) W.2c — archetype_accessor + maximizer_prior_accessor
+#     (read from BuyerUncertaintyProfile populated by W.2a + W.2b)
+# ============================================================================
+
+def make_archetype_accessor(graph_cache):
+    """Coordinator wrapper for archetype assignment read.
+
+    S6.2 expects: archetype_accessor(buyer_id) -> ArchetypeID.
+
+    Reads profile.archetype from BuyerUncertaintyProfile via
+    graph_cache.get_buyer_profile (the same path
+    apply_per_user_posterior_modulation uses). Returns the assigned
+    archetype if present, otherwise PRAGMATIST per S6.2's neutral-
+    default contract (Q23 — cold-start handling at the wrapper seam).
+
+    Cold-start path: when profile.archetype is None (cold-start
+    buyer who hasn't yet hit W.2a's cascade injection), returns
+    PRAGMATIST. Once W.2a's mapper runs at bid time,
+    profile.archetype gets populated via the bid-stream-signal
+    mapper, and subsequent reads return the assigned archetype.
+
+    Coerces the stored string archetype value (e.g., "analyst")
+    back to the ArchetypeID enum. Defensive on unknown values
+    (returns PRAGMATIST default).
+    """
+    def archetype_accessor(buyer_id: str) -> ArchetypeID:
+        if not buyer_id:
+            return _DEFAULT_ARCHETYPE
+        try:
+            profile = graph_cache.get_buyer_profile(buyer_id=buyer_id)
+            if profile is None:
+                return _DEFAULT_ARCHETYPE
+            arch_value = getattr(profile, "archetype", None)
+            if not arch_value:
+                return _DEFAULT_ARCHETYPE
+            try:
+                return ArchetypeID(arch_value.lower())
+            except ValueError:
+                return _DEFAULT_ARCHETYPE
+        except Exception as exc:  # noqa: BLE001
+            logger.debug(
+                "archetype_accessor fallback for %s: %s", buyer_id, exc,
+            )
+            return _DEFAULT_ARCHETYPE
+    return archetype_accessor
+
+
+def make_maximizer_prior_accessor(graph_cache):
+    """Coordinator wrapper for maximizer_tendency Beta posterior read.
+
+    S6.2 expects: maximizer_prior_accessor(buyer_id, archetype) ->
+    tuple[float, float] (posterior_mean, posterior_strength).
+
+    Reads profile.constructs["maximizer_tendency"] (a
+    ConstructPosterior with .alpha + .beta) from
+    BuyerUncertaintyProfile via graph_cache.get_buyer_profile.
+    Returns the Beta posterior's (mean, strength) where
+    mean = α / (α + β) and strength = α + β.
+
+    Cold-start paths return S6.2 neutral default (0.5, 10.0):
+        - profile is None
+        - construct["maximizer_tendency"] absent
+        - alpha + beta <= 0 (defensive — invalid Beta)
+        - any exception in the read path
+
+    Note on the archetype parameter: S6.2's signature passes both
+    buyer_id and the previously-fetched archetype. In the common
+    case the construct's prior matches A.2's archetype-derived
+    prior (per W.2b's apply_archetype_maximizer_prior populating
+    the construct on archetype assignment). The archetype parameter
+    is currently NOT consulted by the accessor — Pass C confirmed
+    apply_archetype_maximizer_prior reliably populates the construct,
+    so the simple read suffices. Future hardening (e.g., divergence-
+    detection fallback to A.2 cached prior) can use this parameter
+    if needed.
+    """
+    def maximizer_prior_accessor(
+        buyer_id: str,
+        archetype: ArchetypeID,
+    ) -> Tuple[float, float]:
+        if not buyer_id:
+            return _DEFAULT_MAXIMIZER_PRIOR
+        try:
+            profile = graph_cache.get_buyer_profile(buyer_id=buyer_id)
+            if profile is None:
+                return _DEFAULT_MAXIMIZER_PRIOR
+            constructs = getattr(profile, "constructs", None)
+            if constructs is None:
+                return _DEFAULT_MAXIMIZER_PRIOR
+            construct = constructs.get(_MAXIMIZER_DIM_KEY)
+            if construct is None:
+                return _DEFAULT_MAXIMIZER_PRIOR
+            alpha = float(getattr(construct, "alpha", 0.0))
+            beta = float(getattr(construct, "beta", 0.0))
+            strength = alpha + beta
+            if strength <= 0.0:
+                return _DEFAULT_MAXIMIZER_PRIOR
+            mean = alpha / strength
+            return (mean, strength)
+        except Exception as exc:  # noqa: BLE001
+            logger.debug(
+                "maximizer_prior_accessor fallback for %s: %s",
+                buyer_id, exc,
+            )
+            return _DEFAULT_MAXIMIZER_PRIOR
+    return maximizer_prior_accessor
