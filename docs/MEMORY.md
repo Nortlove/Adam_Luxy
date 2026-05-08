@@ -164,6 +164,50 @@ Structural defense against re-drift. Past pattern: surviving alternative plans d
 
 ---
 
+### Session 2026-05-08 — W.2.0 per-user posterior infrastructure audit landed (read-only memo)
+
+**EVE Handoff:**
+
+- **Executed:** W.2.0 read-only audit. Eight-pass inspection of the per-user posterior infrastructure surface that W.2 must build archetype + maximizer_prior accessors against, producing tracked memo at `docs/audits/PER_USER_POSTERIOR_INFRASTRUCTURE_AUDIT.md` (~3,252 words / 17 ##-level sections: 5-line header + §1 Executive Summary + §2-§9 per-pass inspections (8 passes covering pipeline state, archetype storage, maximizer storage, update triggers, cold-start fallback, derivation order, write-back architecture, S5.5/S5.6 alignment) + §10 W.2 slice sequence + §11 QUESTION-and-stop + §12 closure). Audit-then-implement pattern matching A.1.0 + A.2.0 + S6.2.0 + W.0 precedents. Zero code changes; zero test changes.
+
+- **🎯 Major positive surprise:** **`per_user_posterior_modulation` pipeline EXISTS and is already fully wired.** W.0 §7's "may not exist as a single function call yet" framing was misleading — the actual pipeline at `adam/intelligence/per_user_posterior_modulation.py:93` ships empirical-Bayes shrinkage with 20-dim BuyerUncertaintyProfile storage, Redis read-through/write-through with 90-day TTL, conversion-event-driven update path through `outcome_handler._update_buyer_profile`, AND active integration at `bilateral_cascade.py:3270`. The infrastructure is in MUCH better shape than W.0 implied. **Existing infrastructure already covers ~70% of Q24=(β)'s scope.**
+
+- **Recommended W.2 decomposition (per §10): SPLIT into 3 sub-slices** (sequential, ~700 LOC total — much less than W.0 implied):
+  - **W.2a** (~300 LOC): archetype storage on BuyerUncertaintyProfile + cold-start auto-derivation. Persists per-user archetype assignment to the existing BuyerUncertaintyProfile Redis storage; cold-start path defers archetype detection to the first non-cold event (Q25 recommendation).
+  - **W.2b** (~250 LOC): maximizer_tendency Beta wiring into the existing constructs dict on BuyerUncertaintyProfile. Per Q26: extend UNCERTAINTY_DIMENSIONS to include maximizer_tendency rather than adding a sibling field; derive update signal from existing dims rather than adding an explicit signal (cleaner architecturally).
+  - **W.2c** (~150 LOC, W.1-pattern slice): accessor closures (`make_archetype_accessor` + `make_maximizer_prior_accessor`) + production_aggregator activation. Once W.2a + W.2b populate the BuyerUncertaintyProfile, W.2c is essentially the same coordinator-wrapper pattern as W.1's accessors.
+  - Sequential ordering required: W.2a must persist archetype before W.2b can derive maximizer Beta from it.
+
+- **4 QUESTION-and-stop concerns surfaced for Claude Proper (Q25-Q28):**
+  - **Q25 — Cold-start archetype detection at bid time has no trait_estimates.** Bid-time path doesn't have trait signals (geo/device/time/IAB) wired into archetype detection. Audit recommends **defer-to-first-non-cold-event** (return PRAGMATIST default at first bid; archetype detection runs once trait estimates are available from accumulated bid-stream signals + persists). Alternative: assign-PRAGMATIST-and-persist immediately, never reassess (matches W.1's posture cold-start pattern). Adjudication needed before W.2a ships.
+  - **Q26 — maximizer_tendency storage location + update signal sourcing.** Two architecturally-distinct decisions: (i) extend UNCERTAINTY_DIMENSIONS dict (cleaner; reuses existing storage shape) vs add sibling field on BuyerUncertaintyProfile (explicit; easier to reason about); (ii) derive maximizer_tendency update signal from existing dims (no new instrumentation) vs add explicit telemetry signal (more direct but more pipeline plumbing). Audit recommends **extend + derive** (option (i) + option (i)) — minimizes new infrastructure, stays consistent with existing BuyerUncertaintyProfile architecture.
+  - **Q27 — Archetype reassignment policy.** Should an established archetype ever get reassigned? Audit recommends **FIXED first-assignment** (archetype is sticky once assigned at bid time); **S5.5 nightly retrain reassesses** the archetype assignment from accumulated posterior state if/when S5.5 ships. Alternative: per-bid drift detection (more responsive but more complex; risks oscillation).
+  - **Q28 — Neo4j durability for buyer profiles** (NOT a W.2 blocker). Existing storage is Redis-only. Q28 flags that pilot-to-post-pilot transition will need Neo4j durability for buyer profiles when ADAM scales beyond a single Redis instance or wants persistence across Redis flushes. Recommend defer to S5.5 work (offline materialization to Neo4j, in-process Redis cache for bid-time reads).
+
+- **Pre-flight findings (in memo):**
+  - **Pass 1 (pipeline state):** EXISTS. `adam/intelligence/per_user_posterior_modulation.py:93` (`per_user_posterior_modulation` function) with full empirical-Bayes shrinkage architecture; 20-dim BuyerUncertaintyProfile schema; Redis-backed storage with TTL.
+  - **Pass 2 (archetype storage):** Currently NOT stored on BuyerUncertaintyProfile (no field for archetype assignment). W.2a adds this field.
+  - **Pass 3 (maximizer storage):** Currently NOT stored either. W.2b extends UNCERTAINTY_DIMENSIONS (per Q26 recommendation).
+  - **Pass 4 (update triggers):** Conversion events drive updates via `outcome_handler._update_buyer_profile`. Impressions + clicks could also drive updates but are not currently wired (intentional — conversion is the highest-signal trigger).
+  - **Pass 5 (cold-start fallback):** No archetype assignment exists for cold-start buyers; W.2a's pattern (defer-to-first-non-cold-event per Q25) handles this without architectural changes.
+  - **Pass 6 (derivation order):** Archetype must be assigned before maximizer Beta can be derived (per A.2's archetype-keyed prior); W.2a → W.2b sequential ordering pin.
+  - **Pass 7 (write-back architecture):** Sync Redis (fast bid-time write) + 90-day TTL. Acceptable for pilot. Q28 flags Neo4j durability as post-pilot work.
+  - **Pass 8 (S5.5/S5.6 alignment):** S5.5/S5.6 not yet built but the existing BuyerUncertaintyProfile schema supports them — aggregation queries on Redis state for nightly retrain are feasible; ADWIN drift detection on per-user posterior shifts is straightforward against the existing 20-dim schema.
+
+- **Verified:**
+  - Memo present at expected path (`docs/audits/PER_USER_POSTERIOR_INFRASTRUCTURE_AUDIT.md`); 28KB; all 17 sections present per spec.
+  - Zero tracked files modified by audit fork (only the new untracked memo file in working tree).
+  - All claims in memo cite `path:line` references throughout per audit discipline rule.
+  - Full pytest unchanged (no code changes; baseline 5,644 passing remains intact).
+
+- **Architectural decision history note:** This audit produced the first **scope CONTRACTION** finding in the audit-first chain. Prior audits (S6.2.0, W.0) consistently surfaced expansions — substrate-not-yet-consumed (S6.2.0 Q16), mindstate dead-letter (W.0 Q20), 5-vs-2 wiring split (W.0 §11). W.2.0 surfaces the OPPOSITE — the per_user_posterior_modulation infrastructure was already built (Q24=(β) framing assumed it wasn't), so W.2's actual scope is ~700 LOC across 3 sub-slices instead of the larger build that W.0 §7 implied. The audit-first discipline pays for itself in BOTH directions: when the surface is more complex than assumed (S6.2.0/W.0 case), audits prevent silent failures; when the surface is more built-out than assumed (W.2.0 case), audits prevent over-scoping work that would duplicate existing infrastructure.
+
+- **Expected next:** **W.2a** (archetype storage on BuyerUncertaintyProfile + cold-start auto-derivation). Awaits Claude Proper prompt with Q25 (cold-start archetype detection: defer-to-first-non-cold-event vs assign-PRAGMATIST-and-persist) + Q27 (archetype reassignment: FIXED-first-assignment-then-S5.5-reassesses vs per-bid drift detection) adjudications. After W.2a → W.2b → W.2c sequence (estimated 3 implementation slices), the archetype + maximizer_prior accessors fire on real data. Then mindstate (M.0/M.1+ chain) is the only remaining substrate-channel work before pilot launch.
+
+- **Hand-off pointer:** Branch `feature/hmt-dashboard` @ HEAD post-W.2.0 commit. **16 slices closed total** (13 implementation + 3 audits — S6.2.0 + W.0 + W.2.0). Working tree carries this MEMORY.md update + the new audit memo + `docs/PLATFORM_INVENTORY_2026_05_07.md` still untracked from earlier sessions. W.2a is the next implementation slice.
+
+---
+
 ### Session 2026-05-08 — W.1 wire 5 substrate accessors into bilateral_cascade (cohort direct-call + posture/priming/cascade_tier adapters + journey coordinator wrapper)
 
 **EVE Handoff:**
