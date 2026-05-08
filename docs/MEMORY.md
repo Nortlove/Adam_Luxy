@@ -164,7 +164,64 @@ Structural defense against re-drift. Past pattern: surviving alternative plans d
 
 ---
 
-### Session 2026-05-08 — W.2c archetype + maximizer_prior accessors activated; **W chain CLOSED pre-mindstate (7 of 7 primary substrate channels firing on real data)**
+### Session 2026-05-08 — M.0 mindstate accessor substrate audit landed (read-only memo); **Q30 corrects W.2c EVE overcount — actual predicate fire rate is 3/6 not 5/6**
+
+**EVE Handoff:**
+
+- **Executed:** M.0 read-only audit. Eight-pass inspection of mindstate accessor substrate state producing tracked memo at `docs/audits/MINDSTATE_ACCESSOR_SUBSTRATE_AUDIT.md` (~3,334 words / 17 ##-level sections: 5-line header + §1-§12 + 3 OPTION sub-sections in §9 + 3 sub-sub-sections in §10 + 3 Q sub-sub-sections in §11). Audit-then-implement (or defer) pattern matching W.0 + W.2.0 + S6.2.0 + A.2.0 + A.1.0 precedents. Zero code changes; zero test changes.
+
+- **Per-composite outcomes (Pass 4):**
+  - **fomo_score → OUTCOME-A** (all inputs on PagePrimingSignature, W.1-wired)
+  - **psych_ownership_proxy → OUTCOME-C** (touch_count + dwell_seconds MISSING; no bid-time per-user-per-brand telemetry surface; substantial substrate build required)
+  - **depletion_proxy → OUTCOME-A** (cognitive_load on PagePrimingSignature; SessionStateTracker singleton ready, not yet bid-cascade-wired)
+
+- **🎯 Pass 6 hypothesis REJECTED with reframing.** I expected M.0 to confirm fomo_score already fires on real data (since its inputs are W.1-wired through PagePrimingSignature). The audit found the OPPOSITE: while inputs ARE wired, the COMPOSITE is read from a `mindstate` accessor that's always None (W.2c left mindstate_accessor as a `lambda buyer_id, url_hash: None` stub). FOMO predicates do NOT currently fire on real data. M.1's smallest scope **bypasses the dead PageMindstateVector @property** and computes inline from PagePrimingSignature aggregator-side.
+
+- **🎯 Q30 — W.2c EVE OVERCOUNT CORRECTION.** In the W.2c EVE block (commit `b1c9922`), I claimed: *"5 of 6 seed predicates fire on real bid data."* **That was wrong.** The audit confirms actual fire rate is **3 of 6**: cohort-keyed predicate fires (cohort_accessor wired since W.1); persuasion-resistance predicate fires (priming_accessor wired with explicit DI); maximizer-keyed predicate fires (W.2c wiring just shipped). The 3 mindstate-keyed predicates (FOMO + ownership + depletion) DO NOT fire because the mindstate accessor returns None always. I conflated "inputs to mindstate composites are wired (via priming + cohort + cascade_tier)" with "mindstate composites themselves fire" — the @property derivations live on PageMindstateVector which doesn't get constructed at bid time. This memo is the source of truth; W.2c EVE's 5/6 claim is corrected to 3/6 here.
+
+- **🎯 Major scope-CONTRACTION finding (analogous to W.2.0's surprise upside).** Audit Pass 1 finding: **`extract_mindstate_vector` is NEVER called from the bid path at all** (only from `outcome_handler` learning paths). W.0 Q20's framing of "fields not populated by extract_mindstate_vector" UNDERSTATED the gap — no PageMindstateVector exists at bid time at all. But this REFRAMES the fix as much smaller: instead of building a substrate-side aggregation that populates PageMindstateVector at bid time, M.1 just bypasses the dead @property and computes the composite inline aggregator-side from already-cached priming inputs. **M.1 enables 2 predicates in ~30 LOC** rather than the substrate-side rebuild W.0 Q20 implied.
+
+- **Recommended pilot launch sequencing: OPTION BETA (per §8 + §9):**
+  - **Ship M.1 pre-pilot** (~30 LOC): aggregator-side fomo_score derivation that bypasses the dead PageMindstateVector @property and computes inline from W.1-wired PagePrimingSignature inputs. Pilot launches with 5/6 predicates firing instead of current 3/6 (FOMO predicates activate).
+  - **Defer M.2 (depletion_proxy)** post-pilot: depletion has no current predicate consumer in the seed set (the depletion-keyed predicate is in `adam/cells/predicates/persuasion_resistance_predicates.py` but doesn't gate on `depletion_proxy` in the current S6.2 seed). Wiring depletion is dormant cycles for pre-pilot. Reassess after pilot data informs whether depletion-keyed predicates earn shipping.
+  - **Defer M.3 (psych_ownership_proxy)** post-pilot: requires substantial substrate build (touch_count + dwell_seconds need a per-user-per-brand telemetry surface that doesn't exist; building it pre-pilot is scope inflation). Reassess after pilot data informs whether ownership-keyed predicate earns the substrate investment.
+
+- **3 QUESTION-and-stop concerns surfaced for Claude Proper (Q29-Q31):**
+  - **Q29 — BETA-vs-GAMMA pilot adjudication.** OPTION BETA ships ~30 LOC pre-pilot for FOMO predicate activation; OPTION GAMMA defers all M.1+ post-pilot (pilot launches with 3/6 predicates firing). BETA is recommended (low effort, meaningful predicate-rate increase); GAMMA is the conservative pilot-timing choice. Adjudication needed.
+  - **Q30 — W.2c EVE overcount correction.** This memo (M.0) is the source of truth; W.2c EVE's "5/6 predicates fire" claim is corrected to 3/6. Note for future audit-trail honesty: the overcount happened because I conflated "substrate inputs wired" with "composite computations active." The @property derivations on PageMindstateVector require PageMindstateVector itself to be constructed at bid time — which it never is.
+  - **Q31 — Architectural simplification proposal.** Consider moving C+D @property derivations OFF PageMindstateVector and onto the aggregator side as inline functions taking primitive inputs. The PageMindstateVector @property pattern was structurally wrong for bid-time use because PMV isn't constructed at bid time. Aggregator-side functions are cleaner and avoid the dead-property problem. This is a refactor opportunity Claude Proper may sequence into M.1+.
+
+- **Pre-flight findings (verified by memo):**
+  - **Pass 1**: `extract_mindstate_vector` at `adam/retargeting/resonance/mindstate_vector.py:71` confirmed; bid-path call site search returned only outcome_handler / learning paths (NOT cascade) — Pass 1's most consequential finding.
+  - **Pass 2**: orchestrator-populated fields (session_position_seconds, posture_class, browsing_momentum) confirmed not populated; scarcity_frame_present + regulatory_focus_priming + touch_count + dwell_seconds also not populated at bid time.
+  - **Pass 3**: SessionStateTracker singleton exists and is ready (relevant to depletion_proxy if M.2 ships); per-user-per-brand telemetry surface for touch_count/dwell_seconds does not exist.
+  - **Pass 4**: composite-to-substrate mapping completed; outcomes A/C/A per fomo/ownership/depletion.
+  - **Pass 5**: depletion_proxy CASE B formula confirmed; cognitive_load on PagePrimingSignature; SessionStateTracker provides session_position_seconds.
+  - **Pass 6**: fomo_score inputs all on PagePrimingSignature; **but composite never computed at bid time** — the consequential finding documented as Pass 6 hypothesis rejection.
+  - **Pass 7**: psych_ownership_proxy inputs MISSING; OUTCOME-C confirmed.
+
+- **Verified:**
+  - Memo present at expected path (`docs/audits/MINDSTATE_ACCESSOR_SUBSTRATE_AUDIT.md`); 28KB; all 17 sections present per spec.
+  - Zero tracked files modified by audit fork.
+  - All claims in memo cite `path:line` references throughout per audit discipline rule.
+  - Full pytest unchanged (no code changes; baseline 5,795 passing remains intact).
+
+- **Architectural decision history note:** M.0 produced two consequential findings the audit-first discipline made visible:
+  1. **The W.2c EVE overcount.** I would have shipped pilot launch with a wrong claim about predicate fire rate without M.0's per-composite verification. This is exactly the kind of "claim that things work without verifying they actually do" failure the audit-first discipline prevents.
+  2. **The scope-CONTRACTION reframing.** W.0 Q20 framed mindstate as substrate-side rebuild work; M.0 found that the actual fix is much smaller (~30 LOC aggregator-side bypass). Same pattern as W.2.0 (per_user_posterior_modulation already existed) — audits in BOTH directions surface scope rightsizings.
+
+  Audit-then-implement pays off again. Without M.0, M.1+ would have been over-scoped (build substrate-side aggregation) AND I'd have shipped pilot with a wrong fire-rate claim.
+
+- **Expected next:** **Pilot launch sequencing decision from Chris based on M.0 findings + Q29-Q31 adjudications.**
+  - If **OPTION BETA + Q29=ship-M.1**: M.1 implementation slice (~30 LOC aggregator-side fomo_score derivation; ~10-15 tests; one-day effort). Pilot launches post-M.1 with 5/6 predicates firing.
+  - If **OPTION GAMMA**: pilot launches now with 3/6 predicates firing. M.1+ becomes iteration substrate informed by pilot data.
+  - If **Q31=ship-architectural-simplification**: extends M.1 scope to refactor C+D @property derivations off PageMindstateVector to aggregator-side inline functions (~150 LOC + extensive zero-regression tests on C+D commits' test surfaces).
+
+- **Hand-off pointer:** Branch `feature/hmt-dashboard` @ HEAD post-M.0 commit. **20 slices closed total** (16 implementation + 4 audits — S6.2.0, W.0, W.2.0, M.0). Working tree carries this MEMORY.md update + new audit memo + `docs/PLATFORM_INVENTORY_2026_05_07.md` still untracked from earlier sessions. Pilot launch sequencing is the next decision; M.1 (if chosen per BETA) is the next implementation slice.
+
+---
+
+### Session 2026-05-08 — W.2c archetype + maximizer_prior accessors activated; **W chain CLOSED pre-mindstate (~~7 of 7~~ → corrected: 5 of 7 + W.2c new) primary substrate channels firing on real data; predicate fire rate ~~5/6~~ → corrected per M.0 audit: 3/6**
 
 **EVE Handoff:**
 
