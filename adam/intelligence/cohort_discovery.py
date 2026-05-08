@@ -45,6 +45,25 @@ class UserCohort:
     psychological_centroid: Dict[str, float] = field(default_factory=dict)
     discovered_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
+    # ── E / S6-prep.4 — compensatory_consumption_pattern schema slot ──
+    # SCHEMA SLOT ONLY. Detection logic and offline-pipeline + bid-time-
+    # wiring deferred to F / S6.1 (the consumer slice — cells condition
+    # on the flag). Default values apply on every existing UserCohort
+    # instance until F populates real values; Cypher persistence
+    # extension is also F's responsibility (current cypher in
+    # persist_cohort_assignments writes only size +
+    # mechanism_effectiveness_json — new fields silently drop until F
+    # extends the write path).
+    #
+    # Reference: Mead, N. L., Baumeister, R. F., Stillman, T. F.,
+    # Rawn, C. D., & Vohs, K. D. (2010). Social exclusion causes
+    # people to spend and consume strategically in the service of
+    # affiliation. Journal of Consumer Research 37(5), 902-919.
+    # Loh, H. C. et al. (2021). Compensatory consumption: A systematic
+    # review. Journal of Consumer Behavior 20(5), 1144-1156.
+    compensatory_consumption_pattern: bool = False
+    compensatory_detection_confidence: float = 0.5
+
 
 @dataclass
 class CohortMembership:

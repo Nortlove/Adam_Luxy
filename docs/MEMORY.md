@@ -164,6 +164,36 @@ Structural defense against re-drift. Past pattern: surviving alternative plans d
 
 ---
 
+### Session 2026-05-07 — E / S6-prep.4 — UserCohort compensatory_consumption_pattern schema slot landed (detection + wiring deferred to F)
+
+**EVE Handoff:**
+
+- **Executed:** E / S6-prep.4 — `compensatory_consumption_pattern: bool = False` + `compensatory_detection_confidence: float = 0.5` schema slot on `UserCohort` dataclass at `adam/intelligence/cohort_discovery.py:37`. Schema-only scope per Q13 adjudication (Q13.A=(β) schema-only + Q13.B=(δ) defer wiring to F). Two new `@dataclass` fields with safe defaults + docstring marker pinning F as the consumer + new test file `tests/unit/test_user_cohort_compensatory_schema.py` covering 9 unique tests (16 with parametrize expansions). Test suite: **5,466 passing** (+16 from E).
+
+- **Q13 adjudication baked in:** Detection logic, offline-pipeline cypher write extension, AND bid-time access wiring (graph_cache.get_cohort_priors return-type extension OR new sibling accessor) ALL DEFERRED to F / S6.1 (the consumer slice — cells condition on the flag and dictate both the detection algorithm AND the access shape). Pre-flight surfaced that cohort discovery uses Louvain community detection over RESPONDS_TO mechanism edges (NOT HMM-over-behavior); per-session behavioral telemetry (posture / browsing_momentum / hour-of-day) is NOT currently aggregated to the cohort level; bid-time access via `graph_cache.get_cohort_priors` returns `Dict[str, float]` which doesn't accommodate booleans. Building speculative detection against a non-existent aggregation surface + speculative bid-time wiring against a contract F may need to redesign would be exactly the substrate-without-consumer pattern v3.1 discipline avoids.
+
+- **Verified:**
+  - Pre-flight Pass A: `UserCohort` `@dataclass` at `adam/intelligence/cohort_discovery.py:37` with 7 fields (cohort_id, size, sample_members, dominant_mechanisms, mechanism_effectiveness, psychological_centroid, discovered_at) — unchanged from Q13 finding.
+  - Pre-flight Pass B: `compensatory_consumption` token absent from adam/, tests/, docs/ — no naming collision.
+  - Pre-flight Pass C: `persist_cohort_assignments` (`adam/intelligence/cohort_discovery.py:474`) writes only `size` + `mechanism_effectiveness_json` to UserCohort node via explicit cypher field enumeration. There is no full UserCohort load-from-Neo4j function — cohorts reconstruct from `discover_cohorts` each run. Cypher write extension is part of F's deferred offline-pipeline work; until F lands, new fields silently drop on cypher persist BY DESIGN at the schema-only stage. Test scope adapted to in-memory `dataclasses.asdict()` round-trip — the canonical path that exists today.
+  - Smoke-test 6-pattern verification: defaults applied (False, 0.5) ✅; explicit construction (True, 0.85) ✅; asdict produces correct keys ✅; **dict round-trip preserves new fields ✅; legacy dict (no new keys) deserializes with safe defaults ✅; `dataclasses.fields()` introspection confirms types + defaults ✅.
+  - Schema acceptance + defaults (Tests 1-2): both fields construct correctly; defaults False / 0.5 applied.
+  - In-memory round-trip (Tests 3-4): `dataclasses.asdict()` ↔ `UserCohort(**dict)` preserves new field values; legacy 7-field dict deserializes with safe defaults — backward-compat verified.
+  - Range-invariant convention (Tests 5-6, parametrized): `[0, 1]` range exercised via 5 in-range cases; out-of-range values pass through (plain `@dataclass`, no validator — convention pinned, not enforcement).
+  - Zero-regression (Tests 7-9): pre-E `UserCohort` 7-field construction unchanged; `_get_default_cohorts` fallback produces 3 cohorts each carrying new fields with safe defaults (existing pipeline not broken); singleton factory `get_cohort_discovery_service` still works.
+  - Schema slot pinned (Tests 10-11): `dataclasses.fields()` introspection asserts `compensatory_consumption_pattern: bool = False` + `compensatory_detection_confidence: float = 0.5`; class source contains `S6-prep.4` + `F / S6.1` markers — F-consumer-revision surfaces explicitly via this test if defaults / types change.
+  - Full pytest suite: 5,466 passed / 9 pre-existing failures unchanged (TestCampaignDocs ×8 + test_dag_has_14_atoms ×1) / 5 skipped — **zero regressions on any unrelated surface**.
+
+- **Loneliness/Compensatory at COHORT level remains PARTIAL** until F's detection ships, but the **schema slot is ready** to receive F-populated values without further UserCohort dataclass changes. Together with C's mindstate-level FOMO + D's depletion + the deferred D.bis loneliness_compensatory_flag (post-keystone), the platform will eventually have both cohort-prior AND mindstate-level signals for compensatory consumption.
+
+- **Architectural decision:** Schema-only at this stage avoids three speculative architectural commitments F should make: (1) detection algorithm choice (literature-grounded behavioral signature aggregation vs. existing-mechanism-effectiveness proxy); (2) cypher-write extension shape (separate property vs. extending mechanism_effectiveness_json blob); (3) bid-time access contract (extend `get_cohort_priors` return type vs. new sibling accessor vs. encode in JSON blob). F decides all three based on cell-conditioning requirements.
+
+- **Expected next:** **F / S6.1 — cell taxonomy keystone. The destination.** All preparation slices closed (A.0 + A.1.0 + A.1 + A.2.0 + A.2 + B + C + D + E = 9 slices). S6 mandate per directive §3 S6 unblocked since G1.path4 closed at 57e43bf. F consumes: maximizer_tendency archetype Beta priors (A.2), persuasion_knowledge_activation page-priming field (B), 3 mindstate composite states (C+D: fomo_score, psych_ownership_proxy, depletion_proxy), and the compensatory_consumption_pattern cohort schema slot (E) — F decides detection + wiring for the cohort flag based on cell-conditioning requirements. **D.bis** (canonical EMOTION_KEYWORDS / MECHANISM_KEYWORDS extension + signature_version V2→V3 + 2 deferred mindstate derivations: loneliness_compensatory_flag + parasocial_priming_score) sequenced **post-keystone** per Q12 + Q13 adjudication (the keystone defines the final shape that vocabulary needs to support).
+
+- **Hand-off pointer:** Branch `feature/hmt-dashboard` @ HEAD post-E commit. Sessions A (5 slices) + B (1) + C (1) + D (1) + E (1) closed = 9 preparation slices total. Working tree carries this MEMORY.md update + the prior-turn `docs/PLATFORM_INVENTORY_2026_05_07.md` still untracked. **F / S6.1 keystone next** — D.bis sequenced post-keystone.
+
+---
+
 ### Session 2026-05-07 — D / S6-prep.3b — depletion_proxy composite state landed (D.bis deferred)
 
 **EVE Handoff:**
