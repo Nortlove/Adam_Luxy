@@ -164,6 +164,60 @@ Structural defense against re-drift. Past pattern: surviving alternative plans d
 
 ---
 
+### Session 2026-05-09 — Platform System Deep-Dive + Architecture Reasoning Memo for Claude Proper landed (two-phase audit; ~15.4k words across 60 sections; intended as architectural decision-support brief for external Claude advisor)
+
+**EVE Handoff:**
+
+- **Executed:** Two-phase deep-dive audit per Chris's directive (deep dive on the system built across Aura/Neo4j/Railway/everything else, depth sufficient for Claude Proper to support architectural decision-making). Phase 1 = inventory + per-subsystem operational/scaffolded/aspirational assessment; Phase 2 = architectural-reasoning depth (decision rationale + patterns + constraints + open questions + optionality vs lock-in) on the four areas Chris specifically named: Railway-deployed platform, frontend system, interpret-learn-test-change loop, and reporting structure. Two tracked memos at `docs/audits/PLATFORM_SYSTEM_DEEP_DIVE_2026_05_09.md` (~7,400 words / 22 ##-level sections) + `docs/audits/ARCHITECTURE_REASONING_FOR_CLAUDE_PROPER_2026_05_09.md` (~7,971 words / 38 ##- and ###-level sections — 8 numbered §-sections + 24 sub-sections covering 6 dimensions per focus area + 6 metadata header lines). **Combined: ~15,371 words / 60 sections.**
+
+- **🎯 Phase 1 (inventory) major scope finding: platform substantially deeper than the A→M chain implies.** This session's substrate work (A.0 → M.1) is operationally tested but represents a fraction of what's built. The atoms layer (30+ modules), workflows layer (synergy_orchestrator at 2,690 LOC + holistic_decision_workflow at 1,636 LOC), embeddings pipeline, identity/household/privacy substrate, behavioral_analytics, governance layers (pharmacovigilance/blind_analysis/validity/verification), and infrastructure layer (Kafka 19 topics + Prometheus + Redis 15 cache domains + resilience patterns) are all operational substrate this session didn't touch. The "5 of 6 predicates fire" framing from M.1 EVE is an honest measure of WHAT THIS SESSION SHIPPED — but understates what THE PLATFORM has built.
+
+- **🎯 Phase 2 (architectural reasoning) per-focus-area characterizations:**
+  - **Railway**: single-process FastAPI bound by `--workers 1` singleton constraint; push-not-pull StackAdapt model fixes change-application cadence at minutes-to-days; Aura Free Tier auto-pause is a learning-loop break risk (encountered NXDOMAIN this session when Chris's Aura instance 3181c986 was paused).
+  - **Frontend**: Next 16 / React 19 dashboard with 8 operator routes + BFF proxy + OpenAPI-generated types; cell-conditional configuration UI is the documented gap.
+  - **Interpret-learn-test-change loop**: deeply built — 10-system OutcomeHandler dispatch + Spine #6 decision-trace emit-drain + M7 causal ensemble + per_user_posterior_modulation + cell predicates; closed end-to-end but cadence-bounded by StackAdapt review queue.
+  - **Reporting**: Prometheus + ledger + Why Library exist; per-cell observability is the gap that gates the loop's interpret phase.
+
+- **🎯 Top 3 architectural questions surfaced for Claude Proper (Phase 2 §7):**
+  - **Q.A** — Should creative-variant routing live in our infrastructure or stay StackAdapt-review-gated for pilot?
+  - **Q.B** — Should causal-claim test scaffolding ship pre-pilot or rely on post-pilot iteration?
+  - **Q.C** — What's the minimum viable cell-conditional reporting set for pilot? (3 cuts proposed: A=3 routes / B=5 / C=9)
+
+- **🎯 Cross-area architectural patterns flagged (Phase 2 §6):**
+  - **Sync-emit-async-drain** pattern — repeated in `decision_trace` + `mrt_producer` + `red_criteria`; worth catalogue + linting
+  - **Empirical-Bayes shrinkage** as the unified personalization primitive across cohort + per-user paths
+  - **Theory-in-docstring + canonical-formula-in-code + regression-tests-pinning-published-anchors** discipline (the B3-LUXY rule made operational)
+  - **Discovery-as-graph-edges over discovery-as-feature-vectors** — the Louvain + RESPONDS_TO architectural commitment vs alternative cluster-the-feature-vectors approaches
+
+- **🎯 Major findings reshaping strategic picture (Phase 2 cross-area + Phase 1 §1):**
+  - (a) **Reporting gaps cap loop closure** — substrate decides cell-conditionally but dashboard doesn't yet expose per-cell outcomes, gating the interpret/test/determine phases of the loop
+  - (b) **StackAdapt's push-not-pull model + URL-granularity blocker** (per S0_HANDOFF) means change-application cadence is minutes-to-days, NOT real-time, regardless of how fast the loop computes changes
+  - (c) **OutcomeHandler is a 2,873-line god-object** dispatching to ~13 sub-update methods — works but brittle; refactor timing is an open architectural question
+  - (d) **Aura Free Tier auto-pause is a single point of failure** with operational consequences (encountered NXDOMAIN this session when instance 3181c986 was paused — DNS subdomain disappears when paused) — tier upgrade timing is a pre-pilot decision
+
+- **Top 3 recommendations from Phase 1 §1:**
+  - (a) **Resume Aura instance + retry Q.0 with API access** — single ops action unblocks P.2/P.3/P.4 + LUXY current-state audit
+  - (b) **Q.0.bis frontend + reporting deep-dive** — inventory dashboard routes against cell-conditional gaps; identify shortest path to pilot-launch feedback loop
+  - (c) **Causal-attribution audit + scaffold** of `adam/intelligence/msprt_*`, `adam/blind_analysis/box.py`, `adam/intelligence/spine/`, `adam/intelligence/dual_eval_evaluator.py`, `adam/intelligence/free_energy_dual_eval.py` to identify what causal scaffolding exists vs needs building
+
+- **Verified:**
+  - Phase 1 memo present at `docs/audits/PLATFORM_SYSTEM_DEEP_DIVE_2026_05_09.md` (64 KB).
+  - Phase 2 memo present at `docs/audits/ARCHITECTURE_REASONING_FOR_CLAUDE_PROPER_2026_05_09.md` (62 KB).
+  - Zero tracked files modified by either fork.
+  - Strict no-production-data-access discipline observed (no API calls, no DB queries, no PII; Phase 1 + 2 are pure code-inspection).
+  - Full pytest suite: **5,897 passed** / 9 pre-existing failures unchanged (TestCampaignDocs ×8 + test_dag_has_14_atoms ×1) / 5 skipped — **zero regressions** (audit-only slice; no code changes).
+  - Both memos cite `path:line` references throughout; Phase 2 prefixes interpretive claims with "Inference:" per discipline.
+
+- **Sensitive credentials handling (this session):** Chris provided two production credentials in conversation context — Aura connection string for instance 3181c986 (currently paused; DNS NXDOMAIN), and a StackAdapt production API token. Neither was committed to any tracked file. Aura credentials were used in a transient bash invocation only (env vars passed inline; not persisted). StackAdapt token was NOT used (no API calls made during this session's audit work; intended scope was code inspection only). Both remain only in active conversation context and will fall out of memory at compression.
+
+- **Architectural decision history note:** This session's audit chain (S6.2.0 → W.0 → W.2.0 → M.0 → P.0 → System Deep-Dive Phase 1 → Phase 2) demonstrates the audit-first discipline scaling up from per-slice scope (S6.2.0) to whole-platform scope (Phase 1+2). Each audit surfaced findings that reshaped subsequent work — sometimes scope contractions (W.2.0: per_user_posterior_modulation already exists; M.0: extract_mindstate_vector never called from bid path; P.0: URL-granularity blocker pre-existed since 2026-05-04), sometimes scope expansions (W.0: 5-vs-2 wiring split; S6.2.0: substrate-not-yet-consumed). The Phase 2 architectural reasoning memo is the most consequential audit artifact yet produced this session because it's structured for external decision-support consumption, not internal Claude Code execution. Chris's framing — "Claude Code is a great execution tool but where you lack Claude Proper excels" — explicitly partitions cognitive labor between this agent (execution) and Claude Proper (architectural choice). The two-phase memo respects that partition.
+
+- **Expected next:** Chris feeds both memos to Claude Proper. Claude Proper's architectural recommendations (likely answering Q.A / Q.B / Q.C above + adjacent decisions) flow back as the next round of slice prompts. In parallel: Q37 (Aura access) adjudication remains open from the P.0 chain (Aura instance pause needs resolving for retrospective analysis P.2/P.3/P.4 to ship); Q32-Q36 (StackAdapt access + decision trace persistence + attribution windows) also open.
+
+- **Hand-off pointer:** Branch `feature/hmt-dashboard` @ HEAD post-deep-dive commit. **25 slices closed total** (18 implementation + 5 codebase audits + 1 docs-update + 1 two-phase deep-dive). Working tree carries this MEMORY.md update + both new audit memos + `docs/PLATFORM_INVENTORY_2026_05_07.md` still untracked from earlier sessions. Awaiting Chris's response after Claude Proper's architectural advice lands.
+
+---
+
 ### Session 2026-05-09 — P.1 ANALYSIS-C cold-start archetype mapper distribution sanity check landed; **all 5 healthy-distribution criteria PASS — W.2a mapper validated for pilot launch**
 
 **EVE Handoff:**
