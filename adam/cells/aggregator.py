@@ -37,6 +37,101 @@ from adam.cells.taxonomy import (
 from adam.cold_start.models.enums import ArchetypeID
 
 
+# ============================================================================
+# M.1 — aggregator-side fomo_score derivation (Q31 architectural simplification)
+# ============================================================================
+# Per M.0 audit (commit 9324f78): PageMindstateVector @property derivations
+# never fire at bid time because PMV is never constructed in the bid path
+# (extract_mindstate_vector lives in outcome_handler learning paths only).
+# M.1 adds aggregator-side inline compute that bypasses the dead PMV path
+# and produces identical values from the same logical inputs (Q31 two-path
+# consistency invariant). C's PageMindstateVector.fomo_score @property
+# remains for outcome_handler backward-compat.
+#
+# Constants mirror C's PageMindstateVector @property exactly
+# (adam/retargeting/resonance/models.py:69-78). Pinned by an equivalence
+# test for two-path consistency.
+
+FOMO_REGULATORY_PROMOTION_MODIFIER: float = 1.2
+FOMO_REGULATORY_PREVENTION_MODIFIER: float = 0.8
+FOMO_REGULATORY_NEUTRAL_MODIFIER: float = 1.0
+FOMO_SCARCITY_FRAME_NAME: str = "scarcity"
+
+
+def compute_fomo_score(
+    arousal: float,
+    activated_frames,
+    regulatory_focus_priming,
+) -> float:
+    """Compute FOMO score aggregator-side per Q31 adjudication.
+
+    Mirrors C's PageMindstateVector.fomo_score @property
+    (commit fd1a95a) but operates on inputs available at the
+    bid-time aggregator seam (already-cached PagePrimingSignature
+    values) rather than on PageMindstateVector fields that
+    aren't constructed at bid time.
+
+    Formula (identical to C's @property in computed value for
+    matching logical inputs):
+
+        fomo_score = arousal × scarcity_indicator × regulatory_modifier
+
+    Where:
+        arousal ∈ [0, 1] from PagePrimingSignature
+        scarcity_indicator = 1.0 if FOMO_SCARCITY_FRAME_NAME ("scarcity")
+                             in activated_frames else 0.0
+        regulatory_modifier =
+            1.2 if PROMOTION
+            0.8 if PREVENTION
+            1.0 otherwise (NEUTRAL or unknown)
+
+    Result clipped to [0, 1].
+
+    C-vs-M.1 input differences (do NOT affect computed value):
+        C's @property reads self.scarcity_frame_present (a separate
+        orchestrator-populated bool); M.1 derives the same bool by
+        membership-checking "scarcity" in activated_frames (the
+        canonical priming-side source per ContentProfiler
+        MECHANISM_KEYWORDS top-5 per
+        adam/platform/intelligence/content_profiler.py:35).
+
+    Bid-time latency: <100μs per call (3 dict/comparison ops).
+
+    Args:
+        arousal: PagePrimingSignature.arousal ∈ [0, 1]
+        activated_frames: PagePrimingSignature.activated_frames
+            (tuple, list, frozenset, or other iterable of str).
+            None → treated as empty (no scarcity contribution).
+        regulatory_focus_priming: RegulatoryFocus enum value OR string
+            ("promotion" / "prevention" / "neutral"). Anything not
+            matching PROMOTION or PREVENTION → NEUTRAL modifier (1.0).
+    """
+    if activated_frames is None:
+        scarcity_indicator = 0.0
+    else:
+        scarcity_indicator = (
+            1.0 if FOMO_SCARCITY_FRAME_NAME in activated_frames
+            else 0.0
+        )
+
+    # Handle both enum and string regulatory_focus_priming.
+    reg_value = (
+        regulatory_focus_priming.value
+        if hasattr(regulatory_focus_priming, "value")
+        else str(regulatory_focus_priming)
+    )
+
+    if reg_value == "promotion":
+        modifier = FOMO_REGULATORY_PROMOTION_MODIFIER
+    elif reg_value == "prevention":
+        modifier = FOMO_REGULATORY_PREVENTION_MODIFIER
+    else:
+        modifier = FOMO_REGULATORY_NEUTRAL_MODIFIER
+
+    raw = float(arousal) * scarcity_indicator * modifier
+    return max(0.0, min(1.0, raw))
+
+
 # Type aliases for clarity in constructor injection.
 ArchetypeAccessor = Callable[[str], ArchetypeID]
 PostureAccessor = Callable[[str], str]
@@ -139,10 +234,19 @@ class CellFeaturesAggregator:
             lambda: self._mindstate(buyer_id, url_hash),
             None,
         )
-        fomo = (
-            float(getattr(mindstate, "fomo_score", 0.0) or 0.0)
-            if mindstate else 0.0
-        )
+        # M.1: aggregator-side fomo_score per Q31 (bypass dead PMV
+        # @property path). Falls back to mindstate.fomo_score if
+        # mindstate is provided (preserves M.2/M.3 future wiring
+        # path); otherwise computes inline from already-fetched
+        # priming inputs.
+        if mindstate is not None and getattr(mindstate, "fomo_score", None):
+            fomo = float(mindstate.fomo_score)
+        else:
+            fomo = compute_fomo_score(
+                arousal=arousal,
+                activated_frames=activated_frames,
+                regulatory_focus_priming=regulatory_focus,
+            )
         psych_own = (
             float(getattr(mindstate, "psych_ownership_proxy", 0.0) or 0.0)
             if mindstate else 0.0

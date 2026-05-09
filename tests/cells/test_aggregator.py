@@ -131,9 +131,23 @@ class TestFailSoft:
         assert fs.persuasion_knowledge_activation == 0.0
 
     def test_mindstate_failure_defaults_mindstate_fields(self):
+        """Schema-evolution note: pre-M.1, mindstate-fetch failure
+        defaulted ALL mindstate fields to 0 (mindstate was the only
+        path). Post-M.1, fomo_score has an inline aggregator-side
+        compute path (Q31) that produces valid values from priming
+        inputs even when mindstate fetch fails. The other 2 mindstate
+        composites (psych_ownership_proxy, depletion_proxy) still
+        default to 0 because M.2/M.3 are deferred per Q29=BETA.
+
+        With this fixture's priming (arousal=0.7, scarcity in
+        activated_frames, regulatory_focus_priming="promotion"),
+        the inline fomo compute produces 0.7 × 1.0 × 1.2 = 0.84.
+        """
         agg = _make_aggregator(mindstate_accessor=self._mk_raising())
         fs = agg.aggregate(buyer_id="u1", url_hash="h1")
-        assert fs.fomo_score == 0.0
+        # M.1 inline compute fires even when mindstate fetch fails.
+        assert fs.fomo_score == pytest.approx(0.84)
+        # M.2/M.3 deferred — these still default to 0 when mindstate fails.
         assert fs.psych_ownership_proxy == 0.0
         assert fs.depletion_proxy == 0.0
         assert fs.browsing_momentum == 0.5

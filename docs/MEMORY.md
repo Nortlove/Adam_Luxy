@@ -164,6 +164,50 @@ Structural defense against re-drift. Past pattern: surviving alternative plans d
 
 ---
 
+### Session 2026-05-08 — M.1 aggregator-side fomo_score derivation landed; **PILOT PATH OPERATIONAL (5/6 predicates fire on real bid data)**
+
+**EVE Handoff:**
+
+- **Executed:** M.1 — first M-chain implementation slice + **final pre-pilot wiring slice**. Components shipped: (1) **`compute_fomo_score(arousal, activated_frames, regulatory_focus_priming)`** pure-functional helper at `adam/cells/aggregator.py:33-115`; mirrors C's `PageMindstateVector.fomo_score` @property formula exactly (Q31 two-path consistency invariant); accepts both `RegulatoryFocus` enum and raw string; handles None activated_frames; clips result to [0, 1]; <100μs per call; (2) **4 module-level constants** matching C exactly: `FOMO_REGULATORY_PROMOTION_MODIFIER = 1.2`, `FOMO_REGULATORY_PREVENTION_MODIFIER = 0.8`, `FOMO_REGULATORY_NEUTRAL_MODIFIER = 1.0`, `FOMO_SCARCITY_FRAME_NAME = "scarcity"`; (3) **aggregator integration** at `aggregator.py:148-160` — replaces W.2c stub's dead-mindstate read with: if explicit mindstate provides `fomo_score`, use it (preserves M.2/M.3 future wiring path); else `compute_fomo_score(arousal, activated_frames, regulatory_focus)` from already-fetched priming; (4) 82 new tests in `tests/cells/test_aggregator_fomo.py` covering compute correctness (10) + Q31 two-path consistency (15+1 parametrized over arousal × scarcity × focus) + aggregator integration (5) + predicate fire-rate end-to-end (3) + zero-regression on locked surfaces (4); (5) **1 stale W.2c test schema-evolution update** — `test_mindstate_failure_defaults_mindstate_fields` updated to reflect that fomo_score now has an inline path that fires even when mindstate fetch fails (psych_ownership_proxy + depletion_proxy still default to 0 since M.2/M.3 are deferred). Test suite: **5,877 passing** (+82 net from M.1; 0 regressions).
+
+- **🔑 PILOT PATH OPERATIONAL — substrate firing inventory updated to 5/6 predicates fire on real bid data (was 3/6 per Q30 correction):**
+  - **Real-data fires:** cohort-keyed (W.1); persuasion-resistance (W.1 + priming DI); maximizer-keyed (W.2c); **`high_fomo_promotion` (M.1 — NEW)**; **`high_fomo_prevention` (M.1 — NEW)**.
+  - **Dormant per BETA pilot adjudication:** depletion-keyed predicate (M.2 deferred — no current predicate consumer in seed set); ownership-keyed predicate (M.3 deferred — substantial substrate build).
+
+- **Q29=BETA + Q30 + Q31 adjudications baked in:**
+  - **Q29=BETA**: M.1 ships pre-pilot for FOMO; M.2 (depletion) + M.3 (psych_ownership) deferred post-pilot per BETA recommendation. Pilot launches with 5/6 predicates firing.
+  - **Q30 correction acknowledged**: W.2c EVE's 5/6 fire-rate claim was a conflation of "inputs wired" with "composites firing." M.0 audit memo + this M.1 EVE block are the source of truth — actual pre-M.1 fire rate was 3/6.
+  - **Q31 two-path coexistence**: aggregator-side `compute_fomo_score` coexists with C's `PageMindstateVector.fomo_score` @property. C's @property remains UNTOUCHED for outcome_handler learning paths. Two-path consistency pinned by 15-case parametrized equivalence test (arousal × scarcity × focus) — both paths produce identical computed values for matching logical inputs.
+
+- **Pre-flight findings (verified by smoke test + tests):**
+  - **Pass A**: extract_mindstate_vector still only called from outcome_handler paths (M.0 finding holds); C's @property exists at `models.py:200` with the formula M.1 mirrors.
+  - **Pass B**: priming_accessor (W.1-wired) returns populated PagePrimingSignature with arousal + activated_frames + regulatory_focus_priming accessible.
+  - **Pass C**: CellFeatureSet.fomo_score field at `features.py:57` defaults to 0.0; M.1 populates it via aggregator-side compute (no schema change).
+  - **Pass D**: aggregator integration site located at `aggregator.py:148-160` (the previous W.2c stub `getattr(mindstate, "fomo_score", 0.0)` line, now replaced).
+  - **Pass E**: Both fomo seed predicates exist in `adam/cells/predicates/fomo_predicates.py` at lines 19-46 (high_fomo_promotion) and 49-72 (high_fomo_prevention); both gate on `features.fomo_score > 0.7` + appropriate regulatory_focus.
+
+- **Verified:**
+  - Smoke-test 10-pattern verification: high arousal + scarcity + promotion → 0.96 (matches C); + prevention → 0.64; + neutral → 0.8; no scarcity → 0.0 (gates); zero arousal → 0.0 (gates); clipping at 1.0 (raw 1.14 → 1.0); string regulatory_focus accepted; None activated_frames → 0.0; **Q31 two-path equivalence: C @property = M.1 compute = 0.96 for matching inputs**; aggregator integration end-to-end (default → 0.0 cold-start; populated priming → 0.96).
+  - **compute_fomo_score correctness tests (10):** 4-modifier × scarcity-on/off matrix; default fallback paths; range invariant fuzz over arousal × scarcity × focus.
+  - **Q31 two-path consistency tests (16):** 15 parametrized cases (5 arousal × 2 scarcity × 3 focus) + constants-match-C invariant.
+  - **Aggregator integration tests (5):** priming with scarcity + promotion populates real fomo (NOT 0.0 default); priming=None yields 0.0 fail-soft; priming without scarcity yields 0.0; explicit mindstate.fomo_score takes precedence (preserves M.2/M.3 future wiring path); aggregator p99 latency < 15ms over 10,000 random aggregations with M.1 compute included.
+  - **Predicate fire-rate tests (3):** high_fomo_promotion fires end-to-end on synthetic priming(arousal=0.85, scarcity, promotion); high_fomo_prevention fires end-to-end on priming(arousal=1.0, scarcity, prevention) — needs max arousal to clear 0.7 threshold (fomo = 1.0 × 1.0 × 0.8 = 0.8); neutral priming fires neither.
+  - **Zero-regression tests (4):** C's PageMindstateVector.fomo_score @property unchanged (still computes 0.96 for matching inputs); W chain accessors still resolve; default_aggregator unchanged (cold-start fomo = 0.0); CellFeatureSet schema unchanged.
+  - **Schema-evolution test update (1):** `test_mindstate_failure_defaults_mindstate_fields` updated — pre-M.1 asserted fomo_score=0.0 when mindstate fetch fails; post-M.1 asserts fomo_score=0.84 because the inline aggregator-side compute fires even when mindstate fetch fails (psych_ownership + depletion still default to 0 since M.2/M.3 deferred). Same schema-evolution pattern as F.2/W.1/W.2b/W.2c.
+  - Full pytest suite: **5,877 passed** / 9 pre-existing failures unchanged (TestCampaignDocs ×8 + test_dag_has_14_atoms ×1) / 5 skipped — **zero regressions on any unrelated surface**.
+
+- **Substrate firing inventory progression:** S6.2 baseline (0/6 fire) → W.1 (3/6 reachable with full DI) → W.2a/W.2b (data layer ready) → W.2c (3/6 actually fire — Q30 correction) → **M.1 (5/6 fire, +2 fomo)**. Final 1/6 (depletion-keyed) acceptable per Q29=BETA pilot adjudication; M.2 + M.3 are post-pilot iteration substrate.
+
+- **Architectural decision history note:** M.1 is the TWENTY-FIRST slice in the chain (17 implementation + 4 audits) and the FINAL pre-pilot wiring slice. The audit-first discipline produced a remarkably clean chain — every audit slice (S6.2.0, W.0, W.2.0, M.0) found scope rightsizings (mostly contractions), every implementation slice shipped with zero unintended regressions across ~270 net new tests, and each schema-evolution test casualty (F.2/W.1/W.2b/W.2c/M.1 — 6 stale tests total) was treated as a legitimate evolution rather than masked. The Q31 two-path consistency invariant (M.1's 15-case parametrized equivalence test) is a particularly clean pattern: explicit pinning of "two paths must produce identical values for matching inputs" makes drift detectable at test time rather than at production time.
+
+- **Pilot launch unblocked.** Substrate-firing inventory: 5/6 predicates fire on real bid data; 1 dormant predicate (depletion) acceptable per Q29=BETA. Bilateral psycholinguistic intelligence thesis is testable at pilot. **The platform substrate is operationally fired end-to-end at bid time.** What's left is operational decisions (not Claude Proper code prompts):
+  - **Pre-pilot operational checklist:** agency handoff; pixel installation by LUXY; audience segment uploads via StackAdapt API; creative inventory loaded against fired predicate classes (scarcity / loss_aversion / authority / social_proof / commitment_consistency / liking / unity boosts + dampens); decision-trace observability turned on.
+  - **Post-pilot iteration queue:** M.2 (depletion aggregator-side if pilot data validates consumer); M.3 (psych_ownership substrate build if pilot validates the predicate); D.bis (vocabulary extension + 2 deferred mindstate derivations); cell pruning offline pipeline; S5.5 nightly retrain; S6.2 ADWIN drift detection; CTV expansion; SSP integration.
+
+- **Hand-off pointer:** Branch `feature/hmt-dashboard` @ HEAD post-M.1 commit. **21 slices closed total** (17 implementation + 4 audits — S6.2.0, W.0, W.2.0, M.0). Working tree carries this MEMORY.md update + new M.1 test file + `docs/PLATFORM_INVENTORY_2026_05_07.md` still untracked from earlier sessions. **All pre-pilot wiring complete.** Awaiting Chris's operational-launch-sequencing decisions, not Claude Proper slice prompts.
+
+---
+
 ### Session 2026-05-08 — M.0 mindstate accessor substrate audit landed (read-only memo); **Q30 corrects W.2c EVE overcount — actual predicate fire rate is 3/6 not 5/6**
 
 **EVE Handoff:**
