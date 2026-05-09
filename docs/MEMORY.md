@@ -164,6 +164,55 @@ Structural defense against re-drift. Past pattern: surviving alternative plans d
 
 ---
 
+### Session 2026-05-08 — P.0 LUXY pilot campaign data access audit landed (read-only memo); **structural URL-granularity blocker confirmed; ANALYSIS-C is the only no-external-dependency retrospective**
+
+**EVE Handoff:**
+
+- **Executed:** P.0 read-only audit. Eight-pass inspection of LUXY pilot campaign data access surface producing tracked memo at `docs/audits/LUXY_PILOT_CAMPAIGN_DATA_ACCESS_AUDIT.md` (~3,325 words / 50 ##-level headers — 5-line metadata header + §1-§12 + 6 ANALYSIS sub-rows in §9 table + 5 Q sub-sections in §11 + 4 numbered sub-sections in §10 + per-pass sub-sections in §3-§8). Audit-then-adjudicate pattern matching W.0 + W.2.0 + M.0 + S6.2.0 precedents. Zero code changes; zero test changes. Strict no-production-data-access discipline observed throughout: no API calls, no database queries, no PII / campaign-confidential records — counts and shapes only from in-repo inspection.
+
+- **🎯 Major access-blocker finding (structural, not credentialing):** **A prior S0_HANDOFF audit dated 2026-05-04 at `docs/S0_HANDOFF_2026_05_04.md:498-500` already established that StackAdapt does NOT populate served-impression-URL granularity for the LUXY account.** This is a PERMANENT data-surface limitation imposed by StackAdapt's reporting layer, not a credentialing issue. **It structurally blocks ANALYSIS-D (cell-tuple cross-reference against historical bid contexts) and ANALYSIS-E (FOMO outcome correlation)** because both require per-impression URL provenance which StackAdapt doesn't deliver. Resolving requires either (a) standing up parallel pixel-impression-tracking infrastructure ourselves (substantial out-of-P-chain engineering work, post-pilot territory) or (b) StackAdapt operationally changing what they populate for the account (out of our control). The audit recommends honest pilot launch with the substrate as-shipped rather than blocking pilot on validation the data surface cannot support.
+
+- **Campaign state inventory (Pass 1):** advertiser_id 122463 confirmed (per session memory + the existing S0_HANDOFF audit notes 12 LUXY campaigns visible). Current state (active / paused / ended) NOT recoverable from in-repo inspection — requires API call which P.0 discipline forbade. Pre-S6.2 baseline retargeting confirmed: S6.2 + W chain + M.1 all shipped during this session and have NOT been deployed against the active campaign yet.
+
+- **Per-analysis feasibility distribution (Pass 8 / §9):**
+  - **Feasible: 1** — **ANALYSIS-C** (`cold_start_archetype_mapper` sanity check). Synthetic distribution check via 10,000 random `(geo, device, hour_of_day, iab_category)` tuples; verifies the W.2a mapper isn't degenerate (assigning everyone the same archetype); ~50 LOC; **zero external data dependencies**; can ship as P.1 immediately without provisioning or further adjudication.
+  - **Partially Feasible: 3** — ANALYSIS-A (FOMO predicate fire-rate via subset analysis on 6 known LUXY URLs whose priming signatures may be cached); ANALYSIS-B (compensatory cohort detection if Neo4j cohorts exist for the campaign window); ANALYSIS-F (cohort outcome correlation conditional on Neo4j access). Each conditional on access decisions in §11.
+  - **Infeasible: 2** — **ANALYSIS-D** (cell-tuple cross-reference against historical bid contexts) and **ANALYSIS-E** (FOMO outcome correlation). Both structurally blocked by the S0_HANDOFF "no served-impression-URL granularity for LUXY" finding above.
+
+- **Recommended first analysis: ANALYSIS-C as P.1.** Rationale: only Feasible-no-blocker analysis in the matrix; small effort (~50 LOC); zero external data dependencies; provides immediate pre-pilot validation that the W.2a cold_start_archetype_mapper isn't degenerate. Other analyses gate on Q32-Q36 adjudications.
+
+- **5 QUESTION-and-stop concerns surfaced for Claude Proper (Q32-Q36):**
+  - Q32 — StackAdapt API credentials for retrospective queries (impression / click / conversion logs; audience segment metadata): which credentials does Chris need to provide? What's the scope?
+  - Q33 — Neo4j production state queryability: is dev environment connected to production Neo4j (read-only path), or is ops-side data extract required for ANALYSIS-B / ANALYSIS-F?
+  - Q34 — Redis production state queryability: same question — dev connectivity to production Redis vs ops-side extract.
+  - Q35 — Decision trace persistence for the active campaign window: were decision traces persisted (Kafka? S3? Redis keys?) during the campaign period? If not, retrospective predicate-firing analysis is limited to inputs we can reconstruct from priming + cohort state.
+  - Q36 — Attribution-window alignment: StackAdapt typically has multi-day attribution lag for conversion events. For ANALYSIS-F (cohort outcome correlation), do attribution windows align with the campaign date range we'd analyze? Affects what conversion data is "complete" vs "still arriving."
+
+- **Pre-flight findings (in memo per pass):**
+  - Pass 1: 12 LUXY campaigns visible per S0_HANDOFF; current state requires API call.
+  - Pass 2: StackAdapt API surfaces inventoried at `adam/api/stackadapt/`; inbound-only (no outbound webhooks per session memory); retrospective endpoints documented.
+  - Pass 3: Neo4j historical state — UserCohort schema documented; counts not queryable without production access.
+  - Pass 4: Redis BuyerUncertaintyProfile entries — schema documented; count framing requires production query.
+  - Pass 5: Decision trace inventory — emitter exists; persistence layer for active campaign window unknown without ops-side check.
+  - Pass 6: PagePrimingSignature historical cache — S3.3 cascade confirmed; URL count for LUXY URLs requires production query.
+  - Pass 7: Outcome data accessibility — StackAdapt API path inventoried; granularity per-impression vs per-day depends on Q32 credential scope.
+  - Pass 8: Feasibility matrix completed (1 / 3 / 2 distribution above).
+
+- **Verified:**
+  - Memo present at expected path; ~26 KB; all 50 ##-level headers per spec.
+  - Zero tracked files modified by audit fork.
+  - All claims in memo cite `path:line` references where in-repo inspection was the source.
+  - Strict no-production-data-access discipline observed throughout (no API calls, no DB queries, no extracted records).
+  - Full pytest unchanged (no code changes; baseline 5,877 passing remains intact).
+
+- **Architectural decision history note:** P.0 is the FIFTH audit slice and confirms the audit-first discipline pays off in another direction we hadn't seen yet — surfacing PRE-EXISTING audit findings that constrain the new audit's scope. The S0_HANDOFF (2026-05-04) URL-granularity finding was sitting in `docs/` from before this session's W/M/P chain work. Without P.0's inspection that found it, I might have proposed ANALYSIS-D or ANALYSIS-E as P.1 work — only to discover mid-implementation that the data surface can't support them. The audit-first discipline keeps preventing wasted slice work in BOTH directions: scope contractions (W.2.0, M.0) AND blocker-discovery (P.0).
+
+- **Expected next:** Either (a) **P.1 implementation slice running ANALYSIS-C** (`cold_start_archetype_mapper` synthetic distribution sanity check, ~50 LOC, no external dependencies — recommended path; can ship immediately without further adjudication), OR (b) **operational handoff** if Chris adjudicates Q32-Q36 in a way that shifts P chain priority off retrospective analysis and toward direct pilot launch validation. Awaits Chris's adjudication on Q32-Q36 + analysis sequencing decision.
+
+- **Hand-off pointer:** Branch `feature/hmt-dashboard` @ HEAD post-P.0 commit. **22 slices closed total** (17 implementation + 5 audits — S6.2.0, W.0, W.2.0, M.0, P.0). Working tree carries this MEMORY.md update + new audit memo + `docs/PLATFORM_INVENTORY_2026_05_07.md` still untracked from earlier sessions. Post-P.0: P.1 implementation OR operational pilot launch sequencing per Chris's call.
+
+---
+
 ### Session 2026-05-08 — M.1 aggregator-side fomo_score derivation landed; **PILOT PATH OPERATIONAL (5/6 predicates fire on real bid data)**
 
 **EVE Handoff:**
