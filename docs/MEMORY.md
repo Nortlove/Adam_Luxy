@@ -205,6 +205,15 @@ Structural defense against re-drift. Past pattern: surviving alternative plans d
   - Full pytest suite: **5,897 passed** / 9 pre-existing failures unchanged (TestCampaignDocs ×8 + test_dag_has_14_atoms ×1) / 5 skipped — **zero regressions on any unrelated surface**.
   - **Flakiness note:** the first full-suite run after P.1 produced 17 failures (8 transient `test_embeddings.py` failures in addition to the 9 pre-existing). Re-running the suite produced the expected 9-failures baseline. The 8 transient failures were order-dependent flakiness in test_embeddings (passes 27/27 in isolation) — pre-existing, not P.1-introduced. Documented for future-trace honesty.
 
+- **Pre-existing failures inventory (carried across this slice unchanged):**
+  - **Stable (9 — same since session start, unchanged for ~12 commits):**
+    - 8 TestCampaignDocs assertions in `tests/integration/test_full_system.py` (flight dates, channels, whitelist, site profiles, frequency caps, dayparting, KPIs, creative copy)
+    - `test_dag_has_14_atoms` in `tests/integration/test_remediation.py` (atom-count drift from prior-session integration work)
+  - **Transient (8 — first surfaced on P.1 full-suite run; recover on retry):** pre-existing test-order/shared-state flakiness in `tests/unit/test_embeddings.py` — 27/27 pass in isolation; intermittent in full suite due to upstream test mutating shared embeddings state; collection-order shift from P.1's added test files unmasked the flakiness without introducing it.
+  - **Recommended post-pilot triage** (both non-pilot-blocking):
+    - Embeddings test-isolation debt cleanup
+    - 9 stable failures triage (fix or retire as obsolete invariants)
+
 - **Architectural decision history note:** P.1 is the FIRST analysis slice in the codebase — establishes the pattern for substrate-validation slices (analysis module + persisted report + invariant-pinning tests). The pattern: (1) read-only synthetic evaluation of a substrate component; (2) generate a markdown report capturing current state; (3) pin findings as architectural invariants in tests. Future tuning that breaks the invariants becomes a regression caught at test time. This composes cleanly with audit-first discipline — audits surface what to inspect; analysis slices systematically inspect with persisted reports.
 
 - **Expected next:** **Chris's adjudication on Q32-Q36** (StackAdapt API credentials, Neo4j/Redis production access, decision trace persistence, attribution-window alignment). Outcomes determine P.2+ sequencing:
