@@ -34,7 +34,7 @@ import logging
 import math
 import time
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -46,13 +46,36 @@ EDGE_DIMENSIONS = [
     "temporal_discounting", "brand_relationship_depth", "autonomy_reactance",
     "information_seeking", "mimetic_desire", "interoceptive_awareness",
     "cooperative_framing_fit", "decision_entropy",
+    # Q.X (Q.B/Q.3 Sketch C+ cleanup): W.2b adds maximizer_tendency as a
+    # cohort-level dimension; causal_learning needs it in the discovery
+    # grid so MODERATES tests can find archetype-conditioned amplification
+    # on this dimension.
+    "maximizer_tendency",
 ]
 
+# Q.W (Q.B/Q.3 Sketch C+ additive cleanup): the canonical Cialdini-9
+# vocabulary used by F.2 includes `anchoring` but causal_learning's
+# original list omitted it. ADDITIVE — `cognitive_ease` is referenced
+# elsewhere in the codebase (adam/constants.py + adam/main.py + demo
+# data) so removal would have substantial blast radius. Adding
+# `anchoring` makes MECHANISMS the canonical Cialdini-9 + cognitive_ease
+# backward-compat superset. Discovery against the canonical-9 grid
+# satisfies Q.W without breaking dependent surfaces.
 MECHANISMS = [
     "authority", "social_proof", "scarcity", "loss_aversion",
     "commitment", "liking", "reciprocity", "curiosity",
     "cognitive_ease", "unity",
+    "anchoring",
 ]
+
+# Canonical Cialdini-9 subset for the bilateral central claim test
+# scaffold. The pre-registered box (Sketch C+) operates over this
+# subset so the parameter grid stays bounded at 8 archetypes × 21
+# dimensions × 9 mechanisms = 1,512 cells.
+CANONICAL_CIALDINI_9 = (
+    "authority", "social_proof", "scarcity", "loss_aversion",
+    "commitment", "liking", "reciprocity", "unity", "anchoring",
+)
 
 
 # ============================================================================
@@ -239,6 +262,42 @@ class TestResult:
     confidence_interval: Tuple[float, float] = (0.0, 0.0)
 
 
+@dataclass
+class ModerationTestResult:
+    """Q.B/Q.3 (Sketch C+) — result of a (archetype, dimension, mechanism)
+    moderation test.
+
+    The bilateral architecture's central causal claim sits on this
+    structure: lift > 1.0 with significance after corrections means
+    the trait × state composition predicts response better than either
+    trait or state alone.
+
+    `lift` is archetype-amplification / non-archetype-amplification.
+    `lift_lo` / `lift_hi` are 95% CI bounds (delta method).
+    `significant` is the post-BH-FDR significance flag.
+    """
+    hypothesis: str = ""
+    archetype: str = ""
+    dimension: str = ""
+    mechanism: str = ""
+    lift: float = 1.0
+    lift_lo: float = 1.0
+    lift_hi: float = 1.0
+    cohens_h: float = 0.0
+    p_value: float = 1.0
+    n_archetype: int = 0
+    n_non_archetype: int = 0
+    amp_archetype: float = 0.0
+    amp_non_archetype: float = 0.0
+    significant: bool = False
+
+    @property
+    def effect_size(self) -> float:
+        """Alias to cohens_h for compatibility with BH-FDR helper that
+        expects an .effect_size attribute on the result type."""
+        return self.cohens_h
+
+
 class CausalTestEngine:
     """Runs statistical tests on accumulated causal observations."""
 
@@ -350,6 +409,184 @@ class CausalTestEngine:
         # Benjamini-Hochberg FDR correction
         results = _apply_bh_correction(results)
 
+        return results
+
+    def test_archetype_moderates_dimension_amplifies_mechanism(
+        self,
+        archetype: str,
+        dimension: str,
+        mechanism: str,
+        observations: List["CausalObservation"],
+        split_point: float = 0.5,
+    ) -> "ModerationTestResult":
+        """Q.B/Q.3 (Sketch C+) — does archetype A produce significantly
+        stronger amplification of mechanism M by dimension D than the
+        population baseline?
+
+        This is the bilateral architecture's central causal claim test:
+        multiplicative trait × state composition predicts response
+        better than either trait-alone or state-alone.
+
+        Procedure:
+          1. Partition observations into archetype-A subset + non-A
+             subset (filtered to mechanism M sent in both)
+          2. Compute amplification rate per partition (high-D vs low-D
+             conversion-rate gap, same primitive as
+             test_dimension_amplifies_mechanism)
+          3. Lift = archetype_amplification / non_archetype_amplification
+          4. z-test on the difference between the two amplifications;
+             Cohen's h on the gap size; both must clear thresholds for
+             significance
+          5. Returns ModerationTestResult with lift + CI + p_value.
+             BH FDR correction is applied at the
+             test_all_moderation_effects level (200+ tests need
+             multi-comparison control)
+
+        Insufficient-data states return non-significant results
+        without raising — matches the test_dimension_amplifies_mechanism
+        soft-fail discipline.
+        """
+        a_obs = [
+            o for o in observations
+            if o.mechanism_sent == mechanism and o.archetype == archetype
+        ]
+        non_a_obs = [
+            o for o in observations
+            if o.mechanism_sent == mechanism and o.archetype != archetype
+        ]
+
+        # Need enough in both partitions for the comparison to be
+        # statistically meaningful. Conservative minimums; pilot
+        # calibration may relax.
+        if len(a_obs) < 20 or len(non_a_obs) < 20:
+            return ModerationTestResult(
+                hypothesis=f"{archetype} moderates {dimension}->{mechanism}",
+                archetype=archetype,
+                dimension=dimension,
+                mechanism=mechanism,
+                n_archetype=len(a_obs),
+                n_non_archetype=len(non_a_obs),
+            )
+
+        def _amplification(obs: List["CausalObservation"]) -> Optional[float]:
+            high = [o for o in obs if o.page_edge_dimensions.get(dimension, 0.5) > split_point]
+            low = [o for o in obs if o.page_edge_dimensions.get(dimension, 0.5) <= split_point]
+            if len(high) < 10 or len(low) < 10:
+                return None
+            rate_high = sum(1 for o in high if o.success) / len(high)
+            rate_low = sum(1 for o in low if o.success) / len(low)
+            return rate_high - rate_low
+
+        amp_a = _amplification(a_obs)
+        amp_non_a = _amplification(non_a_obs)
+
+        if amp_a is None or amp_non_a is None:
+            return ModerationTestResult(
+                hypothesis=f"{archetype} moderates {dimension}->{mechanism}",
+                archetype=archetype,
+                dimension=dimension,
+                mechanism=mechanism,
+                n_archetype=len(a_obs),
+                n_non_archetype=len(non_a_obs),
+            )
+
+        # Lift: ratio of archetype-A amplification to non-A amplification.
+        # Guard against degenerate denominators (zero or near-zero
+        # baseline amplification → lift undefined; report as 1.0 with
+        # not-significant flag).
+        if abs(amp_non_a) < 1e-6:
+            lift = 1.0
+            ci_lo = 1.0
+            ci_hi = 1.0
+            p_value = 1.0
+            cohens_h = 0.0
+            significant = False
+        else:
+            lift = amp_a / amp_non_a if amp_non_a > 0 else 1.0
+
+            # z-test on the difference (amp_a - amp_non_a)
+            n_a, n_non_a = len(a_obs), len(non_a_obs)
+            # Pooled SE estimate (rates bounded [-1, 1] for the gap;
+            # variance ≈ 0.25 for an uninformative prior)
+            se = math.sqrt(0.25 * (1 / n_a + 1 / n_non_a))
+            z = (amp_a - amp_non_a) / max(se, 1e-10)
+            p_value = round(2 * (1 - _normal_cdf(abs(z))), 6)
+
+            # Cohen's h on the amplification gap magnitude
+            h_a = 2 * math.asin(math.sqrt(max(0, min(1, abs(amp_a)))))
+            h_non_a = 2 * math.asin(math.sqrt(max(0, min(1, abs(amp_non_a)))))
+            cohens_h = abs(h_a - h_non_a)
+
+            # Approximate 95% CI on the lift via delta method
+            relative_se = se / max(abs(amp_non_a), 1e-6)
+            ci_lo = max(0.0, lift - 1.96 * relative_se)
+            ci_hi = lift + 1.96 * relative_se
+
+            # Local significance gate (BH FDR + LEE applied at the grid
+            # level). Lift must be meaningfully above 1.0 (modulator
+            # bound enforces practical significance even if statistical
+            # significance is borderline).
+            significant = (
+                p_value < 0.05 and cohens_h > 0.2 and lift > 1.1
+            )
+
+        return ModerationTestResult(
+            hypothesis=f"{archetype} moderates {dimension}->{mechanism}",
+            archetype=archetype,
+            dimension=dimension,
+            mechanism=mechanism,
+            lift=round(lift, 4),
+            lift_lo=round(ci_lo, 4),
+            lift_hi=round(ci_hi, 4),
+            cohens_h=round(cohens_h, 4),
+            p_value=p_value,
+            n_archetype=len(a_obs),
+            n_non_archetype=len(non_a_obs),
+            amp_archetype=round(amp_a, 4),
+            amp_non_archetype=round(amp_non_a, 4),
+            significant=significant,
+        )
+
+    def test_all_moderation_effects(
+        self,
+        archetypes: Sequence[str],
+        observations: List["CausalObservation"],
+        *,
+        dimensions: Optional[Sequence[str]] = None,
+        mechanisms: Optional[Sequence[str]] = None,
+        min_observations: int = 30,
+    ) -> List["ModerationTestResult"]:
+        """Iterate the (archetype × dimension × mechanism) grid.
+
+        Default grid: 8 archetypes × 21 dimensions × 9 mechanisms =
+        1,512 cells (matches the pre-registered box's parameter grid).
+        Applies BH FDR correction across the full grid.
+
+        Returns ModerationTestResult per cell that had enough data;
+        cells without data are silently skipped. Significant results
+        carry the post-correction `significant` flag.
+        """
+        dims = list(dimensions) if dimensions is not None else list(EDGE_DIMENSIONS)
+        mechs = list(mechanisms) if mechanisms is not None else list(CANONICAL_CIALDINI_9)
+        results: List[ModerationTestResult] = []
+
+        for arch in archetypes:
+            for dim in dims:
+                for mech in mechs:
+                    result = self.test_archetype_moderates_dimension_amplifies_mechanism(
+                        arch, dim, mech, observations,
+                    )
+                    if (
+                        result.n_archetype >= min_observations
+                        and result.n_non_archetype >= min_observations
+                    ):
+                        results.append(result)
+
+        # BH FDR over the full moderation grid. Reuses the helper's
+        # logic by translating ModerationTestResult into a temporary
+        # TestResult-shape view (the helper only reads .p_value and
+        # .effect_size and writes .significant).
+        _apply_bh_correction_to_moderation(results)
         return results
 
     def test_cross_category_universality(
@@ -509,6 +746,221 @@ async def query_causal_effects(
 
 
 # ============================================================================
+# Q.B/Q.3 (Sketch C+) — MODERATES edge persistence + read + apply
+# ============================================================================
+
+
+_MODERATES_BOUNDED_LIFT_LOWER: float = 0.5
+_MODERATES_BOUNDED_LIFT_UPPER: float = 2.0
+
+
+async def persist_moderation_discovery(
+    result: "ModerationTestResult",
+    *,
+    box_hash: str,
+    require_unblinded: bool = True,
+) -> bool:
+    """Write a validated MODERATES discovery to Neo4j.
+
+    Creates or updates the edge:
+        (:Archetype {name})-[:MODERATES {
+            page_dim, mechanism, lift, lift_lo, lift_hi,
+            n_observations, p_value, cohens_h,
+            discovered_at, box_hash
+        }]->(:CognitiveMechanism {name})
+
+    Box discipline (Sketch C+):
+      * box_hash is required — every persisted MODERATES edge links
+        to its pre-registered analysis box. Edges discovered against
+        different boxes are tagged differently, preserving auditability.
+      * require_unblinded=True: discovery accumulates pre-pilot but
+        the edge is NOT persisted until the box is UNBLINDED. The
+        function reads the box's state from Neo4j; if not UNBLINDED,
+        returns False without writing.
+
+    Returns True on successful persistence, False on:
+      * result.significant == False (only significant moderations
+        deserve graph representation)
+      * driver unavailable
+      * box not found / not UNBLINDED (when require_unblinded=True)
+      * cypher exception
+    """
+    if not result.significant:
+        return False
+
+    try:
+        from adam.core.dependencies import Infrastructure
+        infra = Infrastructure.get_instance()
+        if not infra._neo4j_driver:
+            try:
+                await infra.initialize()
+            except Exception:
+                pass
+        if not infra._neo4j_driver:
+            return False
+
+        # Box state gating — Sketch C+ discipline anchor.
+        if require_unblinded:
+            from adam.blind_analysis.box_neo4j import read_box_from_neo4j
+            box_record = await read_box_from_neo4j(
+                box_hash, infra._neo4j_driver,
+            )
+            if box_record is None or not box_record.is_unblinded:
+                logger.debug(
+                    "persist_moderation_discovery refused: box_hash=%s "
+                    "not unblinded (state=%s)",
+                    box_hash,
+                    box_record.state if box_record else "missing",
+                )
+                return False
+
+        async with infra._neo4j_driver.session() as session:
+            await session.run("""
+                MERGE (a:Archetype {name: $archetype})
+                MERGE (m:CognitiveMechanism {name: $mechanism})
+                MERGE (a)-[r:MODERATES {
+                    page_dim: $dimension
+                }]->(m)
+                SET r.lift = $lift,
+                    r.lift_lo = $lift_lo,
+                    r.lift_hi = $lift_hi,
+                    r.n_observations = $n,
+                    r.p_value = $p_value,
+                    r.cohens_h = $cohens_h,
+                    r.discovered_at = datetime(),
+                    r.box_hash = $box_hash
+            """, {
+                "archetype": result.archetype,
+                "mechanism": result.mechanism,
+                "dimension": result.dimension,
+                "lift": float(result.lift),
+                "lift_lo": float(result.lift_lo),
+                "lift_hi": float(result.lift_hi),
+                "n": int(result.n_archetype + result.n_non_archetype),
+                "p_value": float(result.p_value),
+                "cohens_h": float(result.cohens_h),
+                "box_hash": box_hash,
+            })
+            return True
+    except Exception as e:
+        logger.debug("MODERATES persistence failed: %s", e)
+        return False
+
+
+async def query_moderates_for_archetype(
+    archetype: str,
+) -> Dict[Tuple[str, str], Dict[str, float]]:
+    """Read MODERATES edges for an archetype from Neo4j.
+
+    Returns a dict keyed by (page_dim, mechanism) tuple with values:
+        {"lift": float, "lift_lo": float, "lift_hi": float,
+         "n": int, "p_value": float, "box_hash": str}
+
+    Called by the cascade at bid time to apply archetype-conditional
+    moderation to mechanism scores. Returns empty dict on driver
+    absence or query failure (graceful degradation per cascade
+    fail-soft pattern).
+    """
+    out: Dict[Tuple[str, str], Dict[str, float]] = {}
+
+    try:
+        from adam.core.dependencies import Infrastructure
+        infra = Infrastructure.get_instance()
+        if not infra._neo4j_driver:
+            return out
+
+        async with infra._neo4j_driver.session() as session:
+            result = await session.run("""
+                MATCH (a:Archetype {name: $archetype})
+                      -[r:MODERATES]->
+                      (m:CognitiveMechanism)
+                RETURN r.page_dim AS page_dim,
+                       m.name AS mechanism,
+                       r.lift AS lift,
+                       r.lift_lo AS lift_lo,
+                       r.lift_hi AS lift_hi,
+                       r.n_observations AS n,
+                       r.p_value AS p_value,
+                       r.box_hash AS box_hash
+            """, {"archetype": archetype})
+
+            async for record in result:
+                page_dim = record.get("page_dim", "")
+                mechanism = record.get("mechanism", "")
+                if not page_dim or not mechanism:
+                    continue
+                out[(page_dim, mechanism)] = {
+                    "lift": float(record.get("lift", 1.0)),
+                    "lift_lo": float(record.get("lift_lo", 1.0)),
+                    "lift_hi": float(record.get("lift_hi", 1.0)),
+                    "n": int(record.get("n", 0)),
+                    "p_value": float(record.get("p_value", 1.0)),
+                    "box_hash": str(record.get("box_hash", "") or ""),
+                }
+    except Exception as e:
+        logger.debug("MODERATES query failed: %s", e)
+
+    return out
+
+
+def apply_moderates_modulation(
+    mechanism_scores: Dict[str, float],
+    moderates_map: Dict[Tuple[str, str], Dict[str, float]],
+    page_edge_dimensions: Dict[str, float],
+    *,
+    page_dimension_threshold: float = 0.6,
+    bounded_lift_lower: float = _MODERATES_BOUNDED_LIFT_LOWER,
+    bounded_lift_upper: float = _MODERATES_BOUNDED_LIFT_UPPER,
+) -> Tuple[Dict[str, float], List[str]]:
+    """Apply archetype-conditional MODERATES lifts to mechanism scores.
+
+    For each (page_dim, mechanism) entry in moderates_map:
+      * If page_edge_dimensions[page_dim] > page_dimension_threshold,
+        the page state is "high" on that dimension and the moderation
+        applies — multiply mechanism_scores[mechanism] by the bounded
+        lift.
+      * If page state is below threshold, no modulation (the
+        moderation is page-state-conditional, not unconditional).
+
+    Lift is bounded to [bounded_lift_lower, bounded_lift_upper] before
+    application — prevents runaway amplification or zeroing-out from
+    miscalibrated lifts. Defaults: 0.5x to 2.0x.
+
+    Returns (updated_mechanism_scores, reasoning_log_lines).
+    Mechanism scores not present in moderates_map are passed through
+    unchanged. Empty moderates_map → no-op (returns input + empty log).
+    """
+    if not moderates_map or not mechanism_scores:
+        return dict(mechanism_scores), []
+
+    updated = dict(mechanism_scores)
+    reasoning: List[str] = []
+
+    for (page_dim, mechanism), entry in moderates_map.items():
+        if mechanism not in updated:
+            continue
+        page_val = page_edge_dimensions.get(page_dim, 0.5)
+        if page_val <= page_dimension_threshold:
+            continue
+        raw_lift = float(entry.get("lift", 1.0))
+        # Bound the multiplier
+        bounded_lift = max(
+            bounded_lift_lower, min(bounded_lift_upper, raw_lift),
+        )
+        before = updated[mechanism]
+        # Soft-bound output to [0, 1] (mechanism scores are typically
+        # rate-shaped)
+        updated[mechanism] = max(0.0, min(1.0, before * bounded_lift))
+        reasoning.append(
+            f"MODERATES: archetype-conditioned {page_dim}={page_val:.2f} "
+            f"→ {mechanism} score {before:.3f} × {bounded_lift:.3f} "
+            f"= {updated[mechanism]:.3f} (raw_lift={raw_lift:.3f})"
+        )
+
+    return updated, reasoning
+
+
+# ============================================================================
 # HELPERS
 # ============================================================================
 
@@ -546,5 +998,34 @@ def _apply_bh_correction(
         # BH threshold: (rank / m) * alpha
         threshold = (rank / m) * alpha
         result.significant = result.p_value <= threshold and result.effect_size > 0.2
+
+    return results
+
+
+def _apply_bh_correction_to_moderation(
+    results: List[ModerationTestResult],
+    alpha: float = 0.05,
+) -> List[ModerationTestResult]:
+    """BH FDR correction for the moderation test grid.
+
+    Mirrors _apply_bh_correction but operates on
+    ModerationTestResult — the significance gate combines BH FDR
+    threshold + lift > 1.1 + cohens_h > 0.2 (practical-significance
+    bound preserved across the grid). Mutates results in-place.
+    """
+    if not results:
+        return results
+
+    indexed = [(i, r) for i, r in enumerate(results)]
+    indexed.sort(key=lambda x: x[1].p_value)
+
+    m = len(indexed)
+    for rank, (orig_idx, result) in enumerate(indexed, 1):
+        threshold = (rank / m) * alpha
+        result.significant = (
+            result.p_value <= threshold
+            and result.cohens_h > 0.2
+            and result.lift > 1.1
+        )
 
     return results

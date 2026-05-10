@@ -1936,6 +1936,10 @@ def apply_context_modulation(
     # Segment ID for goal activation crossover scoring
     segment_id: str = "",
     buyer_id: Optional[str] = None,
+    # Q.B/Q.3 (Sketch C+) — archetype enables the MODERATES modulator
+    # block. When empty, the MODERATES block is a no-op (graceful
+    # degradation; matches the cascade fail-soft template).
+    archetype: str = "",
 ) -> CreativeIntelligence:
     """Apply contextual adjustments to the cascade result.
 
@@ -2085,6 +2089,50 @@ def apply_context_modulation(
                                     )
                     except Exception as e:
                         pass  # Causal effects not available yet — graceful degradation
+
+                # ── Q.B/Q.3 (Sketch C+): MODERATES modulator block ──
+                # Read archetype-conditional MODERATES edges discovered
+                # by causal_learning's bilateral central claim test.
+                # Each MODERATES edge carries a box_hash linking the
+                # discovery to its pre-registered analysis box; only
+                # edges discovered against an UNBLINDED box are persisted
+                # (Sketch C+ discipline). This block applies the lift
+                # when the page state is "high" on the corresponding
+                # dimension. Bounded multiplier 0.5x-2.0x prevents
+                # runaway from miscalibrated lifts. No-op when
+                # archetype is empty OR no MODERATES edges exist for
+                # the archetype.
+                if archetype and result.mechanism_scores:
+                    try:
+                        from adam.intelligence.causal_learning import (
+                            apply_moderates_modulation,
+                            query_moderates_for_archetype,
+                        )
+                        try:
+                            try:
+                                loop = asyncio.get_running_loop()
+                                import concurrent.futures
+                                with concurrent.futures.ThreadPoolExecutor() as pool:
+                                    moderates_map = pool.submit(
+                                        asyncio.run,
+                                        query_moderates_for_archetype(archetype),
+                                    ).result(timeout=2.0)
+                            except RuntimeError:
+                                moderates_map = asyncio.run(
+                                    query_moderates_for_archetype(archetype)
+                                )
+                        except RuntimeError:
+                            moderates_map = {}
+                        if moderates_map:
+                            updated_scores, mod_reasoning = apply_moderates_modulation(
+                                result.mechanism_scores,
+                                moderates_map,
+                                pp.edge_dimensions,
+                            )
+                            result.mechanism_scores = updated_scores
+                            result.reasoning.extend(mod_reasoning)
+                    except Exception:
+                        pass  # MODERATES not available — graceful degradation
 
                 # ── LAYER 6: Persuasion channel gating ──
                 # HARD gate: if a channel is CLOSED, reduce it significantly.
@@ -2819,6 +2867,7 @@ def run_bilateral_cascade(
         keywords=keywords, iab_categories=iab_categories,
         segment_id=segment_id,
         buyer_id=buyer_id,
+        archetype=archetype,
     )
 
     # Synergy check
