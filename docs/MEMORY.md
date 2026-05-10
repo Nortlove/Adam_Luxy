@@ -1355,3 +1355,36 @@ Structural defense against re-drift. Past pattern: surviving alternative plans d
 - **Expected next:** Q.B / Q.3 (Sketch C+) slice prompt — pre-registration box + `:MODERATES` edge type + vocabulary cleanup (Q.W + Q.X) + cascade read-path extension (per Claude Proper's pending C.1 adjudication). Q.2.A.bis sibling slice for schema enrichment (impression_id linkage on RecommendationDetail; cell_id / cohort_id / journey_stage / regulatory_focus on DecisionTrace) is parallel work that closes the schema gaps documented above. Frontend test discipline introduction is its own slice candidate.
 
 - **Hand-off pointer:** Branch `feature/hmt-dashboard` at `75eb621`. 5,971 backend tests passing; dashboard build clean; lint clean for new files; TypeScript clean. Cut B reporting end-to-end deployable. Operator's window into the cell-conditional substrate is now open.
+
+---
+
+### Session 2026-05-10 — Q.B/Q.3 (Sketch C+) pre-registered causal-claim test scaffold
+
+**EVE Handoff:**
+
+- **E (Executed):** Q.B/Q.3 (Sketch C+) — pre-registered causal-claim test scaffold (commit `8f5bf2d`). 5 components shipped:
+  - **Component 1** — `adam/blind_analysis/box_neo4j.py` (new ~310 LOC): Neo4j persistence helpers (`write_box_to_neo4j`, `read_box_from_neo4j`, `authorize_box`, `mark_unblinded`) + `PersistedBoxRecord` dataclass. (:BlindAnalysisBox) node MERGE-keyed on deterministic SHA-256 hash; state machine transitions enforced at the cypher level (SEALED → AUTHORIZED → UNBLINDED).
+  - **Component 2** — `scripts/preregister_bilateral_central_claim.py` (new ~250 LOC) + `scripts/__init__.py`: deploy-once script. Builds + seals + persists the bilateral central claim box over (8 archetypes × 21 dimensions × 9 mechanisms = 1,512 cells). Sketch C+ post-pilot composition methods sealed at deploy time (4 methods: causal_decomposition→causal_forest features, causal_forest→causal_conformal interval, DoWhy refutation on causal_dag_ensemble, causal_decomposition→causal_adjudicator).
+  - **Component 3** — `adam/intelligence/causal_learning.py` extensions: Q.W additive cleanup (anchoring added; cognitive_ease preserved for backward compat with constants.py + 5 other modules) + `CANONICAL_CIALDINI_9` constant; Q.X additive cleanup (maximizer_tendency added → 21 dims); `ModerationTestResult` dataclass; `test_archetype_moderates_dimension_amplifies_mechanism` + `test_all_moderation_effects` on `CausalTestEngine`; `persist_moderation_discovery` with box-state gating; `query_moderates_for_archetype`; `apply_moderates_modulation` with bounded multiplier 0.5x-2.0x; `_apply_bh_correction_to_moderation`; bundled bugfix: `_apply_bh_correction` now returns results list (signature claimed `-> List[TestResult]` but returned None).
+  - **Component 4** — `adam/api/stackadapt/bilateral_cascade.py`: `apply_context_modulation` gains optional `archetype: str = ""` param; new MODERATES modulator block following the existing causal_effects block's thread-pool pattern; fail-soft on no edges / empty archetype; cascade caller updated to pass archetype through.
+  - **Component 5** — 44 tests across `tests/blind_analysis/test_box_neo4j.py` (11 tests: round-trip, idempotent MERGE, state-machine gating, soft-fail), `tests/intelligence/test_causal_learning_moderates.py` (22 tests: vocabulary coherence Q.W+Q.X regression guards, moderation test logic, BH FDR + lift threshold gate, cascade modulator with bounded lifts), `tests/intelligence/test_preregister_bilateral_central_claim.py` (11 tests: archetype values, post-pilot methods documented + deferred_until stamps, grid size 1,512, SEALED initial state, hash determinism).
+
+  Test suite: **6,015 passing (+44 = exact new test count); 9 stable pre-existing failures unchanged** (8 TestCampaignDocs + 1 test_dag_has_14_atoms; none reference Q.B/Q.3 code paths).
+
+- **V (Verified):** Pre-flight Pass A (C.1 findings current — 4,659 LOC; MODERATES referenced in docstring only); Pass B (persist_causal_discovery shape + MODERATES extension formalized); Pass C (test_dimension_amplifies_mechanism shape + CausalObservation.archetype already populated); Pass D (cascade thread-pool pattern + MODERATES block follows same template); Pass E (Q.W blast radius assessed — additive cleanup chosen, no QUESTION-AND-STOP; ~5 LOC well below 50 LOC envelope); Pass F (Q.X — straightforward append); Pass G (Neo4j (:BlindAnalysisBox) persistence chosen for queryability + auditability + composition with platform pattern; no migration scaffolding required). All 5 components compile; tests pass; backend zero-regression on the 5,971-baseline.
+
+- **Box discipline state (Sketch C+):**
+  - **SEALED** at deploy (script run): hash computed; mutation forbidden; post_pilot_methods_json frozen
+  - **AUTHORIZED** at pilot launch: party + justification recorded; cypher gates SEALED → AUTHORIZED only
+  - **UNBLINDED** at post-pilot composition build start: cypher gates AUTHORIZED → UNBLINDED only
+  - `persist_moderation_discovery` refuses to write MODERATES edges until box state == UNBLINDED. Discovery accumulates pre-pilot (observations flow through; tests run; results computed) but edges materialize only post-unblinding. **The methodological discipline is enforced at the cypher level — not just at the Python boundary.**
+
+- **box_hash provenance:** every persisted MODERATES edge carries the SHA-256 hash of the box that pre-registered the test. Edges discovered against different boxes get different tags, preserving auditability across box revisions. Neo4j-traversable: `MATCH (a:Archetype)-[r:MODERATES]->(m) WHERE r.box_hash = $hash RETURN ...` lets ops correlate every edge back to its pre-registration cycle.
+
+- **Q.B/Q.3 complete.** Pre-pilot causal-claim test scaffold operational.
+
+- **Open QUESTIONs:** none. All Sketch C+ pre-pilot scope landed. Post-pilot composition build (~600-800 LOC per C.1 §10) remains gated on box unblinding — execution of pre-registered analysis, not post-hoc design.
+
+- **Expected next:** **Q.1 (deploy + Aura upgrade)** — operational work; pre-pilot path now ready to launch from `feature/hmt-dashboard`. Q.2.A.bis (schema enrichment closing DecisionTrace cell_id/cohort_id/journey_stage/regulatory_focus gaps + RecommendationDetail impression_id linkage) is parallel work to Q.1. Post-pilot iteration queue: M.2 (depletion) + M.3 (psych_ownership) per Q29=BETA; composition build per pre-registered box methods (executes Sketch C+ post-pilot scope once box transitions to UNBLINDED); C.2 audit (spine for Q.D cadence); cleanup queue (Q.S/Q.T/Q.U/Q.V/Q.Z); CTV expansion / SSP integration.
+
+- **Hand-off pointer:** Branch `feature/hmt-dashboard` at `8f5bf2d`. 6,015 backend tests passing. Pre-pilot causal-claim test scaffold ships deployable; bilateral central claim has structural home (:MODERATES edge type) + pre-registered analysis box + box-state-gated discovery + cascade read-path extension. Box-as-identity invariant pinned in regression tests. Vocabulary coherence (Q.W + Q.X) preserved in regression tests. Methodological discipline preserved via cypher-level state machine enforcement.
