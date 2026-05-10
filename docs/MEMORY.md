@@ -1323,3 +1323,35 @@ Structural defense against re-drift. Past pattern: surviving alternative plans d
 - **Expected next:** Q.2.B frontend slice — 5 dashboard route extensions consuming the new endpoints via OpenAPI-generated TypeScript types. Q.2.B prompt drafting starts after Q.2.A is reviewed + OpenAPI types regenerate. Sibling slice candidate: BuyerUncertaintyProfile + ConversionEdge join wiring (un-stubs `_archetype_lookup_for_user` + `_conversion_lookup_for_decision`), depends on Aura cohort population being operational.
 
 - **Hand-off pointer:** Branch `feature/hmt-dashboard` at `28c8061`. 5,971 tests passing. Q.2.A backend deployable in current state; partial-state responses surface honestly; OpenAPI regenerates on next build. Five operator-actionable surfaces ready for Q.2.B frontend consumption.
+
+---
+
+### Session 2026-05-10 — Q.2.B Cut B reporting frontend (5 dashboard route extensions)
+
+**EVE Handoff:**
+
+- **E (Executed):** Q.2.B — Cut B reporting frontend slice (commit `75eb621`). 8 component files extending 5 dashboard routes (3 analytics panels: PerClusterFireRatePanel, PerArchetypePerformancePanel, PerCohortOutcomeCorrelationPanel; 1 learning panel: LoopDispatchRatesPanel; 2 ledger components: DecisionTraceLookup + DecisionTraceDetailView; 1 recommendations panel: RecommendationCellContextPanel; 1 discovery panel: CohortDiscoveryPanel) + 5 BFF route handlers in dashboard/src/app/api/* (analytics/per-cluster-fire-rate, analytics/per-archetype-performance, analytics/per-cohort-outcome-correlation, learning/loop-dispatch-rates, ledger/decision-trace/[impressionId]) + 2 shared infrastructure components (EmptyState + DataSourceStateBadge with 5 states populated/partial/empty/found/not_found) + 8 new TypeScript types in lib/types.ts mirroring Q.2.A's Pydantic response models + 5 page.tsx files updated for component integration. Test suite: backend 5,971 unchanged + 9 stable pre-existing failures unchanged (8 TestCampaignDocs + 1 test_dag_has_14_atoms; none reference Q.2.B code paths). Frontend test framework not present in dashboard per depth-verification §3.3 — test discipline introduction deferred to a separate slice; Q.2.B verified via TypeScript compilation + lint + production build instead.
+
+- **V (Verified):** Pre-flight Pass A (manual types in lib/types.ts is the active convention; auto-gen api-types.gen.ts unused; added types directly — NO QUESTION-AND-STOP); Pass B (existing pattern is plain fetch + useState in client components; React Query wrapper present but unused by any component; new panels match this pattern); Pass C (BFF route pattern at /api/<topic>/<endpoint>/route.ts using apiFetch from @/lib/api with auto-bearer-injection; 5 new handlers mirror system-convergence pattern); Pass D (existing empty-state pattern uses Card with border-dashed; new shared <EmptyState /> formalizes this); Pass E (schema gaps documented in Q.2.A EVE handled via nullableText helper rendering "—"). TypeScript compilation passes (npx tsc --noEmit clean for all new files); pnpm lint passes for all new files (14 lint-flagged files are pre-existing — zero from Q.2.B); pnpm build passes with all 5 new BFF route handlers + 5 dashboard pages successfully compiled (21 routes total; all 5 Q.2.B routes show as `ƒ` dynamic). Privacy guard: decision-trace-detail-view renders only buyer_id_anonymized; never reconstructs raw buyer_id. Backend zero-regression confirmed against Q.2.A surface.
+
+- **Q.2 complete.** Cut B operator-facing surfaces ship deployable end-to-end. Cell-conditional iteration loop's interpret phase closes pending Q.1 (deploy + Aura) data flow.
+
+- **Honest documented gaps carried forward from Q.2.A:**
+  - DecisionTrace lacks campaign_id / cell_id / cohort_id / journey_stage / regulatory_focus → render as "—" via nullableText
+  - Archetype + conversion lookups via DI hooks (`_archetype_lookup_for_user`, `_conversion_lookup_for_decision`) return None/False pre-pilot → /per-archetype panel renders "partial" state with explanation
+  - RecommendationDetail doesn't expose impression_id linkage → /recommendations/[id] cell-context panel renders empty-state with Q.2.A.bis dependency note
+  - Auto-OpenAPI regen deferred per existing manual-types convention; pnpm gen:types remains available for sibling slice that adopts the auto-gen path
+  - Frontend testing framework absent from dashboard; Q.2.B verified via build/lint/typecheck rather than component tests; introducing a frontend test discipline is its own slice candidate
+
+- **Per-route extensions:**
+  - `/analytics`: new "Cell Reporting" tab with 3 panels
+  - `/learning`: new "Loop Dispatch" tab with 14-method dispatch rates
+  - `/ledger`: new "Trace Lookup" tab with impression_id input + per-decision audit trail render
+  - `/recommendations/[id]`: cell-context panel rendered between deviation context and the plan; renders empty-state pre-Q.2.A.bis
+  - `/discovery`: cohort discovery panel rendered above existing DiscoveryClient
+
+- **Open QUESTIONs:** none. All Q.2.B scope landed.
+
+- **Expected next:** Q.B / Q.3 (Sketch C+) slice prompt — pre-registration box + `:MODERATES` edge type + vocabulary cleanup (Q.W + Q.X) + cascade read-path extension (per Claude Proper's pending C.1 adjudication). Q.2.A.bis sibling slice for schema enrichment (impression_id linkage on RecommendationDetail; cell_id / cohort_id / journey_stage / regulatory_focus on DecisionTrace) is parallel work that closes the schema gaps documented above. Frontend test discipline introduction is its own slice candidate.
+
+- **Hand-off pointer:** Branch `feature/hmt-dashboard` at `75eb621`. 5,971 backend tests passing; dashboard build clean; lint clean for new files; TypeScript clean. Cut B reporting end-to-end deployable. Operator's window into the cell-conditional substrate is now open.
