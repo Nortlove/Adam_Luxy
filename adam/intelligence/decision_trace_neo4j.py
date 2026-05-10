@@ -150,6 +150,17 @@ _LIST_FOR_USER_CYPHER: str = (
     "LIMIT $limit"
 )
 
+# Q.2.A — time-window scan for Cut B reporting endpoints.
+# Returns all traces with timestamp >= cutoff_epoch, capped at limit
+# so a runaway pilot window can't OOM the dashboard service.
+_LIST_IN_WINDOW_CYPHER: str = (
+    f"MATCH (d:{DECISION_TRACE_NODE_LABEL}) "
+    "WHERE d.timestamp >= $cutoff_epoch "
+    "RETURN d.payload_json AS payload_json "
+    "ORDER BY d.timestamp DESC "
+    "LIMIT $limit"
+)
+
 
 # =============================================================================
 # Archive
@@ -326,6 +337,79 @@ async def list_traces_for_user_from_neo4j(
             logger.debug(
                 "list_traces_for_user_from_neo4j skipping unparseable "
                 "record for user=%s: %s", user_id, exc,
+            )
+
+    return traces
+
+
+# =============================================================================
+# Q.2.A — time-window scan
+# =============================================================================
+
+
+async def list_traces_in_window_from_neo4j(
+    cutoff_epoch: float,
+    driver: Optional[Any],
+    *,
+    limit: int = 10000,
+) -> List[DecisionTrace]:
+    """Fetch traces with timestamp >= cutoff_epoch, newest-first.
+
+    Used by Cut B reporting endpoints (per-cluster fire-rate,
+    per-archetype performance, per-cohort outcome correlation) to
+    aggregate over a time window. The Redis hot-cache layer indexes
+    only by user_id; for global window scans the Neo4j archive is the
+    canonical surface.
+
+    Args:
+        cutoff_epoch: epoch-seconds inclusive lower bound. Computed
+            from the lookback days at the service-layer boundary.
+        driver: async Neo4j driver; None → empty list (Aura paused
+            empty-state).
+        limit: per-query cap. Defaults to 10000 to protect the
+            dashboard service from runaway pilot windows. Service
+            layer can lower for narrower windows.
+
+    Returns: list of ``DecisionTrace``, newest-first. Empty when
+    cutoff is in the future, no archive present, or any read fails
+    (logged at WARNING). Per-record parse failures are silently
+    skipped — function returns the records it could parse.
+    """
+    if driver is None:
+        return []
+    if limit <= 0:
+        return []
+
+    try:
+        async with driver.session() as session:
+            result = await session.run(
+                _LIST_IN_WINDOW_CYPHER,
+                cutoff_epoch=float(cutoff_epoch),
+                limit=int(limit),
+            )
+            records = []
+            async for r in result:
+                records.append(r)
+    except Exception as exc:
+        logger.warning(
+            "list_traces_in_window_from_neo4j read failed "
+            "(cutoff_epoch=%s): %s", cutoff_epoch, exc,
+        )
+        return []
+
+    traces: List[DecisionTrace] = []
+    for r in records:
+        payload_json = r.get("payload_json")
+        if not payload_json:
+            continue
+        try:
+            if isinstance(payload_json, (bytes, bytearray)):
+                payload_json = payload_json.decode("utf-8")
+            traces.append(DecisionTrace.model_validate_json(payload_json))
+        except Exception as exc:
+            logger.debug(
+                "list_traces_in_window_from_neo4j skipping unparseable "
+                "record: %s", exc,
             )
 
     return traces

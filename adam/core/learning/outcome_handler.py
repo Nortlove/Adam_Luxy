@@ -39,6 +39,17 @@ class OutcomeHandler:
     def __init__(self):
         self._outcomes_processed = 0
         self._total_updates = 0
+        # Q.2.A — per-method dispatch instrumentation for the
+        # /learning/loop-dispatch-rates surface.
+        self._dispatch_counts: Dict[str, int] = {}
+        self._dispatch_last_at: Dict[str, datetime] = {}
+
+    def _record_dispatch(self, method_name: str) -> None:
+        """Increment dispatch counter for a sub-update method (Q.2.A)."""
+        self._dispatch_counts[method_name] = (
+            self._dispatch_counts.get(method_name, 0) + 1
+        )
+        self._dispatch_last_at[method_name] = datetime.now(timezone.utc)
     
     async def process_outcome(
         self,
@@ -406,6 +417,7 @@ class OutcomeHandler:
         # (below), not this Thompson update.
         # =====================================================================
         try:
+            self._record_dispatch("_update_thompson")
             results["updates"]["thompson"] = await self._update_thompson(
                 decision_id, success, metadata,
                 processing_depth_weight=processing_depth_weight,
@@ -418,6 +430,7 @@ class OutcomeHandler:
         # 2. UPDATE META-ORCHESTRATOR (which strategy worked)
         # =====================================================================
         try:
+            self._record_dispatch("_update_meta_orchestrator")
             results["updates"]["meta_orchestrator"] = await self._update_meta_orchestrator(
                 decision_id, success, outcome_value, metadata
             )
@@ -429,6 +442,7 @@ class OutcomeHandler:
         # 3. UPDATE NEO4J OUTCOME ATTRIBUTION
         # =====================================================================
         try:
+            self._record_dispatch("_update_neo4j_attribution")
             results["updates"]["neo4j"] = await self._update_neo4j_attribution(
                 decision_id, outcome_type, outcome_value, metadata
             )
@@ -440,6 +454,7 @@ class OutcomeHandler:
         # 4. UPDATE GRAPH REWRITER (which rules helped)
         # =====================================================================
         try:
+            self._record_dispatch("_update_graph_rewriter")
             results["updates"]["graph_rewriter"] = await self._update_graph_rewriter(
                 decision_id, success, metadata
             )
@@ -451,6 +466,7 @@ class OutcomeHandler:
         # 5. ROUTE TO UNIFIED LEARNING HUB (reaches all atoms)
         # =====================================================================
         try:
+            self._record_dispatch("_route_to_learning_hub")
             results["updates"]["learning_hub"] = await self._route_to_learning_hub(
                 decision_id, outcome_type, outcome_value, success, metadata
             )
@@ -461,6 +477,7 @@ class OutcomeHandler:
         # 6. UPDATE ML ENSEMBLE WEIGHTS
         # =====================================================================
         try:
+            self._record_dispatch("_update_ml_ensemble")
             results["updates"]["ml_ensemble"] = await self._update_ml_ensemble(
                 decision_id, success, metadata
             )
@@ -479,6 +496,7 @@ class OutcomeHandler:
         # the deeper construct level (psychological_state → need → mechanism).
         # =====================================================================
         try:
+            self._record_dispatch("_update_theory_learner")
             results["updates"]["theory_learner"] = await self._update_theory_learner(
                 decision_id, success, outcome_value, metadata,
                 signed_reward=signed_reward,
@@ -671,6 +689,7 @@ class OutcomeHandler:
         # =====================================================================
         if metadata.get("source") == "dsp_impression":
             try:
+                self._record_dispatch("_update_dsp_learning")
                 results["updates"]["dsp_learning"] = await self._update_dsp_learning(
                     decision_id, success, outcome_value, metadata
                 )
@@ -688,6 +707,7 @@ class OutcomeHandler:
         # - Feeds Meta-Learner alignment confidence calibration
         # =====================================================================
         try:
+            self._record_dispatch("_update_cognitive_learning")
             results["updates"]["cognitive_learning"] = await self._update_cognitive_learning(
                 decision_id, success, outcome_value, metadata
             )
@@ -707,6 +727,7 @@ class OutcomeHandler:
         # This creates the context-awareness that no other system has.
         # =====================================================================
         try:
+            self._record_dispatch("_update_page_context_learning")
             results["updates"]["page_context_learning"] = await self._update_page_context_learning(
                 decision_id, success, outcome_value, metadata
             )
@@ -799,6 +820,7 @@ class OutcomeHandler:
         # expected return while accounting for synergies and antagonisms.
         # =====================================================================
         try:
+            self._record_dispatch("_update_mechanism_interactions")
             results["updates"]["mechanism_interactions"] = await self._update_mechanism_interactions(
                 decision_id, outcome_value, metadata
             )
@@ -817,6 +839,7 @@ class OutcomeHandler:
         buyer_id = metadata.get("buyer_id", "")
         if buyer_id:
             try:
+                self._record_dispatch("_update_buyer_profile")
                 results["updates"]["buyer_profile"] = await self._update_buyer_profile(
                     buyer_id, outcome_type, metadata,
                     processing_depth_weight=processing_depth_weight,
@@ -841,6 +864,7 @@ class OutcomeHandler:
         category = metadata.get("product_category", "") or metadata.get("category", "")
         if archetype and category:
             try:
+                self._record_dispatch("_update_bilateral_edge_evidence")
                 results["updates"]["bilateral_edge"] = await self._update_bilateral_edge_evidence(
                     archetype, category, success, outcome_value, metadata
                 )
@@ -1827,6 +1851,7 @@ class OutcomeHandler:
         # =====================================================================
         chain_attestation_results: List[Dict[str, Any]] = []
         try:
+            self._record_dispatch("_process_chain_attestations")
             chain_attestation_results = await self._process_chain_attestations(
                 decision_id=decision_id,
                 learner=learner,
@@ -2824,11 +2849,23 @@ class OutcomeHandler:
             return {"error": str(e)}
 
     @property
-    def stats(self) -> Dict[str, int]:
-        """Get handler statistics."""
+    def stats(self) -> Dict[str, Any]:
+        """Get handler statistics.
+
+        Returns:
+            outcomes_processed, total_updates (legacy contract);
+            plus Q.2.A dispatch_counts (per-method) and
+            dispatch_last_at (per-method ISO datetime). The two
+            dispatch dicts are empty until at least one outcome
+            has been processed — callers handle empty-state.
+        """
         return {
             "outcomes_processed": self._outcomes_processed,
             "total_updates": self._total_updates,
+            "dispatch_counts": dict(self._dispatch_counts),
+            "dispatch_last_at": {
+                k: v.isoformat() for k, v in self._dispatch_last_at.items()
+            },
         }
 
 

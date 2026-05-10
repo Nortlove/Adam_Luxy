@@ -37,6 +37,7 @@ from adam.api.dashboard.models import (
     CurrentUserResponse,
     DashboardHealthResponse,
     DecayReport,
+    DecisionTraceDetailResponse,
     DeviationHorizon,
     DeviationHorizonResponse,
     DeviationListResponse,
@@ -49,9 +50,13 @@ from adam.api.dashboard.models import (
     ClientReportResponse,
     ClientSegmentHighlight,
     DomainCalibration,
+    LoopDispatchRatesResponse,
     SystemConvergenceResponse,
     MechanismEffectivenessResponse,
     MechanismPosterior,
+    PerArchetypePerformanceResponse,
+    PerClusterFireRateResponse,
+    PerCohortOutcomeCorrelationResponse,
     RecommendationDetail,
     RecommendationListResponse,
     RecommendationSummary,
@@ -65,6 +70,13 @@ from adam.api.dashboard.models import (
     UserMembership,
     WhyLibraryEntry,
     WhyLibraryResponse,
+)
+from adam.api.dashboard.cell_aggregation_service import (
+    get_decision_trace_detail,
+    get_loop_dispatch_rates,
+    get_per_archetype_performance,
+    get_per_cluster_fire_rate,
+    get_per_cohort_outcome_correlation,
 )
 from adam.api.dashboard.service import (
     fetch_graph_intelligence,
@@ -1976,3 +1988,85 @@ async def get_agency_view_a(
         taxonomy_accumulator=taxonomy_accumulator,
         page_posture_accumulator=page_posture_accumulator,
     )
+
+
+# =============================================================================
+# Q.2.A — Cut B reporting endpoints
+#
+# Five operator-actionable surfaces extending /analytics, /learning, /ledger:
+#   GET /api/dashboard/analytics/per-cluster-fire-rate
+#   GET /api/dashboard/analytics/per-archetype-performance
+#   GET /api/dashboard/analytics/per-cohort-outcome-correlation
+#   GET /api/dashboard/learning/loop-dispatch-rates
+#   GET /api/dashboard/ledger/decision-trace/{impression_id}
+#
+# Each endpoint handles empty-state gracefully (Aura paused / Infrastructure
+# absent / no traces in window all return data_source_state='empty' with
+# well-formed empty responses, NOT errors). Q.1 timing decoupling: endpoints
+# ship deployable; light up when Aura/data lands.
+# =============================================================================
+
+
+@router.get(
+    "/analytics/per-cluster-fire-rate",
+    response_model=PerClusterFireRateResponse,
+)
+async def per_cluster_fire_rate(
+    days: int = Query(7, ge=1, le=365),
+    campaign_id: Optional[str] = Query(None),
+    _user: DashboardUser = Depends(require_user),
+) -> PerClusterFireRateResponse:
+    """Per-cluster impression count + per-predicate fire rate aggregates."""
+    return await get_per_cluster_fire_rate(days=days, campaign_id=campaign_id)
+
+
+@router.get(
+    "/analytics/per-archetype-performance",
+    response_model=PerArchetypePerformanceResponse,
+)
+async def per_archetype_performance(
+    days: int = Query(30, ge=1, le=365),
+    campaign_id: Optional[str] = Query(None),
+    _user: DashboardUser = Depends(require_user),
+) -> PerArchetypePerformanceResponse:
+    """Per-archetype performance distribution — 8 archetypes × outcome rate."""
+    return await get_per_archetype_performance(days=days, campaign_id=campaign_id)
+
+
+@router.get(
+    "/analytics/per-cohort-outcome-correlation",
+    response_model=PerCohortOutcomeCorrelationResponse,
+)
+async def per_cohort_outcome_correlation(
+    days: int = Query(30, ge=1, le=365),
+    campaign_id: Optional[str] = Query(None),
+    _user: DashboardUser = Depends(require_user),
+) -> PerCohortOutcomeCorrelationResponse:
+    """Per-cohort outcome correlation — affiliative vs transactional cohorts."""
+    return await get_per_cohort_outcome_correlation(
+        days=days, campaign_id=campaign_id,
+    )
+
+
+@router.get(
+    "/learning/loop-dispatch-rates",
+    response_model=LoopDispatchRatesResponse,
+)
+async def loop_dispatch_rates(
+    days: int = Query(7, ge=1, le=365),
+    _user: DashboardUser = Depends(require_user),
+) -> LoopDispatchRatesResponse:
+    """Per-method dispatch counts from OutcomeHandler's 14 sub-update methods."""
+    return await get_loop_dispatch_rates(days=days)
+
+
+@router.get(
+    "/ledger/decision-trace/{impression_id}",
+    response_model=DecisionTraceDetailResponse,
+)
+async def decision_trace_detail(
+    impression_id: str,
+    _user: DashboardUser = Depends(require_user),
+) -> DecisionTraceDetailResponse:
+    """Per-impression decision trace lookup with anonymized buyer_id."""
+    return await get_decision_trace_detail(impression_id=impression_id)

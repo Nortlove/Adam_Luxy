@@ -889,3 +889,138 @@ class AnalyticsSummary(BaseModel):
     stackadapt_reason: Optional[str] = None
     graph_source: Literal["live", "unavailable"]
     last_updated: datetime
+
+
+# =============================================================================
+# Q.2.A — Cut B reporting response models
+#
+# Five operator-actionable surfaces extending existing dashboard routes.
+# Each returns data_source_state to communicate empty/partial/populated
+# state honestly — the substrate is decoupled from Aura/Redis presence
+# (Q.1 timing decoupling); endpoints ship deployable and light up when
+# data populates.
+# =============================================================================
+
+
+DataSourceState = Literal["populated", "empty", "partial"]
+TraceLookupState = Literal["found", "not_found", "partial"]
+
+
+# --- Endpoint 1: per-cluster fire-rate ---
+
+
+class ClusterMetrics(BaseModel):
+    cluster_id: str
+    impression_count: int
+    share_of_total: float = Field(ge=0.0, le=1.0)
+
+
+class PredicateMetrics(BaseModel):
+    predicate_name: str
+    fire_count: int
+    fire_rate: float = Field(ge=0.0, le=1.0)
+    dormant: bool
+
+
+class PerClusterFireRateResponse(BaseModel):
+    clusters: list[ClusterMetrics]
+    predicates: list[PredicateMetrics]
+    total_impressions: int
+    window_start: datetime
+    window_end: datetime
+    data_source_state: DataSourceState
+
+
+# --- Endpoint 2: per-archetype performance ---
+
+
+class ArchetypeMetrics(BaseModel):
+    archetype_id: str
+    impression_count: int
+    conversion_count: int
+    conversion_rate: float = Field(ge=0.0, le=1.0)
+    cold_start_share: float = Field(ge=0.0, le=1.0)
+
+
+class PerArchetypePerformanceResponse(BaseModel):
+    archetypes: list[ArchetypeMetrics]
+    total_impressions: int
+    window_start: datetime
+    window_end: datetime
+    data_source_state: DataSourceState
+
+
+# --- Endpoint 3: per-cohort outcome correlation ---
+
+
+MechanismOrientation = Literal["affiliative", "transactional", "mixed"]
+CohortConfidence = Literal["high_confidence", "partial_evidence", "uninformative"]
+
+
+class CohortMetrics(BaseModel):
+    cohort_id: str
+    dominant_mechanism: str
+    mechanism_orientation: MechanismOrientation
+    compensatory_flag: bool
+    sample_size: int
+    conversion_rate: float = Field(ge=0.0, le=1.0)
+    confidence_label: CohortConfidence
+
+
+class PerCohortOutcomeCorrelationResponse(BaseModel):
+    cohorts: list[CohortMetrics]
+    window_start: datetime
+    window_end: datetime
+    data_source_state: DataSourceState
+
+
+# --- Endpoint 4: loop dispatch rates ---
+
+
+class DispatchMethodMetrics(BaseModel):
+    method_name: str
+    dispatch_count: int
+    last_dispatch_at: Optional[datetime] = None
+    dormant: bool
+
+
+class LoopDispatchRatesResponse(BaseModel):
+    dispatch_methods: list[DispatchMethodMetrics]
+    total_outcomes_processed: int
+    data_source_state: DataSourceState
+
+
+# --- Endpoint 5: decision-trace detail ---
+
+
+class PredicateFiring(BaseModel):
+    predicate_name: str
+    fired: bool
+    score: Optional[float] = None
+    threshold: Optional[float] = None
+
+
+class ModulationDetail(BaseModel):
+    mechanism: str
+    score_before: float
+    score_after: float
+    source: str
+
+
+class DecisionTraceDetailResponse(BaseModel):
+    impression_id: str
+    timestamp: datetime
+    buyer_id_anonymized: str
+    cell_id: Optional[str] = None
+    cluster_id: Optional[str] = None
+    archetype: Optional[str] = None
+    cohort_id: Optional[str] = None
+    posture_class: Optional[str] = None
+    journey_stage: Optional[str] = None
+    regulatory_focus: Optional[str] = None
+    predicates_fired: list[PredicateFiring] = Field(default_factory=list)
+    modulations_applied: list[ModulationDetail] = Field(default_factory=list)
+    chosen_creative_id: Optional[str] = None
+    chosen_creative_cluster: Optional[str] = None
+    why_explanation: Optional[str] = None
+    data_source_state: TraceLookupState
