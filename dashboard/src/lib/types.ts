@@ -842,3 +842,118 @@ export type UserMembership = {
   partner: TenantPartner | null;
   advertiser: TenantAdvertiser | null;
 };
+
+// =============================================================================
+// Q.2.A — Cut B reporting response types
+// Mirrors adam/api/dashboard/models.py Q.2.A section.
+// =============================================================================
+
+export type DataSourceState = "populated" | "empty" | "partial";
+export type TraceLookupState = "found" | "not_found" | "partial";
+
+export type ClusterMetrics = {
+  cluster_id: string;
+  impression_count: number;
+  share_of_total: number;
+};
+
+export type PredicateMetrics = {
+  predicate_name: string;
+  fire_count: number;
+  fire_rate: number;
+  dormant: boolean;
+};
+
+export type PerClusterFireRateResponse = {
+  clusters: ClusterMetrics[];
+  predicates: PredicateMetrics[];
+  total_impressions: number;
+  window_start: string;
+  window_end: string;
+  data_source_state: DataSourceState;
+};
+
+export type ArchetypeMetrics = {
+  archetype_id: string;
+  impression_count: number;
+  conversion_count: number;
+  conversion_rate: number;
+  cold_start_share: number;
+};
+
+export type PerArchetypePerformanceResponse = {
+  archetypes: ArchetypeMetrics[];
+  total_impressions: number;
+  window_start: string;
+  window_end: string;
+  data_source_state: DataSourceState;
+};
+
+export type MechanismOrientation = "affiliative" | "transactional" | "mixed";
+export type CohortConfidence =
+  | "high_confidence"
+  | "partial_evidence"
+  | "uninformative";
+
+export type CohortMetrics = {
+  cohort_id: string;
+  dominant_mechanism: string;
+  mechanism_orientation: MechanismOrientation;
+  compensatory_flag: boolean;
+  sample_size: number;
+  conversion_rate: number;
+  confidence_label: CohortConfidence;
+};
+
+export type PerCohortOutcomeCorrelationResponse = {
+  cohorts: CohortMetrics[];
+  window_start: string;
+  window_end: string;
+  data_source_state: DataSourceState;
+};
+
+export type DispatchMethodMetrics = {
+  method_name: string;
+  dispatch_count: number;
+  last_dispatch_at: string | null;
+  dormant: boolean;
+};
+
+export type LoopDispatchRatesResponse = {
+  dispatch_methods: DispatchMethodMetrics[];
+  total_outcomes_processed: number;
+  data_source_state: DataSourceState;
+};
+
+export type PredicateFiring = {
+  predicate_name: string;
+  fired: boolean;
+  score: number | null;
+  threshold: number | null;
+};
+
+export type ModulationDetail = {
+  mechanism: string;
+  score_before: number;
+  score_after: number;
+  source: string;
+};
+
+export type DecisionTraceDetailResponse = {
+  impression_id: string;
+  timestamp: string;
+  buyer_id_anonymized: string;
+  cell_id: string | null;
+  cluster_id: string | null;
+  archetype: string | null;
+  cohort_id: string | null;
+  posture_class: string | null;
+  journey_stage: string | null;
+  regulatory_focus: string | null;
+  predicates_fired: PredicateFiring[];
+  modulations_applied: ModulationDetail[];
+  chosen_creative_id: string | null;
+  chosen_creative_cluster: string | null;
+  why_explanation: string | null;
+  data_source_state: TraceLookupState;
+};

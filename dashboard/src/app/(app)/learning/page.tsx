@@ -13,6 +13,7 @@ import { WhyLibraryView } from "./_components/why-library";
 import { AdjudicateButton } from "./_components/adjudicate-button";
 import { MechanismEffectivenessView } from "./_components/mechanism-effectiveness";
 import { SubjectInspectionView } from "./_components/subject-inspection";
+import { LoopDispatchRatesPanel } from "./_components/loop-dispatch-rates";
 
 export const metadata = {
   title: "Learning · INFORMATIV",
@@ -51,6 +52,7 @@ export default async function LearningPage() {
         <TabsList>
           <TabsTrigger value="mechanisms">Mechanism Effectiveness</TabsTrigger>
           <TabsTrigger value="subject">Subject Inspection</TabsTrigger>
+          <TabsTrigger value="loop">Loop Dispatch</TabsTrigger>
           <TabsTrigger value="decay">Decay Adjudicator</TabsTrigger>
           <TabsTrigger value="horizons">
             Adjudication Horizons
@@ -76,6 +78,10 @@ export default async function LearningPage() {
 
         <TabsContent value="subject">
           <SubjectInspectionView />
+        </TabsContent>
+
+        <TabsContent value="loop">
+          <LoopDispatchRatesPanel />
         </TabsContent>
 
         <TabsContent value="decay">

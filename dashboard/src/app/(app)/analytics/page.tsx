@@ -13,6 +13,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/page-header";
 import { SystemConvergenceView } from "./_components/system-convergence";
 import { ClientDecisionsView } from "./_components/client-decisions";
+import { PerClusterFireRatePanel } from "./_components/per-cluster-fire-rate";
+import { PerArchetypePerformancePanel } from "./_components/per-archetype-performance";
+import { PerCohortOutcomeCorrelationPanel } from "./_components/per-cohort-outcome-correlation";
 
 export const metadata = {
   title: "Analytics · INFORMATIV",
@@ -55,6 +58,7 @@ export default async function AnalyticsPage() {
         <TabsList>
           <TabsTrigger value="convergence">System Convergence</TabsTrigger>
           <TabsTrigger value="client-decisions">Client Decisions</TabsTrigger>
+          <TabsTrigger value="cells">Cell Reporting</TabsTrigger>
           <TabsTrigger value="performance">Performance Totals</TabsTrigger>
         </TabsList>
 
@@ -64,6 +68,12 @@ export default async function AnalyticsPage() {
 
         <TabsContent value="client-decisions">
           <ClientDecisionsView />
+        </TabsContent>
+
+        <TabsContent value="cells" className="flex flex-col gap-6">
+          <PerClusterFireRatePanel />
+          <PerArchetypePerformancePanel />
+          <PerCohortOutcomeCorrelationPanel />
         </TabsContent>
 
         <TabsContent value="performance">

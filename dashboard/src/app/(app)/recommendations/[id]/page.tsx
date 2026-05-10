@@ -21,6 +21,7 @@ import { DirectiveSubstance } from "@/components/directive-substance";
 import { DirectiveNarrative } from "@/components/directive-narrative";
 import { DeviationContextPanel } from "@/components/deviation-context";
 import { SourceBadge } from "@/components/source-badge";
+import { RecommendationCellContextPanel } from "./_components/cell-context";
 
 export const dynamic = "force-dynamic";
 
@@ -104,6 +105,12 @@ export default async function RecommendationDetailPage({ params }: PageProps) {
           The operator's task here is JUDGMENT (verdict on existing
           deviation), not evaluation of a new proposal. */}
       <DeviationContextPanel recommendation={rec} />
+
+      {/* CELL CONTEXT (Q.2.B) — substrate context for the underlying
+          decision. RecommendationDetail does not currently expose
+          impression_id linkage; panel renders an empty-state with
+          Q.2.A.bis dependency note until that lands. */}
+      <RecommendationCellContextPanel impressionId={null} />
 
       {/* PLAN — alternatives. Header copy is source-aware: "The plan"
           for proposal-shaped sources (dcil/threshold), "Verdict" for

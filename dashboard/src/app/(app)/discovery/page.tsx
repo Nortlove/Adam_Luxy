@@ -1,4 +1,5 @@
 import { DiscoveryClient } from "./_client";
+import { CohortDiscoveryPanel } from "./_components/cohort-discovery-panel";
 import { PageHeader } from "@/components/page-header";
 
 export const metadata = {
@@ -14,6 +15,7 @@ export default function DiscoveryPage() {
         title="Discovery"
         description="The question dance. Brand, audience, goal, and first-party data — rendered as elicitation primitives that write to the Dialogue Ledger as hypotheses."
       />
+      <CohortDiscoveryPanel />
       <DiscoveryClient />
     </div>
   );

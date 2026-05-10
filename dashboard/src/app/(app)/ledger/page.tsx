@@ -11,6 +11,7 @@ import { ClaimsTable } from "./_components/claims-table";
 import { DeviationsTable } from "./_components/deviations-table";
 import { CalibrationView } from "./_components/calibration-view";
 import { Sandbox } from "./_components/sandbox";
+import { DecisionTraceLookup } from "./_components/decision-trace-lookup";
 
 export const metadata = {
   title: "Dialogue Ledger · INFORMATIV",
@@ -54,6 +55,7 @@ export default async function LedgerPage() {
             {isDeviations(deviations) ? <Count n={deviations.total} /> : null}
           </TabsTrigger>
           <TabsTrigger value="calibration">Calibration</TabsTrigger>
+          <TabsTrigger value="trace">Trace Lookup</TabsTrigger>
           <TabsTrigger value="sandbox">Sandbox</TabsTrigger>
         </TabsList>
 
@@ -88,6 +90,10 @@ export default async function LedgerPage() {
           ) : (
             <CalibrationView data={calibration} />
           )}
+        </TabsContent>
+
+        <TabsContent value="trace">
+          <DecisionTraceLookup />
         </TabsContent>
 
         <TabsContent value="sandbox">
