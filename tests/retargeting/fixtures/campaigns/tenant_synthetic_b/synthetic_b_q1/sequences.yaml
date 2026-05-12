@@ -1,0 +1,149 @@
+# Synthetic Tenant B — Q1 — TEST FIXTURE (not production data)
+#
+# Minimal but structurally-valid sequences.yaml that exercises the
+# multi-tenant abstraction (S8.2 Component 6). DELIBERATELY different
+# from LUXY: 3 archetypes (not 5), a 4+4+0 crosswalk partition (not
+# LUXY's 2+3+3+0+0), no Careful Truster (different active set). If the
+# same loader handles both this fixture AND the LUXY YAML with zero code
+# changes, the platform scales — that is the architectural acceptance
+# criterion. No source doc; all touches needs_authoring.
+
+metadata:
+  tenant_id: "tenant_synthetic_b"
+  campaign_id: "synthetic_b_q1"
+  tenant_display_name: "Synthetic Tenant B (test fixture)"
+  campaign_display_name: "Synthetic Q1 (test fixture)"
+  schema_version: "1.0"
+  source_doc: "(synthetic; no source doc)"
+  source_doc_path: "(none)"
+  extraction_date: "2026-05-12"
+  extraction_commit: "(test fixture; not committed as data)"
+  layer: 2
+  archetype_count: 3
+  active_archetype_count: 2
+  suppress_archetype_count: 1
+  campaign_budget_allocation:
+    synthetic_active_a: 50
+    synthetic_active_b: 40
+    synthetic_suppress: 0
+    unallocated: 10
+
+archetypes:
+
+  synthetic_active_a:
+    archetype_id: "synthetic_active_a"
+    archetype_role: "active"
+    population_pct: 40.0
+    conversion_rate_pct: 70.0
+    budget_allocation_pct: 50
+    psychological_profile:
+      regulatory_focus: "promotion"
+      key_traits: ["synthetic_trait_one", "synthetic_trait_two"]
+      summary: "Synthetic promotion-focused archetype (test fixture)."
+    bilateral_findings:
+      helps:
+        - dimension: "synthetic_helps_dim"
+          correlation_r: 0.30
+          interpretation: "Synthetic helps dimension (test fixture)."
+      hurts:
+        - dimension: "synthetic_hurts_dim"
+          correlation_r: -0.15
+          interpretation: "Synthetic hurts dimension (test fixture)."
+    cold_start_archetype_crosswalk:
+      maps_from: ["EXPLORER", "ACHIEVER", "CONNECTOR", "CREATOR"]
+      rationale: "Synthetic fixture; promotion-focused 4-archetype mapping."
+    therapeutic_sequence:
+      derivation_status: "derived_from_bilateral_findings_needs_authoring"
+      touch_count: 2
+      touches:
+        - touch_number: 1
+          touch_role: "initial_impression"
+          mechanism_primary: "cognitive_ease"
+          mechanism_secondary: null
+          alignment_gap_addressed: "synthetic gap one (test fixture)"
+          touch_text_status: "needs_authoring"
+          touch_text: null
+        - touch_number: 2
+          touch_role: "retargeting"
+          mechanism_primary: "social_proof"
+          mechanism_secondary: null
+          alignment_gap_addressed: "synthetic gap two (test fixture)"
+          touch_text_status: "needs_authoring"
+          touch_text: null
+    becca_empirical_data:
+      data_available: false
+      data_grain: null
+      running_since: null
+      notes: "Test fixture; no live data."
+
+  synthetic_active_b:
+    archetype_id: "synthetic_active_b"
+    archetype_role: "active"
+    population_pct: 35.0
+    conversion_rate_pct: 55.0
+    budget_allocation_pct: 40
+    psychological_profile:
+      regulatory_focus: "prevention"
+      key_traits: ["synthetic_trait_three", "synthetic_trait_four"]
+      summary: "Synthetic prevention-focused archetype (test fixture)."
+    bilateral_findings:
+      helps:
+        - dimension: "synthetic_helps_dim_b"
+          correlation_r: 0.42
+          interpretation: "Synthetic helps dimension B (test fixture)."
+      hurts: []
+    cold_start_archetype_crosswalk:
+      maps_from: ["GUARDIAN", "ANALYST", "NURTURER", "PRAGMATIST"]
+      rationale: "Synthetic fixture; prevention-focused 4-archetype mapping."
+    therapeutic_sequence:
+      derivation_status: "derived_from_bilateral_findings_needs_authoring"
+      touch_count: 2
+      touches:
+        - touch_number: 1
+          touch_role: "initial_impression"
+          mechanism_primary: "authority"
+          mechanism_secondary: "anchoring"
+          alignment_gap_addressed: "synthetic gap three (test fixture)"
+          touch_text_status: "needs_authoring"
+          touch_text: null
+        - touch_number: 2
+          touch_role: "retargeting"
+          mechanism_primary: "commitment"
+          mechanism_secondary: null
+          alignment_gap_addressed: "synthetic gap four (test fixture)"
+          touch_text_status: "needs_authoring"
+          touch_text: null
+    becca_empirical_data:
+      data_available: false
+      data_grain: null
+      running_since: null
+      notes: "Test fixture; no live data."
+
+  synthetic_suppress:
+    archetype_id: "synthetic_suppress"
+    archetype_role: "suppress"
+    population_pct: 25.0
+    conversion_rate_pct: 1.0
+    budget_allocation_pct: 0
+    psychological_profile:
+      regulatory_focus: "prevention"
+      key_traits: ["synthetic_resistant_trait"]
+      summary: "Synthetic advertising-resistant archetype (test fixture)."
+    bilateral_findings:
+      helps: []
+      hurts:
+        - dimension: "synthetic_resistance_dim"
+          correlation_r: null
+          interpretation: "Synthetic advertising-resistance (test fixture)."
+    cold_start_archetype_crosswalk:
+      maps_from: []
+      rationale: "Synthetic fixture; empty maps_from — cold-start cannot route here."
+    suppression_rule:
+      action: "suppress_bid"
+      rationale: "Synthetic advertising-resistant archetype; suppress (test fixture)."
+      psychological_basis: "Synthetic resistance basis (test fixture)."
+    becca_empirical_data:
+      data_available: false
+      data_grain: null
+      running_since: null
+      notes: "Test fixture; no live data."

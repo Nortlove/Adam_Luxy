@@ -1,0 +1,341 @@
+# LUXY Ride — Q2 2026 Pilot — Layer-2 Therapeutic Sequences
+#
+# Extracted from the bilateral source doc by slice S8.2. Layer-2 = the
+# tenant's data-driven buyer archetypes (5: 3 active + 2 suppress) with
+# per-archetype therapeutic retargeting sequences. Layer-1 = the
+# platform-generic 8-value cold-start ArchetypeID enum
+# (adam/cold_start/models/enums.py). The cold_start_archetype_crosswalk
+# block on each Layer-2 archetype declares which Layer-1 archetypes
+# route to it (maps_from). Suppress archetypes have empty maps_from:
+# cold-start signals (geo/device/hour/IAB) cannot distinguish a future
+# skeptical_analyst or disillusioned from a careful_truster, so those
+# segments are reached via downstream behavioral signals, not initial
+# cold-start assignment.
+#
+# Copyright discipline: all quotations from the bilateral source doc
+# are <=15 words. The doc's prose is not reproduced; this file carries
+# structured metadata (correlation coefficients, mechanism names,
+# short interpretation phrases).
+#
+# Touch authoring status: Careful Truster touches 2/3/4 are
+# extracted_from_bilateral_doc (the doc details that sequence
+# explicitly). All other touches are
+# derived_from_bilateral_findings_needs_authoring — structure derived
+# from the bilateral helps/hurts findings; touch_text deferred to the
+# S8.2.author follow-up.
+
+metadata:
+  tenant_id: "luxy_ride"
+  campaign_id: "luxy_q2_2026"
+  tenant_display_name: "LUXY Ride"
+  campaign_display_name: "LUXY Ride Q2 2026 Pilot"
+  schema_version: "1.0"
+  source_doc: "INFORMATIV — Bilateral Psycholinguistic  Advertising Intelligence System .md"
+  source_doc_path: "/"
+  extraction_date: "2026-05-11"
+  extraction_commit: "pending"  # patched by S8.2.m1 follow-up sweep
+  layer: 2
+  archetype_count: 5
+  active_archetype_count: 3
+  suppress_archetype_count: 2
+  classifier_accuracy_pct: 97.9
+  corpus_size: 3103
+  corpus_brands:
+    - "Blacklane"
+    - "Wheely"
+    - "Alto"
+    - "Carey"
+    - "SIXT"
+    - "EmpireCLS"
+    - "Dav El BostonCoach"
+    - "LUXY Ride"
+    # source doc names 8 of 14 explicitly ("and others"); remaining 6
+    # not enumerated in source
+  campaign_budget_allocation:
+    status_seeker: 30
+    easy_decider: 15
+    careful_truster: 40
+    skeptical_analyst: 0
+    disillusioned: 0
+    unallocated: 15
+
+archetypes:
+
+  # ── ACTIVE ─────────────────────────────────────────────────────────
+
+  status_seeker:
+    archetype_id: "status_seeker"
+    archetype_role: "active"
+    population_pct: 22.0
+    conversion_rate_pct: 94.5
+    budget_allocation_pct: 30
+    psychological_profile:
+      regulatory_focus: "promotion"
+      key_traits:
+        - "high_promotion_focus"
+        - "high_status_affiliation_motive"
+        - "low_spending_pain"
+        - "high_optimal_distinctiveness"
+      summary: "Books luxury because it signals who they are."
+    bilateral_findings:
+      helps:
+        - dimension: "value_propositions_self_expression"
+          correlation_r: null
+          interpretation: "Self-expression value propositions help conversion."
+      hurts:
+        - dimension: "brand_personality_sincerity"
+          correlation_r: null
+          interpretation: "Warmth and sincerity framing hurt; be competent, status-confirming."
+    cold_start_archetype_crosswalk:
+      maps_from:
+        - "EXPLORER"
+        - "ACHIEVER"
+      rationale: "Promotion focus plus status/achievement motive overlap."
+    therapeutic_sequence:
+      derivation_status: "derived_from_bilateral_findings_needs_authoring"
+      touch_count: 4
+      touches:
+        - touch_number: 1
+          touch_role: "initial_impression"
+          mechanism_primary: "liking"
+          mechanism_secondary: "authority"
+          alignment_gap_addressed: "establish self-expression value proposition, status-confirming not warm"
+          touch_text_status: "needs_authoring"
+          touch_text: null
+        - touch_number: 2
+          touch_role: "retargeting"
+          mechanism_primary: "authority"
+          mechanism_secondary: "social_proof"
+          alignment_gap_addressed: "deepen competence signalling; counter sincerity-framing drift"
+          touch_text_status: "needs_authoring"
+          touch_text: null
+        - touch_number: 3
+          touch_role: "retargeting"
+          mechanism_primary: "social_proof"
+          mechanism_secondary: "liking"
+          alignment_gap_addressed: "distinctiveness via peer-status signalling"
+          touch_text_status: "needs_authoring"
+          touch_text: null
+        - touch_number: 4
+          touch_role: "retargeting"
+          mechanism_primary: "commitment"
+          mechanism_secondary: "scarcity"
+          alignment_gap_addressed: "low-spending-pain close; commitment without price emphasis"
+          touch_text_status: "needs_authoring"
+          touch_text: null
+    becca_empirical_data:
+      data_available: true
+      data_grain: "campaign_track_level"
+      running_since: null  # populated post-S8.2 live StackAdapt pull
+      notes: "30% budget allocation; active track; campaign-track-level analytics available via StackAdapt GraphQL."
+
+  easy_decider:
+    archetype_id: "easy_decider"
+    archetype_role: "active"
+    population_pct: 17.0
+    conversion_rate_pct: 90.9
+    budget_allocation_pct: 15
+    psychological_profile:
+      regulatory_focus: "promotion"
+      key_traits:
+        - "low_maximizer"
+        - "low_self_protection"
+        - "low_information_search"
+        - "low_need_for_cognition"
+      summary: "Doesn't overthink. Remove friction and they convert."
+    bilateral_findings:
+      helps:
+        - dimension: "evolutionary_motive_match"
+          correlation_r: 0.484
+          interpretation: "Number one alignment predictor; match underlying need directly."
+      hurts:
+        - dimension: "linguistic_complexity"
+          correlation_r: -0.130
+          interpretation: "Linguistic complexity hurts; keep messaging simple."
+    cold_start_archetype_crosswalk:
+      maps_from:
+        - "CONNECTOR"
+        - "CREATOR"
+        - "PRAGMATIST"
+      rationale: "Low-information-search plus impulse plus balanced-traits overlap."
+    therapeutic_sequence:
+      derivation_status: "derived_from_bilateral_findings_needs_authoring"
+      touch_count: 4
+      touches:
+        - touch_number: 1
+          touch_role: "initial_impression"
+          mechanism_primary: "cognitive_ease"
+          mechanism_secondary: "reciprocity"
+          alignment_gap_addressed: "match evolutionary motive directly with simple low-complexity messaging"
+          touch_text_status: "needs_authoring"
+          touch_text: null
+        - touch_number: 2
+          touch_role: "retargeting"
+          mechanism_primary: "cognitive_ease"
+          mechanism_secondary: null
+          alignment_gap_addressed: "remove residual friction; reduce decision steps"
+          touch_text_status: "needs_authoring"
+          touch_text: null
+        - touch_number: 3
+          touch_role: "retargeting"
+          mechanism_primary: "reciprocity"
+          mechanism_secondary: "social_proof"
+          alignment_gap_addressed: "low-need-for-cognition nudge; direct benefit restatement"
+          touch_text_status: "needs_authoring"
+          touch_text: null
+        - touch_number: 4
+          touch_role: "retargeting"
+          mechanism_primary: "commitment"
+          mechanism_secondary: "cognitive_ease"
+          alignment_gap_addressed: "one-tap close; minimal-friction conversion path"
+          touch_text_status: "needs_authoring"
+          touch_text: null
+    becca_empirical_data:
+      data_available: true
+      data_grain: "campaign_track_level"
+      running_since: null
+      notes: "15% budget allocation; active track; campaign-track-level analytics available via StackAdapt GraphQL."
+
+  careful_truster:
+    archetype_id: "careful_truster"
+    archetype_role: "active"
+    population_pct: 21.0
+    conversion_rate_pct: 65.0
+    budget_allocation_pct: 40
+    psychological_profile:
+      regulatory_focus: "prevention"
+      key_traits:
+        - "high_agreeableness"
+        - "high_brand_trust"
+        - "high_disease_avoidance"
+        - "low_impulse"
+      summary: "The swing segment. Converts when trust is established through evidence."
+    bilateral_findings:
+      helps:
+        - dimension: "brand_trust_fit"
+          correlation_r: 0.619
+          interpretation: "Single strongest conversion predictor of any dimension in any archetype."
+        - dimension: "appeals_comparative"
+          correlation_r: 0.163
+          interpretation: "Comparative appeals help; show evidence not stories."
+      hurts:
+        - dimension: "liking"
+          correlation_r: -0.229
+          interpretation: "Warmth and sincerity hurt conversion for this group."
+        - dimension: "appeals_narrative"
+          correlation_r: -0.226
+          interpretation: "Narrative appeals hurt; do not tell stories."
+    cold_start_archetype_crosswalk:
+      maps_from:
+        - "GUARDIAN"
+        - "ANALYST"
+        - "NURTURER"
+      rationale: "Prevention focus plus evidence-driven plus agreeableness overlap; ANALYST conservative tie-break to active not suppress."
+    therapeutic_sequence:
+      # Touches 2/3/4 extracted directly from the bilateral source doc's
+      # retargeting-sequence section. Touch 1 (initial impression) is
+      # derived; the doc details the non-converter retargeting touches
+      # 2-4, not the initial impression.
+      derivation_status: "extracted_from_bilateral_doc"
+      touch_count: 4
+      touches:
+        - touch_number: 1
+          touch_role: "initial_impression"
+          mechanism_primary: "authority"
+          mechanism_secondary: "social_proof"
+          alignment_gap_addressed: "establish brand_trust_fit; comparative-rational not narrative-warm"
+          touch_text_status: "needs_authoring"
+          touch_text: null
+        - touch_number: 2
+          touch_role: "retargeting"
+          mechanism_primary: "authority"
+          mechanism_secondary: null
+          alignment_gap_addressed: "deepen brand_trust evidence"
+          touch_text_status: "extracted_from_doc"
+          touch_text: "Touch 2 deepens brand_trust evidence."
+        - touch_number: 3
+          touch_role: "retargeting"
+          mechanism_primary: "social_proof"
+          mechanism_secondary: null
+          alignment_gap_addressed: "testimonial-as-evidence, not warmth"
+          touch_text_status: "extracted_from_doc"
+          touch_text: "Touch 3 deploys testimonial-as-evidence, not warmth."
+        - touch_number: 4
+          touch_role: "retargeting"
+          mechanism_primary: "anchoring"
+          mechanism_secondary: "commitment"
+          alignment_gap_addressed: "price/commitment friction"
+          touch_text_status: "extracted_from_doc"
+          touch_text: "Touch 4 addresses price/commitment friction."
+    becca_empirical_data:
+      data_available: true
+      data_grain: "campaign_track_level"
+      running_since: null
+      notes: "40% budget allocation; swing-segment active track; 225 non-converters / 35% sub-cluster per source doc."
+
+  # ── SUPPRESS ───────────────────────────────────────────────────────
+
+  skeptical_analyst:
+    archetype_id: "skeptical_analyst"
+    archetype_role: "suppress"
+    population_pct: 24.0
+    conversion_rate_pct: 0.8
+    budget_allocation_pct: 0
+    psychological_profile:
+      regulatory_focus: "prevention"
+      key_traits:
+        - "high_need_for_cognition"
+        - "high_attachment_avoidance"
+        - "high_spending_pain"
+        - "high_review_reliance"
+      summary: "Advertising-resistant. Suppress."
+    bilateral_findings:
+      helps: []
+      hurts:
+        - dimension: "appeals_advertising"
+          correlation_r: null
+          interpretation: "Advertising-resistant segment; paid persuasion does not move conversion."
+    cold_start_archetype_crosswalk:
+      maps_from: []
+      rationale: "Cold-start signals cannot observe need-for-cognition / attachment-avoidance; routes to careful_truster pre-pilot; suppression via downstream behavioral signals."
+    suppression_rule:
+      action: "suppress_bid"
+      rationale: "Advertising-resistant; 0% budget allocation; suppress."
+      psychological_basis: "High need-for-cognition + review reliance + spending pain; paid persuasion backfires."
+    becca_empirical_data:
+      data_available: false
+      data_grain: null
+      running_since: null
+      notes: "0% budget allocation; advertising-resistant; no impressions served."
+
+  disillusioned:
+    archetype_id: "disillusioned"
+    archetype_role: "suppress"
+    population_pct: 16.0
+    conversion_rate_pct: 0.8
+    budget_allocation_pct: 0
+    psychological_profile:
+      regulatory_focus: "prevention"
+      key_traits:
+        - "low_agreeableness"
+        - "low_brand_trust"
+        - "low_promotion_focus"
+      summary: "Burned by past experiences. Advertising-resistant. Suppress."
+    bilateral_findings:
+      helps: []
+      hurts:
+        - dimension: "appeals_advertising"
+          correlation_r: null
+          interpretation: "Advertising-resistant segment; prior negative experience blocks paid persuasion."
+    cold_start_archetype_crosswalk:
+      maps_from: []
+      rationale: "Cold-start signals cannot observe burned-by-past-experience; routes to careful_truster pre-pilot; suppression via downstream signals."
+    suppression_rule:
+      action: "suppress_bid"
+      rationale: "Burned by past experiences; advertising-resistant; 0% budget allocation; suppress."
+      psychological_basis: "Low brand trust + low agreeableness + prior negative experience; paid persuasion deepens distrust."
+    becca_empirical_data:
+      data_available: false
+      data_grain: null
+      running_since: null
+      notes: "0% budget allocation; advertising-resistant; no impressions served."
