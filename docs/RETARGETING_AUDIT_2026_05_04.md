@@ -220,3 +220,41 @@ The directive's S8 has 7 slices (S8.1–S8.7). With the substrate audit complete
 - **S8 slice list updated with concrete predecessor closures:** ✓ (composite recommendations table above).
 
 **Standdown per §S2 mandate:** No code modification performed during this audit. Will not begin S8 build until Chris signs off and Claude Proper issues the S8.1 prompt.
+
+---
+
+## Sign-off Addendum — 2026-05-11
+
+**Operator:** Chris Nocera, CTO & Co-Founder, INFORMATIV Group.
+**Sign-off:** G2 closed per directive Part 8. S8 build authorized to proceed.
+
+### Current-state S8 predecessor table (refinement of 2026-05-04 composite recommendations table)
+
+Per `HANDOFF_TO_NEW_THREAD_2026_05_11.md` §5 / §6 / §13, three rows in the 2026-05-04 composite recommendations table reflected substrate state that has advanced since the audit was written. The table below corrects those rows for the post-2026-05-11 build window; the remaining rows are restated unchanged.
+
+| S8 slice | Substrate predecessor | Status as of 2026-05-11 |
+|---|---|---|
+| S8.1 CellStateContext composite | `JourneyTrackingService` + S6 substrate (F.1 `1988a8d` + S6.2 `78dcbec`) + S3 priming | **READY** — 1d |
+| S8.2 `sequences.yaml` extraction | Bilateral doc + `TherapeuticSequence` model (Surface 2) | **READY** — 1-1.5d |
+| S8.3 deterministic next-touch | S8.2 + `bilateral_cascade.py` L3 (Surface 3) | **Ready once S8.2 lands** — 1d |
+| S8.4 pixel postback wiring | `webhook.py` (Surface 4) + `PixelCorrelator` (`a2c9124`) | **READY** — 1-1.5d |
+| S8.5 `TrajectoryEvent` logging | `JourneyTransition` + correlator + S4.5 Stage C event bus | **Defers to S9** per directive substrate-blocking sequence; pre-pilot uses the existing `decision_trace` channel |
+| S8.6 validation harness | S8.1-S8.4 + G1.path4 corpus (`57e43bf`) + Becca analytics | **READY** — 1-1.5d |
+| S8.7 sandbox round-trip + Slice 35 | Surface 4 + Surface 5 `shadow_bidder` | **READY** — 1-1.5d |
+
+### Substrate-state changes since 2026-05-04
+
+1. **Cell classifier substrate shipped.** F.1 cell taxonomy (`1988a8d`), F.2 compensatory cohort detection (`1c49a75`), S6.2 `CellFeatureSet` + `@cell_predicate` evaluator + Path A integration in `bilateral_cascade.py` (`78dcbec`), W chain substrate accessors (`e0f0e52`, `60b1ac0`, `bdd24a0`, `b1c9922`), M.1 aggregator-side `fomo` derivation (`0ad0919`). S8.1 no longer cell-classifier-blocked.
+
+2. **G1 closed via Path 4** at commit `57e43bf` (macro-AUC 0.788, top-1 0.46 on the held-out fixture) — a class-balanced retrain on the existing posture corpus, not the Slice-0 real-URL extraction. The P.0/P.1 corpus-pivot conversation referenced in the 2026-05-04 audit's S8.6 row was held; URL granularity surfaced via P.0 (`64b6daa`) and was addressed via P.1 cold-start mapper (`b85cce3`) plus inventory (`fbae83e`). S8.6 no longer corpus-blocked.
+
+3. **S8.5 deferral made explicit.** Per directive §0.5 (acknowledged tech debt) + the substrate-blocking sequence, full `TrajectoryEvent` logging defers to S9. Pre-pilot S8 uses the existing `decision_trace` channel as the interim observability path. Not a remediation gap; an architectural deferral.
+
+### G2 closure declaration
+
+Per directive Part 8 Gate G2 ("Retargeting audit reports signed off by Chris"):
+- ✓ Audit document exists (this file).
+- ✓ Signed off by Chris (this addendum).
+- ✓ S8 slice list updated with concrete predecessor closures (table above).
+
+**G2 closed 2026-05-11. S8 build authorized to proceed. Next slice: S8.2 (sequences.yaml extraction) per handoff §6 item 3.**
