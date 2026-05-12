@@ -33,7 +33,7 @@ metadata:
   source_doc: "INFORMATIV — Bilateral Psycholinguistic  Advertising Intelligence System .md"
   source_doc_path: "/"
   extraction_date: "2026-05-11"
-  extraction_commit: "pending"  # patched by S8.2.m1 follow-up sweep
+  extraction_commit: "9077743"  # patched by S8.2.f1 (deferred self-reference: YAML cannot reference its own birth commit until after commit)
   layer: 2
   archetype_count: 5
   active_archetype_count: 3
